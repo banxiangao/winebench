@@ -1,0 +1,137 @@
+{
+ "id": "0060",
+ "function": {
+  "name": "D3DXFilterTexture",
+  "export_name": "D3DXFilterTexture",
+  "module": "d3dx9_24",
+  "source_module": "d3dx9_36",
+  "exported_by": [
+   "d3dx9_24",
+   "d3dx9_25",
+   "d3dx9_26",
+   "d3dx9_27",
+   "d3dx9_28",
+   "d3dx9_29",
+   "d3dx9_30",
+   "d3dx9_31",
+   "d3dx9_32",
+   "d3dx9_33",
+   "d3dx9_34",
+   "d3dx9_35",
+   "d3dx9_36",
+   "d3dx9_37",
+   "d3dx9_38",
+   "d3dx9_39",
+   "d3dx9_40",
+   "d3dx9_41",
+   "d3dx9_42",
+   "d3dx9_43"
+  ],
+  "side": "PE",
+  "file": "dlls/d3dx9_36/texture.c",
+  "start_line": 42,
+  "end_line": 163,
+  "body_lines": 119,
+  "signature": "HRESULT WINAPI D3DXFilterTexture(IDirect3DBaseTexture9 *texture, const PALETTEENTRY *palette, UINT srclevel, DWORD filter)",
+  "header_comment": null,
+  "code": "HRESULT WINAPI D3DXFilterTexture(IDirect3DBaseTexture9 *texture,\n                                 const PALETTEENTRY *palette,\n                                 UINT srclevel,\n                                 DWORD filter)\n{\n    UINT level;\n    HRESULT hr;\n    D3DRESOURCETYPE type;\n\n    TRACE(\"texture %p, palette %p, srclevel %u, filter %#lx.\\n\", texture, palette, srclevel, filter);\n\n    if (!texture)\n        return D3DERR_INVALIDCALL;\n\n    if (filter != D3DX_DEFAULT && FAILED(hr = d3dx_validate_filter(filter)))\n        return hr;\n\n    if (srclevel == D3DX_DEFAULT)\n        srclevel = 0;\n    else if (srclevel >= IDirect3DBaseTexture9_GetLevelCount(texture))\n        return D3DERR_INVALIDCALL;\n\n    switch (type = IDirect3DBaseTexture9_GetType(texture))\n    {\n        case D3DRTYPE_TEXTURE:\n        case D3DRTYPE_CUBETEXTURE:\n        {\n            IDirect3DSurface9 *topsurf, *mipsurf;\n            D3DSURFACE_DESC desc;\n            int i, numfaces;\n\n            if (type == D3DRTYPE_TEXTURE)\n            {\n                numfaces = 1;\n                IDirect3DTexture9_GetLevelDesc((IDirect3DTexture9*) texture, srclevel, &desc);\n            }\n            else\n            {\n                numfaces = 6;\n                IDirect3DCubeTexture9_GetLevelDesc((IDirect3DCubeTexture9 *)texture, srclevel, &desc);\n            }\n\n            if (filter == D3DX_DEFAULT)\n            {\n                if (is_pow2(desc.Width) && is_pow2(desc.Height))\n                    filter = D3DX_FILTER_BOX;\n                else\n                    filter = D3DX_FILTER_BOX | D3DX_FILTER_DITHER;\n            }\n\n            for (i = 0; i < numfaces; i++)\n            {\n                level = srclevel + 1;\n                hr = get_surface(type, texture, i, srclevel, &topsurf);\n\n                if (FAILED(hr))\n                    return D3DERR_INVALIDCALL;\n\n                while (get_surface(type, texture, i, level, &mipsurf) == D3D_OK)\n                {\n                    hr = D3DXLoadSurfaceFromSurface(mipsurf, palette, NULL, topsurf, palette, NULL, filter, 0);\n                    IDirect3DSurface9_Release(topsurf);\n                    topsurf = mipsurf;\n\n                    if (FAILED(hr))\n                        break;\n\n                    level++;\n                }\n\n                IDirect3DSurface9_Release(topsurf);\n                if (FAILED(hr))\n                    return hr;\n            }\n\n            return D3D_OK;\n        }\n\n        case D3DRTYPE_VOLUMETEXTURE:\n        {\n            D3DVOLUME_DESC desc;\n            int level, level_count;\n            IDirect3DVolume9 *top_volume, *mip_volume;\n            IDirect3DVolumeTexture9 *volume_texture = (IDirect3DVolumeTexture9*) texture;\n\n            IDirect3DVolumeTexture9_GetLevelDesc(volume_texture, srclevel, &desc);\n\n            if (filter == D3DX_DEFAULT)\n            {\n                if (is_pow2(desc.Width) && is_pow2(desc.Height) && is_pow2(desc.Depth))\n                    filter = D3DX_FILTER_BOX;\n                else\n                    filter = D3DX_FILTER_BOX | D3DX_FILTER_DITHER;\n            }\n\n            hr = IDirect3DVolumeTexture9_GetVolumeLevel(volume_texture, srclevel, &top_volume);\n            if (FAILED(hr))\n                return hr;\n\n            level_count = IDirect3DVolumeTexture9_GetLevelCount(volume_texture);\n            for (level = srclevel + 1; level < level_count; level++)\n            {\n                IDirect3DVolumeTexture9_GetVolumeLevel(volume_texture, level, &mip_volume);\n                hr = D3DXLoadVolumeFromVolume(mip_volume, palette, NULL, top_volume, palette, NULL, filter, 0);\n                IDirect3DVolume9_Release(top_volume);\n                top_volume = mip_volume;\n\n                if (FAILED(hr))\n                    break;\n            }\n\n            IDirect3DVolume9_Release(top_volume);\n            if (FAILED(hr))\n                return hr;\n\n            return D3D_OK;\n        }\n\n        default:\n            return D3DERR_INVALIDCALL;\n    }\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"d3dx9_private.h\""
+  ],
+  "resolution": [
+   "d3dx9_24!D3DXFilterTexture [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/d3dx9_36/tests/texture.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "direct3d9",
+   "path": "desktop-src/direct3d9/d3dxfiltertexture.md",
+   "url": "https://learn.microsoft.com/windows/win32/direct3d9/d3dxfiltertexture",
+   "documented_name": "d3dxfiltertexture",
+   "file": "docs/0060_win32_d3dxfiltertexture.md",
+   "text": "---\ndescription: Filters mipmap levels of a texture.\nms.assetid: bfeae9b0-9480-4a26-a225-4a34780546ce\ntitle: D3DXFilterTexture function (D3dx9tex.h)\nms.topic: reference\nms.date: 05/31/2018\ntopic_type:\n- APIRef\n- kbSyntax\napi_name:\n- D3DXFilterTexture\napi_type:\n- LibDef\napi_location:\n- d3dx9.lib\n- d3dx9.dll\n---\n\n# D3DXFilterTexture function\n\nFilters mipmap levels of a texture.\n\n## Syntax\n\n\n```C++\nHRESULT D3DXFilterTexture(\n  _In_        LPDIRECT3DBASETEXTURE9 pBaseTexture,\n  _Out_ const PALETTEENTRY           *pPalette,\n  _In_        UINT                   SrcLevel,\n  _In_        DWORD                  MipFilter\n);\n```\n\n\n\n## Parameters\n\n<dl> <dt>\n\n*pBaseTexture* \\[in\\]\n</dt> <dd>\n\nType: **[**LPDIRECT3DBASETEXTURE9**](/windows/win32/api/d3d9helper/nn-d3d9helper-idirect3dbasetexture9)**\n\nPointer to an [**IDirect3DBaseTexture9**](/windows/win32/api/d3d9helper/nn-d3d9helper-idirect3dbasetexture9) interface that represents the texture object to filter.\n\n</dd> <dt>\n\n*pPalette* \\[out\\]\n</dt> <dd>\n\nType: **const [**PALETTEENTRY**](/windows/win32/api/wingdi/ns-wingdi-paletteentry)\\***\n\nPointer to a [**PALETTEENTRY**](/windows/win32/api/wingdi/ns-wingdi-paletteentry) structure that represents a 256-color palette to fill in, or **NULL** for nonpalettized formats. If a palette is not specified, the default Direct3D palette (an all opaque white palette) is provided. See Remarks.\n\n</dd> <dt>\n\n*SrcLevel* \\[in\\]\n</dt> <dd>\n\nType: **[**UINT**](../winprog/windows-data-types.md)**\n\nLevel whose image is used to generate the subsequent levels. Specifying D3DX\\_DEFAULT for this parameter is equivalent to specifying 0.\n\n</dd> <dt>\n\n*MipFilter* \\[in\\]\n</dt> <dd>\n\nType: **[**DWORD**](../winprog/windows-data-types.md)**\n\nCombination of one or more [D3DX\\_FILTER](d3dx-filter.md) controlling how the mipmap is filtered. Specifying D3DX\\_DEFAULT for this parameter is the equivalent of specifying D3DX\\_FILTER\\_BOX if the texture size is a power of two, and D3DX\\_FILTER\\_BOX \\| D3DX\\_FILTER\\_DITHER otherwise.\n\n</dd> </dl>\n\n## Return value\n\nType: **[**HRESULT**](https://msdn.microsoft.com/library/Bb401631(v=MSDN.10).aspx)**\n\nIf the function succeeds, the return value is D3D\\_OK. If the function fails, the return value can be one of the following: D3DERR\\_INVALIDCALL, D3DXERR\\_INVALIDDATA.\n\n## Remarks\n\nA filter is recursively applied to each texture level to generate the next texture level.\n\nWriting to a non-level-zero surface of the texture will not cause the dirty rectangle to be updated. If **D3DXFilterTexture** is called and the surface was not already dirty (this is unlikely under normal usage scenarios), the application needs to explicitly call [**AddDirtyRect**](/windows/win32/api/d3d9helper/nf-d3d9helper-idirect3dtexture9-adddirtyrect) on the texture.\n\nTextures created in the default pool (D3DPOOL\\_DEFAULT) cannot be used with **D3DXFilterTexture** (unless created with D3DUSAGE\\_DYNAMIC) because a lock operation is needed on the object. Note that locks are prohibited on textures in the default pool (unless they are dynamic).\n\nFor details on [**PALETTEENTRY**](/windows/win32/api/wingdi/ns-wingdi-paletteentry), see the Platform SDK. Note that as of DirectX 8.0, the peFlags member of the **PALETTEENTRY** structure does not function as documented in the Platform SDK. The peFlags member is now the alpha channel for 8-bit palettized formats.\n\nThere is only one texture filtering function, but two macros that call this method.\n\n\n```\n#define D3DXFilterCubeTexture D3DXFilterTexture\n#define D3DXFilterVolumeTexture D3DXFilterTexture\n```\n\n\n\n## Requirements\n\n\n\n| Requirement | Value |\n|--------------------|---------------------------------------------------------------------------------------|\n| Header<br/>  | <dl> <dt>D3dx9tex.h</dt> </dl> |\n| Library<br/> | <dl> <dt>D3dx9.lib</dt> </dl>  |\n\n\n\n## See also\n\n<dl> <dt>\n\n[Texture Functions in D3DX 9](dx9-graphics-reference-d3dx-functions-texture.md)\n</dt> </dl>\n\n \n\n \n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_surface",
+   "file": "dlls/d3dx9_36/texture.c",
+   "start_line": 27,
+   "end_line": 40,
+   "static": true,
+   "called_from": [
+    "D3DXFilterTexture"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/d3dx9_36/texture.c:1904",
+    "dlls/d3dx9_36/texture.c:2015"
+   ],
+   "signature": "static HRESULT get_surface(D3DRESOURCETYPE type, struct IDirect3DBaseTexture9 *tex, int face, UINT level, struct IDirect3DSurface9 **surf)",
+   "code": "static HRESULT get_surface(D3DRESOURCETYPE type, struct IDirect3DBaseTexture9 *tex,\n        int face, UINT level, struct IDirect3DSurface9 **surf)\n{\n    switch (type)\n    {\n        case D3DRTYPE_TEXTURE:\n            return IDirect3DTexture9_GetSurfaceLevel((IDirect3DTexture9*) tex, level, surf);\n        case D3DRTYPE_CUBETEXTURE:\n            return IDirect3DCubeTexture9_GetCubeMapSurface((IDirect3DCubeTexture9*) tex, face, level, surf);\n        default:\n            ERR(\"Unexpected texture type\\n\");\n            return E_NOTIMPL;\n    }\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 25,
+    "end_line": 25,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(d3dx);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "d3dx_validate_filter",
+    "file": "dlls/d3dx9_36/d3dx_helpers.c",
+    "start_line": 62
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "D3DXLoadSurfaceFromSurface",
+    "impl": [
+     "dlls/d3dx9_36/surface.c:611"
+    ]
+   },
+   {
+    "name": "D3DXLoadVolumeFromVolume",
+    "impl": [
+     "dlls/d3dx9_36/volume.c:247"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "is_pow2"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

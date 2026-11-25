@@ -1,0 +1,213 @@
+{
+ "id": "0448",
+ "function": {
+  "name": "ImageGetDigestStream",
+  "export_name": "ImageGetDigestStream",
+  "module": "imagehlp",
+  "source_module": "imagehlp",
+  "exported_by": [
+   "imagehlp"
+  ],
+  "side": "PE",
+  "file": "dlls/imagehlp/integrity.c",
+  "start_line": 782,
+  "end_line": 882,
+  "body_lines": 98,
+  "signature": "BOOL WINAPI ImageGetDigestStream( HANDLE FileHandle, DWORD DigestLevel, DIGEST_FUNCTION DigestFunction, DIGEST_HANDLE DigestHandle)",
+  "header_comment": "/***********************************************************************\n *\t\tImageGetDigestStream (IMAGEHLP.@)\n *\n * Gets a stream of bytes from a PE file over which a hash might be computed to\n * verify that the image has not changed.  Useful for creating a certificate to\n * be added to the file with ImageAddCertificate.\n *\n * PARAMS\n *  FileHandle     [In] File for which to return a stream.\n *  DigestLevel    [In] Flags to control which portions of the file to return.\n *                      0 is allowed, as is any combination of:\n *                       CERT_PE_IMAGE_DIGEST_ALL_IMPORT_INFO: reports the entire\n *                        import section rather than selected portions of it.\n *                       CERT_PE_IMAGE_DIGEST_DEBUG_INFO: reports the debug section.\n *                       CERT_PE_IMAGE_DIGEST_RESOURCES: reports the resources\n                          section.\n *  DigestFunction [In] Callback function.\n *  DigestHandle   [In] Handle passed as first parameter to DigestFunction.\n *\n * RETURNS\n *  TRUE if successful.\n *  FALSE if unsuccessful.  GetLastError returns more about the error.\n *\n * NOTES\n *  Reports data in the following order:\n *  1. The file headers are reported first\n *  2. Any code sections are reported next.\n *  3. The data (\".data\" and \".rdata\") sections are reported next.\n *  4. The import section is reported next.\n *  5. If CERT_PE_IMAGE_DIGEST_DEBUG_INFO is set in DigestLevel, the debug section is\n *     reported next.\n *  6. If CERT_PE_IMAGE_DIGEST_RESOURCES is set in DigestLevel, the resources section\n *     is reported next.\n *\n * BUGS\n *  CERT_PE_IMAGE_DIGEST_ALL_IMPORT_INFO must be specified, returns an error if not.\n */",
+  "code": "BOOL WINAPI ImageGetDigestStream(\n  HANDLE FileHandle, DWORD DigestLevel,\n  DIGEST_FUNCTION DigestFunction, DIGEST_HANDLE DigestHandle)\n{\n    DWORD error = 0;\n    BOOL ret = FALSE;\n    DWORD offset, size, num_sections, fileSize;\n    HANDLE hMap = INVALID_HANDLE_VALUE;\n    BYTE *map = NULL;\n    IMAGE_DOS_HEADER *dos_hdr;\n    IMAGE_NT_HEADERS *nt_hdr;\n    IMAGE_SECTION_HEADER *section_headers;\n\n    TRACE(\"(%p, %ld, %p, %p)\\n\", FileHandle, DigestLevel, DigestFunction,\n        DigestHandle);\n\n    /* Get the file size */\n    if( !FileHandle )\n        goto invalid_parameter;\n    fileSize = GetFileSize( FileHandle, NULL );\n    if(fileSize == INVALID_FILE_SIZE )\n        goto invalid_parameter;\n\n    /* map file */\n    hMap = CreateFileMappingW( FileHandle, NULL, PAGE_READONLY, 0, 0, NULL );\n    if( hMap == INVALID_HANDLE_VALUE )\n        goto invalid_parameter;\n    map = MapViewOfFile( hMap, FILE_MAP_COPY, 0, 0, 0 );\n    if( !map )\n        goto invalid_parameter;\n\n    /* Read the file header */\n    if( fileSize < sizeof(IMAGE_DOS_HEADER) )\n        goto invalid_parameter;\n    dos_hdr = (IMAGE_DOS_HEADER *)map;\n\n    if( dos_hdr->e_magic != IMAGE_DOS_SIGNATURE )\n        goto invalid_parameter;\n    offset = dos_hdr->e_lfanew;\n    if( !offset || offset > fileSize )\n        goto invalid_parameter;\n    ret = DigestFunction( DigestHandle, map, offset );\n    if( !ret )\n        goto end;\n\n    /* Read the NT header */\n    if( offset + sizeof(IMAGE_NT_HEADERS) > fileSize )\n        goto invalid_parameter;\n    nt_hdr = (IMAGE_NT_HEADERS *)(map + offset);\n    if( nt_hdr->Signature != IMAGE_NT_SIGNATURE )\n        goto invalid_parameter;\n    /* It's clear why the checksum is cleared, but why only these size headers?\n     */\n    nt_hdr->OptionalHeader.SizeOfInitializedData = 0;\n    nt_hdr->OptionalHeader.SizeOfImage = 0;\n    nt_hdr->OptionalHeader.CheckSum = 0;\n    size = sizeof(nt_hdr->Signature) + sizeof(nt_hdr->FileHeader) +\n        nt_hdr->FileHeader.SizeOfOptionalHeader;\n    ret = DigestFunction( DigestHandle, map + offset, size );\n    if( !ret )\n        goto end;\n\n    /* Read the section headers */\n    offset += size;\n    num_sections = nt_hdr->FileHeader.NumberOfSections;\n    size = num_sections * sizeof(IMAGE_SECTION_HEADER);\n    if( offset + size > fileSize )\n        goto invalid_parameter;\n    ret = DigestFunction( DigestHandle, map + offset, size );\n    if( !ret )\n        goto end;\n\n    section_headers = (IMAGE_SECTION_HEADER *)(map + offset);\n    IMAGEHLP_ReportCodeSections( section_headers, num_sections,\n        map, fileSize, DigestFunction, DigestHandle );\n    IMAGEHLP_ReportSection( section_headers, num_sections, \".data\",\n        map, fileSize, DigestFunction, DigestHandle );\n    IMAGEHLP_ReportSection( section_headers, num_sections, \".rdata\",\n        map, fileSize, DigestFunction, DigestHandle );\n    IMAGEHLP_ReportImportSection( section_headers, num_sections,\n        map, fileSize, DigestLevel, DigestFunction, DigestHandle );\n    if( DigestLevel & CERT_PE_IMAGE_DIGEST_DEBUG_INFO )\n        IMAGEHLP_ReportSection( section_headers, num_sections, \".debug\",\n            map, fileSize, DigestFunction, DigestHandle );\n    if( DigestLevel & CERT_PE_IMAGE_DIGEST_RESOURCES )\n        IMAGEHLP_ReportSection( section_headers, num_sections, \".rsrc\",\n            map, fileSize, DigestFunction, DigestHandle );\n\nend:\n    if( map )\n        UnmapViewOfFile( map );\n    if( hMap != INVALID_HANDLE_VALUE )\n        CloseHandle( hMap );\n    if( error )\n        SetLastError(error);\n    return ret;\n\ninvalid_parameter:\n    error = ERROR_INVALID_PARAMETER;\n    goto end;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnt.h\"",
+   "#include \"winver.h\"",
+   "#include \"imagehlp.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "imagehlp!ImageGetDigestStream [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/imagehlp/tests/image.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "imagehlp",
+   "path": "sdk-api-src/content/imagehlp/nf-imagehlp-imagegetdigeststream.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/imagehlp/nf-imagehlp-imagegetdigeststream",
+   "documented_name": "imagegetdigeststream",
+   "file": "docs/0448_sdk-api_nf-imagehlp-imagegetdigeststream.md",
+   "text": "---\nUID: NF:imagehlp.ImageGetDigestStream\ntitle: ImageGetDigestStream function (imagehlp.h)\ndescription: Retrieves the requested data from the specified image file.\nhelpviewer_keywords: [\"CERT_PE_IMAGE_DIGEST_ALL_IMPORT_INFO\",\"CERT_PE_IMAGE_DIGEST_DEBUG_INFO\",\"CERT_PE_IMAGE_DIGEST_RESOURCES\",\"ImageGetDigestStream\",\"ImageGetDigestStream function\",\"_win32_imagegetdigeststream\",\"base.imagegetdigeststream\",\"imagehlp/ImageGetDigestStream\"]\nold-location: base\\imagegetdigeststream.htm\ntech.root: Debug\nms.assetid: e4560609-5b10-453f-a9a6-c5483d88cd64\nms.date: 12/05/2018\nms.keywords: CERT_PE_IMAGE_DIGEST_ALL_IMPORT_INFO, CERT_PE_IMAGE_DIGEST_DEBUG_INFO, CERT_PE_IMAGE_DIGEST_RESOURCES, ImageGetDigestStream, ImageGetDigestStream function, _win32_imagegetdigeststream, base.imagegetdigeststream, imagehlp/ImageGetDigestStream\nreq.header: imagehlp.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Imagehlp.lib\nreq.dll: Imagehlp.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ImageGetDigestStream\n - imagehlp/ImageGetDigestStream\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Imagehlp.dll\napi_name:\n - ImageGetDigestStream\n---\n\n# ImageGetDigestStream function\n\n\n## -description\n\nRetrieves the requested data from the specified image file.\n\n## -parameters\n\n### -param FileHandle [in]\n\nA handle to the image file. This handle must be opened for FILE_READ_DATA access.\n\n### -param DigestLevel [in]\n\nThe aspects of the image that are to be included in the returned data stream. This parameter can be one or more of the following values. \n\n\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"CERT_PE_IMAGE_DIGEST_ALL_IMPORT_INFO\"></a><a id=\"cert_pe_image_digest_all_import_info\"></a><dl>\n<dt><b>CERT_PE_IMAGE_DIGEST_ALL_IMPORT_INFO</b></dt>\n<dt>0x04</dt>\n</dl>\n</td>\n<td width=\"60%\">\nInclude all import information.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"CERT_PE_IMAGE_DIGEST_DEBUG_INFO\"></a><a id=\"cert_pe_image_digest_debug_info\"></a><dl>\n<dt><b>CERT_PE_IMAGE_DIGEST_DEBUG_INFO</b></dt>\n<dt>0x01</dt>\n</dl>\n</td>\n<td width=\"60%\">\nInclude symbolic debugging information.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"CERT_PE_IMAGE_DIGEST_RESOURCES\"></a><a id=\"cert_pe_image_digest_resources\"></a><dl>\n<dt><b>CERT_PE_IMAGE_DIGEST_RESOURCES</b></dt>\n<dt>0x02</dt>\n</dl>\n</td>\n<td width=\"60%\">\nInclude resource information.\n\n</td>\n</tr>\n</table>\n\n### -param DigestFunction [in]\n\nA pointer to a callback routine to process the data. For more information, see \n<a href=\"/windows/desktop/api/imagehlp/nc-imagehlp-digest_function\">DigestFunction</a>.\n\n### -param DigestHandle [in]\n\n A user-supplied handle to the digest. This parameter is passed to <a href=\"/windows/desktop/api/imagehlp/nc-imagehlp-digest_function\">DigestFunction</a> as the first argument.\n\n## -returns\n\nIf the function succeeds, the return value is <b>TRUE</b>.\n\nIf the function fails, the return value is <b>FALSE</b>. To retrieve extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThe \n<b>ImageGetDigestStream</b> function returns the data to be digested from a specified image file, subject to the passed <i>DigestLevel</i> parameter. The order of the bytes will be consistent for different calls, which is required to ensure that the same message digest is always produced from the retrieved byte stream.\n\nTo ensure cross-platform compatibility, all implementations of this function must behave in a consistent manner with respect to the order in which the various parts of the image file are returned.\n\nData should be returned in the following order:\n\n<ol>\n<li>Image (executable and static data) information.</li>\n<li>Resource data.</li>\n<li>Debugging information.</li>\n</ol>\nIf any of these are not specified, the remaining parts must be returned in the same order.\n\nAll ImageHlp functions, such as this one, are single threaded. Therefore, calls from more than one thread to this function will likely result in unexpected behavior or memory corruption. To avoid this, you must synchronize all concurrent calls from more than one thread to this function.\n\n## -see-also\n\n<a href=\"/windows/desktop/Debug/imagehlp-functions\">ImageHlp Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "IMAGEHLP_ReportCodeSections",
+   "file": "dlls/imagehlp/integrity.c",
+   "start_line": 693,
+   "end_line": 706,
+   "static": true,
+   "called_from": [
+    "ImageGetDigestStream"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL IMAGEHLP_ReportCodeSections( IMAGE_SECTION_HEADER *hdr, DWORD num_sections, BYTE *map, DWORD fileSize, DIGEST_FUNCTION DigestFunction, DIGEST_HANDLE DigestHandle )",
+   "code": "static BOOL IMAGEHLP_ReportCodeSections( IMAGE_SECTION_HEADER *hdr, DWORD num_sections,\n    BYTE *map, DWORD fileSize, DIGEST_FUNCTION DigestFunction, DIGEST_HANDLE DigestHandle )\n{\n    DWORD i;\n    BOOL ret = TRUE;\n\n    for( i = 0; ret && i < num_sections; i++, hdr++ )\n    {\n        if( hdr->Characteristics & IMAGE_SCN_CNT_CODE )\n            ret = IMAGEHLP_ReportSectionFromOffset( hdr->PointerToRawData,\n                hdr->SizeOfRawData, map, fileSize, DigestFunction, DigestHandle );\n    }\n    return ret;\n}"
+  },
+  {
+   "name": "IMAGEHLP_ReportSection",
+   "file": "dlls/imagehlp/integrity.c",
+   "start_line": 676,
+   "end_line": 688,
+   "static": true,
+   "called_from": [
+    "ImageGetDigestStream"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL IMAGEHLP_ReportSection( IMAGE_SECTION_HEADER *section_headers, DWORD num_sections, LPCSTR section, BYTE *map, DWORD fileSize, DIGEST_FUNCTION DigestFunction, DIGEST_HANDLE DigestHandle )",
+   "code": "static BOOL IMAGEHLP_ReportSection( IMAGE_SECTION_HEADER *section_headers,\n    DWORD num_sections, LPCSTR section, BYTE *map, DWORD fileSize,\n    DIGEST_FUNCTION DigestFunction, DIGEST_HANDLE DigestHandle )\n{\n    DWORD offset, size = 0;\n\n    offset = IMAGEHLP_GetSectionOffset( section_headers, num_sections, section,\n        &size, NULL );\n    if( !offset )\n        return FALSE;\n    return IMAGEHLP_ReportSectionFromOffset( offset, size, map, fileSize,\n            DigestFunction, DigestHandle );\n}"
+  },
+  {
+   "name": "IMAGEHLP_ReportImportSection",
+   "file": "dlls/imagehlp/integrity.c",
+   "start_line": 713,
+   "end_line": 743,
+   "static": true,
+   "called_from": [
+    "ImageGetDigestStream"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL IMAGEHLP_ReportImportSection( IMAGE_SECTION_HEADER *hdr, DWORD num_sections, BYTE *map, DWORD fileSize, DWORD DigestLevel, DIGEST_FUNCTION DigestFunction, DIGEST_HANDLE DigestHandle )",
+   "code": "static BOOL IMAGEHLP_ReportImportSection( IMAGE_SECTION_HEADER *hdr,\n    DWORD num_sections, BYTE *map, DWORD fileSize, DWORD DigestLevel,\n    DIGEST_FUNCTION DigestFunction, DIGEST_HANDLE DigestHandle )\n{\n    BOOL ret = FALSE;\n    DWORD offset, size, base;\n\n    /* Get import data */\n    offset = IMAGEHLP_GetSectionOffset( hdr, num_sections, \".idata\", &size,\n        &base );\n    if( !offset )\n        return FALSE;\n\n    /* If CERT_PE_IMAGE_DIGEST_ALL_IMPORT_INFO is set, the entire\n     * section is reported.  Otherwise, the debug info section is\n     * decoded and reported piecemeal.  See tests.  However, I haven't been\n     * able to figure out how the native implementation decides which values\n     * to report.  Either it's buggy or my understanding is flawed.\n     */\n    if( DigestLevel & CERT_PE_IMAGE_DIGEST_ALL_IMPORT_INFO )\n        ret = IMAGEHLP_ReportSectionFromOffset( offset, size, map, fileSize,\n                DigestFunction, DigestHandle );\n    else\n    {\n        FIXME(\"not supported except for CERT_PE_IMAGE_DIGEST_ALL_IMPORT_INFO\\n\");\n        SetLastError(ERROR_INVALID_PARAMETER);\n        ret = FALSE;\n    }\n\n    return ret;\n}"
+  },
+  {
+   "name": "IMAGEHLP_ReportSectionFromOffset",
+   "file": "dlls/imagehlp/integrity.c",
+   "start_line": 661,
+   "end_line": 670,
+   "static": true,
+   "called_from": [
+    "IMAGEHLP_ReportCodeSections",
+    "IMAGEHLP_ReportImportSection",
+    "IMAGEHLP_ReportSection"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL IMAGEHLP_ReportSectionFromOffset( DWORD offset, DWORD size, BYTE *map, DWORD fileSize, DIGEST_FUNCTION DigestFunction, DIGEST_HANDLE DigestHandle )",
+   "code": "static BOOL IMAGEHLP_ReportSectionFromOffset( DWORD offset, DWORD size,\n    BYTE *map, DWORD fileSize, DIGEST_FUNCTION DigestFunction, DIGEST_HANDLE DigestHandle )\n{\n    if( offset + size > fileSize )\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return FALSE;\n    }\n    return DigestFunction( DigestHandle, map + offset, size );\n}"
+  },
+  {
+   "name": "IMAGEHLP_GetSectionOffset",
+   "file": "dlls/imagehlp/integrity.c",
+   "start_line": 639,
+   "end_line": 656,
+   "static": true,
+   "called_from": [
+    "IMAGEHLP_ReportImportSection",
+    "IMAGEHLP_ReportSection"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static DWORD IMAGEHLP_GetSectionOffset( IMAGE_SECTION_HEADER *hdr, DWORD num_sections, LPCSTR section, PDWORD size, PDWORD base )",
+   "code": "static DWORD IMAGEHLP_GetSectionOffset( IMAGE_SECTION_HEADER *hdr,\n    DWORD num_sections, LPCSTR section, PDWORD size, PDWORD base )\n{\n    DWORD i, offset = 0;\n\n    for( i = 0; !offset && i < num_sections; i++, hdr++ )\n    {\n        if( !memcmp( hdr->Name, section, strlen(section) ) )\n        {\n            offset = hdr->PointerToRawData;\n            if( size )\n                *size = hdr->SizeOfRawData;\n            if( base )\n                *base = hdr->VirtualAddress;\n        }\n    }\n    return offset;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(imagehlp);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "CloseHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "CreateFileMappingW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/sync.c:1032"
+    ]
+   },
+   {
+    "name": "GetFileSize",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:3257"
+    ]
+   },
+   {
+    "name": "MapViewOfFile",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:279"
+    ]
+   },
+   {
+    "name": "UnmapViewOfFile",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:385"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   },
+   {
+    "name": "strlen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:423"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "DigestFunction",
+    "in_function": "ImageGetDigestStream",
+    "at": "dlls/imagehlp/integrity.c:823",
+    "candidates": []
+   }
+  ]
+ }
+}

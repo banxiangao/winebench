@@ -1,0 +1,307 @@
+{
+ "id": "0031",
+ "function": {
+  "name": "MFCreateMediaSession",
+  "export_name": "MFCreateMediaSession",
+  "module": "mf",
+  "source_module": "mf",
+  "exported_by": [
+   "mf"
+  ],
+  "side": "PE",
+  "file": "dlls/mf/session.c",
+  "start_line": 5091,
+  "end_line": 5187,
+  "body_lines": 94,
+  "signature": "HRESULT WINAPI MFCreateMediaSession(IMFAttributes *config, IMFMediaSession **session)",
+  "header_comment": "/***********************************************************************\n *      MFCreateMediaSession (mf.@)\n */",
+  "code": "HRESULT WINAPI MFCreateMediaSession(IMFAttributes *config, IMFMediaSession **session)\n{\n    BOOL without_quality_manager = FALSE;\n    struct media_session *object;\n    HRESULT hr;\n\n    TRACE(\"%p, %p.\\n\", config, session);\n\n    if (!(object = calloc(1, sizeof(*object))))\n        return E_OUTOFMEMORY;\n\n    object->IMFMediaSession_iface.lpVtbl = &mfmediasessionvtbl;\n    object->IMFGetService_iface.lpVtbl = &session_get_service_vtbl;\n    object->IMFRateSupport_iface.lpVtbl = &session_rate_support_vtbl;\n    object->IMFRateControl_iface.lpVtbl = &session_rate_control_vtbl;\n    object->IMFTopologyNodeAttributeEditor_iface.lpVtbl = &node_attribute_editor_vtbl;\n    object->commands_callback.lpVtbl = &session_commands_callback_vtbl;\n    object->sa_ready_callback.lpVtbl = &session_sa_ready_callback_vtbl;\n    object->events_callback.lpVtbl = &session_events_callback_vtbl;\n    object->sink_finalizer_callback.lpVtbl = &session_sink_finalizer_callback_vtbl;\n    object->refcount = 1;\n    list_init(&object->topologies);\n    list_init(&object->removed_topologies);\n    list_init(&object->commands);\n    list_init(&object->presentation.sources);\n    list_init(&object->presentation.sinks);\n    list_init(&object->presentation.nodes);\n    object->presentation.rate = 1.0f;\n    InitializeCriticalSection(&object->cs);\n\n    if (FAILED(hr = MFCreateTopology(&object->presentation.current_topology)))\n        goto failed;\n\n    if (FAILED(hr = MFCreateEventQueue(&object->event_queue)))\n        goto failed;\n\n    if (FAILED(hr = MFCreatePresentationClock(&object->clock)))\n        goto failed;\n\n    if (FAILED(hr = MFCreateSystemTimeSource(&object->system_time_source)))\n        goto failed;\n\n    if (FAILED(hr = IMFPresentationClock_QueryInterface(object->clock, &IID_IMFRateControl,\n            (void **)&object->clock_rate_control)))\n    {\n        goto failed;\n    }\n\n    if (config)\n    {\n        GUID clsid;\n\n        if (SUCCEEDED(IMFAttributes_GetGUID(config, &MF_SESSION_TOPOLOADER, &clsid)))\n        {\n            if (FAILED(hr = CoCreateInstance(&clsid, NULL, CLSCTX_INPROC_SERVER, &IID_IMFTopoLoader,\n                    (void **)&object->topo_loader)))\n            {\n                WARN(\"Failed to create custom topology loader, hr %#lx.\\n\", hr);\n            }\n        }\n\n        if (SUCCEEDED(IMFAttributes_GetGUID(config, &MF_SESSION_QUALITY_MANAGER, &clsid)))\n        {\n            if (!(without_quality_manager = IsEqualGUID(&clsid, &GUID_NULL)))\n            {\n                if (FAILED(hr = CoCreateInstance(&clsid, NULL, CLSCTX_INPROC_SERVER, &IID_IMFQualityManager,\n                        (void **)&object->quality_manager)))\n                {\n                    WARN(\"Failed to create custom quality manager, hr %#lx.\\n\", hr);\n                }\n            }\n        }\n    }\n\n    if (!object->topo_loader && FAILED(hr = MFCreateTopoLoader(&object->topo_loader)))\n        goto failed;\n\n    if (!object->quality_manager && !without_quality_manager &&\n            FAILED(hr = MFCreateStandardQualityManager(&object->quality_manager)))\n    {\n        goto failed;\n    }\n\n    if (object->quality_manager && FAILED(hr = IMFQualityManager_NotifyPresentationClock(object->quality_manager,\n            object->clock)))\n    {\n        goto failed;\n    }\n\n    *session = &object->IMFMediaSession_iface;\n\n    return S_OK;\n\nfailed:\n    IMFMediaSession_Release(&object->IMFMediaSession_iface);\n    return hr;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <math.h>",
+   "#include <float.h>",
+   "#include <assert.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"mfidl.h\"",
+   "#include \"evr.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/mfinternal.h\"",
+   "#include \"mf_private.h\"",
+   "#include \"initguid.h\""
+  ],
+  "resolution": [
+   "mf!MFCreateMediaSession [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/mf/tests/mf.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 15
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "mfidl",
+   "path": "sdk-api-src/content/mfidl/nf-mfidl-mfcreatemediasession.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/mfidl/nf-mfidl-mfcreatemediasession",
+   "documented_name": "mfcreatemediasession",
+   "file": "docs/0031_sdk-api_nf-mfidl-mfcreatemediasession.md",
+   "text": "---\nUID: NF:mfidl.MFCreateMediaSession\ntitle: MFCreateMediaSession function (mfidl.h)\ndescription: Creates the Media Session in the application's process.\nhelpviewer_keywords: [\"86b2b5ec-231c-4943-9add-1a5a60e72268\",\"MFCreateMediaSession\",\"MFCreateMediaSession function [Media Foundation]\",\"mf.mfcreatemediasession\",\"mfidl/MFCreateMediaSession\"]\nold-location: mf\\mfcreatemediasession.htm\ntech.root: mf\nms.assetid: 86b2b5ec-231c-4943-9add-1a5a60e72268\nms.date: 12/05/2018\nms.keywords: 86b2b5ec-231c-4943-9add-1a5a60e72268, MFCreateMediaSession, MFCreateMediaSession function [Media Foundation], mf.mfcreatemediasession, mfidl/MFCreateMediaSession\nreq.header: mfidl.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps only]\nreq.target-min-winversvr: Windows Server 2008 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Mf.lib\nreq.dll: Mf.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - MFCreateMediaSession\n - mfidl/MFCreateMediaSession\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - mf.dll\napi_name:\n - MFCreateMediaSession\n---\n\n# MFCreateMediaSession function\n\n\n## -description\n\nCreates the <a href=\"/windows/desktop/medfound/media-session\">Media Session</a> in the application's process.\n\n## -parameters\n\n### -param pConfiguration\n\nPointer to the <a href=\"/windows/desktop/api/mfobjects/nn-mfobjects-imfattributes\">IMFAttributes</a> interface. This parameter can be <b>NULL</b>. See Remarks.\n\n### -param ppMediaSession\n\nReceives a pointer to the Media Session's <a href=\"/windows/desktop/api/mfidl/nn-mfidl-imfmediasession\">IMFMediaSession</a> interface. The caller must release the interface. Before releasing the last reference to the <b>IMFMediaSession</b> pointer, the application must call the <a href=\"/windows/desktop/api/mfidl/nf-mfidl-imfmediasession-shutdown\">IMFMediaSession::Shutdown</a> method.\n\n## -returns\n\nThe function returns an <b>HRESULT</b>. Possible values include, but are not limited to, those in the following table.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>S_OK</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe function succeeded.\n              \n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nIf your application does not play protected content, you can use this function to create the Media Session in the application's process. To use the Media Session for protected content, you must call <a href=\"/windows/desktop/api/mfidl/nf-mfidl-mfcreatepmpmediasession\">MFCreatePMPMediaSession</a>.\n      \n\nYou can use the <i>pConfiguration</i> parameter to specify any of the following attributes:\n      \n        \n\n<ul>\n<li>\n<a href=\"/windows/desktop/medfound/mf-session-global-time-attribute\">MF_SESSION_GLOBAL_TIME</a>\n</li>\n<li>\n<a href=\"/windows/desktop/medfound/mf-session-quality-manager-attribute\">MF_SESSION_QUALITY_MANAGER</a>\n</li>\n<li>\n<a href=\"/windows/desktop/medfound/mf-session-topoloader-attribute\">MF_SESSION_TOPOLOADER</a>\n</li>\n<li>\n<a href=\"/windows/desktop/medfound/mf-low-latency\">MF_LOW_LATENCY</a>\n</li>\n</ul>\n\n## -see-also\n\n<a href=\"/windows/desktop/medfound/about-the-media-session\">About the Media Session</a>\n\n\n\n<a href=\"/windows/desktop/api/mfidl/nf-mfidl-mfcreatepmpmediasession\">MFCreatePMPMediaSession</a>\n\n\n\n<a href=\"/windows/desktop/medfound/media-foundation-functions\">Media Foundation Functions</a>\n\n\n\n<a href=\"/windows/desktop/medfound/media-session\">Media Session</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "media_session",
+    "kind": "struct_decl",
+    "start_line": 249,
+    "end_line": 293,
+    "code": "struct media_session\n{\n    IMFMediaSession IMFMediaSession_iface;\n    IMFGetService IMFGetService_iface;\n    IMFRateSupport IMFRateSupport_iface;\n    IMFRateControl IMFRateControl_iface;\n    IMFTopologyNodeAttributeEditor IMFTopologyNodeAttributeEditor_iface;\n    IMFAsyncCallback commands_callback;\n    IMFAsyncCallback sa_ready_callback;\n    IMFAsyncCallback events_callback;\n    IMFAsyncCallback sink_finalizer_callback;\n    LONG refcount;\n    IMFMediaEventQueue *event_queue;\n    IMFPresentationClock *clock;\n    IMFPresentationTimeSource *system_time_source;\n    IMFRateControl *clock_rate_control;\n    IMFTopoLoader *topo_loader;\n    IMFQualityManager *quality_manager;\n    struct\n    {\n        IMFTopology *current_topology;\n        MF_TOPOSTATUS topo_status;\n        MFTIME clock_stop_time;\n        unsigned int flags;\n        struct list sources;\n        struct list sinks;\n        struct list nodes;\n\n        /* Latest Start() arguments. */\n        GUID time_format;\n        PROPVARIANT start_position;\n        /* Latest SetRate() arguments. */\n        BOOL thin;\n        float rate;\n\n        BOOL thin_committed;\n    } presentation;\n    struct list topologies;\n    struct list removed_topologies;\n    struct list commands;\n    enum session_state state;\n    enum command_state command_state;\n    DWORD caps;\n    CRITICAL_SECTION cs;\n};"
+   },
+   {
+    "name": "struct (unnamed at /home/claude/wine_src/dlls/mf/session.c:267:5)",
+    "kind": "struct_decl",
+    "start_line": 267,
+    "end_line": 285,
+    "code": "    struct\n    {\n        IMFTopology *current_topology;\n        MF_TOPOSTATUS topo_status;\n        MFTIME clock_stop_time;\n        unsigned int flags;\n        struct list sources;\n        struct list sinks;\n        struct list nodes;\n\n        /* Latest Start() arguments. */\n        GUID time_format;\n        PROPVARIANT start_position;\n        /* Latest SetRate() arguments. */\n        BOOL thin;\n        float rate;\n\n        BOOL thin_committed;\n    } presentation;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 41,
+    "end_line": 41,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(mfplat);"
+   },
+   {
+    "name": "mfmediasessionvtbl",
+    "type": "const IMFMediaSessionVtbl",
+    "static": true,
+    "start_line": 2631,
+    "end_line": 2650,
+    "code": "static const IMFMediaSessionVtbl mfmediasessionvtbl =\n{\n    mfsession_QueryInterface,\n    mfsession_AddRef,\n    mfsession_Release,\n    mfsession_GetEvent,\n    mfsession_BeginGetEvent,\n    mfsession_EndGetEvent,\n    mfsession_QueueEvent,\n    mfsession_SetTopology,\n    mfsession_ClearTopologies,\n    mfsession_Start,\n    mfsession_Pause,\n    mfsession_Stop,\n    mfsession_Close,\n    mfsession_Shutdown,\n    mfsession_GetClock,\n    mfsession_GetSessionCapabilities,\n    mfsession_GetFullTopology,\n};"
+   },
+   {
+    "name": "node_attribute_editor_vtbl",
+    "type": "const IMFTopologyNodeAttributeEditorVtbl",
+    "static": true,
+    "start_line": 5080,
+    "end_line": 5086,
+    "code": "static const IMFTopologyNodeAttributeEditorVtbl node_attribute_editor_vtbl =\n{\n    node_attribute_editor_QueryInterface,\n    node_attribute_editor_AddRef,\n    node_attribute_editor_Release,\n    node_attribute_editor_UpdateNodeAttributes,\n};"
+   },
+   {
+    "name": "session_commands_callback_vtbl",
+    "type": "const IMFAsyncCallbackVtbl",
+    "static": true,
+    "start_line": 2916,
+    "end_line": 2923,
+    "code": "static const IMFAsyncCallbackVtbl session_commands_callback_vtbl =\n{\n    session_commands_callback_QueryInterface,\n    session_commands_callback_AddRef,\n    session_commands_callback_Release,\n    session_commands_callback_GetParameters,\n    session_commands_callback_Invoke,\n};"
+   },
+   {
+    "name": "session_events_callback_vtbl",
+    "type": "const IMFAsyncCallbackVtbl",
+    "static": true,
+    "start_line": 4749,
+    "end_line": 4756,
+    "code": "static const IMFAsyncCallbackVtbl session_events_callback_vtbl =\n{\n    session_events_callback_QueryInterface,\n    session_events_callback_AddRef,\n    session_events_callback_Release,\n    session_events_callback_GetParameters,\n    session_events_callback_Invoke,\n};"
+   },
+   {
+    "name": "session_get_service_vtbl",
+    "type": "const IMFGetServiceVtbl",
+    "static": true,
+    "start_line": 2806,
+    "end_line": 2812,
+    "code": "static const IMFGetServiceVtbl session_get_service_vtbl =\n{\n    session_get_service_QueryInterface,\n    session_get_service_AddRef,\n    session_get_service_Release,\n    session_get_service_GetService,\n};"
+   },
+   {
+    "name": "session_rate_control_vtbl",
+    "type": "const IMFRateControlVtbl",
+    "static": true,
+    "start_line": 5033,
+    "end_line": 5040,
+    "code": "static const IMFRateControlVtbl session_rate_control_vtbl =\n{\n    session_rate_control_QueryInterface,\n    session_rate_control_AddRef,\n    session_rate_control_Release,\n    session_rate_control_SetRate,\n    session_rate_control_GetRate,\n};"
+   },
+   {
+    "name": "session_rate_support_vtbl",
+    "type": "const IMFRateSupportVtbl",
+    "static": true,
+    "start_line": 4975,
+    "end_line": 4983,
+    "code": "static const IMFRateSupportVtbl session_rate_support_vtbl =\n{\n    session_rate_support_QueryInterface,\n    session_rate_support_AddRef,\n    session_rate_support_Release,\n    session_rate_support_GetSlowestRate,\n    session_rate_support_GetFastestRate,\n    session_rate_support_IsRateSupported,\n};"
+   },
+   {
+    "name": "session_sa_ready_callback_vtbl",
+    "type": "const IMFAsyncCallbackVtbl",
+    "static": true,
+    "start_line": 2979,
+    "end_line": 2986,
+    "code": "static const IMFAsyncCallbackVtbl session_sa_ready_callback_vtbl =\n{\n    session_sa_ready_callback_QueryInterface,\n    session_sa_ready_callback_AddRef,\n    session_sa_ready_callback_Release,\n    session_sa_ready_callback_GetParameters,\n    session_sa_ready_callback_Invoke,\n};"
+   },
+   {
+    "name": "session_sink_finalizer_callback_vtbl",
+    "type": "const IMFAsyncCallbackVtbl",
+    "static": true,
+    "start_line": 4838,
+    "end_line": 4845,
+    "code": "static const IMFAsyncCallbackVtbl session_sink_finalizer_callback_vtbl =\n{\n    session_sink_finalizer_callback_QueryInterface,\n    session_sink_finalizer_callback_AddRef,\n    session_sink_finalizer_callback_Release,\n    session_sink_finalizer_callback_GetParameters,\n    session_sink_finalizer_callback_Invoke,\n};"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "MFCreatePresentationClock",
+    "impl": [
+     "dlls/mf/clock.c:1091"
+    ]
+   },
+   {
+    "name": "MFCreateStandardQualityManager",
+    "impl": [
+     "dlls/mf/quality.c:294"
+    ]
+   },
+   {
+    "name": "MFCreateTopoLoader",
+    "impl": [
+     "dlls/mf/topology_loader.c:1228"
+    ]
+   },
+   {
+    "name": "MFCreateTopology",
+    "impl": [
+     "dlls/mf/topology.c:901"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CoCreateInstance",
+    "module": "ole32",
+    "impl": [
+     "dlls/combase/combase.c:1695"
+    ]
+   },
+   {
+    "name": "InitializeCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:200"
+    ]
+   },
+   {
+    "name": "MFCreateEventQueue",
+    "module": "mfplat",
+    "impl": [
+     "dlls/mfplat/main.c:7659"
+    ]
+   },
+   {
+    "name": "MFCreateSystemTimeSource",
+    "module": "mfplat",
+    "impl": [
+     "dlls/mfplat/main.c:8373"
+    ]
+   },
+   {
+    "name": "calloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   }
+  ],
+  "header_inline": [
+   "IMFAttributes_GetGUID",
+   "IMFMediaSession_Release",
+   "IMFPresentationClock_QueryInterface",
+   "IMFQualityManager_NotifyPresentationClock",
+   "list_init",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "mf.MFCreateMediaSession",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "Microsoft Media Foundation",
+   "header": "mfidl.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 97,
+   "body": 96,
+   "code": 59
+  },
+  "cyclomatic": 20,
+  "return_type": "HRESULT",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 15,
+   "n_tests": 15,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/mf/tests/mf.c::test_async_transform",
+    "dlls/mf/tests/mf.c::test_h264_output_alignment",
+    "dlls/mf/tests/mf.c::test_media_session",
+    "dlls/mf/tests/mf.c::test_media_session_Close",
+    "dlls/mf/tests/mf.c::test_media_session_Start",
+    "dlls/mf/tests/mf.c::test_media_session_events",
+    "dlls/mf/tests/mf.c::test_media_session_invalid_topology",
+    "dlls/mf/tests/mf.c::test_media_session_rate_control",
+    "dlls/mf/tests/mf.c::test_media_session_sample_request",
+    "dlls/mf/tests/mf.c::test_media_session_scrubbing",
+    "dlls/mf/tests/mf.c::test_media_session_seek",
+    "dlls/mf/tests/mf.c::test_media_session_sink_shutdown",
+    "dlls/mf/tests/mf.c::test_media_session_source_shutdown",
+    "dlls/mf/tests/mf.c::test_media_session_thinning",
+    "dlls/mf/tests/mf.c::test_sample_grabber_orientation"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/mfidl/nf-mfidl-mfcreatemediasession",
+   "source": "win32",
+   "description": "Creates the Media Session in the application's process.",
+   "min_windows": "Windows Vista [desktop apps only]",
+   "documented_dll": "Mf.dll"
+  },
+  "exports": [
+   "mf.MFCreateMediaSession"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

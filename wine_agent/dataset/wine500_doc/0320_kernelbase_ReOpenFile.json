@@ -1,0 +1,133 @@
+{
+ "id": "0320",
+ "function": {
+  "name": "ReOpenFile",
+  "export_name": "ReOpenFile",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/file.c",
+  "start_line": 3527,
+  "end_line": 3564,
+  "body_lines": 35,
+  "signature": "HANDLE WINAPI DECLSPEC_HOTPATCH ReOpenFile( HANDLE handle, DWORD access, DWORD sharing, DWORD attributes )",
+  "header_comment": "/***********************************************************************\n *\tReOpenFile   (kernelbase.@)\n */",
+  "code": "HANDLE WINAPI DECLSPEC_HOTPATCH ReOpenFile( HANDLE handle, DWORD access, DWORD sharing, DWORD attributes )\n{\n    SECURITY_QUALITY_OF_SERVICE qos;\n    OBJECT_ATTRIBUTES attr;\n    UNICODE_STRING empty = { 0 };\n    IO_STATUS_BLOCK io;\n    NTSTATUS status;\n    HANDLE file;\n\n    TRACE(\"handle %p, access %#lx, sharing %#lx, attributes %#lx.\\n\", handle, access, sharing, attributes);\n\n    if (attributes & 0x7ffff) /* FILE_ATTRIBUTE_* flags are invalid */\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return INVALID_HANDLE_VALUE;\n    }\n\n    if (attributes & FILE_FLAG_DELETE_ON_CLOSE)\n        access |= DELETE;\n\n    InitializeObjectAttributes( &attr, &empty, OBJ_CASE_INSENSITIVE, handle, NULL );\n    if (attributes & SECURITY_SQOS_PRESENT)\n    {\n        qos.Length = sizeof(qos);\n        qos.ImpersonationLevel = (attributes >> 16) & 0x3;\n        qos.ContextTrackingMode = attributes & SECURITY_CONTEXT_TRACKING ? SECURITY_DYNAMIC_TRACKING : SECURITY_STATIC_TRACKING;\n        qos.EffectiveOnly = (attributes & SECURITY_EFFECTIVE_ONLY) != 0;\n        attr.SecurityQualityOfService = &qos;\n    }\n\n    status = NtCreateFile( &file, access | SYNCHRONIZE | FILE_READ_ATTRIBUTES, &attr, &io, NULL,\n                           0, sharing, FILE_OPEN,\n                           FILE_NON_DIRECTORY_FILE | get_nt_file_options( attributes, OPEN_EXISTING ),\n                           NULL, 0 );\n    if (!set_ntstatus( status ))\n        return INVALID_HANDLE_VALUE;\n    return file;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include \"winerror.h\"",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"wincon.h\"",
+   "#include \"fileapi.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"ddk/ntddser.h\"",
+   "#include \"ioringapi.h\"",
+   "#include \"ddk/ntifs.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!ReOpenFile [stdcall -import] -> import from kernelbase",
+   "kernelbase!ReOpenFile [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/file.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winbase",
+   "path": "sdk-api-src/content/winbase/nf-winbase-reopenfile.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-reopenfile",
+   "documented_name": "reopenfile",
+   "file": "docs/0320_sdk-api_nf-winbase-reopenfile.md",
+   "text": "---\nUID: NF:winbase.ReOpenFile\ntitle: ReOpenFile function (winbase.h)\ndescription: Reopens the specified file system object with different access rights, sharing mode, and flags.\nhelpviewer_keywords: [\"FILE_FLAG_BACKUP_SEMANTICS\",\"FILE_FLAG_DELETE_ON_CLOSE\",\"FILE_FLAG_NO_BUFFERING\",\"FILE_FLAG_OPEN_NO_RECALL\",\"FILE_FLAG_OPEN_REPARSE_POINT\",\"FILE_FLAG_OVERLAPPED\",\"FILE_FLAG_POSIX_SEMANTICS\",\"FILE_FLAG_RANDOM_ACCESS\",\"FILE_FLAG_SEQUENTIAL_SCAN\",\"FILE_FLAG_WRITE_THROUGH\",\"FILE_SHARE_DELETE\",\"FILE_SHARE_READ\",\"FILE_SHARE_WRITE\",\"ReOpenFile\",\"ReOpenFile function [Files]\",\"SECURITY_ANONYMOUS\",\"SECURITY_CONTEXT_TRACKING\",\"SECURITY_DELEGATION\",\"SECURITY_EFFECTIVE_ONLY\",\"SECURITY_IDENTIFICATION\",\"SECURITY_IMPERSONATION\",\"base.reopenfile\",\"fs.reopenfile\",\"winbase/ReOpenFile\"]\nold-location: fs\\reopenfile.htm\ntech.root: fs\nms.assetid: 56d8a4b1-e3b5-4134-8d21-bf40761e9dcc\nms.date: 12/05/2018\nms.keywords: FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_DELETE_ON_CLOSE, FILE_FLAG_NO_BUFFERING, FILE_FLAG_OPEN_NO_RECALL, FILE_FLAG_OPEN_REPARSE_POINT, FILE_FLAG_OVERLAPPED, FILE_FLAG_POSIX_SEMANTICS, FILE_FLAG_RANDOM_ACCESS, FILE_FLAG_SEQUENTIAL_SCAN, FILE_FLAG_WRITE_THROUGH, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, ReOpenFile, ReOpenFile function [Files], SECURITY_ANONYMOUS, SECURITY_CONTEXT_TRACKING, SECURITY_DELEGATION, SECURITY_EFFECTIVE_ONLY, SECURITY_IDENTIFICATION, SECURITY_IMPERSONATION, base.reopenfile, fs.reopenfile, winbase/ReOpenFile\nreq.header: winbase.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ReOpenFile\n - winbase/ReOpenFile\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-file-l2-1-4.dll\n - api-ms-win-core-file-l2-1-3.dll\n - Kernel32.dll\n - API-MS-Win-Core-File-l2-1-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-File-l2-1-1.dll\n - API-MS-Win-Core-File-l2-1-2.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\napi_name:\n - ReOpenFile\n---\n\n# ReOpenFile function\n\n\n## -description\n\nReopens the specified file system object with different access rights, sharing mode, and \n    flags.\n\n## -parameters\n\n### -param hOriginalFile [in]\n\nA handle to the object to be reopened. The object must have been created by the \n       <a href=\"/windows/desktop/api/fileapi/nf-fileapi-createfilea\">CreateFile</a> function.\n\n### -param dwDesiredAccess [in]\n\nThe required access to the object. For a list of values, see \n\t      <a href=\"/windows/desktop/FileIO/file-security-and-access-rights\">File Security and Access Rights</a>. You \n\t      cannot request an access mode that conflicts with the sharing mode specified in a previous open request whose \n\t      handle is still open.\n\nIf this parameter is zero (0), the application can query device attributes without accessing the device. This \n       is useful if an application wants to determine the size of a floppy disk drive and the formats it supports \n       without requiring a floppy in the drive.\n\n### -param dwShareMode [in]\n\nThe sharing mode of the object. You cannot request a sharing mode that conflicts with the access mode \n       specified in a previous open request whose handle is still open.\n\nIf this parameter is zero (0) and <a href=\"/windows/desktop/api/fileapi/nf-fileapi-createfilea\">CreateFile</a> succeeds, \n       the object cannot be shared and cannot be opened again until the handle is closed.\n\nTo enable other processes to share the object while your process has it open, use a combination of one or \n       more of the following values to specify the type of access they can request when they open the object. These \n       sharing options remain in effect until you close the handle to the object.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"FILE_SHARE_DELETE\"></a><a id=\"file_share_delete\"></a><dl>\n<dt><b>FILE_SHARE_DELETE</b></dt>\n<dt>0x00000004</dt>\n</dl>\n</td>\n<td width=\"60%\">\nEnables subsequent open operations on the object to request delete access. Otherwise, other processes \n         cannot open the object if they request delete access.\n\nIf the object has already been opened with delete access, the sharing mode must include this flag.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"FILE_SHARE_READ\"></a><a id=\"file_share_read\"></a><dl>\n<dt><b>FILE_SHARE_READ</b></dt>\n<dt>0x00000001</dt>\n</dl>\n</td>\n<td width=\"60%\">\nEnables subsequent open operations on the object to request read access. Otherwise, other processes cannot \n         open the object if they request read access.\n\nIf the object has already been opened with read access, the sharing mode must include this flag.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"FILE_SHARE_WRITE\"></a><a id=\"file_share_write\"></a><dl>\n<dt><b>FILE_SHARE_WRITE</b></dt>\n<dt>0x00000002</dt>\n</dl>\n</td>\n<td width=\"60%\">\nEnables subsequent open operations on the object to request write access. Otherwise, other processes cannot \n         open the object if they request write access.\n\nIf the object has already been opened with write access, the sharing mode must include this flag.\n\n</td>\n</tr>\n</table>\n\n### -param dwFlagsAndAttributes [in]\n\nThe file flags. This parameter can be one or more of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"FILE_FLAG_BACKUP_SEMANTICS\"></a><a id=\"file_flag_backup_semantics\"></a><dl>\n<dt><b>FILE_FLAG_BACKUP_SEMANTICS</b></dt>\n<dt>0x02000000</dt>\n</dl>\n</td>\n<td width=\"60%\">\nIndicates that the file is being opened or created for a backup or restore operation. The system ensures \n         that the calling process overrides file security checks, provided it has the \n         <b>SE_BACKUP_NAME</b> and <b>SE_RESTORE_NAME</b> privileges. For more \n         information, see \n         <a href=\"/windows/desktop/SecBP/changing-privileges-in-a-token\">Changing Privileges in a Token</a>.\n\nYou can also set this flag to obtain a handle to a directory. Where indicated, a directory handle can be \n         passed to some functions in place of a file handle.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"FILE_FLAG_DELETE_ON_CLOSE\"></a><a id=\"file_flag_delete_on_close\"></a><dl>\n<dt><b>FILE_FLAG_DELETE_ON_CLOSE</b></dt>\n<dt>0x04000000</dt>\n</dl>\n</td>\n<td width=\"60%\">\nIndicates that the operating system is to delete the file immediately after all of its handles have been \n         closed, not just the specified handle but also any other open or duplicated handles.\n\nSubsequent open requests for the file fail, unless <b>FILE_SHARE_DELETE</b> is used.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"FILE_FLAG_NO_BUFFERING\"></a><a id=\"file_flag_no_buffering\"></a><dl>\n<dt><b>FILE_FLAG_NO_BUFFERING</b></dt>\n<dt>0x20000000</dt>\n</dl>\n</td>\n<td width=\"60%\">\nInstructs the system to open the file with no intermediate buffering or caching. When combined with \n         <b>FILE_FLAG_OVERLAPPED</b>, the flag gives maximum asynchronous performance, because the \n         I/O does not rely on the synchronous operations of the memory manager. However, some I/O operations take \n         longer, because data is not being held in the cache.\n\nAn application must meet specific requirements when working with files opened with \n         <b>FILE_FLAG_NO_BUFFERING</b>:\n\n<ul>\n<li>File access must begin at byte offsets within the file that are integer multiples of the volume sector \n          size.</li>\n<li>File access must be for numbers of bytes that are integer multiples of the volume sector size. For \n          example, if the sector size is 512 bytes, an application can request reads and writes of 512, 1024, 1536, or \n          2048 bytes, but not of 335, 981, or 7171 bytes.</li>\n<li>Buffer addresses for read and write operations should be sector aligned (aligned on addresses in memory \n          that are integer multiples of the volume sector size). Depending on the disk, this requirement may not be \n          enforced.</li>\n</ul>\nOne way to align buffers on integer multiples of the volume sector size is to use \n         <a href=\"/windows/desktop/api/memoryapi/nf-memoryapi-virtualalloc\">VirtualAlloc</a> to allocate the buffers. It allocates \n         memory that is aligned on addresses that are integer multiples of the operating system memory page size. \n         Because both memory page and volume sector sizes are powers of 2, this memory is also aligned on addresses \n         that are integer multiples of a volume sector size. Memory pages are 4-8 KB in size; sectors are 512 bytes \n         (hard disks) or 2048 bytes (CD), and therefore, volume sectors can never be larger than memory pages.\n\nAn application can determine a volume sector size by calling the \n         <a href=\"/windows/desktop/api/fileapi/nf-fileapi-getdiskfreespacea\">GetDiskFreeSpace</a> function.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"FILE_FLAG_OPEN_NO_RECALL\"></a><a id=\"file_flag_open_no_recall\"></a><dl>\n<dt><b>FILE_FLAG_OPEN_NO_RECALL</b></dt>\n<dt>0x00100000</dt>\n</dl>\n</td>\n<td width=\"60%\">\nIndicates that the file data is requested, but it should continue to reside in remote storage. It should \n         not be transported back to local storage. This flag is intended for use by remote storage systems.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"FILE_FLAG_OPEN_REPARSE_POINT\"></a><a id=\"file_flag_open_reparse_point\"></a><dl>\n<dt><b>FILE_FLAG_OPEN_REPARSE_POINT</b></dt>\n<dt>0x00200000</dt>\n</dl>\n</td>\n<td width=\"60%\">\nWhen this flag is used, normal <a href=\"/windows/desktop/FileIO/reparse-points\">reparse point</a> \n         processing does not occur, and <b>ReOpenFile</b> attempts to \n         open the reparse point. When a file is opened, a file handle is returned, whether or not the filter that \n         controls the reparse point is operational. This flag cannot be used with the \n         <b>CREATE_ALWAYS</b> flag. If the file is not a reparse point, then this flag is ignored.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"FILE_FLAG_OVERLAPPED\"></a><a id=\"file_flag_overlapped\"></a><dl>\n<dt><b>FILE_FLAG_OVERLAPPED</b></dt>\n<dt>0x40000000</dt>\n</dl>\n</td>\n<td width=\"60%\">\nInstructs the system to initialize the object, so that operations that take a significant amount of time to\n        process return <b>ERROR_IO_PENDING</b>. When the operation is finished, the specified event is set to the signaled\n        state.\n\nWhen you specify <b>FILE_FLAG_OVERLAPPED</b>, the file read and write functions \n         <b>must</b> specify an \n         <a href=\"/windows/desktop/api/minwinbase/ns-minwinbase-overlapped\">OVERLAPPED</a> structure. That is, when \n         <b>FILE_FLAG_OVERLAPPED</b> is specified, an application <b>must</b> \n         perform overlapped reading and writing.\n\nWhen <b>FILE_FLAG_OVERLAPPED</b> is specified, the system does not maintain the file \n         pointer. The file position must be passed as part of the <i>lpOverlapped</i> parameter \n         (pointing to an <a href=\"/windows/desktop/api/minwinbase/ns-minwinbase-overlapped\">OVERLAPPED</a> structure) to the file \n         read and write functions.\n\nThis flag also enables more than one operation to be performed simultaneously with the handle (a \n         simultaneous read and write operation, for example).\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"FILE_FLAG_POSIX_SEMANTICS\"></a><a id=\"file_flag_posix_semantics\"></a><dl>\n<dt><b>FILE_FLAG_POSIX_SEMANTICS</b></dt>\n<dt>0x01000000</dt>\n</dl>\n</td>\n<td width=\"60%\">\nIndicates that the file is to be accessed according to POSIX rules. This includes allowing multiple files \n         with names, differing only in case, for file systems that support such naming. Use care when using this \n         option because files created with this flag may not be accessible by applications written for MS-DOS or \n         16-bit Windows.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"FILE_FLAG_RANDOM_ACCESS\"></a><a id=\"file_flag_random_access\"></a><dl>\n<dt><b>FILE_FLAG_RANDOM_ACCESS</b></dt>\n<dt>0x10000000</dt>\n</dl>\n</td>\n<td width=\"60%\">\nIndicates that the file is accessed randomly. The system can use this as a hint to optimize file \n         caching.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"FILE_FLAG_SEQUENTIAL_SCAN\"></a><a id=\"file_flag_sequential_scan\"></a><dl>\n<dt><b>FILE_FLAG_SEQUENTIAL_SCAN</b></dt>\n<dt>0x08000000</dt>\n</dl>\n</td>\n<td width=\"60%\">\nIndicates that the file is to be accessed sequentially from beginning to end. The system can use this as a \n         hint to optimize file caching. If an application moves the file pointer for random access, optimum caching \n         may not occur; however, correct operation is still guaranteed.\n\nSpecifying this flag can increase performance for applications that read large files using sequential \n         access. Performance gains can be even more noticeable for applications that read large files mostly \n         sequentially, but occasionally skip over small ranges of bytes.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"FILE_FLAG_WRITE_THROUGH\"></a><a id=\"file_flag_write_through\"></a><dl>\n<dt><b>FILE_FLAG_WRITE_THROUGH</b></dt>\n<dt>0x80000000</dt>\n</dl>\n</td>\n<td width=\"60%\">\nInstructs the system to write through any intermediate cache and go directly to disk. The system can still \n         cache write operations, but cannot lazily flush them.\n\n</td>\n</tr>\n</table>\n \n\nIf the handle represents the client side of a named pipe, the <i>dwFlags</i> parameter can \n       also contain Security Quality of Service information. For more information, see \n       <a href=\"/windows/desktop/SecAuthZ/impersonation-levels\">Impersonation Levels</a>. When the calling \n       application specifies the <b>SECURITY_SQOS_PRESENT</b> flag, the \n       <i>dwFlags</i> parameter can contain one or more of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SECURITY_ANONYMOUS\"></a><a id=\"security_anonymous\"></a><dl>\n<dt><b>SECURITY_ANONYMOUS</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nImpersonate the client at the Anonymous impersonation level.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SECURITY_CONTEXT_TRACKING\"></a><a id=\"security_context_tracking\"></a><dl>\n<dt><b>SECURITY_CONTEXT_TRACKING</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe security tracking mode is dynamic. If this flag is not specified, the security tracking mode is \n         static.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SECURITY_DELEGATION\"></a><a id=\"security_delegation\"></a><dl>\n<dt><b>SECURITY_DELEGATION</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nImpersonate the client at the Delegation impersonation level.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SECURITY_EFFECTIVE_ONLY\"></a><a id=\"security_effective_only\"></a><dl>\n<dt><b>SECURITY_EFFECTIVE_ONLY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOnly the enabled aspects of the client security context are available to the server. If you do not specify \n         this flag, all aspects of the client security context are available.\n\nThis allows the client to limit the groups and privileges that a server can use while impersonating the \n         client.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SECURITY_IDENTIFICATION\"></a><a id=\"security_identification\"></a><dl>\n<dt><b>SECURITY_IDENTIFICATION</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nImpersonate the client at the Identification impersonation level.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SECURITY_IMPERSONATION\"></a><a id=\"security_impersonation\"></a><dl>\n<dt><b>SECURITY_IMPERSONATION</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nImpersonate the client at the Impersonation impersonation level.\n\n</td>\n</tr>\n</table>\n\n## -returns\n\nIf the function succeeds, the return value is an open handle to the specified file.\n\nIf the function fails, the return value is <b>INVALID_HANDLE_VALUE</b>. To get extended \n       error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThe <i>dwFlags</i> parameter cannot contain any of the file attribute flags \n    (<b>FILE_ATTRIBUTE_*</b>). These can only be specified when the file is created.\n\nIn Windows 8 and Windows Server 2012, this function is supported by the following technologies.\n\n<table>\n<tr>\n<th>Technology</th>\n<th>Supported</th>\n</tr>\n<tr>\n<td>\nServer Message Block (SMB) 3.0 protocol\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nSMB 3.0 Transparent Failover (TFO)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nSMB 3.0 with Scale-out File Shares (SO)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nCluster Shared Volume File System (CsvFS)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nResilient File System (ReFS)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n</table>\n\n## -see-also\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-createfilea\">CreateFile</a>\n\n\n\n<a href=\"/windows/desktop/FileIO/file-management-functions\">File Management Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_nt_file_options",
+   "file": "dlls/kernelbase/file.c",
+   "start_line": 761,
+   "end_line": 790,
+   "static": true,
+   "called_from": [
+    "ReOpenFile"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/file.c:875",
+    "dlls/kernelbase/file.c:888"
+   ],
+   "signature": "static UINT get_nt_file_options( DWORD attributes, DWORD creation )",
+   "code": "static UINT get_nt_file_options( DWORD attributes, DWORD creation )\n{\n    UINT options = 0;\n\n    if (attributes & FILE_FLAG_BACKUP_SEMANTICS)\n    {\n        options |= FILE_OPEN_FOR_BACKUP_INTENT;\n        if ((attributes & FILE_FLAG_POSIX_SEMANTICS) &&\n            (attributes & FILE_ATTRIBUTE_DIRECTORY) &&\n            creation == CREATE_NEW)\n            options |= FILE_DIRECTORY_FILE;\n    }\n    else\n        options |= FILE_NON_DIRECTORY_FILE;\n    if (attributes & FILE_FLAG_DELETE_ON_CLOSE)\n        options |= FILE_DELETE_ON_CLOSE;\n    if (attributes & FILE_FLAG_NO_BUFFERING)\n        options |= FILE_NO_INTERMEDIATE_BUFFERING;\n    if (attributes & FILE_FLAG_OPEN_REPARSE_POINT)\n        options |= FILE_OPEN_REPARSE_POINT;\n    if (!(attributes & FILE_FLAG_OVERLAPPED))\n        options |= FILE_SYNCHRONOUS_IO_NONALERT;\n    if (attributes & FILE_FLAG_RANDOM_ACCESS)\n        options |= FILE_RANDOM_ACCESS;\n    if (attributes & FILE_FLAG_SEQUENTIAL_SCAN)\n        options |= FILE_SEQUENTIAL_ONLY;\n    if (attributes & FILE_FLAG_WRITE_THROUGH)\n        options |= FILE_WRITE_THROUGH;\n    return options;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(file);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtCreateFile",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/file.c:4645"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "set_ntstatus"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

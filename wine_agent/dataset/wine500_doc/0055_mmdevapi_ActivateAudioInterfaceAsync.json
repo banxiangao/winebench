@@ -1,0 +1,205 @@
+{
+ "id": "0055",
+ "function": {
+  "name": "ActivateAudioInterfaceAsync",
+  "export_name": "ActivateAudioInterfaceAsync",
+  "module": "mmdevapi",
+  "source_module": "mmdevapi",
+  "exported_by": [
+   "mmdevapi"
+  ],
+  "side": "PE",
+  "file": "dlls/mmdevapi/main.c",
+  "start_line": 607,
+  "end_line": 640,
+  "body_lines": 31,
+  "signature": "HRESULT WINAPI ActivateAudioInterfaceAsync(const WCHAR *path, REFIID riid, PROPVARIANT *params, IActivateAudioInterfaceCompletionHandler *done_handler, IActivateAudioInterfaceAsyncOperation **op_out)",
+  "header_comment": "/***********************************************************************\n *\t\tActivateAudioInterfaceAsync (MMDEVAPI.17)\n */",
+  "code": "HRESULT WINAPI ActivateAudioInterfaceAsync(const WCHAR *path, REFIID riid,\n        PROPVARIANT *params, IActivateAudioInterfaceCompletionHandler *done_handler,\n        IActivateAudioInterfaceAsyncOperation **op_out)\n{\n    struct activate_async_op *op;\n    HANDLE ht;\n    IMMDevice *mmdev;\n\n    TRACE(\"(%s, %s, %p, %p, %p)\\n\", debugstr_w(path), debugstr_guid(riid),\n            params, done_handler, op_out);\n\n    op = malloc(sizeof(*op));\n    if (!op)\n        return E_OUTOFMEMORY;\n\n    op->ref = 2; /* returned ref and threadproc ref */\n    op->IActivateAudioInterfaceAsyncOperation_iface.lpVtbl = &IActivateAudioInterfaceAsyncOperation_vtbl;\n    op->callback = done_handler;\n    IActivateAudioInterfaceCompletionHandler_AddRef(done_handler);\n\n    op->result_hr = get_mmdevice_by_activatepath(path, &mmdev);\n    if (SUCCEEDED(op->result_hr)) {\n        op->result_hr = IMMDevice_Activate(mmdev, riid, CLSCTX_INPROC_SERVER, params, (void**)&op->result_iface);\n        IMMDevice_Release(mmdev);\n    }else\n        op->result_iface = NULL;\n\n    ht = CreateThread(NULL, 0, &activate_async_threadproc, op, 0, NULL);\n    CloseHandle(ht);\n\n    *op_out = &op->IActivateAudioInterfaceAsyncOperation_iface;\n\n    return S_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <wchar.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"ole2.h\"",
+   "#include \"olectl.h\"",
+   "#include \"rpcproxy.h\"",
+   "#include \"propsys.h\"",
+   "#include \"propkeydef.h\"",
+   "#include \"mmdeviceapi.h\"",
+   "#include \"mmsystem.h\"",
+   "#include \"dsound.h\"",
+   "#include \"audioclient.h\"",
+   "#include \"endpointvolume.h\"",
+   "#include \"audiopolicy.h\"",
+   "#include \"devpkey.h\"",
+   "#include \"winreg.h\"",
+   "#include \"spatialaudioclient.h\"",
+   "#include \"mmddk.h\"",
+   "#include \"mmdevapi_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "mmdevapi!ActivateAudioInterfaceAsync [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/mmdevapi/tests/mmdevenum.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "mmdeviceapi",
+   "path": "sdk-api-src/content/mmdeviceapi/nf-mmdeviceapi-activateaudiointerfaceasync.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/mmdeviceapi/nf-mmdeviceapi-activateaudiointerfaceasync",
+   "documented_name": "activateaudiointerfaceasync",
+   "file": "docs/0055_sdk-api_nf-mmdeviceapi-activateaudiointerfaceasync.md",
+   "text": "---\nUID: NF:mmdeviceapi.ActivateAudioInterfaceAsync\ntitle: ActivateAudioInterfaceAsync function (mmdeviceapi.h)\ndescription: Enables Windows Store apps to access preexisting Component Object Model (COM) interfaces in the WASAPI family.\nhelpviewer_keywords: [\"ActivateAudioInterfaceAsync\",\"ActivateAudioInterfaceAsync function [Core Audio]\",\"coreaudio.activateaudiointerfaceasync\",\"mmdeviceapi/ActivateAudioInterfaceAsync\"]\nold-location: coreaudio\\activateaudiointerfaceasync.htm\ntech.root: CoreAudio\nms.assetid: 7BAFD9DB-DCD7-4093-A24B-9A8556C6C45B\nms.date: 12/05/2018\nms.keywords: ActivateAudioInterfaceAsync, ActivateAudioInterfaceAsync function [Core Audio], coreaudio.activateaudiointerfaceasync, mmdeviceapi/ActivateAudioInterfaceAsync\nreq.header: mmdeviceapi.h\nreq.include-header: Mmdevapi.idl\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 8 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2012 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Mmdevapi.lib\nreq.dll: Mmdevapi.dll\nreq.irql: No\ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ActivateAudioInterfaceAsync\n - mmdeviceapi/ActivateAudioInterfaceAsync\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Mmdevapi.dll\napi_name:\n - ActivateAudioInterfaceAsync\n---\n\n# ActivateAudioInterfaceAsync function\n\n\n## -description\n\nEnables Windows Store apps to access preexisting Component Object Model (COM) interfaces in the <a href=\"/windows/desktop/CoreAudio/wasapi\">WASAPI</a> family.\n\n## -parameters\n\n### -param deviceInterfacePath [in]\n\nA device interface ID for an audio device. This is normally retrieved from a <a href=\"/uwp/api/windows.devices.enumeration.deviceinformation\">DeviceInformation</a> object or one of the methods of the <a href=\"/uwp/api/windows.media.devices.mediadevice\">MediaDevice</a> class. \n\nThe GUIDs <a href=\"/windows/desktop/CoreAudio/devinterface-xxx-guids\">DEVINTERFACE_AUDIO_CAPTURE</a>  and <b>DEVINTERFACE_AUDIO_RENDER</b>  represent the default audio capture and render device respectively. Call <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-stringfromiid\">StringFromIID</a> to convert either of these GUIDs to an <b>LPCWSTR</b> to use for this argument.\n\nSpecify **VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK** to activate the audio interface for process loopback capture. For sample code that demonstrates the process loopback capture scenario, see the [Application Loopback API Capture Sample](https://docs.microsoft.com/en-us/samples/microsoft/windows-classic-samples/applicationloopbackaudio-sample/).\n\n### -param riid [in]\n\nThe IID of a COM interface in the <a href=\"/windows/desktop/CoreAudio/wasapi\">WASAPI</a> family, such as <a href=\"/windows/desktop/api/audioclient/nn-audioclient-iaudioclient\">IAudioClient</a>.\n\n### -param activationParams [in]\n\nInterface-specific activation parameters. For more information, see the <i>pActivationParams</i> parameter in <a href=\"/windows/desktop/api/mmdeviceapi/nf-mmdeviceapi-immdevice-activate\">IMMDevice::Activate</a>.\n\nStarting with Windows 10 Build 20438, you can specify [AUDIOCLIENT_ACTIVATION_PARAMS](/windows/desktop/api/audioclientactivationparams/ns-audioclientactivationparams-audioclient_activation_params) to activate the interface to include or exclude audio streams associated with a specified process ID.\n\n### -param completionHandler [in]\n\nAn interface implemented by the caller that is called by Windows when the result of the activation procedure is available.\n\n### -param activationOperation\n\nReturns an <a href=\"/windows/desktop/api/mmdeviceapi/nn-mmdeviceapi-iactivateaudiointerfaceasyncoperation\">IActivateAudioInterfaceAsyncOperation</a> interface that represents the asynchronous operation of activating the requested <b>WASAPI</b> interface.\n\n## -returns\n\nThe function returns an <b>HRESULT</b>. Possible values include, but are not limited to, those in the following table.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>S_OK</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe underlying object and asynchronous operation were created successfully.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_ILLEGAL_METHOD_CALL </b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOn versions of Windows previous to Windows 10, this error may result if the function is called from an incorrect COM apartment, or if the passed <a href=\"/windows/desktop/api/mmdeviceapi/nn-mmdeviceapi-iactivateaudiointerfacecompletionhandler\">IActivateAudioInterfaceCompletionHandler</a> is not implemented on an agile object (aggregating a free-threaded marshaler).\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThis function enables Windows Store apps to  activate certain <a href=\"/windows/desktop/CoreAudio/wasapi\">WASAPI</a> COM interfaces after using Windows Runtime APIs in the <b>Windows.Devices</b> and <a href=\"/uwp/api/windows.media.devices\">Windows.Media.Devices</a> namespaces to select an audio device.  \n\nFor many implementations, an application must call this function from the main UI thread to activate a COM interface in the <a href=\"/windows/desktop/CoreAudio/wasapi\">WASAPI</a> family so that the system can show a dialog to the user. The application passes an <a href=\"/windows/desktop/api/mmdeviceapi/nn-mmdeviceapi-iactivateaudiointerfacecompletionhandler\">IActivateAudioInterfaceCompletionHandler</a> callback COM interface through <i>completionHandler</i>. Windows calls a method in the application’s <b>IActivateAudioInterfaceCompletionHandler</b> interface from a worker thread in the COM Multi-threaded Apartment (MTA) when the activation results are available. The application can then call a method in the <a href=\"/windows/desktop/api/mmdeviceapi/nn-mmdeviceapi-iactivateaudiointerfaceasyncoperation\">IActivateAudioInterfaceAsyncOperation</a> interface  to retrieve the result code and the requested <b>WASAPI</b> interface. There are some activations that are explicitly safe and therefore don't require that this function be called from the main UI thread. These explicitly safe activations include:\n\n<ul>\n<li>Calling <b>ActivateAudioInterfaceAsync</b> with a <i>deviceInterfacePath</i> that specifies an audio render device and an <i>riid</i> that specifies the <a href=\"/windows/desktop/api/audioclient/nn-audioclient-iaudioclient\">IAudioClient</a> interface.</li>\n<li>Calling <b>ActivateAudioInterfaceAsync</b> with a <i>deviceInterfacePath</i> that specifies an audio render device and an <i>riid</i> that specifies the <a href=\"/windows/desktop/api/endpointvolume/nn-endpointvolume-iaudioendpointvolume\">IAudioEndpointVolume</a> interface.</li>\n<li>Calling <b>ActivateAudioInterfaceAsync</b> from a session 0 service. For more information, see <a href=\"/windows/desktop/services/services\">Services</a>.</li>\n</ul>\nWindows holds a reference to the application's <a href=\"/windows/desktop/api/mmdeviceapi/nn-mmdeviceapi-iactivateaudiointerfacecompletionhandler\">IActivateAudioInterfaceCompletionHandler</a> interface until the operation is complete and the application releases the <a href=\"/windows/desktop/api/mmdeviceapi/nn-mmdeviceapi-iactivateaudiointerfaceasyncoperation\">IActivateAudioInterfaceAsyncOperation</a> interface. \n\n<div class=\"alert\"><b>Important</b>  <p class=\"note\">Applications must not free the object implementing the <b>IActivateAudioInterfaceCompletionHandler</b> until the completion handler callback has executed. \n\n</div>\n<div> </div>\nDepending on which <a href=\"/windows/desktop/CoreAudio/wasapi\">WASAPI</a> interface is activated, this function may display a consent prompt the first time it is called. For example, when the application calls this function to activate <a href=\"/windows/desktop/api/audioclient/nn-audioclient-iaudioclient\">IAudioClient</a> to access a microphone, the purpose of the consent prompt is to get the user's permission for the app to access the microphone. For more information about the consent prompt, see <a href=\"/windows/uwp/security/index\">Guidelines for devices that access personal data</a>.\n\n\n<b>ActivateAudioInterfaceAsync</b> must be called on the main UI thread so that the consent prompt can be shown. If the consent prompt can’t be shown, the user can’t grant device access to the app.\n\nOn versions of Windows previous to Windows 10, <b>ActivateAudioInterfaceAsync</b> must be called on a thread in a COM Single-Threaded Apartment (STA), when opening a device for audio capture. The <i>completionHandler</i> that is passed into <b>ActivateAudioInterfaceAsync</b> needs to implement <a href=\"/windows/desktop/api/objidl/nn-objidl-iagileobject\">IAgileObject</a> to ensure that there is no deadlock when the <i>completionHandler</i> is called from the MTA. Otherwise, an <b>E_ILLEGAL_METHOD_CALL</b> will occur.\n\n## -see-also\n\n<a href=\"/windows/desktop/CoreAudio/core-audio-functions\">Core Audio Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/mmdeviceapi/nn-mmdeviceapi-iactivateaudiointerfaceasyncoperation\">IActivateAudioInterfaceAsyncOperation</a>\n\n\n\n<a href=\"/windows/desktop/api/mmdeviceapi/nn-mmdeviceapi-iactivateaudiointerfacecompletionhandler\">IActivateAudioInterfaceCompletionHandler</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_mmdevice_by_activatepath",
+   "file": "dlls/mmdevapi/main.c",
+   "start_line": 563,
+   "end_line": 602,
+   "static": true,
+   "called_from": [
+    "ActivateAudioInterfaceAsync"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static HRESULT get_mmdevice_by_activatepath(const WCHAR *path, IMMDevice **mmdev)",
+   "code": "static HRESULT get_mmdevice_by_activatepath(const WCHAR *path, IMMDevice **mmdev)\n{\n    IMMDeviceEnumerator *devenum;\n    HRESULT hr;\n\n    static const WCHAR DEVINTERFACE_AUDIO_RENDER_WSTR[] = L\"{E6327CAD-DCEC-4949-AE8A-991E976A79D2}\";\n    static const WCHAR DEVINTERFACE_AUDIO_CAPTURE_WSTR[] = L\"{2EEF81BE-33FA-4800-9670-1CD474972C3F}\";\n    static const WCHAR MMDEV_PATH_PREFIX[] = L\"\\\\\\\\?\\\\SWD#MMDEVAPI#\";\n\n    hr = MMDevEnum_Create(&IID_IMMDeviceEnumerator, (void**)&devenum);\n    if (FAILED(hr)) {\n        WARN(\"Failed to create MMDeviceEnumerator: %08lx\\n\", hr);\n        return hr;\n    }\n\n    if (!lstrcmpiW(path, DEVINTERFACE_AUDIO_RENDER_WSTR)){\n        hr = IMMDeviceEnumerator_GetDefaultAudioEndpoint(devenum, eRender, eMultimedia, mmdev);\n    } else if (!lstrcmpiW(path, DEVINTERFACE_AUDIO_CAPTURE_WSTR)){\n        hr = IMMDeviceEnumerator_GetDefaultAudioEndpoint(devenum, eCapture, eMultimedia, mmdev);\n    } else if (!memcmp(path, MMDEV_PATH_PREFIX, sizeof(MMDEV_PATH_PREFIX) - sizeof(WCHAR))) {\n        WCHAR device_id[56]; /* == strlen(\"{0.0.1.00000000}.{fd47d9cc-4218-4135-9ce2-0c195c87405b}\") + 1 */\n\n        lstrcpynW(device_id, path + (ARRAY_SIZE(MMDEV_PATH_PREFIX) - 1), ARRAY_SIZE(device_id));\n\n        hr = IMMDeviceEnumerator_GetDevice(devenum, device_id, mmdev);\n    } else {\n        FIXME(\"Unrecognized device id format: %s\\n\", debugstr_w(path));\n        hr = HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);\n    }\n\n    if (FAILED(hr)) {\n        WARN(\"Failed to get requested device (%s): %08lx\\n\", debugstr_w(path), hr);\n        *mmdev = NULL;\n        hr = HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);\n    }\n\n    IMMDeviceEnumerator_Release(devenum);\n\n    return hr;\n}"
+  },
+  {
+   "name": "activate_async_threadproc",
+   "file": "dlls/mmdevapi/main.c",
+   "start_line": 550,
+   "end_line": 561,
+   "static": true,
+   "called_from": [
+    "ActivateAudioInterfaceAsync"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static DWORD WINAPI activate_async_threadproc(void *user)",
+   "code": "static DWORD WINAPI activate_async_threadproc(void *user)\n{\n    struct activate_async_op *op = user;\n\n    SetThreadDescription(GetCurrentThread(), L\"wine_mmdevapi_activate_async\");\n\n    IActivateAudioInterfaceCompletionHandler_ActivateCompleted(op->callback, &op->IActivateAudioInterfaceAsyncOperation_iface);\n\n    IActivateAudioInterfaceAsyncOperation_Release(&op->IActivateAudioInterfaceAsyncOperation_iface);\n\n    return 0;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "activate_async_op",
+    "kind": "struct_decl",
+    "start_line": 468,
+    "end_line": 475,
+    "code": "struct activate_async_op {\n    IActivateAudioInterfaceAsyncOperation IActivateAudioInterfaceAsyncOperation_iface;\n    LONG ref;\n\n    IActivateAudioInterfaceCompletionHandler *callback;\n    HRESULT result_hr;\n    IUnknown *result_iface;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "IActivateAudioInterfaceAsyncOperation_vtbl",
+    "type": "IActivateAudioInterfaceAsyncOperationVtbl",
+    "static": true,
+    "start_line": 543,
+    "end_line": 548,
+    "code": "static IActivateAudioInterfaceAsyncOperationVtbl IActivateAudioInterfaceAsyncOperation_vtbl = {\n    activate_async_op_QueryInterface,\n    activate_async_op_AddRef,\n    activate_async_op_Release,\n    activate_async_op_GetActivateResult,\n};"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 48,
+    "end_line": 48,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(mmdevapi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "MMDevEnum_Create",
+    "file": "dlls/mmdevapi/devenum.c",
+    "start_line": 1074
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "CloseHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "CreateThread",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/thread.c:169"
+    ]
+   },
+   {
+    "name": "SetThreadDescription",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/thread.c:463"
+    ]
+   },
+   {
+    "name": "lstrcmpiW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/string.c:82"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetCurrentThread",
+   "HRESULT_FROM_WIN32",
+   "IActivateAudioInterfaceAsyncOperation_Release",
+   "IActivateAudioInterfaceCompletionHandler_ActivateCompleted",
+   "IActivateAudioInterfaceCompletionHandler_AddRef",
+   "IMMDeviceEnumerator_GetDefaultAudioEndpoint",
+   "IMMDeviceEnumerator_GetDevice",
+   "IMMDeviceEnumerator_Release",
+   "IMMDevice_Activate",
+   "IMMDevice_Release",
+   "debugstr_guid",
+   "debugstr_w",
+   "lstrcpynW",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

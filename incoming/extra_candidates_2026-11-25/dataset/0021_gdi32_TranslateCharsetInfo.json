@@ -1,0 +1,136 @@
+{
+ "id": "0021",
+ "function": {
+  "name": "TranslateCharsetInfo",
+  "export_name": "TranslateCharsetInfo",
+  "module": "gdi32",
+  "source_module": "gdi32",
+  "exported_by": [
+   "gdi32"
+  ],
+  "side": "PE",
+  "file": "dlls/gdi32/text.c",
+  "start_line": 2885,
+  "end_line": 2909,
+  "body_lines": 22,
+  "signature": "BOOL WINAPI TranslateCharsetInfo( DWORD *src, CHARSETINFO *cs, DWORD flags )",
+  "header_comment": "/***********************************************************************\n *           TranslateCharsetInfo    (GDI32.@)\n *\n * Fills a CHARSETINFO structure for a character set, code page, or\n * font. This allows making the correspondence between different labels\n * (character set, Windows, ANSI, and OEM codepages, and Unicode ranges)\n * of the same encoding.\n *\n * Only one codepage will be set in cs->fs. If TCI_SRCFONTSIG is used,\n * only one codepage should be set in *src.\n *\n * if flags == TCI_SRCFONTSIG: src is a pointer to fsCsb of a FONTSIGNATURE\n * if flags == TCI_SRCCHARSET: src is a character set value\n * if flags == TCI_SRCCODEPAGE: src is a code page value\n */",
+  "code": "BOOL WINAPI TranslateCharsetInfo( DWORD *src, CHARSETINFO *cs, DWORD flags )\n{\n    unsigned int i;\n\n    switch (flags)\n    {\n    case TCI_SRCFONTSIG:\n        for (i = 0; i < ARRAY_SIZE(charset_info); i++)\n            if (charset_info[i].fs.fsCsb[0] & src[0]) goto found;\n        return FALSE;\n    case TCI_SRCCODEPAGE:\n        for (i = 0; i < ARRAY_SIZE(charset_info); i++)\n            if (PtrToUlong(src) == charset_info[i].ciACP) goto found;\n        return FALSE;\n    case TCI_SRCCHARSET:\n        for (i = 0; i < ARRAY_SIZE(charset_info); i++)\n            if (PtrToUlong(src) == charset_info[i].ciCharset) goto found;\n        return FALSE;\n    default:\n        return FALSE;\n    }\nfound:\n    *cs = charset_info[i];\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <limits.h>",
+   "#include <assert.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winnls.h\"",
+   "#include \"usp10.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"gdi_private.h\"",
+   "#include \"resource.h\""
+  ],
+  "resolution": [
+   "gdi32!TranslateCharsetInfo [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdi32/tests/font.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 8
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-translatecharsetinfo.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-translatecharsetinfo",
+   "documented_name": "translatecharsetinfo",
+   "file": "docs/0021_sdk-api_nf-wingdi-translatecharsetinfo.md",
+   "text": "---\nUID: NF:wingdi.TranslateCharsetInfo\ntitle: TranslateCharsetInfo function (wingdi.h)\ndescription: Translates character set information and sets all members of a destination structure to appropriate values.\nhelpviewer_keywords: [\"TCI_SRCCHARSET\",\"TCI_SRCCODEPAGE\",\"TCI_SRCFONTSIG\",\"TCI_SRCLOCALE\",\"TranslateCharsetInfo\",\"TranslateCharsetInfo function [Internationalization for Windows Applications]\",\"_win32_TranslateCharsetInfo\",\"intl.translatecharsetinfo\",\"wingdi/TranslateCharsetInfo\"]\nold-location: intl\\translatecharsetinfo.htm\ntech.root: Intl\nms.assetid: 0e6e81f1-ec7b-42ba-8706-a352349fa6ab\nms.date: 12/05/2018\nms.keywords: TCI_SRCCHARSET, TCI_SRCCODEPAGE, TCI_SRCFONTSIG, TCI_SRCLOCALE, TranslateCharsetInfo, TranslateCharsetInfo function [Internationalization for Windows Applications], _win32_TranslateCharsetInfo, intl.translatecharsetinfo, wingdi/TranslateCharsetInfo\nreq.header: wingdi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - TranslateCharsetInfo\n - wingdi/TranslateCharsetInfo\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Gdi32.dll\n - Ext-MS-Win-GDI-Font-l1-1-0.dll\n - Ext-MS-Win-GDI-Font-l1-1-1.dll\n - ext-ms-win-gdi-font-l1-1-2.dll\n - Ext-MS-Win-GDI-Font-L1-1-3.dll\n - GDI32Full.dll\napi_name:\n - TranslateCharsetInfo\n---\n\n# TranslateCharsetInfo function\n\n\n## -description\n\nTranslates character set information and sets all members of a destination structure to appropriate values.\n\n## -parameters\n\n### -param lpSrc [in, out]\n\nPointer to the <b>fsCsb</b> member of a <a href=\"/windows/desktop/api/wingdi/ns-wingdi-fontsignature\">FONTSIGNATURE</a> structure if <i>dwFlags</i> is set to TCI_SRCFONTSIG. Otherwise, this parameter is set to a DWORD value indicating the source.\n\n### -param lpCs [out]\n\nPointer to a <a href=\"/windows/desktop/api/wingdi/ns-wingdi-charsetinfo\">CHARSETINFO</a> structure that receives the translated character set information.\n\n### -param dwFlags [in]\n\nFlags specifying how to perform the translation. This parameter can be one of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"TCI_SRCCHARSET\"></a><a id=\"tci_srccharset\"></a><dl>\n<dt><b>TCI_SRCCHARSET</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nSource contains the character set value in the low word, and 0 in the high word.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"TCI_SRCCODEPAGE\"></a><a id=\"tci_srccodepage\"></a><dl>\n<dt><b>TCI_SRCCODEPAGE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nSource is a code page identifier in the low word and 0 in the high word.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"TCI_SRCFONTSIG\"></a><a id=\"tci_srcfontsig\"></a><dl>\n<dt><b>TCI_SRCFONTSIG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nSource is the code page bitfield portion of a <a href=\"/windows/desktop/api/wingdi/ns-wingdi-fontsignature\">FONTSIGNATURE</a> structure. On input this should have only one Windows code-page bit set, either for an ANSI code page value or for a common ANSI and OEM value (for OEM values, bits 32-63 must be clear). On output, this has only one bit set.\n\nIf the TCI_SRCFONTSIG value is given, the <i>lpSrc</i> parameter must be the address of the code-page bitfield. If any other TCI_ value is given, the <i>lpSrc</i> parameter must be a value not an address.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"TCI_SRCLOCALE\"></a><a id=\"tci_srclocale\"></a><dl>\n<dt><b>TCI_SRCLOCALE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\n<b>Windows 2000:</b> Source is the locale identifier (LCID) or language identifier of the keyboard layout. If it is a language identifier, the value is in the low word.\n\n</td>\n</tr>\n</table>\n\n## -returns\n\nReturns a nonzero value if successful, or 0 otherwise. To get extended error information, the application can call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-charsetinfo\">CHARSETINFO</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-fontsignature\">FONTSIGNATURE</a>\n\n\n\n<a href=\"/windows/desktop/Intl/unicode-and-character-set-functions\">Unicode and Character Set Functions</a>\n\n\n\n<a href=\"/windows/desktop/Intl/unicode-and-character-sets\">Unicode and Character Sets</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "charset_info",
+    "type": "const CHARSETINFO[17]",
+    "static": true,
+    "start_line": 2849,
+    "end_line": 2868,
+    "code": "static const CHARSETINFO charset_info[] =\n{\n    { ANSI_CHARSET,        1252,      { {0}, { FS_LATIN1 }}},\n    { EASTEUROPE_CHARSET,  1250,      { {0}, { FS_LATIN2 }}},\n    { RUSSIAN_CHARSET,     1251,      { {0}, { FS_CYRILLIC }}},\n    { GREEK_CHARSET,       1253,      { {0}, { FS_GREEK }}},\n    { TURKISH_CHARSET,     1254,      { {0}, { FS_TURKISH }}},\n    { HEBREW_CHARSET,      1255,      { {0}, { FS_HEBREW }}},\n    { ARABIC_CHARSET,      1256,      { {0}, { FS_ARABIC }}},\n    { BALTIC_CHARSET,      1257,      { {0}, { FS_BALTIC }}},\n    { VIETNAMESE_CHARSET,  1258,      { {0}, { FS_VIETNAMESE }}},\n    { THAI_CHARSET,        874,       { {0}, { FS_THAI }}},\n    { SHIFTJIS_CHARSET,    932,       { {0}, { FS_JISJAPAN }}},\n    { GB2312_CHARSET,      936,       { {0}, { FS_CHINESESIMP }}},\n    { HANGEUL_CHARSET,     949,       { {0}, { FS_WANSUNG }}},\n    { CHINESEBIG5_CHARSET, 950,       { {0}, { FS_CHINESETRAD }}},\n    { JOHAB_CHARSET,       1361,      { {0}, { FS_JOHAB }}},\n    { 254,                 CP_UTF8,   { {0}, { 0x04000000 }}},\n    { SYMBOL_CHARSET,      CP_SYMBOL, { {0}, { FS_SYMBOL }}}\n};"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [],
+  "header_inline": [
+   "PtrToUlong"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "gdi32.TranslateCharsetInfo",
+  "category": {
+   "l1": "User interface",
+   "l2": "Internationalization (NLS, IME, Uniscribe)",
+   "header": "wingdi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 25,
+   "body": 24,
+   "code": 19
+  },
+  "cyclomatic": 10,
+  "return_type": "BOOL",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 8,
+   "n_tests": 10,
+   "n_tests_other": 2,
+   "own_test_functions": [
+    "dlls/gdi32/tests/font.c::create_fixed_pitch_font_proc",
+    "dlls/gdi32/tests/font.c::enum_multi_charset_font_proc",
+    "dlls/gdi32/tests/font.c::get_glyph_indices",
+    "dlls/gdi32/tests/font.c::test_EnumFontFamiliesEx_default_charset",
+    "dlls/gdi32/tests/font.c::test_TranslateCharsetInfo",
+    "dlls/gdi32/tests/font.c::test_bitmap_font_glyph_index",
+    "dlls/gdi32/tests/font.c::test_bitmap_font_metrics",
+    "dlls/gdi32/tests/font.c::test_nonexistent_font"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-translatecharsetinfo",
+   "source": "win32",
+   "description": "Translates character set information and sets all members of a destination structure to appropriate values.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Gdi32.dll"
+  },
+  "exports": [
+   "gdi32.TranslateCharsetInfo"
+  ],
+  "subset": {
+   "selected_by": "extra candidate 2026-11-25: loc.total > 10, 5 < n_tests_own <= 50, category with few samples"
+  }
+ }
+}

@@ -1,0 +1,221 @@
+{
+ "id": "0290",
+ "function": {
+  "name": "WsGetHeader",
+  "export_name": "WsGetHeader",
+  "module": "webservices",
+  "source_module": "webservices",
+  "exported_by": [
+   "webservices"
+  ],
+  "side": "PE",
+  "file": "dlls/webservices/msg.c",
+  "start_line": 1337,
+  "end_line": 1363,
+  "body_lines": 24,
+  "signature": "HRESULT WINAPI WsGetHeader( WS_MESSAGE *handle, WS_HEADER_TYPE type, WS_TYPE value_type, WS_READ_OPTION option, WS_HEAP *heap, void *value, ULONG size, WS_ERROR *error )",
+  "header_comment": "/**************************************************************************\n *          WsGetHeader\t\t[webservices.@]\n */",
+  "code": "HRESULT WINAPI WsGetHeader( WS_MESSAGE *handle, WS_HEADER_TYPE type, WS_TYPE value_type, WS_READ_OPTION option,\n                            WS_HEAP *heap, void *value, ULONG size, WS_ERROR *error )\n{\n    struct msg *msg = (struct msg *)handle;\n    HRESULT hr;\n\n    TRACE( \"%p %u %u %u %p %p %lu %p\\n\", handle, type, value_type, option, heap, value, size, error );\n    if (error) FIXME( \"ignoring error parameter\\n\" );\n\n    if (!msg || type < WS_ACTION_HEADER || type > WS_FAULT_TO_HEADER || option < WS_READ_REQUIRED_VALUE ||\n        option > WS_READ_OPTIONAL_POINTER) return E_INVALIDARG;\n\n    EnterCriticalSection( &msg->cs );\n\n    if (msg->magic != MSG_MAGIC)\n    {\n        LeaveCriticalSection( &msg->cs );\n        return E_INVALIDARG;\n    }\n\n    if (msg->state < WS_MESSAGE_STATE_INITIALIZED) hr = WS_E_INVALID_OPERATION;\n    else hr = get_standard_header( msg, type, value_type, option, heap, value, size );\n\n    LeaveCriticalSection( &msg->cs );\n    TRACE( \"returning %#lx\\n\", hr );\n    return hr;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winuser.h\"",
+   "#include \"rpc.h\"",
+   "#include \"webservices.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"webservices_private.h\""
+  ],
+  "resolution": [
+   "webservices!WsGetHeader [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/webservices/tests/msg.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "webservices",
+   "path": "sdk-api-src/content/webservices/nf-webservices-wsgetheader.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/webservices/nf-webservices-wsgetheader",
+   "documented_name": "wsgetheader",
+   "file": "docs/0290_sdk-api_nf-webservices-wsgetheader.md",
+   "text": "---\nUID: NF:webservices.WsGetHeader\ntitle: WsGetHeader function (webservices.h)\ndescription: Finds a particular standard header in the message and deserializes it.\nhelpviewer_keywords: [\"WsGetHeader\",\"WsGetHeader function [Web Services for Windows]\",\"webservices/WsGetHeader\",\"wsw.wsgetheader\"]\nold-location: wsw\\wsgetheader.htm\ntech.root: wsw\nms.assetid: ff6e639f-715d-4a4f-b0ef-35202aa54dc5\nms.date: 12/05/2018\nms.keywords: WsGetHeader, WsGetHeader function [Web Services for Windows], webservices/WsGetHeader, wsw.wsgetheader\nreq.header: webservices.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 7 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 R2 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: WebServices.lib\nreq.dll: WebServices.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - WsGetHeader\n - webservices/WsGetHeader\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - WebServices.dll\napi_name:\n - WsGetHeader\n---\n\n# WsGetHeader function\n\n\n## -description\n\nFinds a particular standard header in the message and deserializes it.\n\n## -parameters\n\n### -param message [in]\n\nThe message containing the header.\n                \n\nThe message can be in any state but <a href=\"/windows/desktop/api/webservices/ne-webservices-ws_message_state\">WS_MESSAGE_STATE_EMPTY</a>.\n\n### -param headerType [in]\n\nThe type of header to deserialize.\n\n### -param valueType [in]\n\nThe type of value to deserialize.  See <a href=\"/windows/desktop/api/webservices/ne-webservices-ws_header_type\">WS_HEADER_TYPE</a> for\n                    the set of types which correspond to each type of header.\n\n### -param readOption [in]\n\nWhether the value is required, and how to allocate the value. \n                    <a href=\"/windows/desktop/api/webservices/ne-webservices-ws_read_option\">WS_READ_NILLABLE_VALUE</a> and <b>WS_READ_NILLABLE_POINTER</b> \n                    read options cannot be specified since the header types in <a href=\"/windows/desktop/api/webservices/ne-webservices-ws_header_type\">WS_HEADER_TYPE</a> \n                    are not allowed to be nillable in the respective standards specifications.\n                    See <b>WS_READ_OPTION</b> for more information.\n\n### -param heap [in, optional]\n\nThe heap to store the deserialized header data in.\n                    If this is <b>NULL</b>, then the message heap will be used.\n\n### -param value\n\nThe interpretation of this parameter depends on the <a href=\"/windows/desktop/api/webservices/ne-webservices-ws_read_option\">WS_READ_OPTION</a>.\n\n### -param valueSize [in]\n\nThe interpretation of this parameter depends on the <a href=\"/windows/desktop/api/webservices/ne-webservices-ws_read_option\">WS_READ_OPTION</a>.\n\n### -param error [in, optional]\n\nSpecifies where additional error information should be stored if the function fails.\n\n## -returns\n\nThis function can return one of these values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WS_E_INVALID_FORMAT</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe header does not exist, and is required.\n                \n\nThere are multiple instances of the type of header present in the message.\n                \n\nThe input data was not in the expected format.\n                \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WS_E_QUOTA_EXCEEDED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe size quota of the heap was exceeded.\n                \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_OUTOFMEMORY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThere was not enough memory available to deserialize the header.\n                \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_INVALIDARG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOne or more of the parameters are incorrect.\n                \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b> Other Errors </b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThis function may return other errors not listed above.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThis API provides access to a set of standard header types (see <a href=\"/windows/desktop/api/webservices/ne-webservices-ws_header_type\">WS_HEADER_TYPE</a>).\n                For application defined header types, use <a href=\"/windows/desktop/api/webservices/nf-webservices-wsgetcustomheader\">WsGetCustomHeader</a>.\n            \n\nThis API is designed handle types of headers that appear once in the\n                message and are targeted at the ultimate receiver.  Headers targeted\n                with a role/actor other than ultimate receiver are ignored by this API."
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_standard_header",
+   "file": "dlls/webservices/msg.c",
+   "start_line": 1319,
+   "end_line": 1332,
+   "static": true,
+   "called_from": [
+    "WsGetHeader"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static HRESULT get_standard_header( struct msg *msg, WS_HEADER_TYPE type, WS_TYPE value_type, WS_READ_OPTION option, WS_HEAP *heap, void *value, ULONG size )",
+   "code": "static HRESULT get_standard_header( struct msg *msg, WS_HEADER_TYPE type, WS_TYPE value_type,\n                                    WS_READ_OPTION option, WS_HEAP *heap, void *value, ULONG size )\n{\n    const WS_XML_STRING *localname = get_header_name( type );\n    const WS_XML_STRING *ns = get_addr_namespace( msg->version_addr );\n    HRESULT hr;\n\n    if (!heap) heap = msg->heap;\n    if (!msg->reader && (hr = WsCreateReader( NULL, 0, &msg->reader, NULL )) != S_OK) return hr;\n    if ((hr = WsSetInputToBuffer( msg->reader, msg->buf, NULL, 0, NULL )) != S_OK) return hr;\n\n    if ((hr = find_header( msg->reader, localname, ns )) != S_OK) return hr;\n    return read_header( msg->reader, localname, ns, value_type, NULL, option, heap, value, size );\n}"
+  },
+  {
+   "name": "get_header_name",
+   "file": "dlls/webservices/msg.c",
+   "start_line": 521,
+   "end_line": 541,
+   "static": true,
+   "called_from": [
+    "get_standard_header"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/msg.c:559",
+    "dlls/webservices/msg.c:577",
+    "dlls/webservices/msg.c:592",
+    "dlls/webservices/msg.c:607",
+    "dlls/webservices/msg.c:620"
+   ],
+   "signature": "static const WS_XML_STRING *get_header_name( WS_HEADER_TYPE type )",
+   "code": "static const WS_XML_STRING *get_header_name( WS_HEADER_TYPE type )\n{\n    static const WS_XML_STRING headers[] =\n    {\n        {6, (BYTE *)\"Action\"},\n        {2, (BYTE *)\"To\"},\n        {9, (BYTE *)\"MessageID\"},\n        {9, (BYTE *)\"RelatesTo\"},\n        {4, (BYTE *)\"From\"},\n        {7, (BYTE *)\"ReplyTo\"},\n        {7, (BYTE *)\"FaultTo\"},\n    };\n\n    if (type < WS_ACTION_HEADER || type > WS_FAULT_TO_HEADER)\n    {\n        ERR( \"unknown type %u\\n\", type );\n        return NULL;\n    }\n\n    return &headers[type - 1];\n}"
+  },
+  {
+   "name": "get_addr_namespace",
+   "file": "dlls/webservices/msg.c",
+   "start_line": 503,
+   "end_line": 519,
+   "static": true,
+   "called_from": [
+    "get_standard_header"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/msg.c:712",
+    "dlls/webservices/msg.c:1206"
+   ],
+   "signature": "static const WS_XML_STRING *get_addr_namespace( WS_ADDRESSING_VERSION version )",
+   "code": "static const WS_XML_STRING *get_addr_namespace( WS_ADDRESSING_VERSION version )\n{\n    static const WS_XML_STRING namespaces[] =\n    {\n        {48, (BYTE *)\"http://schemas.xmlsoap.org/ws/2004/08/addressing\"},\n        {36, (BYTE *)\"http://www.w3.org/2005/08/addressing\"},\n        {55, (BYTE *)\"http://schemas.microsoft.com/ws/2005/05/addressing/none\"},\n    };\n\n    if (version < WS_ADDRESSING_VERSION_0_9 || version > WS_ADDRESSING_VERSION_TRANSPORT)\n    {\n        ERR( \"unknown version %u\\n\", version );\n        return NULL;\n    }\n\n    return &namespaces[version - 1];\n}"
+  },
+  {
+   "name": "find_header",
+   "file": "dlls/webservices/msg.c",
+   "start_line": 1298,
+   "end_line": 1317,
+   "static": true,
+   "called_from": [
+    "get_standard_header"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/msg.c:1801"
+   ],
+   "signature": "static HRESULT find_header( WS_XML_READER *reader, const WS_XML_STRING *localname, const WS_XML_STRING *ns )",
+   "code": "static HRESULT find_header( WS_XML_READER *reader, const WS_XML_STRING *localname, const WS_XML_STRING *ns )\n{\n    const WS_XML_NODE *node;\n    const WS_XML_ELEMENT_NODE *elem;\n    HRESULT hr;\n\n    for (;;)\n    {\n        if ((hr = WsReadNode( reader, NULL )) != S_OK) return hr;\n        if ((hr = WsGetReaderNode( reader, &node, NULL )) != S_OK) return hr;\n        if (node->nodeType == WS_XML_NODE_TYPE_EOF) return WS_E_INVALID_FORMAT;\n        if (node->nodeType != WS_XML_NODE_TYPE_ELEMENT) continue;\n\n        elem = (const WS_XML_ELEMENT_NODE *)node;\n        if (WsXmlStringEquals( elem->localName, localname, NULL ) == S_OK &&\n            WsXmlStringEquals( elem->ns, ns, NULL ) == S_OK) break;\n    }\n\n    return S_OK;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "msg",
+    "kind": "struct_decl",
+    "start_line": 64,
+    "end_line": 90,
+    "code": "struct msg\n{\n    ULONG                               magic;\n    CRITICAL_SECTION                    cs;\n    WS_MESSAGE_INITIALIZATION           init;\n    WS_MESSAGE_STATE                    state;\n    GUID                                id;\n    GUID                                id_req;\n    WS_ENVELOPE_VERSION                 version_env;\n    WS_ADDRESSING_VERSION               version_addr;\n    BOOL                                is_addressed;\n    WS_STRING                           addr;\n    WS_XML_STRING                      *action;\n    WS_HEAP                            *heap;\n    WS_XML_BUFFER                      *buf;\n    WS_XML_WRITER                      *writer;\n    WS_XML_WRITER                      *writer_body;\n    WS_XML_READER                      *reader;\n    WS_XML_READER                      *reader_body;\n    ULONG                               header_count;\n    ULONG                               header_size;\n    struct header                     **header;\n    WS_PROXY_MESSAGE_CALLBACK_CONTEXT   ctx_send;\n    WS_PROXY_MESSAGE_CALLBACK_CONTEXT   ctx_receive;\n    ULONG                               prop_count;\n    struct prop                         prop[ARRAY_SIZE( msg_props )];\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 32,
+    "end_line": 32,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(webservices);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "MSG_MAGIC",
+    "start_line": 92,
+    "end_line": 92,
+    "code": "#define MSG_MAGIC (('M' << 24) | ('E' << 16) | ('S' << 8) | 'S')"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "read_header",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 6922
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "WsCreateReader",
+    "impl": [
+     "dlls/webservices/reader.c:556"
+    ]
+   },
+   {
+    "name": "WsGetReaderNode",
+    "impl": [
+     "dlls/webservices/reader.c:764"
+    ]
+   },
+   {
+    "name": "WsReadNode",
+    "impl": [
+     "dlls/webservices/reader.c:3177"
+    ]
+   },
+   {
+    "name": "WsSetInputToBuffer",
+    "impl": [
+     "dlls/webservices/reader.c:7262"
+    ]
+   },
+   {
+    "name": "WsXmlStringEquals",
+    "impl": [
+     "dlls/webservices/string.c:822"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

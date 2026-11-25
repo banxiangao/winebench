@@ -1,0 +1,101 @@
+{
+ "id": "0371",
+ "function": {
+  "name": "EnumDisplayDevicesA",
+  "export_name": "EnumDisplayDevicesA",
+  "module": "user32",
+  "source_module": "user32",
+  "exported_by": [
+   "user32"
+  ],
+  "side": "PE",
+  "file": "dlls/user32/sysparams.c",
+  "start_line": 939,
+  "end_line": 967,
+  "body_lines": 26,
+  "signature": "BOOL WINAPI EnumDisplayDevicesA( LPCSTR device, DWORD index, DISPLAY_DEVICEA *info, DWORD flags )",
+  "header_comment": "/***********************************************************************\n *\t\tEnumDisplayDevicesA (USER32.@)\n */",
+  "code": "BOOL WINAPI EnumDisplayDevicesA( LPCSTR device, DWORD index, DISPLAY_DEVICEA *info, DWORD flags )\n{\n    UNICODE_STRING deviceW;\n    DISPLAY_DEVICEW ddW;\n    BOOL ret;\n\n    if (device)\n        RtlCreateUnicodeStringFromAsciiz( &deviceW, device );\n    else\n        deviceW.Buffer = NULL;\n\n    ddW.cb = sizeof(ddW);\n    ret = EnumDisplayDevicesW( deviceW.Buffer, index, &ddW, flags );\n    RtlFreeUnicodeString( &deviceW );\n\n    if (!ret)\n        return ret;\n\n    WideCharToMultiByte( CP_ACP, 0, ddW.DeviceName, -1, info->DeviceName, sizeof(info->DeviceName), NULL, NULL );\n    WideCharToMultiByte( CP_ACP, 0, ddW.DeviceString, -1, info->DeviceString, sizeof(info->DeviceString), NULL, NULL );\n    info->StateFlags = ddW.StateFlags;\n\n    if (info->cb >= offsetof(DISPLAY_DEVICEA, DeviceID) + sizeof(info->DeviceID))\n        WideCharToMultiByte( CP_ACP, 0, ddW.DeviceID, -1, info->DeviceID, sizeof(info->DeviceID), NULL, NULL );\n    if (info->cb >= offsetof(DISPLAY_DEVICEA, DeviceKey) + sizeof(info->DeviceKey))\n        WideCharToMultiByte( CP_ACP, 0, ddW.DeviceKey, -1, info->DeviceKey, sizeof(info->DeviceKey), NULL, NULL );\n\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"user_private.h\"",
+   "#include \"controls.h\"",
+   "#include \"wine/asm.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "user32!EnumDisplayDevicesA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/monitor.c",
+   "dlls/user32/tests/sysparams.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-enumdisplaydevicesa.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-enumdisplaydevicesa",
+   "documented_name": "enumdisplaydevicesa",
+   "file": "docs/0371_sdk-api_nf-winuser-enumdisplaydevicesa.md",
+   "text": "---\nUID: NF:winuser.EnumDisplayDevicesA\ntitle: EnumDisplayDevicesA function (winuser.h)\ndescription: The EnumDisplayDevices function lets you obtain information about the display devices in the current session. (ANSI)\nhelpviewer_keywords: [\"EnumDisplayDevicesA\", \"winuser/EnumDisplayDevicesA\"]\nold-location: gdi\\enumdisplaydevices.htm\ntech.root: gdi\nms.assetid: df3b493c-23d2-4996-9b79-86009efe3078\nms.date: 12/05/2018\nms.keywords: EnumDisplayDevices, EnumDisplayDevices function [Windows GDI], EnumDisplayDevicesA, EnumDisplayDevicesW, _win32_EnumDisplayDevices, gdi.enumdisplaydevices, winuser/EnumDisplayDevices, winuser/EnumDisplayDevicesA, winuser/EnumDisplayDevicesW\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: EnumDisplayDevicesW (Unicode) and EnumDisplayDevicesA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - EnumDisplayDevicesA\n - winuser/EnumDisplayDevicesA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - User32.dll\n - Ext-MS-Win-RTCore-NTUser-sysparams-l1-1-0.dll\n - minuser.dll\n - api-ms-win-ntuser-sysparams-l1-1-0.dll\napi_name:\n - EnumDisplayDevices\n - EnumDisplayDevicesA\n - EnumDisplayDevicesW\nreq.apiset: ext-ms-win-ntuser-sysparams-ext-l1-1-1 (introduced in Windows 10, version 10.0.14393)\n---\n\n# EnumDisplayDevicesA function\n\n\n## -description\n\nThe <b>EnumDisplayDevices</b> function lets you obtain information about the display devices in the current session.\n\n## -parameters\n\n### -param lpDevice [in]\n\nA pointer to the device name. If <b>NULL</b>, function returns information for the display adapter(s) on the machine, based on <i>iDevNum</i>.\n\nFor more information, see Remarks.\n\n### -param iDevNum [in]\n\nAn index value that specifies the display device of interest.\n\nThe operating system identifies each display device in the current session with an index value. The index values are consecutive integers, starting at 0. If the current session has three display devices, for example, they are specified by the index values 0, 1, and 2.\n\n### -param lpDisplayDevice [out]\n\nA pointer to a <a href=\"/windows/desktop/api/wingdi/ns-wingdi-display_devicea\">DISPLAY_DEVICE</a> structure that receives information about the display device specified by <i>iDevNum</i>. \n\nBefore calling <b>EnumDisplayDevices</b>, you must initialize the <b>cb</b> member of <a href=\"/windows/desktop/api/wingdi/ns-wingdi-display_devicea\">DISPLAY_DEVICE</a> to the size, in bytes, of <b>DISPLAY_DEVICE</b>.\n\n### -param dwFlags [in]\n\nSet this flag to EDD_GET_DEVICE_INTERFACE_NAME (0x00000001) to retrieve the device interface name for GUID_DEVINTERFACE_MONITOR, which is registered by the operating system on a per monitor basis. The value is placed in the DeviceID member of the <a href=\"/windows/desktop/api/wingdi/ns-wingdi-display_devicea\">DISPLAY_DEVICE</a> structure returned in <i>lpDisplayDevice</i>. The resulting device interface name can be used with <a href=\"/windows-hardware/drivers/install/setupapi\">SetupAPI functions</a> and serves as a link between GDI monitor devices and SetupAPI monitor devices.\n\n## -returns\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero. The function fails if <i>iDevNum</i> is greater than the largest device index.\n\n## -remarks\n\nTo query all display devices in the current session, call this function in a loop, starting with <i>iDevNum</i> set to 0, and incrementing <i>iDevNum</i> until the function fails. To select all display devices in the desktop, use only the display devices that have the DISPLAY_DEVICE_ATTACHED_TO_DESKTOP flag in the <a href=\"/windows/desktop/api/wingdi/ns-wingdi-display_devicea\">DISPLAY_DEVICE</a> structure.\n\nTo get information on the display adapter, call <b>EnumDisplayDevices</b> with <i>lpDevice</i> set to <b>NULL</b>. For example, <a href=\"/windows/desktop/api/wingdi/ns-wingdi-display_devicea\">DISPLAY_DEVICE</a>.<b>DeviceString</b> contains the adapter name.\n\nTo obtain information on a display monitor, first call <b>EnumDisplayDevices</b> with <i>lpDevice</i> set to <b>NULL</b>. Then call <b>EnumDisplayDevices</b> with <i>lpDevice</i> set to <a href=\"/windows/desktop/api/wingdi/ns-wingdi-display_devicea\">DISPLAY_DEVICE</a>.<b>DeviceName</b> from the first call to <b>EnumDisplayDevices</b> and with <i>iDevNum</i> set to zero. Then <b>DISPLAY_DEVICE</b>.<b>DeviceString</b> is the monitor name.\n\nTo query all monitor devices associated with an adapter, call <b>EnumDisplayDevices</b> in a loop with <i>lpDevice</i> set to the adapter name, <i>iDevNum</i> set to start at 0, and <i>iDevNum</i> set to increment until the function fails. Note that <b>DISPLAY_DEVICE.DeviceName</b> changes with each call for monitor information, so you must save the adapter name. The function fails when there are no more monitors for the adapter.\n\n\n\n\n\n> [!NOTE]\n> The winuser.h header defines EnumDisplayDevices as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-changedisplaysettingsa\">ChangeDisplaySettings</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-changedisplaysettingsexa\">ChangeDisplaySettingsEx</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-createdca\">CreateDC</a>\n\n\n\n<a href=\"/windows/win32/api/wingdi/ns-wingdi-devmodea\">DEVMODE</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-display_devicea\">DISPLAY_DEVICE</a>\n\n\n\n<a href=\"/windows/desktop/gdi/device-context-functions\">Device Context Functions</a>\n\n\n\n<a href=\"/windows/desktop/gdi/device-contexts\">Device Contexts Overview</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-enumdisplaysettingsa\">EnumDisplaySettings</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "EnumDisplayDevicesW",
+    "impl": [
+     "dlls/user32/sysparams.c:972"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "RtlCreateUnicodeStringFromAsciiz",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:255"
+    ]
+   },
+   {
+    "name": "RtlFreeUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:272"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   }
+  ],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

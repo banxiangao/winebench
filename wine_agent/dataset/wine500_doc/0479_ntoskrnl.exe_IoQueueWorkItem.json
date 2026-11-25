@@ -1,0 +1,232 @@
+{
+ "id": "0479",
+ "function": {
+  "name": "IoQueueWorkItem",
+  "export_name": "IoQueueWorkItem",
+  "module": "ntoskrnl.exe",
+  "source_module": "ntoskrnl.exe",
+  "exported_by": [
+   "ntoskrnl.exe"
+  ],
+  "side": "PE",
+  "file": "dlls/ntoskrnl.exe/ntoskrnl.c",
+  "start_line": 1330,
+  "end_line": 1339,
+  "body_lines": 7,
+  "signature": "void WINAPI IoQueueWorkItem( PIO_WORKITEM work_item, PIO_WORKITEM_ROUTINE worker, WORK_QUEUE_TYPE type, void *context )",
+  "header_comment": "/***********************************************************************\n *           IoQueueWorkItem  (NTOSKRNL.EXE.@)\n */",
+  "code": "void WINAPI IoQueueWorkItem( PIO_WORKITEM work_item, PIO_WORKITEM_ROUTINE worker,\n                             WORK_QUEUE_TYPE type, void *context )\n{\n    TRACE( \"%p %p %u %p\\n\", work_item, worker, type, context );\n\n    ObReferenceObject( work_item->device );\n    work_item->worker = worker;\n    work_item->context = context;\n    TrySubmitThreadpoolCallback( run_work_item_worker, work_item, NULL );\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"ntoskrnl_private.h\"",
+   "#include \"excpt.h\"",
+   "#include \"winreg.h\"",
+   "#include \"ntsecapi.h\"",
+   "#include \"evntprov.h\"",
+   "#include \"ddk/csq.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/svcctl.h\""
+  ],
+  "resolution": [
+   "ntoskrnl.exe!IoQueueWorkItem [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntoskrnl.exe/tests/driver.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "wdm",
+   "path": "wdk-ddi-src/content/wdm/nf-wdm-ioqueueworkitem.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-ioqueueworkitem",
+   "documented_name": "ioqueueworkitem",
+   "file": "docs/0479_windows-driver-docs-ddi_nf-wdm-ioqueueworkitem.md",
+   "text": "---\nUID: NF:wdm.IoQueueWorkItem\ntitle: IoQueueWorkItem function (wdm.h)\ndescription: The IoQueueWorkItem routine associates a WorkItem routine with a work item, and it inserts the work item into a queue for later processing by a system worker thread.\nold-location: kernel\\ioqueueworkitem.htm\ntech.root: kernel\nms.date: 04/30/2018\nkeywords: [\"IoQueueWorkItem function\"]\nms.keywords: IoQueueWorkItem, IoQueueWorkItem routine [Kernel-Mode Driver Architecture], k104_6f5cb4e5-75d1-433a-864e-19de914aa2e7.xml, kernel.ioqueueworkitem, wdm/IoQueueWorkItem\nreq.header: wdm.h\nreq.include-header: Wdm.h, Ntddk.h, Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt: Available starting with Windows 2000.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: <= DISPATCH_LEVEL\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - IoQueueWorkItem\n - wdm/IoQueueWorkItem\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - IoQueueWorkItem\n---\n\n# IoQueueWorkItem function\n\n\n## -description\n\nThe <b>IoQueueWorkItem</b> routine associates a <a href=\"/windows-hardware/drivers/ddi/wdm/nc-wdm-io_workitem_routine\">WorkItem</a> routine with a work item, and it inserts the work item into a queue for later processing by a system worker thread.\n\n## -parameters\n\n### -param IoWorkItem [in]\n\n\nPointer to an <a href=\"/windows-hardware/drivers/kernel/eprocess\">IO_WORKITEM</a> structure that was allocated by <a href=\"/windows-hardware/drivers/ddi/wdm/nf-wdm-ioallocateworkitem\">IoAllocateWorkItem</a> or initialized by <a href=\"/windows-hardware/drivers/ddi/wdm/nf-wdm-ioinitializeworkitem\">IoInitializeWorkItem</a>.\n\n### -param WorkerRoutine [in]\n\n\nPointer to a <a href=\"/windows-hardware/drivers/ddi/wdm/nc-wdm-io_workitem_routine\">WorkItem</a> routine.\n\n### -param QueueType [in]\n\n\nSpecifies a <a href=\"/windows-hardware/drivers/ddi/wdm/ne-wdm-_work_queue_type\">WORK_QUEUE_TYPE</a> value that stipulates the type of system worker thread to handle the work item. Drivers must specify <b>DelayedWorkQueue</b>.\n\n### -param Context [in, optional]\n\n\nSpecifies driver-specific information for the work item. The system passes this value as the <i>Context</i> parameter to <a href=\"/windows-hardware/drivers/ddi/wdm/nc-wdm-io_workitem_routine\">WorkItem</a>.\n\n## -remarks\n\nFor more information about work items, see <a href=\"/windows-hardware/drivers/kernel/system-worker-threads\">System Worker Threads</a>.\n\n## -see-also\n\n<a href=\"/windows-hardware/drivers/kernel/eprocess\">IO_WORKITEM</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/wdm/nf-wdm-ioallocateworkitem\">IoAllocateWorkItem</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/wdm/nf-wdm-ioqueueworkitemex\">IoQueueWorkItemEx</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/wdm/nc-wdm-io_workitem_routine\">WorkItem</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "ObReferenceObject",
+   "file": "dlls/ntoskrnl.exe/ntoskrnl.c",
+   "start_line": 222,
+   "end_line": 249,
+   "static": false,
+   "called_from": [
+    "IoQueueWorkItem"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntoskrnl.exe/ntoskrnl.c:366",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:3310",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:3366",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:3416"
+   ],
+   "signature": "void ObReferenceObject( void *obj )",
+   "code": "void ObReferenceObject( void *obj )\n{\n    struct object_header *header = (struct object_header*)obj - 1;\n    LONG ref;\n\n    if (!obj)\n    {\n        FIXME(\"NULL obj\\n\");\n        return;\n    }\n\n    EnterCriticalSection( &obref_cs );\n\n    ref = ++header->ref;\n    TRACE( \"(%p) ref=%lu\\n\", obj, ref );\n    if (ref == 1)\n    {\n        SERVER_START_REQ( grab_kernel_object )\n        {\n            req->manager  = wine_server_obj_handle( get_device_manager() );\n            req->user_ptr = wine_server_client_ptr( obj );\n            if (wine_server_call( req )) FIXME( \"failed to grab %p reference\\n\", obj );\n        }\n        SERVER_END_REQ;\n    }\n\n    LeaveCriticalSection( &obref_cs );\n}"
+  },
+  {
+   "name": "run_work_item_worker",
+   "file": "dlls/ntoskrnl.exe/ntoskrnl.c",
+   "start_line": 1315,
+   "end_line": 1325,
+   "static": true,
+   "called_from": [
+    "IoQueueWorkItem"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void WINAPI run_work_item_worker(TP_CALLBACK_INSTANCE *instance, void *context)",
+   "code": "static void WINAPI run_work_item_worker(TP_CALLBACK_INSTANCE *instance, void *context)\n{\n    PIO_WORKITEM work_item = context;\n    DEVICE_OBJECT *device = work_item->device;\n\n    TRACE( \"%p: calling %p(%p %p)\\n\", work_item, work_item->worker, device, work_item->context );\n    work_item->worker( device, work_item->context );\n    TRACE( \"done\\n\" );\n\n    ObDereferenceObject( device );\n}"
+  },
+  {
+   "name": "get_device_manager",
+   "file": "dlls/ntoskrnl.exe/ntoskrnl.c",
+   "start_line": 114,
+   "end_line": 140,
+   "static": true,
+   "called_from": [
+    "ObReferenceObject"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntoskrnl.exe/ntoskrnl.c:167",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:211",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:283",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:394",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:946"
+   ],
+   "signature": "static HANDLE get_device_manager(void)",
+   "code": "static HANDLE get_device_manager(void)\n{\n    static HANDLE device_manager;\n    HANDLE handle = 0, ret = device_manager;\n\n    if (!ret)\n    {\n        SERVER_START_REQ( create_device_manager )\n        {\n            req->access     = SYNCHRONIZE;\n            req->attributes = 0;\n            if (!wine_server_call( req )) handle = wine_server_ptr_handle( reply->handle );\n        }\n        SERVER_END_REQ;\n\n        if (!handle)\n        {\n            ERR( \"failed to create the device manager\\n\" );\n            return 0;\n        }\n        if (!(ret = InterlockedCompareExchangePointer( &device_manager, handle, 0 )))\n            ret = handle;\n        else\n            NtClose( handle );  /* somebody beat us to it */\n    }\n    return ret;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "_IO_WORKITEM",
+    "kind": "struct_decl",
+    "start_line": 1283,
+    "end_line": 1288,
+    "code": "struct _IO_WORKITEM\n{\n    DEVICE_OBJECT *device;\n    PIO_WORKITEM_ROUTINE worker;\n    void *context;\n};"
+   },
+   {
+    "name": "object_header",
+    "kind": "struct_decl",
+    "start_line": 143,
+    "end_line": 147,
+    "code": "struct object_header\n{\n    LONG ref;\n    POBJECT_TYPE type;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 35,
+    "end_line": 35,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ntoskrnl);"
+   },
+   {
+    "name": "obref_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 181,
+    "end_line": 181,
+    "code": "DECLARE_CRITICAL_SECTION(obref_cs);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "NtClose",
+    "impl": [
+     "dlls/ntdll/unix/server.c:1940"
+    ]
+   },
+   {
+    "name": "ObDereferenceObject",
+    "impl": [
+     "dlls/ntoskrnl.exe/ntoskrnl.c:186"
+    ]
+   },
+   {
+    "name": "memset",
+    "impl": [
+     "dlls/msvcrt/string.c:3194"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "TrySubmitThreadpoolCallback",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/thread.c:1383"
+    ]
+   },
+   {
+    "name": "wine_server_call",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/loader.c:3436"
+    ]
+   }
+  ],
+  "header_inline": [
+   "_InterlockedCompareExchangePointer",
+   "wine_dbg_log",
+   "wine_server_client_ptr",
+   "wine_server_obj_handle",
+   "wine_server_ptr_handle"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [
+   {
+    "request": "create_device_manager",
+    "handler": "server/device.c:829"
+   },
+   {
+    "request": "grab_kernel_object",
+    "handler": "server/device.c:1052"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "work_item->worker",
+    "in_function": "run_work_item_worker",
+    "at": "dlls/ntoskrnl.exe/ntoskrnl.c:1321",
+    "candidates": [
+     "worker @ dlls/ntoskrnl.exe/ntoskrnl.c:1336"
+    ]
+   }
+  ]
+ }
+}

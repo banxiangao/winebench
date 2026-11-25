@@ -1,0 +1,235 @@
+{
+ "id": "0209",
+ "function": {
+  "name": "PathCchIsRoot",
+  "export_name": "PathCchIsRoot",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/path.c",
+  "start_line": 713,
+  "end_line": 748,
+  "body_lines": 33,
+  "signature": "BOOL WINAPI PathCchIsRoot(const WCHAR *path)",
+  "header_comment": null,
+  "code": "BOOL WINAPI PathCchIsRoot(const WCHAR *path)\n{\n    const WCHAR *root_end;\n    const WCHAR *next;\n    BOOL is_unc;\n\n    TRACE(\"%s\\n\", wine_dbgstr_w(path));\n\n    if (!path || !*path) return FALSE;\n\n    root_end = get_root_end(path);\n    if (!root_end) return FALSE;\n\n    if ((is_unc = is_prefixed_unc(path)) || (path[0] == '\\\\' && path[1] == '\\\\' && path[2] != '?'))\n    {\n        next = root_end + 1;\n        /* No extra segments */\n        if ((is_unc && !*next) || (!is_unc && !*next)) return TRUE;\n\n        /* Has first segment with an ending backslash but no remaining characters */\n        if (get_next_segment(next, &next) && !*next) return FALSE;\n        /* Has first segment with no ending backslash */\n        else if (!*next)\n            return TRUE;\n        /* Has first segment with an ending backslash and has remaining characters*/\n        else\n        {\n            /* Second segment must have no backslash and no remaining characters */\n            return !get_next_segment(next, &next) && !*next;\n        }\n    }\n    else if (*root_end == '\\\\' && !root_end[1])\n        return TRUE;\n    else\n        return FALSE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdbool.h>",
+   "#include <string.h>",
+   "#include <wchar.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"pathcch.h\"",
+   "#include \"strsafe.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"wininet.h\"",
+   "#include \"intshcut.h\"",
+   "#include \"winternl.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernelbase!PathCchIsRoot [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernelbase/tests/path.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "pathcch",
+   "path": "sdk-api-src/content/pathcch/nf-pathcch-pathcchisroot.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/pathcch/nf-pathcch-pathcchisroot",
+   "documented_name": "pathcchisroot",
+   "file": "docs/0209_sdk-api_nf-pathcch-pathcchisroot.md",
+   "text": "---\nUID: NF:pathcch.PathCchIsRoot\ntitle: PathCchIsRoot function (pathcch.h)\ndescription: Determines whether a path string refers to the root of a volume.This function differs from PathIsRoot in that it accepts paths with &#0034;\\\\&#0034;, &#0034;\\\\?\\&#0034; and &#0034;\\\\?\\UNC\\&#0034; prefixes.\nold-location: shell\\PathCchIsRoot.htm\ntech.root: shell\nms.assetid: b9770030-b298-47f8-98a7-3ce9b4d44dd1\nms.date: 12/05/2018\nms.keywords: PathCchIsRoot, PathCchIsRoot function [Windows Shell], pathcch/PathCchIsRoot, shell.PathCchIsRoot\nreq.header: pathcch.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 8 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2012 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Pathcch.lib\nreq.dll: \nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - PathCchIsRoot\n - pathcch/PathCchIsRoot\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - pathcch.lib\n - API-MS-Win-Core-Path-l1-1-0.dll\n - KernelBase.dll\napi_name:\n - PathCchIsRoot\n---\n\n# PathCchIsRoot function\n\n\n## -description\n\nDetermines whether a path string refers to the root of a volume.\n\nThis function differs from <a href=\"/windows/desktop/api/shlwapi/nf-shlwapi-pathisroota\">PathIsRoot</a> in that it accepts paths with \"\\\\\", \"\\\\?\\\" and \"\\\\?\\UNC\\\" prefixes.\n\n## -parameters\n\n### -param pszPath [in, optional]\n\nA pointer to the path string.\n\n## -returns\n\nReturns <b>TRUE</b> if the specified path is a root, or <b>FALSE</b> otherwise.\n\n## -remarks\n\nThe following table shows the <b>PathCchIsRoot</b> return value for various paths.\n            \n                \n\n<table class=\"clsStd\">\n<tr>\n<th>Path</th>\n<th>PathCchIsRoot</th>\n</tr>\n<tr>\n<td>\"c:\\\"</td>\n<td>TRUE</td>\n</tr>\n<tr>\n<td>\"c:\"</td>\n<td>FALSE</td>\n</tr>\n<tr>\n<td>\"c:\\path1\"</td>\n<td>FALSE</td>\n</tr>\n<tr>\n<td>\"\\path1\"</td>\n<td>TRUE</td>\n</tr>\n<tr>\n<td>\"path1\"</td>\n<td>FALSE</td>\n</tr>\n<tr>\n<td>\"\\\\path1\\path2\"</td>\n<td>TRUE</td>\n</tr>\n<tr>\n<td>\"\\\\path1\\path2\\\"</td>\n<td>FALSE</td>\n</tr>\n<tr>\n<td>\"\\\\path1\\path2\\path3\"</td>\n<td>FALSE</td>\n</tr>\n<tr>\n<td>\"\\\\path1\"</td>\n<td>TRUE</td>\n</tr>\n<tr>\n<td>\"\\\\path1\\\"</td>\n<td>FALSE</td>\n</tr>\n<tr>\n<td>\"\\\\\"</td>\n<td>TRUE</td>\n</tr>\n<tr>\n<td>\"\\\\?\\UNC\\\"</td>\n<td>TRUE</td>\n</tr>\n<tr>\n<td>\"\\\\?\\UNC\\path1\\path2\"</td>\n<td>TRUE</td>\n</tr>\n<tr>\n<td>\"\\\\?\\UNC\\path1\\path2\\\"</td>\n<td>FALSE</td>\n</tr>\n<tr>\n<td>\"\\\\?\\UNC\\path1\\path2\\path3\"</td>\n<td>FALSE</td>\n</tr>\n<tr>\n<td>\"\\\\?\\UNC\\path1\"</td>\n<td>TRUE</td>\n</tr>\n<tr>\n<td>\"\\\\?\\UNC\\path1\\\"</td>\n<td>FALSE</td>\n</tr>\n<tr>\n<td>\"\\\\?\\c:\\\"</td>\n<td>TRUE</td>\n</tr>\n<tr>\n<td>\"\\\\?\\c:\"</td>\n<td>FALSE</td>\n</tr>\n<tr>\n<td>\"\\\\?\\c:\\path1\"</td>\n<td>FALSE</td>\n</tr>\n<tr>\n<td>\"\\\\?\\Volume{guid}\\\"</td>\n<td>TRUE</td>\n</tr>\n<tr>\n<td>\"\\\\?\\Volume{guid}\"</td>\n<td>FALSE</td>\n</tr>\n<tr>\n<td>\"\\\\?\\Volume{guid}\\path1\"</td>\n<td>FALSE</td>\n</tr>\n<tr>\n<td>NULL</td>\n<td>FALSE</td>\n</tr>\n<tr>\n<td>\"\"</td>\n<td>FALSE</td>\n</tr>\n</table>\n \n\nThis function returns <b>TRUE</b> for paths such as \"\\\", \"<i>X</i>:\\\" or \"&#92;&#92;<i>server</i>&#92;<i>share</i>\". Paths such as \"..\\path2\" or \"&#92;&#92;<i>server</i>\\share\\\" return <b>FALSE</b>.\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_root_end",
+   "file": "dlls/kernelbase/path.c",
+   "start_line": 211,
+   "end_line": 231,
+   "static": true,
+   "called_from": [
+    "PathCchIsRoot"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/path.c:275",
+    "dlls/kernelbase/path.c:777",
+    "dlls/kernelbase/path.c:864"
+   ],
+   "signature": "static const WCHAR *get_root_end(const WCHAR *path)",
+   "code": "static const WCHAR *get_root_end(const WCHAR *path)\n{\n    /* Find path root */\n    if (is_prefixed_volume(path))\n        return path[48] == '\\\\' ? path + 48 : path + 47;\n    else if (is_prefixed_unc(path))\n        return path + 7;\n    else if (is_prefixed_disk(path))\n        return path[6] == '\\\\' ? path + 6 : path + 5;\n    /* \\\\ */\n    else if (path[0] == '\\\\' && path[1] == '\\\\')\n        return path + 1;\n    /* \\ */\n    else if (path[0] == '\\\\')\n        return path;\n    /* X:\\ */\n    else if (is_drive_spec( path ))\n        return path[2] == '\\\\' ? path + 2 : path + 1;\n    else\n        return NULL;\n}"
+  },
+  {
+   "name": "is_prefixed_unc",
+   "file": "dlls/kernelbase/path.c",
+   "start_line": 148,
+   "end_line": 151,
+   "static": true,
+   "called_from": [
+    "PathCchIsRoot",
+    "get_root_end"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/path.c:830",
+    "dlls/kernelbase/path.c:860",
+    "dlls/kernelbase/path.c:868",
+    "dlls/kernelbase/path.c:891",
+    "dlls/kernelbase/path.c:921"
+   ],
+   "signature": "static BOOL is_prefixed_unc(const WCHAR *string)",
+   "code": "static BOOL is_prefixed_unc(const WCHAR *string)\n{\n    return !wcsnicmp(string, L\"\\\\\\\\?\\\\UNC\\\\\", 8 );\n}"
+  },
+  {
+   "name": "get_next_segment",
+   "file": "dlls/kernelbase/path.c",
+   "start_line": 195,
+   "end_line": 208,
+   "static": true,
+   "called_from": [
+    "PathCchIsRoot"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/path.c:870",
+    "dlls/kernelbase/path.c:871",
+    "dlls/kernelbase/path.c:876",
+    "dlls/kernelbase/path.c:878"
+   ],
+   "signature": "static BOOL get_next_segment(const WCHAR *next, const WCHAR **next_segment)",
+   "code": "static BOOL get_next_segment(const WCHAR *next, const WCHAR **next_segment)\n{\n    while (*next && *next != '\\\\') next++;\n    if (*next == '\\\\')\n    {\n        *next_segment = next + 1;\n        return TRUE;\n    }\n    else\n    {\n        *next_segment = next;\n        return FALSE;\n    }\n}"
+  },
+  {
+   "name": "is_prefixed_volume",
+   "file": "dlls/kernelbase/path.c",
+   "start_line": 158,
+   "end_line": 191,
+   "static": true,
+   "called_from": [
+    "get_root_end"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/path.c:860",
+    "dlls/kernelbase/path.c:1043",
+    "dlls/kernelbase/path.c:1101",
+    "dlls/kernelbase/path.c:1137"
+   ],
+   "signature": "static BOOL is_prefixed_volume(const WCHAR *string)",
+   "code": "static BOOL is_prefixed_volume(const WCHAR *string)\n{\n    const WCHAR *guid;\n    INT i = 0;\n\n    if (wcsnicmp( string, L\"\\\\\\\\?\\\\Volume\", 10 )) return FALSE;\n\n    guid = string + 10;\n\n    while (i <= 37)\n    {\n        switch (i)\n        {\n        case 0:\n            if (guid[i] != '{') return FALSE;\n            break;\n        case 9:\n        case 14:\n        case 19:\n        case 24:\n            if (guid[i] != '-') return FALSE;\n            break;\n        case 37:\n            if (guid[i] != '}') return FALSE;\n            break;\n        default:\n            if (!isxdigit(guid[i])) return FALSE;\n            break;\n        }\n        i++;\n    }\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "is_prefixed_disk",
+   "file": "dlls/kernelbase/path.c",
+   "start_line": 153,
+   "end_line": 156,
+   "static": true,
+   "called_from": [
+    "get_root_end"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/path.c:443",
+    "dlls/kernelbase/path.c:861",
+    "dlls/kernelbase/path.c:898",
+    "dlls/kernelbase/path.c:1043",
+    "dlls/kernelbase/path.c:1102"
+   ],
+   "signature": "static BOOL is_prefixed_disk(const WCHAR *string)",
+   "code": "static BOOL is_prefixed_disk(const WCHAR *string)\n{\n    return !wcsncmp(string, L\"\\\\\\\\?\\\\\", 4) && is_drive_spec( string + 4 );\n}"
+  },
+  {
+   "name": "is_drive_spec",
+   "file": "dlls/kernelbase/path.c",
+   "start_line": 138,
+   "end_line": 141,
+   "static": true,
+   "called_from": [
+    "get_root_end",
+    "is_prefixed_disk"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/path.c:286",
+    "dlls/kernelbase/path.c:360",
+    "dlls/kernelbase/path.c:401",
+    "dlls/kernelbase/path.c:402",
+    "dlls/kernelbase/path.c:438"
+   ],
+   "signature": "static BOOL is_drive_spec( const WCHAR *str )",
+   "code": "static BOOL is_drive_spec( const WCHAR *str )\n{\n    return isalpha( str[0] ) && str[1] == ':';\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 39,
+    "end_line": 39,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(path);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "isalpha",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:801"
+    ]
+   },
+   {
+    "name": "isxdigit",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:882"
+    ]
+   },
+   {
+    "name": "wcsncmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:341"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wcsnicmp",
+   "wine_dbg_log",
+   "wine_dbgstr_w"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

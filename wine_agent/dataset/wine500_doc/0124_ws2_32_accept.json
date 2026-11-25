@@ -1,0 +1,326 @@
+{
+ "id": "0124",
+ "function": {
+  "name": "accept",
+  "export_name": "accept",
+  "module": "ws2_32",
+  "source_module": "ws2_32",
+  "exported_by": [
+   "winsock.dll16",
+   "ws2_32",
+   "wsock32"
+  ],
+  "side": "PE",
+  "file": "dlls/ws2_32/socket.c",
+  "start_line": 899,
+  "end_line": 939,
+  "body_lines": 38,
+  "signature": "SOCKET WINAPI accept( SOCKET s, struct sockaddr *addr, int *len )",
+  "header_comment": "/***********************************************************************\n *\t\taccept\t\t(WS2_32.1)\n */",
+  "code": "SOCKET WINAPI accept( SOCKET s, struct sockaddr *addr, int *len )\n{\n    IO_STATUS_BLOCK io;\n    NTSTATUS status;\n    ULONG accept_handle;\n    HANDLE sync_event;\n    SOCKET ret;\n\n    TRACE( \"socket %#Ix\\n\", s );\n\n    if (!(sync_event = get_sync_event())) return INVALID_SOCKET;\n    status = NtDeviceIoControlFile( (HANDLE)s, sync_event, NULL, NULL, &io, IOCTL_AFD_WINE_ACCEPT,\n                                    NULL, 0, &accept_handle, sizeof(accept_handle) );\n    if (status == STATUS_PENDING)\n    {\n        if (wait_event_alertable( sync_event ) == WAIT_FAILED)\n            return SOCKET_ERROR;\n        status = io.Status;\n    }\n    if (status)\n    {\n        TRACE( \"failed, status %#lx\\n\", status );\n        WSASetLastError( NtStatusToWSAError( status ) );\n        return INVALID_SOCKET;\n    }\n\n    ret = accept_handle;\n    if (!socket_list_add( ret ))\n    {\n        CloseHandle( SOCKET2HANDLE(ret) );\n        return INVALID_SOCKET;\n    }\n    if (addr && len && getpeername( ret, addr, len ))\n    {\n        closesocket( ret );\n        return INVALID_SOCKET;\n    }\n\n    TRACE( \"returning %#Ix\\n\", ret );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ws2_32_private.h\""
+  ],
+  "resolution": [
+   "ws2_32!accept [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ws2_32/tests/afd.c",
+   "dlls/ws2_32/tests/sock.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "winsock.dll16",
+   "source_module": "winsock.dll16",
+   "exported_by": [
+    "winsock.dll16"
+   ],
+   "file": "dlls/winsock.dll16/socket.c",
+   "start_line": 439,
+   "resolution": [
+    "winsock.dll16!accept [pascal -ret16] -> internal symbol accept16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 445,
+   "signature": "SOCKET16 WINAPI accept16(SOCKET16 s, struct sockaddr* addr, INT16* addrlen16 )",
+   "code": "SOCKET16 WINAPI accept16(SOCKET16 s, struct sockaddr* addr, INT16* addrlen16 )\n{\n    INT addrlen32 = addrlen16 ? *addrlen16 : 0;\n    SOCKET retSocket = accept( s, addr, &addrlen32 );\n    if( addrlen16 ) *addrlen16 = addrlen32;\n    return retSocket;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winsock2",
+   "path": "sdk-api-src/content/winsock2/nf-winsock2-accept.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winsock2/nf-winsock2-accept",
+   "documented_name": "accept",
+   "file": "docs/0124_sdk-api_nf-winsock2-accept.md",
+   "text": "---\nUID: NF:winsock2.accept\ntitle: accept function (winsock2.h)\ndescription: The accept function permits an incoming connection attempt on a socket.\nhelpviewer_keywords: [\"_win32_accept_2\",\"accept\",\"accept function [Winsock]\",\"winsock.accept_2\",\"winsock2/accept\"]\nold-location: winsock\\accept_2.htm\ntech.root: WinSock\nms.assetid: 72246263-4806-4ab2-9b26-89a1782a954b\nms.date: 12/05/2018\nms.keywords: _win32_accept_2, accept, accept function [Winsock], winsock.accept_2, winsock2/accept\nreq.header: winsock2.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 8.1, Windows Vista [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ws2_32.lib\nreq.dll: Ws2_32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - accept\n - winsock2/accept\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Ws2_32.dll\napi_name:\n - accept\n---\n\n# accept function\n\n\n## -description\n\nThe \n<b>accept</b> function permits an incoming connection attempt on a socket.\n\n## -parameters\n\n### -param s [in]\n\nA descriptor that identifies a socket that has been placed in a listening state with the \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-listen\">listen</a> function. The connection is actually made with the socket that is returned by \n<b>accept</b>.\n\n### -param addr [out]\n\nAn optional pointer to a buffer that receives the address of the connecting entity, as known to the communications layer. The exact format of the <i>addr</i> parameter is determined by the address family that was established when the socket from the \n<a href=\"/windows/desktop/WinSock/sockaddr-2\">sockaddr</a> structure was created.\n\n### -param addrlen [in, out]\n\nAn optional pointer to an integer that contains the length of structure pointed to by the <i>addr</i> parameter.\n\n## -returns\n\nIf no error occurs, \n<b>accept</b> returns a value of type <b>SOCKET</b> that is a descriptor for the new socket. This returned value is a handle for the socket on which the actual connection is made.\n\nOtherwise, a value of <b>INVALID_SOCKET</b> is returned, and a specific error code can be retrieved by calling \n<a href=\"/windows/desktop/api/winsock/nf-winsock-wsagetlasterror\">WSAGetLastError</a>.\n\nThe integer referred to by <i>addrlen</i> initially contains the amount of space pointed to by <i>addr</i>. On return it will contain the actual length in bytes of the address returned.\n\n<table>\n<tr>\n<th>Error code</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSANOTINITIALISED</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA successful \n<a href=\"/windows/desktop/api/winsock/nf-winsock-wsastartup\">WSAStartup</a> call must occur before using this function.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAECONNRESET</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn incoming connection was indicated, but was subsequently terminated by the remote peer prior to accepting the call.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAEFAULT</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <i>addrlen</i> parameter is too small or <i>addr</i> is not a valid part of the user address space.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAEINTR</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA blocking Windows Sockets 1.1 call was canceled through \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsacancelblockingcall\">WSACancelBlockingCall</a>.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAEINVAL</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-listen\">listen</a> function was not invoked prior to \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-accept\">accept</a>.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAEINPROGRESS</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA blocking Windows Sockets 1.1 call is in progress, or the service provider is still processing a callback function.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAEMFILE</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe queue is nonempty upon entry to \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-accept\">accept</a> and there are no descriptors available.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAENETDOWN</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe network subsystem has failed.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAENOBUFS</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nNo buffer space is available.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAENOTSOCK</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe descriptor is not a socket.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAEOPNOTSUPP</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe referenced socket is not a type that supports connection-oriented service.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAEWOULDBLOCK</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe socket is marked as nonblocking and no connections are present to be accepted.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe \n<b>accept</b> function extracts the first connection on the queue of pending connections on socket <i>s</i>. It then creates and returns a handle to the new socket. The newly created socket is the socket that will handle the actual connection; it has the same properties as socket <i>s</i>, including the asynchronous events registered with the \n<a href=\"/windows/desktop/api/winsock/nf-winsock-wsaasyncselect\">WSAAsyncSelect</a> or \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsaeventselect\">WSAEventSelect</a> functions.\n\nThe \n<b>accept</b> function can block the caller until a connection is present if no pending connections are present on the queue, and the socket is marked as blocking. If the socket is marked as nonblocking and no pending connections are present on the queue, \n<b>accept</b> returns an error as described in the following. After the successful completion of \n<b>accept</b> returns a new socket handle, the accepted socket cannot be used to accept more connections. The original socket remains open and listens for new connection requests.\n\nThe parameter <i>addr</i> is a result parameter that is filled in with the address of the connecting entity, as known to the communications layer. The exact format of the <i>addr</i> parameter is determined by the address family in which the communication is occurring. The <i>addrlen</i> is a value-result parameter; it should initially contain the amount of space pointed to by <i>addr</i>; on return it will contain the actual length (in bytes) of the address returned.\n\nThe \n<b>accept</b> function is used with connection-oriented socket types such as SOCK_STREAM. If <i>addr</i> and/or <i>addrlen</i> are equal to <b>NULL</b>, then no information about the remote address of the accepted socket is returned.\n\n<div class=\"alert\"><b>Note</b>  When issuing a blocking Winsock call such as <b>accept</b>, Winsock may need to wait for a network event before the call can complete. Winsock performs an alertable wait in this situation, which can be interrupted by an asynchronous procedure call (APC) scheduled on the same thread. Issuing another blocking Winsock call inside an APC that interrupted an ongoing blocking Winsock call on the same thread will lead to undefined behavior, and must never be attempted by Winsock clients. </div>\n<div> </div>\n<h3><a id=\"Example_Code\"></a><a id=\"example_code\"></a><a id=\"EXAMPLE_CODE\"></a>Example Code</h3>\nThe following example demonstrates the use of the <b>accept</b> function.\n\n\n```cpp\n#ifndef UNICODE\n#define UNICODE\n#endif\n\n#include <winsock2.h>\n#include <WS2tcpip.h>\n#include <stdio.h>\n#include <windows.h>\n\n// Need to link with Ws2_32.lib\n#pragma comment(lib, \"Ws2_32.lib\")\n\nint wmain(void)\n{\n\n    //----------------------\n    // Initialize Winsock.\n    WSADATA wsaData;\n    int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);\n    if (iResult != NO_ERROR) {\n        wprintf(L\"WSAStartup failed with error: %ld\\n\", iResult);\n        return 1;\n    }\n    //----------------------\n    // Create a SOCKET for listening for\n    // incoming connection requests.\n    SOCKET ListenSocket;\n    ListenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);\n    if (ListenSocket == INVALID_SOCKET) {\n        wprintf(L\"socket failed with error: %ld\\n\", WSAGetLastError());\n        WSACleanup();\n        return 1;\n    }\n    //----------------------\n    // The sockaddr_in structure specifies the address family,\n    // IP address, and port for the socket that is being bound.\n    sockaddr_in service;\n    service.sin_family = AF_INET;\n    service.sin_port = htons(27015);\n    inet_pton(AF_INET, \"127.0.0.1\", &service.sin_addr);\n\n    if (bind(ListenSocket,\n             (SOCKADDR *) & service, sizeof (service)) == SOCKET_ERROR) {\n        wprintf(L\"bind failed with error: %ld\\n\", WSAGetLastError());\n        closesocket(ListenSocket);\n        WSACleanup();\n        return 1;\n    }\n    //----------------------\n    // Listen for incoming connection requests.\n    // on the created socket\n    if (listen(ListenSocket, 1) == SOCKET_ERROR) {\n        wprintf(L\"listen failed with error: %ld\\n\", WSAGetLastError());\n        closesocket(ListenSocket);\n        WSACleanup();\n        return 1;\n    }\n    //----------------------\n    // Create a SOCKET for accepting incoming requests.\n    SOCKET AcceptSocket;\n    wprintf(L\"Waiting for client to connect...\\n\");\n\n    //----------------------\n    // Accept the connection.\n    AcceptSocket = accept(ListenSocket, NULL, NULL);\n    if (AcceptSocket == INVALID_SOCKET) {\n        wprintf(L\"accept failed with error: %ld\\n\", WSAGetLastError());\n        closesocket(ListenSocket);\n        WSACleanup();\n        return 1;\n    } else\n        wprintf(L\"Client connected.\\n\");\n\n    // No longer need server socket\n    closesocket(ListenSocket);\n\n    WSACleanup();\n    return 0;\n}\n\n\n```\n\n\nFor another example that uses the  <b>accept</b> function, see <a href=\"/windows/desktop/WinSock/getting-started-with-winsock\">Getting Started With Winsock</a>.\n\n<h3><a id=\"Notes_for_ATM\"></a><a id=\"notes_for_atm\"></a><a id=\"NOTES_FOR_ATM\"></a>Notes for ATM</h3>\n\nThe following are important issues associated with connection setup, and must be considered when using Asynchronous Transfer Mode (ATM) with Windows Sockets 2:\n\n<ul>\n<li>The \n<b>accept</b> and \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsaaccept\">WSAAccept</a> functions do not necessarily set the remote address and address length parameters. Therefore, when using ATM, the caller should use the \n<b>WSAAccept</b> function and place ATM_CALLING_PARTY_NUMBER_IE in the \n<b>ProviderSpecific</b> member of the \n<a href=\"/windows/win32/api/winsock2/ns-winsock2-qos\">QoS</a> structure, which itself is included in the <i>lpSQOS</i> parameter of the callback function used in accordance with \n<b>WSAAccept</b>.</li>\n<li>When using the \n<b>accept</b> function, realize that the function may return before connection establishment has traversed the entire distance between sender and receiver. This is because the \n<b>accept</b> function returns as soon as it receives a CONNECT ACK message; in ATM, a CONNECT ACK message is returned by the next switch in the path as soon as a CONNECT message is processed (rather than the CONNECT ACK being sent by the end node to which the connection is ultimately established). As such, applications should realize that if data is sent immediately following receipt of a CONNECT ACK message, data loss is possible, since the connection may not have been established all the way between sender and receiver.</li>\n</ul>\n\n\n<b>Windows 8.1</b> and <b>Windows Server 2012 R2</b>: This function is supported for Windows Store apps on Windows 8.1, Windows Server 2012 R2, and later.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsaaccept\">WSAAccept</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock/nf-winsock-wsaasyncselect\">WSAAsyncSelect</a>\n\n\n\n<a href=\"/windows/desktop/WinSock/winsock-functions\">Winsock Functions</a>\n\n\n\n<a href=\"/windows/desktop/WinSock/winsock-reference\">Winsock Reference</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock/nf-winsock-bind\">bind</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-connect\">connect</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-listen\">listen</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-select\">select</a>\n\n\n\n<a href=\"/windows/desktop/WinSock/sockaddr-2\">sockaddr</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-socket\">socket</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_sync_event",
+   "file": "dlls/ws2_32/socket.c",
+   "start_line": 707,
+   "end_line": 715,
+   "static": true,
+   "called_from": [
+    "accept"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ws2_32/socket.c:1016",
+    "dlls/ws2_32/socket.c:1101",
+    "dlls/ws2_32/socket.c:1169",
+    "dlls/ws2_32/socket.c:1309",
+    "dlls/ws2_32/socket.c:1379"
+   ],
+   "signature": "static HANDLE get_sync_event(void)",
+   "code": "static HANDLE get_sync_event(void)\n{\n    struct per_thread_data *data;\n\n    if (!(data = get_per_thread_data())) return NULL;\n    if (!data->sync_event)\n        data->sync_event = CreateEventW( NULL, TRUE, FALSE, NULL );\n    return data->sync_event;\n}"
+  },
+  {
+   "name": "wait_event_alertable",
+   "file": "dlls/ws2_32/socket.c",
+   "start_line": 717,
+   "end_line": 724,
+   "static": true,
+   "called_from": [
+    "accept"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ws2_32/socket.c:1124",
+    "dlls/ws2_32/socket.c:1395",
+    "dlls/ws2_32/socket.c:3028",
+    "dlls/ws2_32/socket.c:3181"
+   ],
+   "signature": "static DWORD wait_event_alertable( HANDLE event )",
+   "code": "static DWORD wait_event_alertable( HANDLE event )\n{\n    DWORD ret;\n\n    while ((ret = WaitForSingleObjectEx( event, INFINITE, TRUE )) == WAIT_IO_COMPLETION)\n        ;\n    return ret;\n}"
+  },
+  {
+   "name": "NtStatusToWSAError",
+   "file": "dlls/ws2_32/socket.c",
+   "start_line": 593,
+   "end_line": 675,
+   "static": true,
+   "called_from": [
+    "accept"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ws2_32/socket.c:864",
+    "dlls/ws2_32/socket.c:986",
+    "dlls/ws2_32/socket.c:1040",
+    "dlls/ws2_32/socket.c:1075",
+    "dlls/ws2_32/socket.c:1129"
+   ],
+   "signature": "static DWORD NtStatusToWSAError( NTSTATUS status )",
+   "code": "static DWORD NtStatusToWSAError( NTSTATUS status )\n{\n    static const struct\n    {\n        NTSTATUS status;\n        DWORD error;\n    }\n    errors[] =\n    {\n        {STATUS_PENDING,                    ERROR_IO_PENDING},\n\n        {STATUS_BUFFER_OVERFLOW,            WSAEMSGSIZE},\n\n        {STATUS_NOT_IMPLEMENTED,            WSAEOPNOTSUPP},\n        {STATUS_ACCESS_VIOLATION,           WSAEFAULT},\n        {STATUS_PAGEFILE_QUOTA,             WSAENOBUFS},\n        {STATUS_INVALID_HANDLE,             WSAENOTSOCK},\n        {STATUS_NO_SUCH_DEVICE,             WSAENETDOWN},\n        {STATUS_NO_SUCH_FILE,               WSAENETDOWN},\n        {STATUS_NO_MEMORY,                  WSAENOBUFS},\n        {STATUS_CONFLICTING_ADDRESSES,      WSAENOBUFS},\n        {STATUS_ACCESS_DENIED,              WSAEACCES},\n        {STATUS_BUFFER_TOO_SMALL,           WSAEFAULT},\n        {STATUS_OBJECT_TYPE_MISMATCH,       WSAENOTSOCK},\n        {STATUS_OBJECT_NAME_NOT_FOUND,      WSAENETDOWN},\n        {STATUS_OBJECT_PATH_NOT_FOUND,      WSAENETDOWN},\n        {STATUS_SHARING_VIOLATION,          WSAEADDRINUSE},\n        {STATUS_QUOTA_EXCEEDED,             WSAENOBUFS},\n        {STATUS_TOO_MANY_PAGING_FILES,      WSAENOBUFS},\n        {STATUS_INSUFFICIENT_RESOURCES,     WSAENOBUFS},\n        {STATUS_WORKING_SET_QUOTA,          WSAENOBUFS},\n        {STATUS_DEVICE_NOT_READY,           WSAEWOULDBLOCK},\n        {STATUS_PIPE_DISCONNECTED,          WSAESHUTDOWN},\n        {STATUS_IO_TIMEOUT,                 WSAETIMEDOUT},\n        {STATUS_NOT_SUPPORTED,              WSAEOPNOTSUPP},\n        {STATUS_REMOTE_NOT_LISTENING,       WSAECONNREFUSED},\n        {STATUS_BAD_NETWORK_PATH,           WSAENETUNREACH},\n        {STATUS_NETWORK_BUSY,               WSAENETDOWN},\n        {STATUS_INVALID_NETWORK_RESPONSE,   WSAENETDOWN},\n        {STATUS_UNEXPECTED_NETWORK_ERROR,   WSAENETDOWN},\n        {STATUS_REQUEST_NOT_ACCEPTED,       WSAEWOULDBLOCK},\n        {STATUS_CANCELLED,                  ERROR_OPERATION_ABORTED},\n        {STATUS_COMMITMENT_LIMIT,           WSAENOBUFS},\n        {STATUS_LOCAL_DISCONNECT,           WSAECONNABORTED},\n        {STATUS_REMOTE_DISCONNECT,          WSAECONNRESET},\n        {STATUS_REMOTE_RESOURCES,           WSAENOBUFS},\n        {STATUS_LINK_FAILED,                WSAECONNRESET},\n        {STATUS_LINK_TIMEOUT,               WSAETIMEDOUT},\n        {STATUS_INVALID_CONNECTION,         WSAENOTCONN},\n        {STATUS_INVALID_ADDRESS,            WSAEADDRNOTAVAIL},\n        {STATUS_INVALID_BUFFER_SIZE,        WSAEMSGSIZE},\n        {STATUS_INVALID_ADDRESS_COMPONENT,  WSAEADDRNOTAVAIL},\n        {STATUS_TOO_MANY_ADDRESSES,         WSAENOBUFS},\n        {STATUS_ADDRESS_ALREADY_EXISTS,     WSAEADDRINUSE},\n        {STATUS_CONNECTION_DISCONNECTED,    WSAECONNRESET},\n        {STATUS_CONNECTION_RESET,           WSAECONNRESET},\n        {STATUS_TRANSACTION_ABORTED,        WSAECONNABORTED},\n        {STATUS_CONNECTION_REFUSED,         WSAECONNREFUSED},\n        {STATUS_GRACEFUL_DISCONNECT,        WSAEDISCON},\n        {STATUS_CONNECTION_ACTIVE,          WSAEISCONN},\n        {STATUS_NETWORK_UNREACHABLE,        WSAENETUNREACH},\n        {STATUS_HOST_UNREACHABLE,           WSAEHOSTUNREACH},\n        {STATUS_PROTOCOL_UNREACHABLE,       WSAENETUNREACH},\n        {STATUS_PORT_UNREACHABLE,           WSAECONNRESET},\n        {STATUS_REQUEST_ABORTED,            WSAEINTR},\n        {STATUS_CONNECTION_ABORTED,         WSAECONNABORTED},\n        {STATUS_DATATYPE_MISALIGNMENT_ERROR,WSAEFAULT},\n        {STATUS_HOST_DOWN,                  WSAEHOSTDOWN},\n        {0x80070000 | ERROR_IO_INCOMPLETE,  ERROR_IO_INCOMPLETE},\n        {0xc0010000 | ERROR_IO_INCOMPLETE,  ERROR_IO_INCOMPLETE},\n        {0xc0070000 | ERROR_IO_INCOMPLETE,  ERROR_IO_INCOMPLETE},\n    };\n\n    unsigned int i;\n\n    for (i = 0; i < ARRAY_SIZE(errors); ++i)\n    {\n        if (errors[i].status == status)\n            return errors[i].error;\n    }\n\n    return NT_SUCCESS(status) ? RtlNtStatusToDosErrorNoTeb(status) : WSAEINVAL;\n}"
+  },
+  {
+   "name": "socket_list_add",
+   "file": "dlls/ws2_32/socket.c",
+   "start_line": 496,
+   "end_line": 523,
+   "static": true,
+   "called_from": [
+    "accept"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ws2_32/socket.c:4071",
+    "dlls/ws2_32/socket.c:4155"
+   ],
+   "signature": "static BOOL socket_list_add(SOCKET socket)",
+   "code": "static BOOL socket_list_add(SOCKET socket)\n{\n    unsigned int i, new_size;\n    SOCKET *new_array;\n\n    EnterCriticalSection(&cs_socket_list);\n    for (i = 0; i < socket_list_size; ++i)\n    {\n        if (!socket_list[i])\n        {\n            socket_list[i] = socket;\n            LeaveCriticalSection(&cs_socket_list);\n            return TRUE;\n        }\n    }\n    new_size = max(socket_list_size * 2, 8);\n    if (!(new_array = realloc( socket_list, new_size * sizeof(*socket_list) )))\n    {\n        LeaveCriticalSection(&cs_socket_list);\n        return FALSE;\n    }\n    socket_list = new_array;\n    memset(socket_list + socket_list_size, 0, (new_size - socket_list_size) * sizeof(*socket_list));\n    socket_list[socket_list_size] = socket;\n    socket_list_size = new_size;\n    LeaveCriticalSection(&cs_socket_list);\n    return TRUE;\n}"
+  },
+  {
+   "name": "get_per_thread_data",
+   "file": "dlls/ws2_32/socket.c",
+   "start_line": 678,
+   "end_line": 688,
+   "static": false,
+   "called_from": [
+    "get_sync_event"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ws2_32/socket.c:1929",
+    "dlls/ws2_32/socket.c:3459",
+    "dlls/ws2_32/socket.c:3809",
+    "dlls/ws2_32/protocol.c:681",
+    "dlls/ws2_32/protocol.c:1115"
+   ],
+   "signature": "struct per_thread_data *get_per_thread_data(void)",
+   "code": "struct per_thread_data *get_per_thread_data(void)\n{\n    struct per_thread_data *data = NtCurrentTeb()->WinSockData;\n\n    if (!data)\n    {\n        data = calloc( 1, sizeof(*data) );\n        NtCurrentTeb()->WinSockData = data;\n    }\n    return data;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "struct (unnamed at /Users/xingangao/wine_fuzz/wine_src/wine/dlls/ws2_32/socket.c:595:18)",
+    "kind": "struct_decl",
+    "start_line": 595,
+    "end_line": 599,
+    "code": "    static const struct\n    {\n        NTSTATUS status;\n        DWORD error;\n    }"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 33,
+    "end_line": 33,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(winsock);"
+   },
+   {
+    "name": "cs_socket_list",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 187,
+    "end_line": 187,
+    "code": "DECLARE_CRITICAL_SECTION(cs_socket_list);"
+   },
+   {
+    "name": "socket_list",
+    "type": "SOCKET *",
+    "static": true,
+    "start_line": 189,
+    "end_line": 189,
+    "code": "static SOCKET *socket_list;"
+   },
+   {
+    "name": "socket_list_size",
+    "type": "unsigned int",
+    "static": true,
+    "start_line": 190,
+    "end_line": 190,
+    "code": "static unsigned int socket_list_size;"
+   }
+  ],
+  "macros": [
+   {
+    "name": "SOCKET2HANDLE",
+    "start_line": 493,
+    "end_line": 493,
+    "code": "#define SOCKET2HANDLE(s) ((HANDLE)(s))"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "WSASetLastError",
+    "impl": [
+     "dlls/ws2_32/socket.c:809"
+    ]
+   },
+   {
+    "name": "closesocket",
+    "impl": [
+     "dlls/ws2_32/socket.c:1346"
+    ]
+   },
+   {
+    "name": "getpeername",
+    "impl": [
+     "dlls/ws2_32/socket.c:1665"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CloseHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "CreateEventW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/sync.c:566"
+    ]
+   },
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "NtDeviceIoControlFile",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/file.c:6669"
+    ]
+   },
+   {
+    "name": "RtlNtStatusToDosErrorNoTeb",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:46"
+    ]
+   },
+   {
+    "name": "WaitForSingleObjectEx",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/sync.c:404"
+    ]
+   },
+   {
+    "name": "calloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   },
+   {
+    "name": "realloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:459"
+    ]
+   }
+  ],
+  "header_inline": [
+   "NtCurrentTeb",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

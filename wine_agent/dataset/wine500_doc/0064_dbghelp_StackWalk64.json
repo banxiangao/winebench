@@ -1,0 +1,160 @@
+{
+ "id": "0064",
+ "function": {
+  "name": "StackWalk64",
+  "export_name": "StackWalk64",
+  "module": "dbghelp",
+  "source_module": "dbghelp",
+  "exported_by": [
+   "dbghelp",
+   "imagehlp"
+  ],
+  "side": "PE",
+  "file": "dlls/dbghelp/stack.c",
+  "start_line": 216,
+  "end_line": 252,
+  "body_lines": 34,
+  "signature": "BOOL WINAPI StackWalk64(DWORD MachineType, HANDLE hProcess, HANDLE hThread, LPSTACKFRAME64 frame, PVOID ctx, PREAD_PROCESS_MEMORY_ROUTINE64 f_read_mem, PFUNCTION_TABLE_ACCESS_ROUTINE64 FunctionTableAccessRoutine, PGET_MODULE_BASE_ROUTINE64 GetModuleBaseRoutine, PTRANSLATE_ADDRESS_ROUTINE64 f_xlat_adr)",
+  "header_comment": "/***********************************************************************\n *\t\tStackWalk64 (DBGHELP.@)\n */",
+  "code": "BOOL WINAPI StackWalk64(DWORD MachineType, HANDLE hProcess, HANDLE hThread,\n                        LPSTACKFRAME64 frame, PVOID ctx,\n                        PREAD_PROCESS_MEMORY_ROUTINE64 f_read_mem,\n                        PFUNCTION_TABLE_ACCESS_ROUTINE64 FunctionTableAccessRoutine,\n                        PGET_MODULE_BASE_ROUTINE64 GetModuleBaseRoutine,\n                        PTRANSLATE_ADDRESS_ROUTINE64 f_xlat_adr)\n{\n    struct cpu_stack_walk       csw;\n    struct cpu*                 cpu;\n\n    TRACE(\"(%ld, %p, %p, %p, %p, %p, %p, %p, %p)\\n\",\n          MachineType, hProcess, hThread, frame, ctx,\n          f_read_mem, FunctionTableAccessRoutine,\n          GetModuleBaseRoutine, f_xlat_adr);\n\n    if (!(cpu = cpu_find(MachineType)))\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return FALSE;\n    }\n\n    csw.hProcess = hProcess;\n    csw.hThread = hThread;\n    csw.is32 = FALSE;\n    csw.cpu = cpu;\n    /* sigh... MS isn't even consistent in the func prototypes */\n    csw.u.s64.f_read_mem = (f_read_mem) ? f_read_mem : read_mem64;\n    csw.u.s64.f_xlat_adr = (f_xlat_adr) ? f_xlat_adr : addr_to_linear;\n    csw.u.s64.f_tabl_acs = (FunctionTableAccessRoutine) ? FunctionTableAccessRoutine : SymFunctionTableAccess64;\n    csw.u.s64.f_modl_bas = (GetModuleBaseRoutine) ? GetModuleBaseRoutine : SymGetModuleBase64;\n\n    if (!cpu->stack_walk(&csw, frame, ctx)) return FALSE;\n\n    /* we don't handle KdHelp */\n\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdlib.h>",
+   "#include <stdio.h>",
+   "#include <string.h>",
+   "#include <assert.h>",
+   "#include \"dbghelp_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "dbghelp!StackWalk64 [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/dbghelp/tests/dbghelp.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "dbghelp",
+   "path": "sdk-api-src/content/dbghelp/nf-dbghelp-stackwalk64.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/dbghelp/nf-dbghelp-stackwalk64",
+   "documented_name": "stackwalk64",
+   "file": "docs/0064_sdk-api_nf-dbghelp-stackwalk64.md",
+   "text": "---\nUID: NF:dbghelp.StackWalk64\ntitle: StackWalk64 function (dbghelp.h)\ndescription: Obtains a stack trace. (StackWalk64)\nhelpviewer_keywords: [\"IMAGE_FILE_MACHINE_AMD64\",\"IMAGE_FILE_MACHINE_I386\",\"IMAGE_FILE_MACHINE_IA64\",\"StackWalk\",\"StackWalk function\",\"StackWalk64\",\"StackWalk64 function\",\"_win32_stackwalk64\",\"base.stackwalk64\",\"dbghelp/StackWalk\",\"dbghelp/StackWalk64\"]\nold-location: base\\stackwalk64.htm\ntech.root: Debug\nms.assetid: e2bdaa4c-5474-41a0-bcea-927570c8402c\nms.date: 12/05/2018\nms.keywords: IMAGE_FILE_MACHINE_AMD64, IMAGE_FILE_MACHINE_I386, IMAGE_FILE_MACHINE_IA64, StackWalk, StackWalk function, StackWalk64, StackWalk64 function, _win32_stackwalk64, base.stackwalk64, dbghelp/StackWalk, dbghelp/StackWalk64\nreq.header: dbghelp.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: DbgHelp.lib\nreq.dll: DbgHelp.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: DbgHelp.dll 5.1 or later\nms.custom: 19H1\nf1_keywords:\n - StackWalk64\n - dbghelp/StackWalk64\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - DbgHelp.dll\n - imagehlp.dll\napi_name:\n - StackWalk64\n - StackWalk\n---\n\n# StackWalk64 function\n\n\n## -description\n\nObtains a stack trace.\n\n## -parameters\n\n### -param MachineType [in]\n\nThe architecture type of the computer for which the stack trace is generated. This parameter can be one of \n      the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"IMAGE_FILE_MACHINE_I386\"></a><a id=\"image_file_machine_i386\"></a><dl>\n<dt><b>IMAGE_FILE_MACHINE_I386</b></dt>\n<dt>0x014c</dt>\n</dl>\n</td>\n<td width=\"60%\">\nIntel x86\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"IMAGE_FILE_MACHINE_IA64\"></a><a id=\"image_file_machine_ia64\"></a><dl>\n<dt><b>IMAGE_FILE_MACHINE_IA64</b></dt>\n<dt>0x0200</dt>\n</dl>\n</td>\n<td width=\"60%\">\nIntel Itanium\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"IMAGE_FILE_MACHINE_AMD64\"></a><a id=\"image_file_machine_amd64\"></a><dl>\n<dt><b>IMAGE_FILE_MACHINE_AMD64</b></dt>\n<dt>0x8664</dt>\n</dl>\n</td>\n<td width=\"60%\">\nx64 (AMD64 or EM64T)\n\n</td>\n</tr>\n</table>\n\n### -param hProcess [in]\n\nA handle to the process for which the stack trace is generated. If the caller supplies a valid callback \n      pointer for the <i>ReadMemoryRoutine</i> parameter, then this value does not have to be a \n      valid process handle. It can be a token that is unique and consistently the same for all calls to the \n      <b>StackWalk64</b> function. If the symbol handler is used with \n      <b>StackWalk64</b>, use the same process handles for the calls \n      to each function.\n\n### -param hThread [in]\n\nA handle to the thread for which the stack trace is generated. If the caller supplies a valid callback \n     pointer for the <i>ReadMemoryRoutine</i> parameter, then this value does not have to be a \n     valid thread handle. It can be a token that is unique and consistently the same for all calls to the \n     <b>StackWalk64</b> function.\n\n### -param StackFrame [in, out]\n\nA pointer to a <a href=\"/windows/desktop/api/dbghelp/ns-dbghelp-stackframe\">STACKFRAME64</a> structure. This \n      structure receives information for the next frame, if the function call succeeds.\n\n### -param ContextRecord [in, out]\n\nA pointer to a <a href=\"/windows/desktop/api/winnt/ns-winnt-arm64_nt_context\">CONTEXT</a> structure. This parameter is \n       required only when the <i>MachineType</i> parameter is not \n       <b>IMAGE_FILE_MACHINE_I386</b>. However, it is recommended that this parameter contain a \n       valid context record. This allows <b>StackWalk64</b> to handle \n       a greater variety of situations.\n\nThis context may be modified, so do not pass a context record that should not be modified.\n\n### -param ReadMemoryRoutine [in, optional]\n\nA callback routine that provides memory read services. When the \n       <b>StackWalk64</b> function needs to read memory from the \n       process's address space, the \n       <a href=\"/windows/desktop/api/dbghelp/nc-dbghelp-pread_process_memory_routine\">ReadProcessMemoryProc64</a> callback is \n       used.\n\nIf this parameter is <b>NULL</b>, then the function uses a default routine. In this case, \n       the <i>hProcess</i> parameter must be a valid process handle.\n\nIf this parameter is not \n       <b>NULL</b>, the application should implement and register a symbol handler callback \n       function that handles <b>CBA_READ_MEMORY</b>.\n\n### -param FunctionTableAccessRoutine [in, optional]\n\nA callback routine that provides access to the run-time function table for the process. This parameter is \n       required because the <b>StackWalk64</b> function does not have \n       access to the process's run-time function table. For more information, see \n       <a href=\"/windows/desktop/api/dbghelp/nc-dbghelp-pfunction_table_access_routine\">FunctionTableAccessProc64</a>.\n\nThe symbol handler provides functions that load and access the run-time table. If these functions are used, \n       then <a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symfunctiontableaccess\">SymFunctionTableAccess64</a> can be \n       passed as a valid parameter.\n\n### -param GetModuleBaseRoutine [in, optional]\n\nA callback routine that provides a module base for any given virtual address. This parameter is required. For \n       more information, see <a href=\"/windows/desktop/api/dbghelp/nc-dbghelp-pget_module_base_routine\">GetModuleBaseProc64</a>.\n\nThe symbol handler provides functions that load and maintain module information. If these functions are used, \n       then <a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symgetmodulebase\">SymGetModuleBase64</a> can be passed as a valid \n       parameter.\n\n### -param TranslateAddress [in, optional]\n\nA callback routine that provides address translation for 16-bit addresses. For more information, see \n       <a href=\"/windows/desktop/api/dbghelp/nc-dbghelp-ptranslate_address_routine\">TranslateAddressProc64</a>.\n\nMost callers of <b>StackWalk64</b> can safely pass \n       <b>NULL</b> for this parameter.\n\n## -returns\n\nIf the function succeeds, the return value is <b>TRUE</b>.\n\nIf the function fails, the return value is <b>FALSE</b>. Note that \n       <b>StackWalk64</b> generally does not set the last error \n       code.\n\n## -remarks\n\nThe <b>StackWalk64</b> function provides a portable method \n    for obtaining a stack trace. Using the <b>StackWalk64</b> \n    function is recommended over writing your own function because of all the complexities associated with stack \n    walking on platforms. In addition, there are compiler options that cause the stack to appear differently, \n    depending on how the module is compiled. By using this function, your application has a portable stack trace that \n    continues to work as the compiler and operating system change.\n\nThe first call to this function will fail if the <b>AddrPC</b>, \n    <b>AddrFrame</b>, and <b>AddrStack</b> members of the \n    <a href=\"/windows/desktop/api/dbghelp/ns-dbghelp-stackframe\">STACKFRAME64</a> structure passed in the \n    <i>StackFrame</i> parameter are not initialized.\n\nAll DbgHelp functions, such as this one, are single threaded. Therefore, calls from more than one thread to \n    this function will likely result in unexpected behavior or memory corruption. To avoid this, you must synchronize \n    all concurrent calls from more than one thread to this function.\n\nThis function supersedes the <b>StackWalk</b> function. For \n   more information, see <a href=\"/windows/desktop/Debug/updated-platform-support\">Updated Platform Support</a>. \n   <b>StackWalk</b> is defined as follows in DbgHelp.h.\n   \n\n\n```cpp\n#if !defined(_IMAGEHLP_SOURCE_) && defined(_IMAGEHLP64)\n#define StackWalk StackWalk64\n#else\nBOOL\nIMAGEAPI\nStackWalk(\n    DWORD MachineType,\n    __in HANDLE hProcess,\n    __in HANDLE hThread,\n    __inout LPSTACKFRAME StackFrame,\n    __inout PVOID ContextRecord,\n    __in_opt PREAD_PROCESS_MEMORY_ROUTINE ReadMemoryRoutine,\n    __in_opt PFUNCTION_TABLE_ACCESS_ROUTINE FunctionTableAccessRoutine,\n    __in_opt PGET_MODULE_BASE_ROUTINE GetModuleBaseRoutine,\n    __in_opt PTRANSLATE_ADDRESS_ROUTINE TranslateAddress\n    );\n\n#endif\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winnt/ns-winnt-arm64_nt_context\">CONTEXT</a>\n\n\n\n<a href=\"/windows/desktop/Debug/dbghelp-functions\">DbgHelp Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/dbghelp/nc-dbghelp-pfunction_table_access_routine\">FunctionTableAccessProc64</a>\n\n\n\n<a href=\"/windows/desktop/api/dbghelp/nc-dbghelp-pget_module_base_routine\">GetModuleBaseProc64</a>\n\n\n\n<a href=\"/windows/desktop/api/dbghelp/nc-dbghelp-pread_process_memory_routine\">ReadProcessMemoryProc64</a>\n\n\n\n<a href=\"/windows/desktop/api/dbghelp/ns-dbghelp-stackframe\">STACKFRAME64</a>\n\n\n\n<a href=\"/windows/desktop/api/dbghelp/nc-dbghelp-ptranslate_address_routine\">TranslateAddressProc64</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "read_mem64",
+   "file": "dlls/dbghelp/stack.c",
+   "start_line": 74,
+   "end_line": 81,
+   "static": true,
+   "called_from": [
+    "StackWalk64"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/dbghelp/stack.c:312"
+   ],
+   "signature": "static BOOL CALLBACK read_mem64(HANDLE hProcess, DWORD64 addr, void* buffer, DWORD size, LPDWORD nread)",
+   "code": "static BOOL CALLBACK read_mem64(HANDLE hProcess, DWORD64 addr, void* buffer,\n                                DWORD size, LPDWORD nread)\n{\n    SIZE_T      r;\n    if (!ReadProcessMemory(hProcess, (void*)(DWORD_PTR)addr, buffer, size, &r)) return FALSE;\n    if (nread) *nread = r;\n    return TRUE;\n}"
+  },
+  {
+   "name": "addr_to_linear",
+   "file": "dlls/dbghelp/stack.c",
+   "start_line": 34,
+   "end_line": 61,
+   "static": true,
+   "called_from": [
+    "StackWalk64"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/dbghelp/stack.c:120",
+    "dlls/dbghelp/stack.c:313"
+   ],
+   "signature": "static DWORD64 WINAPI addr_to_linear(HANDLE hProcess, HANDLE hThread, ADDRESS64* addr)",
+   "code": "static DWORD64 WINAPI addr_to_linear(HANDLE hProcess, HANDLE hThread, ADDRESS64* addr)\n{\n    LDT_ENTRY\tle;\n\n    switch (addr->Mode)\n    {\n    case AddrMode1616:\n        if (GetThreadSelectorEntry(hThread, addr->Segment, &le))\n            return (le.HighWord.Bits.BaseHi << 24) +\n                (le.HighWord.Bits.BaseMid << 16) + le.BaseLow + LOWORD(addr->Offset);\n        break;\n    case AddrMode1632:\n        if (GetThreadSelectorEntry(hThread, addr->Segment, &le))\n            return (le.HighWord.Bits.BaseHi << 24) +\n                (le.HighWord.Bits.BaseMid << 16) + le.BaseLow + addr->Offset;\n        break;\n    case AddrModeReal:\n        return (DWORD)(LOWORD(addr->Segment) << 4) + addr->Offset;\n    case AddrModeFlat:\n        return addr->Offset;\n    default:\n        FIXME(\"Unsupported (yet) mode (%x)\\n\", addr->Mode);\n        return 0;\n    }\n    FIXME(\"Failed to linearize address %04x:%I64x (mode %x)\\n\",\n          addr->Segment, addr->Offset, addr->Mode);\n    return 0;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 32,
+    "end_line": 32,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(dbghelp);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "cpu_find",
+    "file": "dlls/dbghelp/dbghelp.c",
+    "start_line": 170
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "SymFunctionTableAccess64",
+    "impl": [
+     "dlls/dbghelp/module.c:1557"
+    ]
+   },
+   {
+    "name": "SymGetModuleBase64",
+    "impl": [
+     "dlls/dbghelp/module.c:1475"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "GetThreadSelectorEntry",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernel32/thread.c:111"
+    ]
+   },
+   {
+    "name": "ReadProcessMemory",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:353"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "cpu->stack_walk",
+    "in_function": "StackWalk64",
+    "at": "dlls/dbghelp/stack.c:247",
+    "candidates": []
+   }
+  ]
+ }
+}

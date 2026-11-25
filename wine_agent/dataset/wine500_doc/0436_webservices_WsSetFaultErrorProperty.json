@@ -1,0 +1,274 @@
+{
+ "id": "0436",
+ "function": {
+  "name": "WsSetFaultErrorProperty",
+  "export_name": "WsSetFaultErrorProperty",
+  "module": "webservices",
+  "source_module": "webservices",
+  "exported_by": [
+   "webservices"
+  ],
+  "side": "PE",
+  "file": "dlls/webservices/error.c",
+  "start_line": 672,
+  "end_line": 707,
+  "body_lines": 33,
+  "signature": "HRESULT WINAPI WsSetFaultErrorProperty( WS_ERROR *handle, WS_FAULT_ERROR_PROPERTY_ID id, const void *value, ULONG size )",
+  "header_comment": "/**************************************************************************\n *          WsSetFaultErrorProperty\t\t[webservices.@]\n */",
+  "code": "HRESULT WINAPI WsSetFaultErrorProperty( WS_ERROR *handle, WS_FAULT_ERROR_PROPERTY_ID id,\n                                        const void *value, ULONG size )\n{\n    struct error *error = (struct error *)handle;\n    HRESULT hr = S_OK;\n\n    TRACE( \"%p %u %p %lu\\n\", handle, id, value, size );\n\n    if (!error || !value) return E_INVALIDARG;\n    if (id > WS_FAULT_ERROR_PROPERTY_HEADER) return E_INVALIDARG;\n    else if (id == WS_FAULT_ERROR_PROPERTY_HEADER)\n    {\n        FIXME( \"WS_FAULT_ERROR_PROPERTY_HEADER not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    EnterCriticalSection( &error->cs );\n\n    if (error->magic != ERROR_MAGIC)\n    {\n        hr = E_INVALIDARG;\n        goto done;\n    }\n\n    if (id == WS_FAULT_ERROR_PROPERTY_FAULT && size == sizeof(WS_FAULT))\n        hr = set_fault( error, value );\n    else if (id == WS_FAULT_ERROR_PROPERTY_ACTION && size == sizeof(WS_XML_STRING))\n        hr = set_action( error, value );\n    else\n        hr = E_INVALIDARG;\n\ndone:\n    LeaveCriticalSection( &error->cs );\n    TRACE( \"returning %#lx\\n\", hr );\n    return hr;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"webservices.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"webservices_private.h\""
+  ],
+  "resolution": [
+   "webservices!WsSetFaultErrorProperty [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/webservices/tests/reader.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "webservices",
+   "path": "sdk-api-src/content/webservices/nf-webservices-wssetfaulterrorproperty.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/webservices/nf-webservices-wssetfaulterrorproperty",
+   "documented_name": "wssetfaulterrorproperty",
+   "file": "docs/0436_sdk-api_nf-webservices-wssetfaulterrorproperty.md",
+   "text": "---\nUID: NF:webservices.WsSetFaultErrorProperty\ntitle: WsSetFaultErrorProperty function (webservices.h)\ndescription: Set a Fault property of a WS_ERROR object.\nhelpviewer_keywords: [\"WsSetFaultErrorProperty\",\"WsSetFaultErrorProperty function [Web Services for Windows]\",\"webservices/WsSetFaultErrorProperty\",\"wsw.wssetfaulterrorproperty\"]\nold-location: wsw\\wssetfaulterrorproperty.htm\ntech.root: wsw\nms.assetid: 193664ab-4688-49c9-97e7-ccf2b3e2d7e8\nms.date: 12/05/2018\nms.keywords: WsSetFaultErrorProperty, WsSetFaultErrorProperty function [Web Services for Windows], webservices/WsSetFaultErrorProperty, wsw.wssetfaulterrorproperty\nreq.header: webservices.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 7 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 R2 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: WebServices.lib\nreq.dll: WebServices.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - WsSetFaultErrorProperty\n - webservices/WsSetFaultErrorProperty\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - WebServices.dll\napi_name:\n - WsSetFaultErrorProperty\n---\n\n# WsSetFaultErrorProperty function\n\n\n## -description\n\nSet a Fault property of a <a href=\"/windows/desktop/wsw/ws-error\">WS_ERROR</a> object.\n\n## -parameters\n\n### -param error [in]\n\nA pointer to the <a href=\"/windows/desktop/wsw/ws-error\">WS_ERROR</a> object in which to set the property.  The pointer must reference a valid WS_ERROR object.\n\n### -param id [in]\n\nIdentifier of the property to set.\n\n### -param value\n\nThe property value to set.\n                    The pointer must have an alignment compatible with the type\n                    of the property.\n\n### -param valueSize [in]\n\nThe size in bytes of the property value.\n\n## -returns\n\nThis function can return one of these values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_INVALIDARG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe property id was not supported for this object.\n\nThe specified size was not appropriate for the property.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_OUTOFMEMORY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThere was not enough space to set the property value.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b> Other Errors </b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThis function may return other errors not listed above.\n\n</td>\n</tr>\n</table>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "set_fault",
+   "file": "dlls/webservices/error.c",
+   "start_line": 239,
+   "end_line": 284,
+   "static": true,
+   "called_from": [
+    "WsSetFaultErrorProperty"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static HRESULT set_fault( struct error *error, const WS_FAULT *value )",
+   "code": "static HRESULT set_fault( struct error *error, const WS_FAULT *value )\n{\n    static const WCHAR prefix[] = L\"The fault reason was: '\";\n    static const WCHAR postfix[] = L\"'.\";\n    static const ULONG prefix_len = ARRAY_SIZE(prefix) - 1, postfix_len = ARRAY_SIZE(postfix) - 1;\n    WS_FAULT *fault;\n    WS_STRING *str;\n    WCHAR *dst;\n    ULONG len;\n    HRESULT hr = S_OK;\n\n    if (!(fault = dup_fault( error->heap, value )))\n        return E_OUTOFMEMORY;\n\n    /* FIXME: check if reason lang matches error property langid */\n    if (fault->reasonCount > 0)\n    {\n        if ((hr = grow_strs_array( error )) != S_OK) goto done;\n\n        str = &error->strs[error->strs_count];\n        len = prefix_len + fault->reasons[0].text.length + postfix_len;\n        if (!(str->chars = ws_alloc( error->heap, len * sizeof(WCHAR) )))\n        {\n            hr = E_OUTOFMEMORY;\n            goto done;\n        }\n\n        dst = str->chars;\n        memcpy( dst, prefix, prefix_len * sizeof(WCHAR) );\n        dst += prefix_len;\n        memcpy( dst, fault->reasons[0].text.chars, fault->reasons[0].text.length * sizeof(WCHAR) );\n        dst += fault->reasons[0].text.length;\n        memcpy( dst, postfix, postfix_len * sizeof(WCHAR) );\n\n        str->length = len;\n        error->strs_count++;\n    }\n\n    free_fault( error->heap, error->fault );\n    error->fault = fault;\n\ndone:\n    if (hr != S_OK)\n        free_fault( error->heap, fault );\n    return hr;\n}"
+  },
+  {
+   "name": "set_action",
+   "file": "dlls/webservices/error.c",
+   "start_line": 286,
+   "end_line": 306,
+   "static": true,
+   "called_from": [
+    "WsSetFaultErrorProperty"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static HRESULT set_action( struct error *error, const WS_XML_STRING *value )",
+   "code": "static HRESULT set_action( struct error *error, const WS_XML_STRING *value )\n{\n    BYTE *buf;\n\n    if (value->length == 0)\n    {\n        ws_free( error->heap, error->fault_action.bytes, error->fault_action.length );\n        memset( &error->fault_action, 0, sizeof(error->fault_action) );\n        return S_OK;\n    }\n\n    if (!(buf = ws_alloc( error->heap, value->length )))\n        return E_OUTOFMEMORY;\n\n    memcpy( buf, value->bytes, value->length );\n    ws_free( error->heap, error->fault_action.bytes, error->fault_action.length );\n    error->fault_action.bytes = buf;\n    error->fault_action.length = value->length;\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "dup_fault",
+   "file": "dlls/webservices/error.c",
+   "start_line": 172,
+   "end_line": 237,
+   "static": true,
+   "called_from": [
+    "set_fault"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static WS_FAULT *dup_fault( WS_HEAP *heap, const WS_FAULT *src )",
+   "code": "static WS_FAULT *dup_fault( WS_HEAP *heap, const WS_FAULT *src )\n{\n    WS_FAULT *new_fault;\n    WS_FAULT_CODE *code, *prev_code, *new_code;\n    struct xmlbuf *buf, *new_buf;\n    ULONG i;\n    BOOL success = FALSE;\n\n    if (!(new_fault = ws_alloc_zero( heap, sizeof(*new_fault) ))) return NULL;\n\n    prev_code = NULL;\n    code = src->code;\n    while (code)\n    {\n        if (!(new_code = ws_alloc_zero( heap, sizeof(*new_code) ))) goto done;\n\n        if (prev_code)\n            prev_code->subCode = new_code;\n        else\n            new_fault->code = new_code;\n\n        if (!copy_xml_string( heap, &code->value.localName, &new_code->value.localName ) ||\n            !copy_xml_string( heap, &code->value.ns, &new_code->value.ns )) goto done;\n\n        prev_code = new_code;\n        code = code->subCode;\n    }\n\n    if (src->reasonCount > 0)\n    {\n        if (!(new_fault->reasons = ws_alloc_zero( heap, sizeof(*new_fault->reasons) * src->reasonCount )))\n            goto done;\n        new_fault->reasonCount = src->reasonCount;\n        for (i = 0; i < src->reasonCount; i++)\n        {\n            if (!copy_string( heap, &src->reasons[i].text, &new_fault->reasons[i].text ) ||\n                !copy_string( heap, &src->reasons[i].lang, &new_fault->reasons[i].lang ))\n                goto done;\n        }\n    }\n\n    if (!copy_string( heap, &src->actor, &new_fault->actor ) ||\n        !copy_string( heap, &src->node, &new_fault->node ))\n        goto done;\n\n    buf = (struct xmlbuf *)src->detail;\n    new_buf = NULL;\n    if (buf)\n    {\n        if (!(new_buf = alloc_xmlbuf( heap, buf->bytes.length, buf->encoding,\n                                      buf->charset, buf->dict_static, buf->dict )))\n            goto done;\n        memcpy( new_buf->bytes.bytes, buf->bytes.bytes, buf->bytes.length );\n        new_buf->bytes.length = buf->bytes.length;\n    }\n    new_fault->detail = (WS_XML_BUFFER *)new_buf;\n\n    success = TRUE;\ndone:\n    if (!success)\n    {\n        free_fault( heap, new_fault );\n        return NULL;\n    }\n    return new_fault;\n}"
+  },
+  {
+   "name": "grow_strs_array",
+   "file": "dlls/webservices/error.c",
+   "start_line": 145,
+   "end_line": 170,
+   "static": true,
+   "called_from": [
+    "set_fault"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/error.c:538"
+   ],
+   "signature": "static HRESULT grow_strs_array( struct error *error )",
+   "code": "static HRESULT grow_strs_array( struct error *error )\n{\n    WS_STRING *new_ptr;\n    ULONG new_size;\n\n    if (error->strs_count < error->strs_size)\n        return S_OK;\n\n    if (error->strs_size > 0)\n    {\n        new_size = 2 * error->strs_size;\n        new_ptr = ws_realloc_zero( error->heap, error->strs, error->strs_size * sizeof(WS_STRING),\n                                   new_size * sizeof(WS_STRING) );\n    }\n    else\n    {\n        new_size = 1;\n        new_ptr = ws_alloc_zero( error->heap, sizeof(WS_STRING) );\n    }\n    if (!new_ptr)\n        return E_OUTOFMEMORY;\n\n    error->strs = new_ptr;\n    error->strs_size = new_size;\n    return S_OK;\n}"
+  },
+  {
+   "name": "free_fault",
+   "file": "dlls/webservices/error.c",
+   "start_line": 117,
+   "end_line": 122,
+   "static": true,
+   "called_from": [
+    "dup_fault",
+    "set_fault"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void free_fault( WS_HEAP *heap, WS_FAULT *fault )",
+   "code": "static void free_fault( WS_HEAP *heap, WS_FAULT *fault )\n{\n    if (!fault) return;\n    free_fault_fields( heap, fault );\n    ws_free( heap, fault, sizeof(*fault) );\n}"
+  },
+  {
+   "name": "copy_xml_string",
+   "file": "dlls/webservices/error.c",
+   "start_line": 124,
+   "end_line": 131,
+   "static": true,
+   "called_from": [
+    "dup_fault"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL copy_xml_string( WS_HEAP *heap, const WS_XML_STRING *src, WS_XML_STRING *dst )",
+   "code": "static BOOL copy_xml_string( WS_HEAP *heap, const WS_XML_STRING *src, WS_XML_STRING *dst )\n{\n    if (!src->length) return TRUE;\n    if (!(dst->bytes = ws_alloc( heap, src->length ))) return FALSE;\n    memcpy( dst->bytes, src->bytes, src->length );\n    dst->length = src->length;\n    return TRUE;\n}"
+  },
+  {
+   "name": "copy_string",
+   "file": "dlls/webservices/error.c",
+   "start_line": 133,
+   "end_line": 142,
+   "static": true,
+   "called_from": [
+    "dup_fault"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL copy_string( WS_HEAP *heap, const WS_STRING *src, WS_STRING *dst )",
+   "code": "static BOOL copy_string( WS_HEAP *heap, const WS_STRING *src, WS_STRING *dst )\n{\n    ULONG size;\n    if (!src->length) return TRUE;\n    size = src->length * sizeof(WCHAR);\n    if (!(dst->chars = ws_alloc( heap, size ))) return FALSE;\n    memcpy( dst->chars, src->chars, size );\n    dst->length = src->length;\n    return TRUE;\n}"
+  },
+  {
+   "name": "free_fault_fields",
+   "file": "dlls/webservices/error.c",
+   "start_line": 90,
+   "end_line": 115,
+   "static": false,
+   "called_from": [
+    "free_fault"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/reader.c:6636",
+    "dlls/webservices/msg.c:2302"
+   ],
+   "signature": "void free_fault_fields( WS_HEAP *heap, WS_FAULT *fault )",
+   "code": "void free_fault_fields( WS_HEAP *heap, WS_FAULT *fault )\n{\n    WS_FAULT_CODE *code, *prev_code;\n    ULONG i;\n\n    code = fault->code;\n    while ( code )\n    {\n        ws_free( heap, code->value.localName.bytes, code->value.localName.length );\n        ws_free( heap, code->value.ns.bytes, code->value.ns.length );\n        prev_code = code;\n        code = code->subCode;\n        ws_free( heap, prev_code, sizeof(*prev_code) );\n    }\n\n    for (i = 0; i < fault->reasonCount; i++)\n    {\n        ws_free( heap, fault->reasons[i].text.chars, fault->reasons[i].text.length * sizeof(WCHAR) );\n        ws_free( heap, fault->reasons[i].lang.chars, fault->reasons[i].lang.length * sizeof(WCHAR) );\n    }\n    ws_free( heap, fault->reasons, fault->reasonCount * sizeof(*fault->reasons) );\n\n    ws_free( heap, fault->actor.chars, fault->actor.length * sizeof(WCHAR) );\n    ws_free( heap, fault->node.chars, fault->node.length * sizeof(WCHAR) );\n    free_xmlbuf((struct xmlbuf *)fault->detail);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "error",
+    "kind": "struct_decl",
+    "start_line": 40,
+    "end_line": 52,
+    "code": "struct error\n{\n    ULONG            magic;\n    CRITICAL_SECTION cs;\n    WS_HEAP         *heap;\n    ULONG            prop_count;\n    struct prop      prop[ARRAY_SIZE( error_props )];\n    ULONG            strs_count;\n    ULONG            strs_size; /* Maximum length of the strs array */\n    WS_STRING       *strs;\n    WS_FAULT        *fault;\n    WS_XML_STRING    fault_action;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 31,
+    "end_line": 31,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(webservices);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "ERROR_MAGIC",
+    "start_line": 54,
+    "end_line": 54,
+    "code": "#define ERROR_MAGIC (('E' << 24) | ('R' << 16) | ('R' << 8) | 'O')"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "alloc_xmlbuf",
+    "file": "dlls/webservices/heap.c",
+    "start_line": 323
+   },
+   {
+    "name": "free_xmlbuf",
+    "file": "dlls/webservices/heap.c",
+    "start_line": 345
+   },
+   {
+    "name": "ws_alloc",
+    "file": "dlls/webservices/heap.c",
+    "start_line": 65
+   },
+   {
+    "name": "ws_alloc_zero",
+    "file": "dlls/webservices/heap.c",
+    "start_line": 81
+   },
+   {
+    "name": "ws_free",
+    "file": "dlls/webservices/heap.c",
+    "start_line": 147
+   },
+   {
+    "name": "ws_realloc_zero",
+    "file": "dlls/webservices/heap.c",
+    "start_line": 122
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

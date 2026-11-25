@@ -1,0 +1,206 @@
+{
+ "id": "0049",
+ "function": {
+  "name": "GlobalFlags",
+  "export_name": "GlobalFlags",
+  "module": "kernel32",
+  "source_module": "kernel32",
+  "exported_by": [
+   "kernel32",
+   "krnl386.exe16"
+  ],
+  "side": "PE",
+  "file": "dlls/kernel32/heap.c",
+  "start_line": 275,
+  "end_line": 300,
+  "body_lines": 23,
+  "signature": "UINT WINAPI GlobalFlags( HGLOBAL handle )",
+  "header_comment": "/***********************************************************************\n *           GlobalFlags   (KERNEL32.@)\n *\n * Get information about a global memory object.\n *\n * PARAMS\n *  handle [I] Handle of the global memory object\n *\n * RETURNS\n *  Failure: GMEM_INVALID_HANDLE, when the provided handle is invalid\n *  Success: Value specifying allocation flags and lock count\n *\n */",
+  "code": "UINT WINAPI GlobalFlags( HGLOBAL handle )\n{\n    HANDLE heap = GetProcessHeap();\n    struct mem_entry *mem;\n    UINT flags;\n\n    if (unsafe_ptr_from_HLOCAL( handle )) return 0;\n\n    RtlLockHeap( heap );\n    if ((mem = unsafe_mem_from_HLOCAL( handle )))\n    {\n        flags = mem->lock;\n        if (mem->flags & MEM_FLAG_DISCARDABLE) flags |= GMEM_DISCARDABLE;\n        if (mem->flags & MEM_FLAG_DISCARDED) flags |= GMEM_DISCARDED;\n        if (mem->flags & MEM_FLAG_DDESHARE) flags |= GMEM_DDESHARE;\n    }\n    else\n    {\n        WARN_(globalmem)( \"invalid handle %p\\n\", handle );\n        SetLastError( ERROR_INVALID_HANDLE );\n        flags = GMEM_INVALID_HANDLE;\n    }\n    RtlUnlockHeap( heap );\n\n    return flags;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <limits.h>",
+   "#include <stdlib.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <string.h>",
+   "#include <sys/types.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winnt.h\"",
+   "#include \"winternl.h\"",
+   "#include \"kernel_private.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!GlobalFlags [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/heap.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winbase",
+   "path": "sdk-api-src/content/winbase/nf-winbase-globalflags.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-globalflags",
+   "documented_name": "globalflags",
+   "file": "docs/0049_sdk-api_nf-winbase-globalflags.md",
+   "text": "---\nUID: NF:winbase.GlobalFlags\ntitle: GlobalFlags function (winbase.h)\ndescription: Retrieves information about the specified global memory object.\nhelpviewer_keywords: [\"GlobalFlags\",\"GlobalFlags function\",\"_win32_globalflags\",\"base.globalflags\",\"winbase/GlobalFlags\"]\nold-location: base\\globalflags.htm\ntech.root: base\nms.assetid: 647fc9a2-0522-42ab-ab8b-43c648f27d90\nms.date: 12/05/2018\nms.keywords: GlobalFlags, GlobalFlags function, _win32_globalflags, base.globalflags, winbase/GlobalFlags\nreq.header: winbase.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GlobalFlags\n - winbase/GlobalFlags\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Kernel32.dll\n - API-MS-Win-Core-Heap-Obsolete-l1-1-0.dll\n - kernel32legacy.dll\n - API-MS-Win-DownLevel-Kernel32-l2-1-0.dll\napi_name:\n - GlobalFlags\n---\n\n# GlobalFlags function\n\n\n## -description\n\nRetrieves information about the specified global memory object.\n<div class=\"alert\"><b>Note</b>  This function is provided only for compatibility with 16-bit versions of Windows. New applications should use the  <a href=\"/windows/desktop/Memory/heap-functions\">heap functions</a>. For more information, see Remarks. \n</div><div> </div>\n\n## -parameters\n\n### -param hMem [in]\n\nA handle to the global memory object. This handle is returned by either the \n<a href=\"/windows/desktop/api/winbase/nf-winbase-globalalloc\">GlobalAlloc</a> or \n<a href=\"/windows/desktop/api/winbase/nf-winbase-globalrealloc\">GlobalReAlloc</a> function.\n\n## -returns\n\nIf the function succeeds, the return value specifies the allocation values and the lock count for the memory object.\n\nIf the function fails, the return value is <b>GMEM_INVALID_HANDLE</b>, indicating that the global handle is not valid. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThe low-order byte of the low-order word of the return value contains the lock count of the object. To retrieve the lock count from the return value, use the <b>GMEM_LOCKCOUNT</b> mask with the bitwise AND (&amp;) operator. The lock count of memory objects allocated with <b>GMEM_FIXED</b> is always zero.\n\nThe high-order byte of the low-order word of the return value indicates the allocation values of the memory object. It can be zero or <b>GMEM_DISCARDED</b>.\n\nThe global functions have greater overhead and provide fewer features than other memory management functions. New applications should use the <a href=\"/windows/desktop/Memory/heap-functions\">heap functions</a> unless documentation states that a global function should be used. For more information, see <a href=\"/windows/desktop/Memory/global-and-local-functions\">Global and Local Functions</a>.\n\n## -see-also\n\n<a href=\"/windows/desktop/Memory/global-and-local-functions\">Global and Local Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-globalalloc\">GlobalAlloc</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-globaldiscard\">GlobalDiscard</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-globalrealloc\">GlobalReAlloc</a>\n\n\n\n<a href=\"/windows/desktop/Memory/memory-management-functions\">Memory\n    Management Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "unsafe_ptr_from_HLOCAL",
+   "file": "dlls/kernel32/heap.c",
+   "start_line": 122,
+   "end_line": 126,
+   "static": true,
+   "called_from": [
+    "GlobalFlags"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernel32/heap.c:169",
+    "dlls/kernel32/heap.c:204",
+    "dlls/kernel32/heap.c:393"
+   ],
+   "signature": "static inline void *unsafe_ptr_from_HLOCAL( HLOCAL handle )",
+   "code": "static inline void *unsafe_ptr_from_HLOCAL( HLOCAL handle )\n{\n    if (((UINT_PTR)handle & ((sizeof(void *) << 1) - 1))) return NULL;\n    return handle;\n}"
+  },
+  {
+   "name": "unsafe_mem_from_HLOCAL",
+   "file": "dlls/kernel32/heap.c",
+   "start_line": 112,
+   "end_line": 120,
+   "static": true,
+   "called_from": [
+    "GlobalFlags"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernel32/heap.c:196",
+    "dlls/kernel32/heap.c:208",
+    "dlls/kernel32/heap.c:396"
+   ],
+   "signature": "static inline struct mem_entry *unsafe_mem_from_HLOCAL( HLOCAL handle )",
+   "code": "static inline struct mem_entry *unsafe_mem_from_HLOCAL( HLOCAL handle )\n{\n    struct mem_entry *mem = CONTAINING_RECORD( *(volatile HANDLE *)&handle, struct mem_entry, ptr );\n    struct kernelbase_global_data *data = kernelbase_global_data;\n    if (((UINT_PTR)handle & ((sizeof(void *) << 1) - 1)) != sizeof(void *)) return NULL;\n    if (mem < data->mem_entries || mem >= data->mem_entries_end) return NULL;\n    if (!(mem->flags & MEM_FLAG_USED)) return NULL;\n    return mem;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "mem_entry",
+    "kind": "struct_decl",
+    "start_line": 94,
+    "end_line": 106,
+    "code": "struct mem_entry\n{\n    union\n    {\n        struct\n        {\n            WORD flags;\n            BYTE lock;\n        };\n        void *next_free;\n    };\n    void *ptr;\n};"
+   },
+   {
+    "name": "struct (anonymous at /Users/xingangao/wine_fuzz/wine_src/wine/dlls/kernel32/heap.c:98:9)",
+    "kind": "struct_decl",
+    "start_line": 98,
+    "end_line": 102,
+    "code": "        struct\n        {\n            WORD flags;\n            BYTE lock;\n        };"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch_globalmem",
+    "type": "struct __wine_debug_channel",
+    "static": true,
+    "start_line": 42,
+    "end_line": 42,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(globalmem);"
+   },
+   {
+    "name": "kernelbase_global_data",
+    "type": "struct kernelbase_global_data *",
+    "static": false,
+    "start_line": 110,
+    "end_line": 110,
+    "code": "struct kernelbase_global_data *kernelbase_global_data;"
+   }
+  ],
+  "macros": [
+   {
+    "name": "MEM_FLAG_DDESHARE",
+    "start_line": 92,
+    "end_line": 92,
+    "code": "#define MEM_FLAG_DDESHARE    0x8000"
+   },
+   {
+    "name": "MEM_FLAG_DISCARDABLE",
+    "start_line": 90,
+    "end_line": 90,
+    "code": "#define MEM_FLAG_DISCARDABLE 4"
+   },
+   {
+    "name": "MEM_FLAG_DISCARDED",
+    "start_line": 91,
+    "end_line": 91,
+    "code": "#define MEM_FLAG_DISCARDED   8"
+   },
+   {
+    "name": "MEM_FLAG_USED",
+    "start_line": 88,
+    "end_line": 88,
+    "code": "#define MEM_FLAG_USED        1"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetProcessHeap",
+    "impl": [
+     "dlls/kernelbase/process.c:910"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "RtlLockHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2302"
+    ]
+   },
+   {
+    "name": "RtlUnlockHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2324"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

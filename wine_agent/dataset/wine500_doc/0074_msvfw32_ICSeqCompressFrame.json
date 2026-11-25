@@ -1,0 +1,99 @@
+{
+ "id": "0074",
+ "function": {
+  "name": "ICSeqCompressFrame",
+  "export_name": "ICSeqCompressFrame",
+  "module": "msvfw32",
+  "source_module": "msvfw32",
+  "exported_by": [
+   "msvfw32"
+  ],
+  "side": "PE",
+  "file": "dlls/msvfw32/msvideo_main.c",
+  "start_line": 1416,
+  "end_line": 1469,
+  "body_lines": 51,
+  "signature": "LPVOID VFWAPI ICSeqCompressFrame(PCOMPVARS pc, UINT uiFlags, LPVOID lpBits, BOOL *pfKey, LONG *plSize)",
+  "header_comment": "/***********************************************************************\n *      ICSeqCompressFrame   [MSVFW32.@]\n */",
+  "code": "LPVOID VFWAPI ICSeqCompressFrame(PCOMPVARS pc, UINT uiFlags, LPVOID lpBits, BOOL *pfKey, LONG *plSize)\n{\n    ICCOMPRESS* icComp = pc->lpState;\n    DWORD ret;\n    TRACE(\"(%p, 0x%08x, %p, %p, %p)\\n\", pc, uiFlags, lpBits, pfKey, plSize);\n\n    if (pc->cbState != sizeof(ICCOMPRESS))\n    {\n       ERR(\"Invalid cbState %li\\n\", pc->cbState);\n       return NULL;\n    }\n\n    if (!pc->lKeyCount++)\n       icComp->dwFlags = ICCOMPRESS_KEYFRAME;\n    else\n    {\n        if (pc->lKey && pc->lKeyCount == (pc->lKey - 1))\n        /* No key frames if pc->lKey == 0 */\n           pc->lKeyCount = 0;\n        icComp->dwFlags = 0;\n    }\n\n    icComp->lpInput = lpBits;\n    icComp->lFrameNum = pc->lFrame++;\n    icComp->lpOutput = pc->lpBitsOut;\n    icComp->lpPrev = pc->lpBitsPrev;\n    ret = ICSendMessage(pc->hic, ICM_COMPRESS, (DWORD_PTR)icComp, sizeof(*icComp));\n\n    if (ret == ICERR_OK)\n    {\n        LPVOID oldprev, oldout;\n\n        if (icComp->dwFlags & AVIIF_KEYFRAME)\n        {\n            pc->lKeyCount = 1;\n            *pfKey = TRUE;\n            TRACE(\"Key frame\\n\");\n        }\n        else\n            *pfKey = FALSE;\n\n        *plSize = icComp->lpbiOutput->biSizeImage;\n\n        /* We shift Prev and Out, so we don't have to allocate and release memory */\n        oldprev = pc->lpBitsPrev;\n        oldout = pc->lpBitsOut;\n        pc->lpBitsPrev = oldout;\n        pc->lpBitsOut = oldprev;\n\n        TRACE(\"returning: %p, compressed frame size %lu\\n\", icComp->lpOutput, *plSize);\n        return icComp->lpOutput;\n    }\n    return NULL;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <string.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winuser.h\"",
+   "#include \"commdlg.h\"",
+   "#include \"vfw.h\"",
+   "#include \"msvideo_private.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\""
+  ],
+  "resolution": [
+   "msvfw32!ICSeqCompressFrame [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/msvfw32/tests/msvfw.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "vfw",
+   "path": "sdk-api-src/content/vfw/nf-vfw-icseqcompressframe.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/vfw/nf-vfw-icseqcompressframe",
+   "documented_name": "icseqcompressframe",
+   "file": "docs/0074_sdk-api_nf-vfw-icseqcompressframe.md",
+   "text": "---\nUID: NF:vfw.ICSeqCompressFrame\ntitle: ICSeqCompressFrame function (vfw.h)\ndescription: The ICSeqCompressFrame function compresses one frame in a sequence of frames.\nhelpviewer_keywords: [\"ICSeqCompressFrame\",\"ICSeqCompressFrame function [Windows Multimedia]\",\"_win32_ICSeqCompressFrame\",\"multimedia.icseqcompressframe\",\"vfw/ICSeqCompressFrame\"]\nold-location: multimedia\\icseqcompressframe.htm\ntech.root: Multimedia\nms.assetid: 6159e455-1e1a-4aa5-9d75-53cd2af2656a\nms.date: 12/05/2018\nms.keywords: ICSeqCompressFrame, ICSeqCompressFrame function [Windows Multimedia], _win32_ICSeqCompressFrame, multimedia.icseqcompressframe, vfw/ICSeqCompressFrame\nreq.header: vfw.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Vfw32.lib\nreq.dll: Msvfw32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ICSeqCompressFrame\n - vfw/ICSeqCompressFrame\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Msvfw32.dll\napi_name:\n - ICSeqCompressFrame\n---\n\n# ICSeqCompressFrame function\n\n\n## -description\n\nThe <b>ICSeqCompressFrame</b> function compresses one frame in a sequence of frames.\n\n## -parameters\n\n### -param pc\n\nPointer to a <a href=\"/windows/desktop/api/vfw/ns-vfw-compvars\">COMPVARS</a> structure initialized with information about the compression.\n\n### -param uiFlags\n\nReserved; must be zero.\n\n### -param lpBits\n\nPointer to the data bits to compress. (The data bits exclude header or format information.)\n\n### -param pfKey\n\nReturns whether or not the frame was compressed into a key frame.\n\n### -param plSize\n\nMaximum size desired for the compressed image. The compressor might not be able to compress the data to fit within this size. When the function returns, the parameter points to the size of the compressed image. Images sizes are specified in bytes.\n\n## -returns\n\nReturns the address of the compressed bits if successful or <b>NULL</b> otherwise.\n\n## -remarks\n\nThis function uses a <a href=\"/windows/desktop/api/vfw/ns-vfw-compvars\">COMPVARS</a> structure to provide settings for the specified compressor and intersperses key frames at the rate specified by the <a href=\"/windows/desktop/api/vfw/nf-vfw-icseqcompressframestart\">ICSeqCompressorFrameStart</a> function. You can specify values for the data rate for the sequence and the key-frame frequency by using the appropriate members of <b>COMPVARS</b>.\n\nUse this function instead of the <a href=\"/windows/desktop/api/vfw/nf-vfw-iccompress\">ICCompress</a> function to compress a video sequence.\n\nYou can allow the user to specify a compressor and initialize a <a href=\"/windows/desktop/api/vfw/ns-vfw-compvars\">COMPVARS</a> structure by using the <a href=\"/windows/desktop/api/vfw/nf-vfw-iccompressorchoose\">ICCompressorChoose</a> function. Or, you can initialize a <b>COMPVARS</b> structure manually.\n\nUse the <a href=\"/windows/desktop/api/vfw/nf-vfw-icseqcompressframestart\">ICSeqCompressFrameStart</a>, <b>ICSeqCompressFrame</b>, and <a href=\"/windows/desktop/api/vfw/nf-vfw-icseqcompressframeend\">ICSeqCompressFrameEnd</a> functions to compress a sequence of frames to a specified data rate and number of key frames. Use <b>ICSeqCompressFrame</b> once for each frame to be compressed.\n\nWhen finished with compression, use the <a href=\"/windows/desktop/api/vfw/nf-vfw-iccompressorfree\">ICCompressorFree</a> function to release the resources specified by <a href=\"/windows/desktop/api/vfw/ns-vfw-compvars\">COMPVARS</a>.\n\n## -see-also\n\n<a href=\"/windows/desktop/Multimedia/video-compression-functions\">Video Compression Functions</a>\n\n\n\n<a href=\"/windows/desktop/Multimedia/video-compression-manager\">Video Compression Manager</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 49,
+    "end_line": 49,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(msvideo);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "ICSendMessage",
+    "impl": [
+     "dlls/msvfw32/msvideo_main.c:1158"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

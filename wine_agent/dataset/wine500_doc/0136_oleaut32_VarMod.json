@@ -1,0 +1,129 @@
+{
+ "id": "0136",
+ "function": {
+  "name": "VarMod",
+  "export_name": "VarMod",
+  "module": "oleaut32",
+  "source_module": "oleaut32",
+  "exported_by": [
+   "oleaut32"
+  ],
+  "side": "PE",
+  "file": "dlls/oleaut32/variant.c",
+  "start_line": 5421,
+  "end_line": 5642,
+  "body_lines": 219,
+  "signature": "HRESULT WINAPI VarMod(LPVARIANT left, LPVARIANT right, LPVARIANT result)",
+  "header_comment": "/**********************************************************************\n *              VarMod [OLEAUT32.155]\n *\n * Perform the modulus operation of the right hand variant on the left\n *\n * PARAMS\n *  left     [I] Left hand variant\n *  right    [I] Right hand variant\n *  result   [O] Destination for converted value\n *\n * RETURNS\n *  Success: S_OK. result contains the remainder.\n *  Failure: An HRESULT error code indicating the error.\n *\n * NOTE:\n *   If an error occurs the type of result will be modified but the value will not be.\n *   Doesn't support arrays or any special flags yet.\n */",
+  "code": "HRESULT WINAPI VarMod(LPVARIANT left, LPVARIANT right, LPVARIANT result)\n{\n    HRESULT      rc         = E_FAIL;\n    int          resT = 0;\n    VARIANT      lv,rv;\n    VARIANT tempLeft, tempRight;\n\n    VariantInit(&tempLeft);\n    VariantInit(&tempRight);\n    VariantInit(&lv);\n    VariantInit(&rv);\n    V_VT(result) = VT_EMPTY;\n\n    TRACE(\"(%s,%s,%p)\\n\", debugstr_variant(left), debugstr_variant(right), result);\n\n    /* Handle VT_DISPATCH by storing and taking address of returned value */\n    if ((V_VT(left) & VT_TYPEMASK) == VT_DISPATCH)\n    {\n        rc = VARIANT_FetchDispatchValue(left, &tempLeft);\n        if (FAILED(rc)) goto end;\n        left = &tempLeft;\n    }\n    if ((V_VT(right) & VT_TYPEMASK) == VT_DISPATCH)\n    {\n        rc = VARIANT_FetchDispatchValue(right, &tempRight);\n        if (FAILED(rc)) goto end;\n        right = &tempRight;\n    }\n\n    /* check for invalid inputs */\n    switch (V_VT(left) & VT_TYPEMASK) {\n    case VT_BOOL :\n    case VT_I1   :\n    case VT_I2   :\n    case VT_I4   :\n    case VT_I8   :\n    case VT_INT  :\n    case VT_UI1  :\n    case VT_UI2  :\n    case VT_UI4  :\n    case VT_UI8  :\n    case VT_UINT :\n    case VT_R4   :\n    case VT_R8   :\n    case VT_CY   :\n    case VT_EMPTY:\n    case VT_DATE :\n    case VT_BSTR :\n    case VT_DECIMAL:\n      break;\n    case VT_VARIANT:\n    case VT_UNKNOWN:\n      V_VT(result) = VT_EMPTY;\n      rc = DISP_E_TYPEMISMATCH;\n      goto end;\n    case VT_ERROR:\n      rc = DISP_E_TYPEMISMATCH;\n      goto end;\n    case VT_RECORD:\n      V_VT(result) = VT_EMPTY;\n      rc = DISP_E_TYPEMISMATCH;\n      goto end;\n    case VT_NULL:\n      break;\n    default:\n      V_VT(result) = VT_EMPTY;\n      rc = DISP_E_BADVARTYPE;\n      goto end;\n    }\n\n\n    switch (V_VT(right) & VT_TYPEMASK) {\n    case VT_BOOL :\n    case VT_I1   :\n    case VT_I2   :\n    case VT_I4   :\n    case VT_I8   :\n      if((V_VT(left) == VT_INT) && (V_VT(right) == VT_I8))\n      {\n\tV_VT(result) = VT_EMPTY;\n        rc = DISP_E_TYPEMISMATCH;\n        goto end;\n      }\n    case VT_INT  :\n      if((V_VT(right) == VT_INT) && (V_VT(left) == VT_I8))\n      {\n\tV_VT(result) = VT_EMPTY;\n        rc = DISP_E_TYPEMISMATCH;\n        goto end;\n      }\n    case VT_UI1  :\n    case VT_UI2  :\n    case VT_UI4  :\n    case VT_UI8  :\n    case VT_UINT :\n    case VT_R4   :\n    case VT_R8   :\n    case VT_CY   :\n      if(V_VT(left) == VT_EMPTY)\n      {\n\tV_VT(result) = VT_I4;\n        V_I4(result) = 0;\n        rc = S_OK;\n        goto end;\n      }\n    case VT_EMPTY:\n    case VT_DATE :\n    case VT_DECIMAL:\n      if(V_VT(left) == VT_ERROR)\n      {\n\tV_VT(result) = VT_EMPTY;\n        rc = DISP_E_TYPEMISMATCH;\n        goto end;\n      }\n    case VT_BSTR:\n      if(V_VT(left) == VT_NULL)\n      {\n\tV_VT(result) = VT_NULL;\n        rc = S_OK;\n        goto end;\n      }\n      break;\n\n    case VT_VOID:\n      V_VT(result) = VT_EMPTY;\n      rc = DISP_E_BADVARTYPE;\n      goto end;\n    case VT_NULL:\n      if(V_VT(left) == VT_VOID)\n      {\n\tV_VT(result) = VT_EMPTY;\n        rc = DISP_E_BADVARTYPE;\n      } else\n      {\n        V_VT(result) = VT_NULL;\n        rc = S_OK;\n      }\n      goto end;\n    case VT_VARIANT:\n    case VT_UNKNOWN:\n      V_VT(result) = VT_EMPTY;\n      rc = DISP_E_TYPEMISMATCH;\n      goto end;\n    case VT_ERROR:\n      rc = DISP_E_TYPEMISMATCH;\n      goto end;\n    case VT_RECORD:\n      if((V_VT(left) == 15) || ((V_VT(left) >= 24) && (V_VT(left) <= 35)))\n      {\n\tV_VT(result) = VT_EMPTY;\n        rc = DISP_E_BADVARTYPE;\n      } else\n      {\n\tV_VT(result) = VT_EMPTY;\n        rc = DISP_E_TYPEMISMATCH;\n      }\n      goto end;\n    default:\n      V_VT(result) = VT_EMPTY;\n      rc = DISP_E_BADVARTYPE;\n      goto end;\n    }\n\n    /* determine the result type */\n    if((V_VT(left) == VT_I8)        || (V_VT(right) == VT_I8))   resT = VT_I8;\n    else if((V_VT(left) == VT_UI1)  && (V_VT(right) == VT_BOOL)) resT = VT_I2;\n    else if((V_VT(left) == VT_UI1)  && (V_VT(right) == VT_UI1))  resT = VT_UI1;\n    else if((V_VT(left) == VT_UI1)  && (V_VT(right) == VT_I2))   resT = VT_I2;\n    else if((V_VT(left) == VT_I2)   && (V_VT(right) == VT_BOOL)) resT = VT_I2;\n    else if((V_VT(left) == VT_I2)   && (V_VT(right) == VT_UI1))  resT = VT_I2;\n    else if((V_VT(left) == VT_I2)   && (V_VT(right) == VT_I2))   resT = VT_I2;\n    else if((V_VT(left) == VT_BOOL) && (V_VT(right) == VT_BOOL)) resT = VT_I2;\n    else if((V_VT(left) == VT_BOOL) && (V_VT(right) == VT_UI1))  resT = VT_I2;\n    else if((V_VT(left) == VT_BOOL) && (V_VT(right) == VT_I2))   resT = VT_I2;\n    else resT = VT_I4; /* most outputs are I4 */\n\n    /* convert to I8 for the modulo */\n    rc = VariantChangeType(&lv, left, 0, VT_I8);\n    if(FAILED(rc))\n    {\n      FIXME(\"Could not convert left type %d to %d? rc == %#lx.\\n\", V_VT(left), VT_I8, rc);\n      goto end;\n    }\n\n    rc = VariantChangeType(&rv, right, 0, VT_I8);\n    if(FAILED(rc))\n    {\n      FIXME(\"Could not convert right type %d to %d? rc == %#lx.\\n\", V_VT(right), VT_I8, rc);\n      goto end;\n    }\n\n    /* if right is zero set VT_EMPTY and return divide by zero */\n    if(V_I8(&rv) == 0)\n    {\n      V_VT(result) = VT_EMPTY;\n      rc = DISP_E_DIVBYZERO;\n      goto end;\n    }\n\n    /* perform the modulo operation */\n    V_VT(result) = VT_I8;\n    V_I8(result) = V_I8(&lv) % V_I8(&rv);\n\n    TRACE(\"V_I8(left) == %s, V_I8(right) == %s, V_I8(result) == %s\\n\",\n          wine_dbgstr_longlong(V_I8(&lv)), wine_dbgstr_longlong(V_I8(&rv)),\n          wine_dbgstr_longlong(V_I8(result)));\n\n    /* convert left and right to the destination type */\n    rc = VariantChangeType(result, result, 0, resT);\n    if(FAILED(rc))\n    {\n      FIXME(\"Could not convert 0x%x to %d?\\n\", V_VT(result), resT);\n      /* fall to end of function */\n    }\n\nend:\n    VariantClear(&lv);\n    VariantClear(&rv);\n    VariantClear(&tempLeft);\n    VariantClear(&tempRight);\n    return rc;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <string.h>",
+   "#include <stdlib.h>",
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"variant.h\"",
+   "#include \"resource.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "oleaut32!VarMod [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/oleaut32/tests/vartest.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "oleauto",
+   "path": "sdk-api-src/content/oleauto/nf-oleauto-varmod.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/oleauto/nf-oleauto-varmod",
+   "documented_name": "varmod",
+   "file": "docs/0136_sdk-api_nf-oleauto-varmod.md",
+   "text": "---\nUID: NF:oleauto.VarMod\ntitle: VarMod function (oleauto.h)\ndescription: Divides two variants and returns only the remainder.\nhelpviewer_keywords: [\"VarMod\",\"VarMod function [Automation]\",\"_oa96_VarMod\",\"automat.varmod\",\"oleauto/VarMod\"]\nold-location: automat\\varmod.htm\ntech.root: automat\nms.assetid: 910d3f37-15f4-4a0e-8aa0-ab58be865c62\nms.date: 12/05/2018\nms.keywords: VarMod, VarMod function [Automation], _oa96_VarMod, automat.varmod, oleauto/VarMod\nreq.header: oleauto.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: OleAut32.lib\nreq.dll: OleAut32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - VarMod\n - oleauto/VarMod\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - OleAut32.dll\napi_name:\n - VarMod\n---\n\n# VarMod function\n\n\n## -description\n\nDivides two variants and returns only the remainder.\n\n## -parameters\n\n### -param pvarLeft [in]\n\nThe first variant.\n\n### -param pvarRight [in]\n\nThe second variant.\n\n### -param pvarResult [out]\n\nThe result variant.\n\n## -returns\n\nIf this function succeeds, it returns <b>S_OK</b>. Otherwise, it returns an <b>HRESULT</b> error code.\n\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "VARIANT_FetchDispatchValue",
+   "file": "dlls/oleaut32/variant.c",
+   "start_line": 504,
+   "end_line": 518,
+   "static": true,
+   "called_from": [
+    "VarMod"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/oleaut32/variant.c:2668",
+    "dlls/oleaut32/variant.c:2694",
+    "dlls/oleaut32/variant.c:2979",
+    "dlls/oleaut32/variant.c:2985",
+    "dlls/oleaut32/variant.c:3256"
+   ],
+   "signature": "static HRESULT VARIANT_FetchDispatchValue(LPVARIANT pvDispatch, LPVARIANT pValue)",
+   "code": "static HRESULT VARIANT_FetchDispatchValue(LPVARIANT pvDispatch, LPVARIANT pValue)\n{\n    DISPPARAMS params = { 0 };\n    HRESULT hres;\n\n    if ((V_VT(pvDispatch) & VT_TYPEMASK) == VT_DISPATCH) {\n        if (NULL == V_DISPATCH(pvDispatch)) return DISP_E_TYPEMISMATCH;\n        hres = IDispatch_Invoke(V_DISPATCH(pvDispatch), DISPID_VALUE, &IID_NULL,\n            LOCALE_USER_DEFAULT, DISPATCH_PROPERTYGET, &params, pValue,\n            NULL, NULL);\n    } else {\n        hres = DISP_E_TYPEMISMATCH;\n    }\n    return hres;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(variant);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "VariantChangeType",
+    "impl": [
+     "dlls/oleaut32/variant.c:940"
+    ]
+   },
+   {
+    "name": "VariantClear",
+    "impl": [
+     "dlls/oleaut32/variant.c:627"
+    ]
+   },
+   {
+    "name": "VariantInit",
+    "impl": [
+     "dlls/oleaut32/variant.c:547"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "IDispatch_Invoke",
+   "debugstr_variant",
+   "wine_dbg_log",
+   "wine_dbgstr_longlong"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

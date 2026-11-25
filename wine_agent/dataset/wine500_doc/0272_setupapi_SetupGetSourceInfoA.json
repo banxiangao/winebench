@@ -1,0 +1,118 @@
+{
+ "id": "0272",
+ "function": {
+  "name": "SetupGetSourceInfoA",
+  "export_name": "SetupGetSourceInfoA",
+  "module": "setupapi",
+  "source_module": "setupapi",
+  "exported_by": [
+   "setupapi"
+  ],
+  "side": "PE",
+  "file": "dlls/setupapi/query.c",
+  "start_line": 424,
+  "end_line": 462,
+  "body_lines": 36,
+  "signature": "BOOL WINAPI SetupGetSourceInfoA( HINF hinf, UINT source_id, UINT info, PSTR buffer, DWORD buffer_size, LPDWORD required_size )",
+  "header_comment": null,
+  "code": "BOOL WINAPI SetupGetSourceInfoA( HINF hinf, UINT source_id, UINT info,\n                                 PSTR buffer, DWORD buffer_size, LPDWORD required_size )\n{\n    BOOL ret = FALSE;\n    WCHAR *bufferW = NULL;\n    DWORD required;\n    INT size;\n\n    TRACE(\"%p, %d, %d, %p, %ld, %p\\n\", hinf, source_id, info, buffer, buffer_size,\n          required_size);\n\n    if (!SetupGetSourceInfoW( hinf, source_id, info, NULL, 0, &required ))\n        return FALSE;\n\n    if (!(bufferW = malloc( required * sizeof(WCHAR) )))\n        return FALSE;\n\n    if (!SetupGetSourceInfoW( hinf, source_id, info, bufferW, required, NULL ))\n        goto done;\n\n    size = WideCharToMultiByte( CP_ACP, 0, bufferW, -1, NULL, 0, NULL, NULL );\n    if (required_size) *required_size = size;\n\n    if (buffer)\n    {\n        if (buffer_size >= size)\n            WideCharToMultiByte( CP_ACP, 0, bufferW, -1, buffer, buffer_size, NULL, NULL );\n        else\n        {\n            SetLastError( ERROR_INSUFFICIENT_BUFFER );\n            goto done;\n        }\n    }\n    ret = TRUE;\n\n done:\n    free( bufferW );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winreg.h\"",
+   "#include \"setupapi.h\"",
+   "#include \"advpub.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"setupapi_private.h\""
+  ],
+  "resolution": [
+   "setupapi!SetupGetSourceInfoA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/setupapi/tests/query.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "setupapi",
+   "path": "sdk-api-src/content/setupapi/nf-setupapi-setupgetsourceinfoa.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/setupapi/nf-setupapi-setupgetsourceinfoa",
+   "documented_name": "setupgetsourceinfoa",
+   "file": "docs/0272_sdk-api_nf-setupapi-setupgetsourceinfoa.md",
+   "text": "---\nUID: NF:setupapi.SetupGetSourceInfoA\ntitle: SetupGetSourceInfoA function (setupapi.h)\ndescription: The SetupGetSourceInfo function retrieves the path, tag file, or media description for a source listed in an INF file. (ANSI)\nhelpviewer_keywords: [\"SetupGetSourceInfoA\", \"setupapi/SetupGetSourceInfoA\"]\nold-location: setup\\setupgetsourceinfo.htm\ntech.root: setup\nms.assetid: 15bedd7f-7079-4623-a797-db308a51093f\nms.date: 12/05/2018\nms.keywords: SetupGetSourceInfo, SetupGetSourceInfo function [Setup API], SetupGetSourceInfoA, SetupGetSourceInfoW, _setupapi_setupgetsourceinfo, setup.setupgetsourceinfo, setupapi/SetupGetSourceInfo, setupapi/SetupGetSourceInfoA, setupapi/SetupGetSourceInfoW\nreq.header: setupapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: SetupGetSourceInfoW (Unicode) and SetupGetSourceInfoA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Setupapi.lib\nreq.dll: Setupapi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SetupGetSourceInfoA\n - setupapi/SetupGetSourceInfoA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Setupapi.dll\napi_name:\n - SetupGetSourceInfo\n - SetupGetSourceInfoA\n - SetupGetSourceInfoW\n---\n\n# SetupGetSourceInfoA function\n\n\n## -description\n\n<p class=\"CCE_Message\">[This function is available for use in the operating systems indicated in the Requirements section. It may be altered or unavailable in subsequent versions.   SetupAPI should no longer be used for installing applications. Instead, use the Windows Installer for developing application installers. SetupAPI continues to be used for installing device drivers.]\n\nThe \n<b>SetupGetSourceInfo</b> function retrieves the path, tag file, or media description for a source listed in an INF file.\n\n## -parameters\n\n### -param InfHandle [in]\n\nHandle to an open INF file that contains a <b>SourceDisksNames</b> section. If platform-specific sections exist for the user's system (for example, <b>SourceDisksNames.x86</b>), the platform-specific section will be used.\n\n### -param SourceId [in]\n\nIdentifier for a source media. This value is used to search by key in the <b>SourceDisksNames</b> section.\n\n### -param InfoDesired [in]\n\nIndicates what information is desired. Only one value may be specified per function call, and they cannot be combined. The following types of information can be retrieved from a <b>SourceDisksNames</b> section. \n\n\n\n\n\n\n\n#### SRCINFO_PATH\n\nThe path specified for the source. This is not a full path, but the path relative to the installation root.\n\n\n\n#### SRCINFO_TAGFILE\n\nThe tag file that identifies the source media, or if cabinets are used, the name of the cabinet file.\n\n\n\n#### SRCINFO_DESCRIPTION\n\nA description for the media.\n\n### -param ReturnBuffer [in, out]\n\nOptional pointer to a buffer to receive the retrieved information.  Path returns are guaranteed not to end with \\.  You should use a <b>null</b>-terminated string. The <b>null</b>-terminated string should not exceed the size of the destination buffer. You can call the function once to get the required buffer size, allocate the necessary memory, and then call the function a second time to retrieve the data. See the Remarks section. Using this technique, you can avoid errors due to an insufficient buffer size. This parameter can be <b>NULL</b>.\n\n### -param ReturnBufferSize [in]\n\nSize of the buffer pointed to by <i>ReturnBuffer</i>, in characters. This  includes the <b>null</b> terminator.\n\n### -param RequiredSize [in, out]\n\nOptional pointer to a variable that receives the required size for the buffer specified by <i>ReturnBuffer</i>, in characters. This includes the <b>null</b> terminator. If <i>ReturnBuffer</i> is specified and the actual size needed is larger than the value specified by <i>ReturnBufferSize</i>, the function fails and a call to <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> returns ERROR_INSUFFICIENT_BUFFER.\n\n## -returns\n\nIf the function succeeds, the return value is a nonzero value.\n\nIf the function fails, the return value is zero. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nIf this function is called with a <i>ReturnBuffer</i> of <b>NULL</b> and a <i>ReturnBufferSize</i> of zero, the function puts the buffer size needed to hold the specified data into the variable pointed to by <i>RequiredSize</i>. If the function succeeds in this, the return value is a nonzero value. Otherwise, the return value is zero and extended error information can be obtained by calling <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n\n\n\n\n\n> [!NOTE]\n> The setupapi.h header defines SetupGetSourceInfo as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/SetupApi/functions\">Functions</a>\n\n\n\n<a href=\"/windows/desktop/SetupApi/overview\">Overview</a>\n\n\n\n<a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupgetsourcefilelocationa\">SetupGetSourceFileLocation</a>\n\n\n\n<a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupgetsourcefilesizea\">SetupGetSourceFileSize</a>\n\n\n\n<a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupgettargetpatha\">SetupGetTargetPath</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 34,
+    "end_line": 34,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(setupapi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "SetupGetSourceInfoW",
+    "impl": [
+     "dlls/setupapi/query.c:468"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

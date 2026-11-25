@@ -1,0 +1,252 @@
+{
+ "id": "0042",
+ "function": {
+  "name": "CoRevokeClassObject",
+  "export_name": "CoRevokeClassObject",
+  "module": "combase",
+  "source_module": "combase",
+  "exported_by": [
+   "combase",
+   "compobj.dll16",
+   "ole32"
+  ],
+  "side": "PE",
+  "file": "dlls/combase/combase.c",
+  "start_line": 3279,
+  "end_line": 3318,
+  "body_lines": 37,
+  "signature": "HRESULT WINAPI DECLSPEC_HOTPATCH CoRevokeClassObject(DWORD cookie)",
+  "header_comment": "/***********************************************************************\n *           CoRevokeClassObject    (combase.@)\n */",
+  "code": "HRESULT WINAPI DECLSPEC_HOTPATCH CoRevokeClassObject(DWORD cookie)\n{\n    HRESULT hr = E_INVALIDARG;\n    struct registered_class *cur;\n    struct apartment *apt;\n\n    TRACE(\"%#lx\\n\", cookie);\n\n    if (!(apt = apartment_get_current_or_mta()))\n    {\n        ERR(\"COM was not initialized\\n\");\n        return CO_E_NOTINITIALIZED;\n    }\n\n    EnterCriticalSection(&registered_classes_cs);\n\n    LIST_FOR_EACH_ENTRY(cur, &registered_classes, struct registered_class, entry)\n    {\n        if (cur->cookie != cookie)\n            continue;\n\n        if (cur->apartment_id == apt->oxid)\n        {\n            com_revoke_class_object(cur);\n            hr = S_OK;\n        }\n        else\n        {\n            ERR(\"called from wrong apartment, should be called from %s\\n\", wine_dbgstr_longlong(cur->apartment_id));\n            hr = RPC_E_WRONG_THREAD;\n        }\n\n        break;\n    }\n\n    LeaveCriticalSection(&registered_classes_cs);\n    apartment_release(apt);\n\n    return hr;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"objbase.h\"",
+   "#include \"comsvcs.h\"",
+   "#include \"ctxtcall.h\"",
+   "#include \"oleauto.h\"",
+   "#include \"dde.h\"",
+   "#include \"winternl.h\"",
+   "#include \"dcom.h\"",
+   "#include \"combase_private.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\""
+  ],
+  "resolution": [
+   "ole32!CoRevokeClassObject [stdcall] -> forward combase.CoRevokeClassObject",
+   "combase!CoRevokeClassObject [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ole32/tests/compobj.c",
+   "dlls/ole32/tests/defaulthandler.c",
+   "dlls/ole32/tests/marshal.c",
+   "dlls/ole32/tests/moniker.c",
+   "dlls/ole32/tests/ole2.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 14
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "compobj.dll16",
+   "source_module": "compobj.dll16",
+   "exported_by": [
+    "compobj.dll16"
+   ],
+   "file": "dlls/compobj.dll16/compobj.c",
+   "start_line": 520,
+   "resolution": [
+    "compobj.dll16!CoRevokeClassObject [pascal] -> internal symbol CoRevokeClassObject16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 524,
+   "signature": "HRESULT WINAPI CoRevokeClassObject16(DWORD dwRegister) /* [in] token on class obj */",
+   "code": "HRESULT WINAPI CoRevokeClassObject16(DWORD dwRegister) /* [in] token on class obj */\n{\n    FIXME(\"(0x%08lx),stub!\\n\", dwRegister);\n    return 0;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "combaseapi",
+   "path": "sdk-api-src/content/combaseapi/nf-combaseapi-corevokeclassobject.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/combaseapi/nf-combaseapi-corevokeclassobject",
+   "documented_name": "corevokeclassobject",
+   "file": "docs/0042_sdk-api_nf-combaseapi-corevokeclassobject.md",
+   "text": "---\nUID: NF:combaseapi.CoRevokeClassObject\ntitle: CoRevokeClassObject function (combaseapi.h)\ndescription: Informs OLE that a class object, previously registered with the CoRegisterClassObject function, is no longer available for use.\nhelpviewer_keywords: [\"CoRevokeClassObject\",\"CoRevokeClassObject function [COM]\",\"_com_CoRevokeClassObject\",\"com.corevokeclassobject\",\"combaseapi/CoRevokeClassObject\"]\nold-location: com\\corevokeclassobject.htm\ntech.root: com\nms.assetid: 90b9b9ca-b5b2-48f5-8c2a-b478b6daa7ec\nms.date: 12/05/2018\nms.keywords: CoRevokeClassObject, CoRevokeClassObject function [COM], _com_CoRevokeClassObject, com.corevokeclassobject, combaseapi/CoRevokeClassObject\nreq.header: combaseapi.h\nreq.include-header: Objbase.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ole32.lib\nreq.dll: Ole32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CoRevokeClassObject\n - combaseapi/CoRevokeClassObject\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-com-l1-1-3.dll\n - api-ms-win-core-com-l1-1-2.dll\n - Ole32.dll\n - API-MS-Win-Core-Com-l1-1-0.dll\n - ComBase.dll\n - API-MS-Win-Core-Com-l1-1-1.dll\n - API-MS-Win-DownLevel-Ole32-l1-1-0.dll\n - API-MS-Win-DownLevel-Ole32-l1-1-1.dll\napi_name:\n - CoRevokeClassObject\n---\n\n# CoRevokeClassObject function\n\n\n## -description\n\nInforms OLE that a class object, previously registered with the <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-coregisterclassobject\">CoRegisterClassObject</a> function, is no longer available for use.\n\n## -parameters\n\n### -param dwRegister [in]\n\nA token previously returned from the <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-coregisterclassobject\">CoRegisterClassObject</a> function.\n\n## -returns\n\nThis function can return the standard return values E_INVALIDARG, E_OUTOFMEMORY, and E_UNEXPECTED, as well as the following values.\n\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>S_OK</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe class object was revoked successfully.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nA successful call to <b>CoRevokeClassObject</b> means that the class object has been removed from the global class object table (although it does not release the class object). If other clients still have pointers to the class object and have caused the reference count to be incremented by calls to <a href=\"/windows/desktop/api/unknwn/nf-unknwn-iunknown-addref\">IUnknown::AddRef</a>, the reference count will not be zero. When this occurs, applications may benefit if subsequent calls (with the obvious exceptions of <b>AddRef</b> and <a href=\"/windows/desktop/api/unknwn/nf-unknwn-iunknown-release\">IUnknown::Release</a>) to the class object fail. Note that <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-coregisterclassobject\">CoRegisterClassObject</a> calls <b>AddRef</b> and <b>CoRevokeClassObject</b> calls <b>Release</b>, so the two functions form an <b>AddRef</b>/<b>Release</b> pair.\n\n\n\nAn object application must call <b>CoRevokeClassObject</b> to revoke registered class objects before exiting the program. Class object implementers should call <b>CoRevokeClassObject</b> as part of the release sequence. You must specifically revoke the class object even when you have specified the flags value REGCLS_SINGLEUSE in a call to <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-coregisterclassobject\">CoRegisterClassObject</a>, indicating that only one application can connect to the class object.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-cogetclassobject\">CoGetClassObject</a>\n\n\n\n<a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-coregisterclassobject\">CoRegisterClassObject</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "com_revoke_class_object",
+   "file": "dlls/combase/combase.c",
+   "start_line": 3234,
+   "end_line": 3243,
+   "static": true,
+   "called_from": [
+    "CoRevokeClassObject"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/combase.c:3255",
+    "dlls/combase/combase.c:3270"
+   ],
+   "signature": "static void com_revoke_class_object(struct registered_class *entry)",
+   "code": "static void com_revoke_class_object(struct registered_class *entry)\n{\n    list_remove(&entry->entry);\n\n    if (entry->clscontext & CLSCTX_LOCAL_SERVER)\n        rpc_revoke_local_server(entry->rpcss_cookie);\n\n    IUnknown_Release(entry->object);\n    free(entry);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "registered_class",
+    "kind": "struct_decl",
+    "start_line": 119,
+    "end_line": 129,
+    "code": "struct registered_class\n{\n    struct list entry;\n    CLSID clsid;\n    OXID apartment_id;\n    IUnknown *object;\n    DWORD clscontext;\n    DWORD flags;\n    unsigned int cookie;\n    unsigned int rpcss_cookie;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ole);"
+   },
+   {
+    "name": "registered_classes",
+    "type": "struct list",
+    "static": true,
+    "start_line": 131,
+    "end_line": 131,
+    "code": "static struct list registered_classes = LIST_INIT(registered_classes);"
+   },
+   {
+    "name": "registered_classes_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 140,
+    "end_line": 140,
+    "code": "static CRITICAL_SECTION registered_classes_cs = { &registered_classes_cs_debug, -1, 0, 0, 0, 0 };"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "apartment_get_current_or_mta",
+    "file": "dlls/combase/apartment.c",
+    "start_line": 623
+   },
+   {
+    "name": "apartment_release",
+    "file": "dlls/combase/apartment.c",
+    "start_line": 444
+   },
+   {
+    "name": "rpc_revoke_local_server",
+    "file": "dlls/combase/rpc.c",
+    "start_line": 371
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   }
+  ],
+  "header_inline": [
+   "list_remove",
+   "wine_dbg_log",
+   "wine_dbgstr_longlong"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "combase.CoRevokeClassObject",
+  "category": {
+   "l1": "System services",
+   "l2": "COM",
+   "header": "combaseapi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 40,
+   "body": 39,
+   "code": 21
+  },
+  "cyclomatic": 4,
+  "return_type": "HRESULT",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 14,
+   "n_tests": 21,
+   "n_tests_other": 7,
+   "own_test_functions": [
+    "dlls/ole32/tests/compobj.c::implicit_mta_proc",
+    "dlls/ole32/tests/compobj.c::revoke_class_object_thread",
+    "dlls/ole32/tests/compobj.c::test_CoCreateInstanceEx",
+    "dlls/ole32/tests/compobj.c::test_CoCreateInstanceFromApp",
+    "dlls/ole32/tests/compobj.c::test_CoRegisterClassObject",
+    "dlls/ole32/tests/compobj.c::test_CoRegisterPSClsid",
+    "dlls/ole32/tests/compobj.c::test_registered_object_thread_affinity",
+    "dlls/ole32/tests/defaulthandler.c::test_default_handler_run",
+    "dlls/ole32/tests/marshal.c::test_local_server",
+    "dlls/ole32/tests/marshal.c::test_marshal_channel_buffer",
+    "dlls/ole32/tests/marshal.c::test_register_local_server",
+    "dlls/ole32/tests/moniker.c::test_MkParseDisplayName",
+    "dlls/ole32/tests/ole2.c::START_TEST(ole2)",
+    "dlls/ole32/tests/ole2.c::test_default_handler"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/combaseapi/nf-combaseapi-corevokeclassobject",
+   "source": "win32",
+   "description": "Informs OLE that a class object, previously registered with the CoRegisterClassObject function, is no longer available for use.",
+   "min_windows": "Windows 2000 Professional [desktop apps \\| UWP apps]",
+   "documented_dll": "Ole32.dll"
+  },
+  "exports": [
+   "combase.CoRevokeClassObject",
+   "ole32.CoRevokeClassObject"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

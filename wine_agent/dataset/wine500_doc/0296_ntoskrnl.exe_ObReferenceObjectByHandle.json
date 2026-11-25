@@ -1,0 +1,294 @@
+{
+ "id": "0296",
+ "function": {
+  "name": "ObReferenceObjectByHandle",
+  "export_name": "ObReferenceObjectByHandle",
+  "module": "ntoskrnl.exe",
+  "source_module": "ntoskrnl.exe",
+  "exported_by": [
+   "ntoskrnl.exe"
+  ],
+  "side": "PE",
+  "file": "dlls/ntoskrnl.exe/ntoskrnl.c",
+  "start_line": 350,
+  "end_line": 368,
+  "body_lines": 16,
+  "signature": "NTSTATUS WINAPI ObReferenceObjectByHandle( HANDLE handle, ACCESS_MASK access, POBJECT_TYPE type, KPROCESSOR_MODE mode, void **ptr, POBJECT_HANDLE_INFORMATION info )",
+  "header_comment": "/***********************************************************************\n *           ObReferenceObjectByHandle    (NTOSKRNL.EXE.@)\n */",
+  "code": "NTSTATUS WINAPI ObReferenceObjectByHandle( HANDLE handle, ACCESS_MASK access,\n                                           POBJECT_TYPE type,\n                                           KPROCESSOR_MODE mode, void **ptr,\n                                           POBJECT_HANDLE_INFORMATION info )\n{\n    NTSTATUS status;\n\n    TRACE( \"%p %lx %p %d %p %p\\n\", handle, access, type, mode, ptr, info );\n\n    if (mode != KernelMode)\n    {\n        FIXME(\"UserMode access not implemented\\n\");\n        return STATUS_NOT_IMPLEMENTED;\n    }\n\n    status = kernel_object_from_handle( handle, type, ptr );\n    if (!status) ObReferenceObject( *ptr );\n    return status;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"ntoskrnl_private.h\"",
+   "#include \"excpt.h\"",
+   "#include \"winreg.h\"",
+   "#include \"ntsecapi.h\"",
+   "#include \"evntprov.h\"",
+   "#include \"ddk/csq.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/svcctl.h\""
+  ],
+  "resolution": [
+   "ntoskrnl.exe!ObReferenceObjectByHandle [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntoskrnl.exe/tests/driver.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "wdm",
+   "path": "wdk-ddi-src/content/wdm/nf-wdm-obreferenceobjectbyhandle.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-obreferenceobjectbyhandle",
+   "documented_name": "obreferenceobjectbyhandle",
+   "file": "docs/0296_windows-driver-docs-ddi_nf-wdm-obreferenceobjectbyhandle.md",
+   "text": "---\nUID: NF:wdm.ObReferenceObjectByHandle\ntitle: ObReferenceObjectByHandle function (wdm.h)\ndescription: The ObReferenceObjectByHandle routine provides access validation on the object handle, and, if access can be granted, returns the corresponding pointer to the object's body.\nold-location: kernel\\obreferenceobjectbyhandle.htm\ntech.root: kernel\nms.date: 04/30/2018\nkeywords: [\"ObReferenceObjectByHandle function\"]\nms.keywords: ObReferenceObjectByHandle, ObReferenceObjectByHandle routine [Kernel-Mode Driver Architecture], k107_97ce2cea-8f20-4b30-996c-9ea268951aef.xml, kernel.obreferenceobjectbyhandle, wdm/ObReferenceObjectByHandle\nreq.header: wdm.h\nreq.include-header: Wdm.h, Ntddk.h, Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt: Available starting with Windows 2000.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: IrqlObPassive, TargetRelationNeedsRef, HwStorPortProhibitedDDIs\nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: PASSIVE_LEVEL\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - ObReferenceObjectByHandle\n - wdm/ObReferenceObjectByHandle\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - ObReferenceObjectByHandle\n---\n\n# ObReferenceObjectByHandle function\n\n\n## -description\n\nThe **ObReferenceObjectByHandle** routine provides access validation on the object handle, and, if access can be granted, returns the corresponding pointer to the object's body.\n\n## -parameters\n\n### -param Handle [in]\n\n\nSpecifies an open handle for an object.\n\n### -param DesiredAccess [in]\n\n\nSpecifies the requested types of access to the object. The interpretation of this field is dependent on the object type. Do not use any generic access rights. For more information, see [ACCESS_MASK](/windows-hardware/drivers/kernel/access-mask).\n\n### -param ObjectType [in, optional]\n\n\nPointer to the object type. *ObjectType* can be **\\*ExEventObjectType**, **\\*ExSemaphoreObjectType**, **\\*IoFileObjectType**, **\\*PsProcessType**, **\\*PsThreadType**, **\\*SeTokenObjectType**, **\\*TmEnlistmentObjectType**, **\\*TmResourceManagerObjectType**, **\\*TmTransactionManagerObjectType**, or **\\*TmTransactionObjectType**.\n\nIf *ObjectType* is not **NULL**, the operating system verifies that the supplied object type matches the object type of the object that *Handle* specifies.\n\n### -param AccessMode [in]\n\n\nSpecifies the access mode to use for the access check. It must be either **UserMode** or **KernelMode**. Drivers should always specify **UserMode** for handles they receive from user address space.\n\n### -param Object [out]\n\n\nPointer to a variable that receives a pointer to the object's body. The following table contains the pointer types.\n\n|ObjectType parameter|Object pointer type|\n|----|----|\n|**\\*ExEventObjectType**|PKEVENT|\n|**\\*ExSemaphoreObjectType**|PKSEMAPHORE|\n|**\\*IoFileObjectType**|PFILE_OBJECT|\n|**\\*PsProcessType**|PEPROCESS or PKPROCESS|\n|**\\*PsThreadType**|PETHREAD or PKTHREAD|\n|**\\*SeTokenObjectType**|PACCESS_TOKEN|\n|**\\*TmEnlistmentObjectType**|PKENLISTMENT|\n|**\\*TmResourceManagerObjectType**|PKRESOURCEMANAGER|\n|**\\*TmTransactionManagerObjectType**|PKTM|\n|**\\*TmTransactionObjectType**|PKTRANSACTION|\n\nThe structures that the pointer types reference are opaque, and drivers cannot access the structure members. Because the structures are opaque, PEPROCESS is equivalent to PKPROCESS, and PETHREAD is equivalent to PKTHREAD.\n\n### -param HandleInformation [out, optional]\n\n\nDrivers set this to **NULL**.\n\n## -returns\n\n**ObReferenceObjectByHandle** returns STATUS_SUCCESS if the call is successful. Possible return values include the following error codes:\n\n|Return code|Description|\n|----|----|\n|**STATUS_OBJECT_TYPE_MISMATCH**|The *ObjectType* parameter specifies the wrong object type for the object that is identified by the *Handle* parameter.|\n|**STATUS_ACCESS_DENIED**|The caller cannot be granted the requested access rights to the object.|\n|**STATUS_INVALID_HANDLE**|The *Handle* parameter is not a valid object handle.|\n\n## -remarks\n\nA pointer to the object body is retrieved from the object table entry and returned to the caller by means of the *Object* parameter.\n\nIf *AccessMode* is **UserMode**, the requested access is compared to the granted access for the object. If *AccessMode* is **KernelMode**, the handle should originate in the kernel address space.\n\nStarting with Windows 7, if *AccessMode* is **KernelMode** and handle is received from user address space, [Driver Verifier](/windows-hardware/drivers/devtest/driver-verifier) issues bugcheck C4, subcode F6.\n\nIf the call succeeds, a pointer to the object body is returned to the caller and the pointer reference count is incremented. Incrementing this count prevents the object from being deleted while the pointer is being referenced. The caller must decrement the reference count with [ObDereferenceObject](nf-wdm-obdereferenceobject.md) as soon as it is done with the object.\n\n## -see-also\n\n[ACCESS_MASK](/windows-hardware/drivers/kernel/access-mask)\n\n[ObDereferenceObject](nf-wdm-obdereferenceobject.md)\n\n[ObReferenceObject](nf-wdm-obfreferenceobject.md)\n\n[ObReferenceObjectByPointer](nf-wdm-obreferenceobjectbypointer.md)\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "kernel_object_from_handle",
+   "file": "dlls/ntoskrnl.exe/ntoskrnl.c",
+   "start_line": 274,
+   "end_line": 345,
+   "static": false,
+   "called_from": [
+    "ObReferenceObjectByHandle"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntoskrnl.exe/sync.c:223",
+    "dlls/ntoskrnl.exe/sync.c:249",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:2668",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:2703"
+   ],
+   "signature": "NTSTATUS kernel_object_from_handle( HANDLE handle, POBJECT_TYPE type, void **ret )",
+   "code": "NTSTATUS kernel_object_from_handle( HANDLE handle, POBJECT_TYPE type, void **ret )\n{\n    void *obj;\n    NTSTATUS status;\n\n    EnterCriticalSection( &handle_map_cs );\n\n    SERVER_START_REQ( get_kernel_object_ptr )\n    {\n        req->manager = wine_server_obj_handle( get_device_manager() );\n        req->handle  = wine_server_obj_handle( handle );\n        status = wine_server_call( req );\n        obj = wine_server_get_ptr( reply->user_ptr );\n    }\n    SERVER_END_REQ;\n    if (status)\n    {\n        LeaveCriticalSection( &handle_map_cs );\n        return status;\n    }\n\n    if (!obj)\n    {\n        char buf[256];\n        OBJECT_TYPE_INFORMATION *type_info = (OBJECT_TYPE_INFORMATION *)buf;\n        ULONG size;\n\n        status = NtQueryObject( handle, ObjectTypeInformation, buf, sizeof(buf), &size );\n        if (status)\n        {\n            LeaveCriticalSection( &handle_map_cs );\n            return status;\n        }\n        if (!type)\n        {\n            size_t i;\n            for (i = 0; i < ARRAY_SIZE(known_types); i++)\n            {\n                type = *known_types[i];\n                if (!RtlCompareUnicodeStrings( type->name, lstrlenW(type->name), type_info->TypeName.Buffer,\n                                               type_info->TypeName.Length / sizeof(WCHAR), FALSE ))\n                    break;\n            }\n            if (i == ARRAY_SIZE(known_types))\n            {\n                FIXME(\"Unsupported type %s\\n\", debugstr_us(&type_info->TypeName));\n                LeaveCriticalSection( &handle_map_cs );\n                return STATUS_INVALID_HANDLE;\n            }\n        }\n        else if (RtlCompareUnicodeStrings( type->name, lstrlenW(type->name), type_info->TypeName.Buffer,\n                                           type_info->TypeName.Length / sizeof(WCHAR), FALSE) )\n        {\n            LeaveCriticalSection( &handle_map_cs );\n            return STATUS_OBJECT_TYPE_MISMATCH;\n        }\n\n        if (type->constructor)\n            obj = type->constructor( handle );\n        else\n        {\n            FIXME( \"No constructor for type %s\\n\", debugstr_w(type->name) );\n            obj = alloc_kernel_object( type, handle, 0, 0 );\n        }\n        if (!obj) status = STATUS_NO_MEMORY;\n    }\n    else if (type && ObGetObjectType( obj ) != type) status = STATUS_OBJECT_TYPE_MISMATCH;\n\n    LeaveCriticalSection( &handle_map_cs );\n    if (!status) *ret = obj;\n    return status;\n}"
+  },
+  {
+   "name": "ObReferenceObject",
+   "file": "dlls/ntoskrnl.exe/ntoskrnl.c",
+   "start_line": 222,
+   "end_line": 249,
+   "static": false,
+   "called_from": [
+    "ObReferenceObjectByHandle"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntoskrnl.exe/ntoskrnl.c:1335",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:3310",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:3366",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:3416"
+   ],
+   "signature": "void ObReferenceObject( void *obj )",
+   "code": "void ObReferenceObject( void *obj )\n{\n    struct object_header *header = (struct object_header*)obj - 1;\n    LONG ref;\n\n    if (!obj)\n    {\n        FIXME(\"NULL obj\\n\");\n        return;\n    }\n\n    EnterCriticalSection( &obref_cs );\n\n    ref = ++header->ref;\n    TRACE( \"(%p) ref=%lu\\n\", obj, ref );\n    if (ref == 1)\n    {\n        SERVER_START_REQ( grab_kernel_object )\n        {\n            req->manager  = wine_server_obj_handle( get_device_manager() );\n            req->user_ptr = wine_server_client_ptr( obj );\n            if (wine_server_call( req )) FIXME( \"failed to grab %p reference\\n\", obj );\n        }\n        SERVER_END_REQ;\n    }\n\n    LeaveCriticalSection( &obref_cs );\n}"
+  },
+  {
+   "name": "get_device_manager",
+   "file": "dlls/ntoskrnl.exe/ntoskrnl.c",
+   "start_line": 114,
+   "end_line": 140,
+   "static": true,
+   "called_from": [
+    "ObReferenceObject",
+    "alloc_kernel_object",
+    "kernel_object_from_handle"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntoskrnl.exe/ntoskrnl.c:211",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:394",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:946",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:1669",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:1742"
+   ],
+   "signature": "static HANDLE get_device_manager(void)",
+   "code": "static HANDLE get_device_manager(void)\n{\n    static HANDLE device_manager;\n    HANDLE handle = 0, ret = device_manager;\n\n    if (!ret)\n    {\n        SERVER_START_REQ( create_device_manager )\n        {\n            req->access     = SYNCHRONIZE;\n            req->attributes = 0;\n            if (!wine_server_call( req )) handle = wine_server_ptr_handle( reply->handle );\n        }\n        SERVER_END_REQ;\n\n        if (!handle)\n        {\n            ERR( \"failed to create the device manager\\n\" );\n            return 0;\n        }\n        if (!(ret = InterlockedCompareExchangePointer( &device_manager, handle, 0 )))\n            ret = handle;\n        else\n            NtClose( handle );  /* somebody beat us to it */\n    }\n    return ret;\n}"
+  },
+  {
+   "name": "alloc_kernel_object",
+   "file": "dlls/ntoskrnl.exe/ntoskrnl.c",
+   "start_line": 155,
+   "end_line": 179,
+   "static": false,
+   "called_from": [
+    "kernel_object_from_handle"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntoskrnl.exe/sync.c:190",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:419",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:559",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:1577",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:1676"
+   ],
+   "signature": "void *alloc_kernel_object( POBJECT_TYPE type, HANDLE handle, SIZE_T size, LONG ref )",
+   "code": "void *alloc_kernel_object( POBJECT_TYPE type, HANDLE handle, SIZE_T size, LONG ref )\n{\n    struct object_header *header;\n\n    if (!(header = HeapAlloc( GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*header) + size)) )\n        return NULL;\n\n    if (handle)\n    {\n        NTSTATUS status;\n        SERVER_START_REQ( set_kernel_object_ptr )\n        {\n            req->manager  = wine_server_obj_handle( get_device_manager() );\n            req->handle   = wine_server_obj_handle( handle );\n            req->user_ptr = wine_server_client_ptr( header + 1 );\n            status = wine_server_call( req );\n        }\n        SERVER_END_REQ;\n        if (status) FIXME( \"set_object_reference failed: %#lx\\n\", status );\n    }\n\n    header->ref = ref;\n    header->type = type;\n    return header + 1;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "object_header",
+    "kind": "struct_decl",
+    "start_line": 143,
+    "end_line": 147,
+    "code": "struct object_header\n{\n    LONG ref;\n    POBJECT_TYPE type;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 35,
+    "end_line": 35,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ntoskrnl);"
+   },
+   {
+    "name": "handle_map_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 272,
+    "end_line": 272,
+    "code": "DECLARE_CRITICAL_SECTION(handle_map_cs);"
+   },
+   {
+    "name": "known_types",
+    "type": "const POBJECT_TYPE *[8]",
+    "static": true,
+    "start_line": 260,
+    "end_line": 270,
+    "code": "static const POBJECT_TYPE *known_types[] =\n{\n    &ExEventObjectType,\n    &ExSemaphoreObjectType,\n    &IoDeviceObjectType,\n    &IoDriverObjectType,\n    &IoFileObjectType,\n    &PsProcessType,\n    &PsThreadType,\n    &SeTokenObjectType\n};"
+   },
+   {
+    "name": "obref_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 181,
+    "end_line": 181,
+    "code": "DECLARE_CRITICAL_SECTION(obref_cs);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "NtClose",
+    "impl": [
+     "dlls/ntdll/unix/server.c:1940"
+    ]
+   },
+   {
+    "name": "ObGetObjectType",
+    "impl": [
+     "dlls/ntoskrnl.exe/ntoskrnl.c:254"
+    ]
+   },
+   {
+    "name": "RtlCompareUnicodeStrings",
+    "impl": [
+     "dlls/ntdll/locale.c:655"
+    ]
+   },
+   {
+    "name": "memset",
+    "impl": [
+     "dlls/msvcrt/string.c:3194"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "HeapAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "NtQueryObject",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/file.c:7808"
+    ]
+   },
+   {
+    "name": "wine_server_call",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/loader.c:3436"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "_InterlockedCompareExchangePointer",
+   "debugstr_w",
+   "lstrlenW",
+   "wine_dbg_log",
+   "wine_server_client_ptr",
+   "wine_server_get_ptr",
+   "wine_server_obj_handle",
+   "wine_server_ptr_handle"
+  ],
+  "system": [],
+  "unresolved": [
+   "debugstr_us"
+  ],
+  "server_requests": [
+   {
+    "request": "create_device_manager",
+    "handler": "server/device.c:829"
+   },
+   {
+    "request": "get_kernel_object_ptr",
+    "handler": "server/device.c:1008"
+   },
+   {
+    "request": "grab_kernel_object",
+    "handler": "server/device.c:1052"
+   },
+   {
+    "request": "set_kernel_object_ptr",
+    "handler": "server/device.c:1028"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "type->constructor",
+    "in_function": "kernel_object_from_handle",
+    "at": "dlls/ntoskrnl.exe/ntoskrnl.c:332",
+    "candidates": []
+   }
+  ]
+ }
+}

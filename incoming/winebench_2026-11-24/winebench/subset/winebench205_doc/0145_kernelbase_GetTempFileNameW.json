@@ -1,0 +1,209 @@
+{
+ "id": "0145",
+ "function": {
+  "name": "GetTempFileNameW",
+  "export_name": "GetTempFileNameW",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase",
+   "unicows"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/file.c",
+  "start_line": 2466,
+  "end_line": 2525,
+  "body_lines": 57,
+  "signature": "UINT WINAPI DECLSPEC_HOTPATCH GetTempFileNameW( LPCWSTR path, LPCWSTR prefix, UINT unique, LPWSTR buffer )",
+  "header_comment": "/***********************************************************************\n *\tGetTempFileNameW   (kernelbase.@)\n */",
+  "code": "UINT WINAPI DECLSPEC_HOTPATCH GetTempFileNameW( LPCWSTR path, LPCWSTR prefix, UINT unique, LPWSTR buffer )\n{\n    int i;\n    LPWSTR p;\n    DWORD attr;\n\n    if (!path || !buffer)\n    {\n        SetLastError( ERROR_INVALID_PARAMETER );\n        return 0;\n    }\n\n    /* ensure that the provided directory exists */\n    attr = GetFileAttributesW( path );\n    if (attr == INVALID_FILE_ATTRIBUTES || !(attr & FILE_ATTRIBUTE_DIRECTORY))\n    {\n        TRACE( \"path not found %s\\n\", debugstr_w( path ));\n        SetLastError( ERROR_DIRECTORY );\n        return 0;\n    }\n\n    lstrcpyW( buffer, path );\n    p = buffer + lstrlenW(buffer);\n\n    /* add a \\, if there isn't one  */\n    if ((p == buffer) || (p[-1] != '\\\\')) *p++ = '\\\\';\n\n    if (prefix) for (i = 3; (i > 0) && (*prefix); i--) *p++ = *prefix++;\n\n    unique &= 0xffff;\n    if (unique) swprintf( p, MAX_PATH - (p - buffer), L\"%X.tmp\", unique );\n    else\n    {\n        /* get a \"random\" unique number and try to create the file */\n        HANDLE handle;\n        UINT num = NtGetTickCount() & 0xffff;\n        static UINT last;\n\n        /* avoid using the same name twice in a short interval */\n        if (last - num < 10) num = last + 1;\n        if (!num) num = 1;\n        unique = num;\n        do\n        {\n            swprintf( p, MAX_PATH - (p - buffer), L\"%X.tmp\", unique );\n            handle = CreateFileW( buffer, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, 0 );\n            if (handle != INVALID_HANDLE_VALUE)\n            {  /* We created it */\n                CloseHandle( handle );\n                last = unique;\n                break;\n            }\n            if (GetLastError() != ERROR_FILE_EXISTS && GetLastError() != ERROR_SHARING_VIOLATION)\n                break;  /* No need to go on */\n            if (!(++unique & 0xffff)) unique = 1;\n        } while (unique != num);\n    }\n    TRACE( \"returning %s\\n\", debugstr_w( buffer ));\n    return unique;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include \"winerror.h\"",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"wincon.h\"",
+   "#include \"fileapi.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"ddk/ntddser.h\"",
+   "#include \"ioringapi.h\"",
+   "#include \"ddk/ntifs.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!GetTempFileNameW [stdcall -import] -> import from kernelbase",
+   "kernelbase!GetTempFileNameW [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/actctx.c",
+   "dlls/kernel32/tests/file.c",
+   "dlls/kernel32/tests/loader.c",
+   "dlls/kernel32/tests/module.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 14
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "fileapi",
+   "path": "sdk-api-src/content/fileapi/nf-fileapi-gettempfilenamew.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/fileapi/nf-fileapi-gettempfilenamew",
+   "documented_name": "gettempfilenamew",
+   "file": "docs/0145_sdk-api_nf-fileapi-gettempfilenamew.md",
+   "text": "---\nUID: NF:fileapi.GetTempFileNameW\ntitle: GetTempFileNameW function (fileapi.h)\ndescription: Creates a name for a temporary file. If a unique file name is generated, an empty file is created and the handle to it is released; otherwise, only a file name is generated. (GetTempFileNameW)\nhelpviewer_keywords: [\"GetTempFileName\", \"GetTempFileName function [Files]\", \"GetTempFileNameW\", \"_win32_gettempfilename\", \"base.gettempfilename\", \"fileapi/GetTempFileName\", \"fileapi/GetTempFileNameW\", \"fs.gettempfilename\"]\nold-location: fs\\gettempfilename.htm\ntech.root: fs\nms.assetid: 0a30055f-a3b9-439f-9304-40ee8a07b967\nms.date: 09/24/2025\nms.keywords: GetTempFileName, GetTempFileName function [Files], GetTempFileNameA, GetTempFileNameW, _win32_gettempfilename, base.gettempfilename, fileapi/GetTempFileName, fileapi/GetTempFileNameA, fileapi/GetTempFileNameW, fs.gettempfilename, winbase/GetTempFileName, winbase/GetTempFileNameA, winbase/GetTempFileNameW\nreq.header: fileapi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: GetTempFileNameW (Unicode) and GetTempFileNameA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetTempFileNameW\n - fileapi/GetTempFileNameW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-file-l1-2-5.dll\n - api-ms-win-core-file-l1-2-4.dll\n - api-ms-win-core-file-l1-2-3.dll\n - Kernel32.dll\n - API-MS-Win-Core-File-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-File-l1-2-0.dll\n - API-MS-Win-Core-File-l1-2-1.dll\n - API-MS-Win-Core-File-l1-2-2.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\napi_name:\n - GetTempFileName\n - GetTempFileNameA\n - GetTempFileNameW\n---\n\n# GetTempFileNameW function\n\n## -description\n\nCreates a name for a temporary file. If a unique file name is generated, an empty file is created and the handle to it is released; otherwise, only a file name is generated.\n\n## -parameters\n\n### -param lpPathName [in]\n\nThe directory path for the file name. Applications typically specify a period (`.`) for the current directory or the result of the [GetTempPath2](nf-fileapi-gettemppath2w.md) function. The string cannot be longer than **MAX_PATH**–14 characters or **GetTempFileName** will fail. If this parameter is `NULL`, the function fails.\n\n### -param lpPrefixString [in]\n\nThe null-terminated prefix string. The function uses up to the first three characters of this string as the prefix of the file name. This string must consist of characters in the OEM-defined character set.\n\n### -param uUnique [in]\n\nAn unsigned integer to be used in creating the temporary file name. For more information, see Remarks.\n\nIf *uUnique* is zero, the function attempts to form a unique file name using the current system time. If the file already exists, the number is increased by one and the functions tests if this file already exists. This continues until a unique filename is found; the function creates a file by that name and closes it. Note that the function does not attempt  to verify the uniqueness of the file name when *uUnique* is nonzero.\n\n### -param lpTempFileName [out]\n\nA pointer to the buffer that receives the temporary file name. This buffer should be **MAX_PATH** characters to accommodate the path plus the terminating null character.\n\n## -returns\n\nIf the function succeeds, the return value specifies the unique numeric value used in the temporary file name. If the *uUnique* parameter is nonzero, the return value specifies that same number.\n\nIf the function fails, the return value is zero. To get extended error information, call [GetLastError](/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror).\n\nThe following is a list of possible return values:\n\n| Return value | Description |\n|--------------|-------------|\n| **ERROR_BUFFER_OVERFLOW** | The length of the string pointed to by the *lpPathName* parameter is more than **MAX_PATH**–14 characters. |\n\n## -remarks\n\nThe **GetTempFileName** function creates a temporary file name of the following form:\n\n`<path>\\<pre><uuuu>.TMP`\n\nThe following table describes the file name syntax:\n\n| Component | Meaning |\n|-----------|---------|\n| `<path>` | Path specified by the *lpPathName* parameter |\n| `<pre>`  | First three letters of the *lpPrefixString* string |\n| `<uuuu>` | Hexadecimal value of *uUnique* |\n \nIf *uUnique* is zero, **GetTempFileName** creates an empty file and closes it. If *uUnique* is not zero, you must create the file yourself. Only a file name is created, because **GetTempFileName** is not able to guarantee that the file name is unique.\n\nOnly the lower 16 bits of the *uUnique* parameter are used. This limits **GetTempFileName** to a maximum of 65,535 unique file names if the *lpPathName* and *lpPrefixString* parameters remain the same.\n\nDue to the algorithm used to generate file names, **GetTempFileName** can perform poorly when creating a large number of files with the same prefix. In such cases, it is recommended that you construct unique file names based on **GUID**s. You can also append the current process ID to the prefix string to reduce the likelihood of collisions in parallel operations.\n\nTemporary files whose names have been created by this function are not automatically deleted. To delete these files call [DeleteFile](nf-fileapi-deletefilew.md).\n\nTo avoid problems resulting when converting an ANSI string, an application should call the [CreateFile](nf-fileapi-createfilew.md) function to create a temporary file.\n\nStarting in Windows 8 and Windows Server 2012, this function is supported by the following technologies:\n\n| Technology | Supported |\n|------------|-----------|\n| Server Message Block (SMB) 3.0 protocol | Yes |\n| SMB 3.0 Transparent Failover (TFO) | Yes |\n| SMB 3.0 with Scale-out File Shares (SOFS) | Yes |\n| Cluster Shared Volume File System (CsvFS) | Yes |\n| Resilient File System (ReFS) | Yes |\n\n#### Examples\n\nFor an example, see [Creating and Using a Temporary File](/windows/win32/FileIO/creating-and-using-a-temporary-file).\n\n> [!NOTE]\n> The fileapi.h header defines GetTempFileName as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n[CreateFile](nf-fileapi-createfilew.md)\n\n[DeleteFile](nf-fileapi-deletefilew.md)\n\n[File Management Functions](/windows/win32/FileIO/file-management-functions)\n\n[GetTempPath2](nf-fileapi-gettemppath2w.md)\n\n[Naming Files, Paths, and Namespaces](/windows/win32/FileIO/naming-a-file)\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(file);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "CloseHandle",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "CreateFileW",
+    "impl": [
+     "dlls/kernelbase/file.c:795"
+    ]
+   },
+   {
+    "name": "GetFileAttributesW",
+    "impl": [
+     "dlls/kernelbase/file.c:1783"
+    ]
+   },
+   {
+    "name": "GetLastError",
+    "impl": [
+     "dlls/kernelbase/thread.c:231"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   },
+   {
+    "name": "lstrlenW",
+    "impl": [
+     "dlls/kernelbase/string.c:166"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtGetTickCount",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/time.c:401"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_w",
+   "lstrcpyW",
+   "swprintf",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "kernelbase.GetTempFileNameW",
+  "category": {
+   "l1": "Data access and storage",
+   "l2": "Files and I/O",
+   "header": "fileapi.h",
+   "textbook": "File management",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 60,
+   "body": 59,
+   "code": 37
+  },
+  "cyclomatic": 18,
+  "return_type": "UINT",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 14,
+   "n_tests": 57,
+   "n_tests_other": 43,
+   "own_test_functions": [
+    "dlls/kernel32/tests/actctx.c::create_temp_manifest_file",
+    "dlls/kernel32/tests/file.c::test_CopyFile2",
+    "dlls/kernel32/tests/file.c::test_CopyFileW",
+    "dlls/kernel32/tests/file.c::test_CreateFile2",
+    "dlls/kernel32/tests/file.c::test_CreateFileW",
+    "dlls/kernel32/tests/file.c::test_GetFinalPathNameByHandleW",
+    "dlls/kernel32/tests/file.c::test_MoveFileW",
+    "dlls/kernel32/tests/file.c::test_ReplaceFileW",
+    "dlls/kernel32/tests/file.c::test_SetFileRenameInfo",
+    "dlls/kernel32/tests/file.c::test_SetFileTime",
+    "dlls/kernel32/tests/file.c::test_posix_semantics",
+    "dlls/kernel32/tests/loader.c::init_load_path",
+    "dlls/kernel32/tests/loader.c::test_import_resolution",
+    "dlls/kernel32/tests/module.c::test_AddDllDirectory"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/fileapi/nf-fileapi-gettempfilenamew",
+   "source": "win32",
+   "description": "Creates a name for a temporary file. If a unique file name is generated, an empty file is created and the handle to it is released; otherwise, only a file name is generated. (GetTempFileNameW)",
+   "min_windows": "Windows XP [desktop apps \\| UWP apps]",
+   "documented_dll": "Kernel32.dll"
+  },
+  "exports": [
+   "kernel32.GetTempFileNameW",
+   "kernelbase.GetTempFileNameW",
+   "shlwapi.GetTempFileNameWrapW",
+   "unicows.GetTempFileNameW"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

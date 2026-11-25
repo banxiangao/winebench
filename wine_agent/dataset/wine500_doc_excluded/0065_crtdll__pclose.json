@@ -1,0 +1,170 @@
+{
+ "id": "0065",
+ "function": {
+  "name": "_pclose",
+  "export_name": "_pclose",
+  "module": "crtdll",
+  "source_module": "msvcrt",
+  "exported_by": [
+   "crtdll",
+   "msvcr100",
+   "msvcr110",
+   "msvcr120",
+   "msvcr120_app",
+   "msvcr70",
+   "msvcr71",
+   "msvcr80",
+   "msvcr90",
+   "msvcrt",
+   "msvcrt20",
+   "msvcrt40",
+   "msvcrtd",
+   "ucrtbase"
+  ],
+  "side": "PE",
+  "file": "dlls/msvcrt/process.c",
+  "start_line": 1210,
+  "end_line": 1244,
+  "body_lines": 32,
+  "signature": "int CDECL _pclose(FILE* file)",
+  "header_comment": "/*********************************************************************\n *\t\t_pclose (MSVCRT.@)\n */",
+  "code": "int CDECL _pclose(FILE* file)\n{\n  HANDLE h;\n  DWORD i;\n\n  if (!MSVCRT_CHECK_PMT(file != NULL)) return -1;\n\n  _lock(_POPEN_LOCK);\n  for(i=0; i<popen_handles_size; i++)\n  {\n    if (popen_handles[i].f == file)\n      break;\n  }\n  if(i == popen_handles_size)\n  {\n    _unlock(_POPEN_LOCK);\n    *_errno() = EBADF;\n    return -1;\n  }\n\n  h = popen_handles[i].proc;\n  popen_handles[i].f = NULL;\n  _unlock(_POPEN_LOCK);\n\n  fclose(file);\n  if(WaitForSingleObject(h, INFINITE)==WAIT_FAILED || !GetExitCodeProcess(h, &i))\n  {\n    msvcrt_set_errno(GetLastError());\n    CloseHandle(h);\n    return -1;\n  }\n\n  CloseHandle(h);\n  return i;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <fcntl.h>",
+   "#include <io.h>",
+   "#include <process.h>",
+   "#include <stdarg.h>",
+   "#include \"msvcrt.h\"",
+   "#include <winnls.h>",
+   "#include \"mtdll.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "crtdll!_pclose [cdecl]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/msvcrt/tests/misc.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "cpp-docs",
+   "header": "crt",
+   "path": "docs/c-runtime-library/reference/pclose.md",
+   "url": "https://learn.microsoft.com/cpp/c-runtime-library/reference/pclose",
+   "documented_name": "_pclose",
+   "file": "docs/0065_cpp-docs_pclose.md",
+   "text": "---\ndescription: \"Learn more about: _pclose\"\ntitle: \"_pclose\"\nms.date: \"4/2/2020\"\napi_name: [\"_pclose\", \"_o__pclose\"]\napi_location: [\"msvcrt.dll\", \"msvcr80.dll\", \"msvcr90.dll\", \"msvcr100.dll\", \"msvcr100_clr0400.dll\", \"msvcr110.dll\", \"msvcr110_clr0400.dll\", \"msvcr120.dll\", \"msvcr120_clr0400.dll\", \"ucrtbase.dll\", \"api-ms-win-crt-stdio-l1-1-0.dll\"]\napi_type: [\"DLLExport\"]\ntopic_type: [\"apiref\"]\nf1_keywords: [\"_pclose\", \"pclose\"]\nhelpviewer_keywords: [\"_pclose function\", \"pclose function\", \"pipes, closing\"]\nms.assetid: e2e31a9e-ba3a-4124-bcbb-c4040110b3d3\n---\n# `_pclose`\n\nWaits for a new command processor and closes the stream on the associated pipe.\n\n> [!IMPORTANT]\n> This API cannot be used in applications that execute in the Windows Runtime. For more information, see [CRT functions not supported in Universal Windows Platform apps](../../cppcx/crt-functions-not-supported-in-universal-windows-platform-apps.md).\n\n## Syntax\n\n```C\nint _pclose(\nFILE *stream\n);\n```\n\n### Parameters\n\n*`stream`*\\\nReturn value from the previous call to `_popen`.\n\n## Return value\n\nReturns the exit status of the terminating command processor, or -1 if an error occurs. The format of the return value is the same as for `_cwait`, except the low-order and high-order bytes are swapped. If stream is `NULL`, **`_pclose`** sets `errno` to `EINVAL` and returns -1.\n\nFor information about these and other error codes, see [`errno`, `_doserrno`, `_sys_errlist`, and `_sys_nerr`](../errno-doserrno-sys-errlist-and-sys-nerr.md).\n\n## Remarks\n\nThe **`_pclose`** function looks up the process ID of the command processor (Cmd.exe) started by the associated `_popen` call, executes a [`_cwait`](cwait.md) call on the new command processor, and closes the stream on the associated pipe.\n\nBy default, this function's global state is scoped to the application. To change this behavior, see [Global state in the CRT](../global-state.md).\n\n## Requirements\n\n| Routine | Required header |\n|---|---|\n| **`_pclose`** | \\<stdio.h> |\n\nFor more compatibility information, see [Compatibility](../compatibility.md).\n\n## Libraries\n\nAll versions of the [C run-time libraries](../crt-library-features.md).\n\n## See also\n\n[Process and environment control](../process-and-environment-control.md)\\\n[`_pipe`](pipe.md)\\\n[`_popen`, `_wpopen`](popen-wpopen.md)\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "popen_handle",
+    "kind": "struct_decl",
+    "start_line": 1026,
+    "end_line": 1029,
+    "code": "static struct popen_handle {\n    FILE *f;\n    HANDLE proc;\n} *popen_handles;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "popen_handles",
+    "type": "struct popen_handle *",
+    "static": true,
+    "start_line": 1029,
+    "end_line": 1029,
+    "code": "static struct popen_handle {\n    FILE *f;\n    HANDLE proc;\n} *popen_handles;"
+   },
+   {
+    "name": "popen_handles_size",
+    "type": "DWORD",
+    "static": true,
+    "start_line": 1030,
+    "end_line": 1030,
+    "code": "static DWORD popen_handles_size;"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "_invalid_parameter",
+    "file": "dlls/msvcrt/errno.c",
+    "start_line": 460
+   },
+   {
+    "name": "_lock",
+    "file": "dlls/msvcrt/lock.c",
+    "start_line": 85
+   },
+   {
+    "name": "_unlock",
+    "file": "dlls/msvcrt/lock.c",
+    "start_line": 114
+   },
+   {
+    "name": "msvcrt_set_errno",
+    "file": "dlls/msvcrt/errno.c",
+    "start_line": 131
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "_errno",
+    "impl": [
+     "dlls/msvcrt/errno.c:214"
+    ]
+   },
+   {
+    "name": "fclose",
+    "impl": [
+     "dlls/msvcrt/file.c:3758"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CloseHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "GetExitCodeProcess",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:799"
+    ]
+   },
+   {
+    "name": "WaitForSingleObject",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/sync.c:395"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetLastError"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

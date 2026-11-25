@@ -1,0 +1,188 @@
+{
+ "id": "0424",
+ "function": {
+  "name": "ICInstall",
+  "export_name": "ICInstall",
+  "module": "msvfw32",
+  "source_module": "msvfw32",
+  "exported_by": [
+   "msvfw32"
+  ],
+  "side": "PE",
+  "file": "dlls/msvfw32/msvideo_main.c",
+  "start_line": 336,
+  "end_line": 383,
+  "body_lines": 45,
+  "signature": "BOOL VFWAPI ICInstall(DWORD type, DWORD handler, LPARAM lparam, char *desc, UINT flags)",
+  "header_comment": "/***********************************************************************\n *              ICInstall                       [MSVFW32.@]\n */",
+  "code": "BOOL VFWAPI ICInstall(DWORD type, DWORD handler, LPARAM lparam, char *desc, UINT flags)\n{\n    struct reg_driver *driver;\n\n    TRACE(\"type %s, handler %s, lparam %#Ix, desc %s, flags %#x.\\n\",\n            debugstr_fourcc(type), debugstr_fourcc(handler), lparam, debugstr_a(desc), flags);\n\n    LIST_FOR_EACH_ENTRY(driver, &reg_driver_list, struct reg_driver, entry)\n    {\n        if (!compare_fourcc(type, driver->fccType)\n                && !compare_fourcc(handler, driver->fccHandler))\n        {\n            return FALSE;\n        }\n    }\n\n    switch (flags)\n    {\n    case ICINSTALL_FUNCTION:\n        if (!(driver = calloc(1, sizeof(*driver))))\n            return FALSE;\n        driver->fccType = type;\n        driver->fccHandler = handler;\n        driver->proc = (DRIVERPROC)lparam;\n        list_add_tail(&reg_driver_list, &driver->entry);\n        return TRUE;\n    case ICINSTALL_DRIVER:\n    {\n        const char *driver = (const char *)lparam;\n        char value[10];\n        HKEY key;\n        LONG res;\n\n        if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, HKLM_DRIVERS32, 0, KEY_SET_VALUE, &key))\n            return FALSE;\n        fourcc_to_string(value, type);\n        value[4] = '.';\n        fourcc_to_string(value + 5, handler);\n        value[9] = 0;\n        res = RegSetValueExA(key, value, 0, REG_SZ, (const BYTE *)driver, strlen(driver) + 1);\n        RegCloseKey(key);\n        return !res;\n    }\n    default:\n        FIXME(\"Unhandled flags %#x.\\n\", flags);\n        return FALSE;\n    }\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <string.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winuser.h\"",
+   "#include \"commdlg.h\"",
+   "#include \"vfw.h\"",
+   "#include \"msvideo_private.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\""
+  ],
+  "resolution": [
+   "msvfw32!ICInstall [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/msvfw32/tests/msvfw.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "vfw",
+   "path": "sdk-api-src/content/vfw/nf-vfw-icinstall.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/vfw/nf-vfw-icinstall",
+   "documented_name": "icinstall",
+   "file": "docs/0424_sdk-api_nf-vfw-icinstall.md",
+   "text": "---\nUID: NF:vfw.ICInstall\ntitle: ICInstall function (vfw.h)\ndescription: The ICInstall function installs a new compressor or decompressor.\nhelpviewer_keywords: [\"ICInstall\",\"ICInstall function [Windows Multimedia]\",\"_win32_ICInstall\",\"multimedia.icinstall\",\"vfw/ICInstall\"]\nold-location: multimedia\\icinstall.htm\ntech.root: Multimedia\nms.assetid: 23bbc186-3ef9-479a-94f9-a97269cf6dbc\nms.date: 12/05/2018\nms.keywords: ICInstall, ICInstall function [Windows Multimedia], _win32_ICInstall, multimedia.icinstall, vfw/ICInstall\nreq.header: vfw.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Vfw32.lib\nreq.dll: Msvfw32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ICInstall\n - vfw/ICInstall\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Msvfw32.dll\napi_name:\n - ICInstall\n---\n\n# ICInstall function\n\n\n## -description\n\nThe <b>ICInstall</b> function installs a new compressor or decompressor.\n\n## -parameters\n\n### -param fccType\n\nFour-character code indicating the type of data used by the compressor or decompressor. Specify \"VIDC\" for a video compressor or decompressor.\n\n### -param fccHandler\n\nFour-character code identifying a specific compressor or decompressor.\n\n### -param lParam\n\nPointer to a null-terminated string containing the name of the compressor or decompressor, or the address of a function used for compression or decompression. The contents of this parameter are defined by the flags set for <i>wFlags</i>.\n\n### -param szDesc\n\nReserved; do not use.\n\n### -param wFlags\n\nFlags defining the contents of <i>lParam</i>. The following values are defined.\n\n<table>\n<tr>\n<th>Value\n                </th>\n<th>Meaning\n                </th>\n</tr>\n<tr>\n<td>ICINSTALL_DRIVER</td>\n<td>The <i>lParam</i> parameter contains the address of a null-terminated string that names the compressor to install.</td>\n</tr>\n<tr>\n<td>ICINSTALL_FUNCTION</td>\n<td>The <i>lParam</i> parameter contains the address of a compressor function. This function should be structured like the <a href=\"/previous-versions/dd797918(v=vs.85)\">DriverProc</a> entry point function used by compressors.</td>\n</tr>\n</table>\n\n## -returns\n\nReturns ICERR_OK if successful or an error otherwise.\n\n## -remarks\n\nApplications must open an installed compressor or decompressor before using it.\n\nIf your application installs a function as a compressor or decompressor, it should remove the function with the <a href=\"/windows/desktop/api/vfw/nf-vfw-icremove\">ICRemove</a> function before it terminates. This prevents other applications from trying to access the function when it is not available.\n\n## -see-also\n\n<a href=\"/windows/desktop/Multimedia/video-compression-functions\">Video Compression Functions</a>\n\n\n\n<a href=\"/windows/desktop/Multimedia/video-compression-manager\">Video Compression Manager</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "compare_fourcc",
+   "file": "dlls/msvfw32/msvideo_main.c",
+   "start_line": 205,
+   "end_line": 212,
+   "static": true,
+   "called_from": [
+    "ICInstall"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvfw32/msvideo_main.c:286",
+    "dlls/msvfw32/msvideo_main.c:287",
+    "dlls/msvfw32/msvideo_main.c:306",
+    "dlls/msvfw32/msvideo_main.c:307",
+    "dlls/msvfw32/msvideo_main.c:319"
+   ],
+   "signature": "static int compare_fourcc(DWORD fcc1, DWORD fcc2)",
+   "code": "static int compare_fourcc(DWORD fcc1, DWORD fcc2)\n{\n  char fcc_str1[4];\n  char fcc_str2[4];\n  fourcc_to_string(fcc_str1, fcc1);\n  fourcc_to_string(fcc_str2, fcc2);\n  return _strnicmp(fcc_str1, fcc_str2, 4);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "reg_driver",
+    "kind": "struct_decl",
+    "start_line": 93,
+    "end_line": 99,
+    "code": "struct reg_driver\n{\n    DWORD       fccType;\n    DWORD       fccHandler;\n    DRIVERPROC  proc;\n    struct list entry;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 49,
+    "end_line": 49,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(msvideo);"
+   },
+   {
+    "name": "reg_driver_list",
+    "type": "struct list",
+    "static": true,
+    "start_line": 101,
+    "end_line": 101,
+    "code": "static struct list reg_driver_list = LIST_INIT(reg_driver_list);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "HKLM_DRIVERS32",
+    "start_line": 47,
+    "end_line": 47,
+    "code": "#define HKLM_DRIVERS32 \"Software\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Drivers32\""
+   },
+   {
+    "name": "fourcc_to_string",
+    "start_line": 52,
+    "end_line": 57,
+    "code": "#define fourcc_to_string(str, fcc) do { \\\n\t(str)[0] = LOBYTE(LOWORD(fcc)); \\\n\t(str)[1] = HIBYTE(LOWORD(fcc)); \\\n\t(str)[2] = LOBYTE(HIWORD(fcc)); \\\n\t(str)[3] = HIBYTE(HIWORD(fcc)); \\\n\t} while(0)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "RegCloseKey",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1129"
+    ]
+   },
+   {
+    "name": "RegOpenKeyExA",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:688"
+    ]
+   },
+   {
+    "name": "RegSetValueExA",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1241"
+    ]
+   },
+   {
+    "name": "_strnicmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:666"
+    ]
+   },
+   {
+    "name": "calloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "strlen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:423"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_a",
+   "debugstr_fourcc",
+   "list_add_tail",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

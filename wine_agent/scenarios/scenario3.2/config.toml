@@ -1,0 +1,101 @@
+# Scenario 3.2 - like 3.1, plus the official Microsoft documentation of the function (the same pages as scenario 1.4).
+# The model works through tools: it can list / read / search the whole source tree EXCEPT the tests and the original
+# implementation (the target function is served as a stub, its exclusive helpers are removed - scripts/bench/hide.py),
+# writes the function with write_function, can compile the module, and submits.  Dataset: winebench205_doc, Wine 11.19 (as 1.3 / 1.4); the pilot runs used wine500_doc.
+
+[paths]                               # relative to this file
+dataset = "../../dataset/winebench205_doc"
+out     = "../../runs/scenario3.2"    # <out>/agent/{prompts,responses/<model>/<id>.{json,c,traj.json}}
+models  = "../models.toml"
+secrets = "../../secrets.toml"
+
+[run]
+workers       = 3                     # records in parallel (reads are parallel, compiles are serialized by a lock)
+max_retries   = 3
+timeout_s     = 180
+temperature   = 0.0
+max_tokens    = 0
+anthropic_default_max_tokens = 16000
+skip_existing = true
+
+[agent]                               # ---- the agentic settings
+tools = ["list_dir", "read_file", "search", "write_function", "compile", "submit"]   # drop "compile" for a no-build variant
+max_steps                 = 40        # model calls per record (each call = one tool round); 0 = no limit
+max_tool_calls_per_step   = 3         # if a reply carries several tool calls, only the first N run (the rest get an error)
+wall_time_limit_seconds   = 1800      # per record
+max_format_errors         = 3         # consecutive replies without a tool call before giving up
+read_max_lines            = 200       # lines per read_file call
+search_max_hits           = 50        # hits per search call
+list_max_entries          = 300
+observation_max_chars     = 12000     # a tool output longer than this is shown head + tail
+history_max_chars         = 250000    # beyond this, the oldest tool outputs are replaced by a placeholder
+auto_compile_on_write     = false     # true = every write_function is followed by a compile automatically
+require_compile_before_submit = false # true = submit is refused until the current code compiled OK
+max_compile_failures      = 5         # after N failed compiles the run ends and the last written version is the submission (exit_status CompileLimit)
+submit_on_limit           = true      # true = code written before hitting a limit still counts as the submission
+compile_timeout           = 900       # seconds for one make
+deny_paths                = []        # extra path patterns the agent may not read (tests/ and .git are always denied)
+
+# ---------------------------------------------------------------- stage: agent (the only stage)
+[stage.agent]
+project_name    = "a Windows compatibility layer"
+answer_language = "English"
+system_template = "templates/system.txt"
+user_template   = "templates/task.txt"              # placeholders: {{dll}} {{function}} {{c_name}} {{file}} {{signature}} {{docs_section}}
+one_shot        = false
+reply_format    = "code"                            # the submission is C source, saved as <id>.c - evaluated like a programmer reply
+splice_base     = "hidden"                          # evaluate.py splices it into the hidden file (stub + exclusive helpers removed), what the agent saw
+collapse_blank_lines = true
+
+[stage.agent.inputs]
+show_docs            = true
+docs_max_pages       = 2
+docs_max_chars       = 0
+docs_show_url        = true
+docs_strip_sections  = ["-see-also"]
+
+# ---------------------------------------------------------------- off-the-shelf agents (scripts/run_mini_swe.py, scripts/run_openhands.py)
+# Same task as the bench agent above, but the agent is mini-swe-agent / OpenHands working in a restricted copy of the tree
+# (scripts/make_swe_trees.sh): no tests (sources and binaries removed), no git history, the target function replaced by the
+# stub, a ./compile script.  Compiling is the only feedback; the result is the agent's diff (reply_format = "patch").
+[swe]
+max_steps               = 40          # model calls per record (mini-swe-agent: steps; OpenHands: iterations)
+wall_time_limit_seconds = 1800        # per record
+command_timeout         = 900         # seconds for one shell command (./compile included)
+cost_limit              = 0.0         # USD per record, 0 = none (cost tracking is best effort)
+max_format_errors       = 3           # mini-swe-agent: consecutive replies without a command
+max_compile_failures    = 5           # after N failed compiles the run ends (exit_status CompileLimit) and the current tree is the submission
+
+[stage.mini_swe]
+project_name    = "a Windows compatibility layer"
+answer_language = "English"
+system_template = "templates/swe_system.txt"
+user_template   = "templates/swe_task_docs.txt"
+one_shot        = false
+reply_format    = "patch"                           # <id>.patch: a diff against the hidden tree
+splice_base     = "hidden"
+collapse_blank_lines = true
+
+[stage.mini_swe.inputs]
+show_docs            = true
+docs_max_pages       = 2
+docs_max_chars       = 0
+docs_show_url        = true
+docs_strip_sections  = ["-see-also"]
+
+[stage.openhands]
+project_name    = "a Windows compatibility layer"
+answer_language = "English"
+system_template = "templates/swe_system.txt"
+user_template   = "templates/swe_task_docs.txt"
+one_shot        = false
+reply_format    = "patch"
+splice_base     = "hidden"
+collapse_blank_lines = true
+
+[stage.openhands.inputs]
+show_docs            = true
+docs_max_pages       = 2
+docs_max_chars       = 0
+docs_show_url        = true
+docs_strip_sections  = ["-see-also"]

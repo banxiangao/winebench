@@ -1,0 +1,112 @@
+{
+ "id": "0492",
+ "function": {
+  "name": "GetVersion",
+  "export_name": "GetVersion",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase",
+   "krnl386.exe16"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/version.c",
+  "start_line": 1462,
+  "end_line": 1476,
+  "body_lines": 12,
+  "signature": "DWORD WINAPI GetVersion(void)",
+  "header_comment": "/***********************************************************************\n *         GetVersion   (kernelbase.@)\n */",
+  "code": "DWORD WINAPI GetVersion(void)\n{\n    OSVERSIONINFOEXW info;\n    DWORD result;\n\n    info.dwOSVersionInfoSize = sizeof(info);\n    if (!GetVersionExW( (OSVERSIONINFOW *)&info )) return 0;\n\n    result = MAKELONG( MAKEWORD( info.dwMajorVersion, info.dwMinorVersion ),\n                       (info.dwPlatformId ^ 2) << 14 );\n\n    if (info.dwPlatformId == VER_PLATFORM_WIN32_NT)\n        result |= LOWORD(info.dwBuildNumber) << 16;\n    return result;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include <stdio.h>",
+   "#include <sys/types.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winver.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winerror.h\"",
+   "#include \"appmodel.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!GetVersion [stdcall -import] -> import from kernelbase",
+   "kernelbase!GetVersion [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/console.c",
+   "dlls/kernel32/tests/drive.c",
+   "dlls/kernel32/tests/path.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "krnl386.exe16",
+   "source_module": "krnl386.exe16",
+   "exported_by": [
+    "krnl386.exe16"
+   ],
+   "file": "dlls/krnl386.exe16/kernel.c",
+   "start_line": 152,
+   "resolution": [
+    "krnl386.exe16!GetVersion [pascal] -> internal symbol GetVersion16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 197,
+   "signature": "DWORD WINAPI GetVersion16(void)",
+   "code": "DWORD WINAPI GetVersion16(void)\n{\n    static WORD dosver, winver;\n\n    if (!dosver)  /* not determined yet */\n    {\n        RTL_OSVERSIONINFOEXW info;\n\n        info.dwOSVersionInfoSize = sizeof(info);\n        if (RtlGetVersion( &info )) return 0;\n\n        if (info.dwMajorVersion <= 3)\n            winver = MAKEWORD( info.dwMajorVersion, info.dwMinorVersion );\n        else\n            winver = MAKEWORD( 3, 95 );\n\n        switch(info.dwPlatformId)\n        {\n        case VER_PLATFORM_WIN32s:\n            switch(MAKELONG( info.dwMinorVersion, info.dwMajorVersion ))\n            {\n            case 0x0200:\n                dosver = 0x0303;  /* DOS 3.3 for Windows 2.0 */\n                break;\n            case 0x0300:\n                dosver = 0x0500;  /* DOS 5.0 for Windows 3.0 */\n                break;\n            default:\n                dosver = 0x0616;  /* DOS 6.22 for Windows 3.1 and later */\n                break;\n            }\n            break;\n        case VER_PLATFORM_WIN32_WINDOWS:\n            /* DOS 8.0 for WinME, 7.0 for Win95/98 */\n            if (info.dwMinorVersion >= 90) dosver = 0x0800;\n            else dosver = 0x0700;\n            break;\n        case VER_PLATFORM_WIN32_NT:\n            dosver = 0x0500;  /* always DOS 5.0 for NT */\n            break;\n        }\n        TRACE( \"DOS %d.%02d Win %d.%02d\\n\",\n               HIBYTE(dosver), LOBYTE(dosver), LOBYTE(winver), HIBYTE(winver) );\n    }\n    return MAKELONG( winver, dosver );\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "sysinfoapi",
+   "path": "sdk-api-src/content/sysinfoapi/nf-sysinfoapi-getversion.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/sysinfoapi/nf-sysinfoapi-getversion",
+   "documented_name": "getversion",
+   "file": "docs/0492_sdk-api_nf-sysinfoapi-getversion.md",
+   "text": "---\nUID: NF:sysinfoapi.GetVersion\ntitle: GetVersion function (sysinfoapi.h)\ndescription: With the release of Windows 8.1, the behavior of the GetVersion API has changed in the value it will return for the operating system version. The value returned by the GetVersion function now depends on how the application is manifested.\nhelpviewer_keywords: [\"GetVersion\",\"GetVersion function\",\"_win32_getversion\",\"base.getversion\",\"sysinfoapi/GetVersion\"]\nold-location: base\\getversion.htm\ntech.root: winprog\nms.assetid: 25cb87c6-e4a5-447e-8153-f12638859d00\nms.date: 12/05/2018\nms.keywords: GetVersion, GetVersion function, _win32_getversion, base.getversion, sysinfoapi/GetVersion\nreq.header: sysinfoapi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetVersion\n - sysinfoapi/GetVersion\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-sysinfo-l1-2-7.dll\n - api-ms-win-core-sysinfo-l1-2-6.dll\n - api-ms-win-core-sysinfo-l1-2-5.dll\n - api-ms-win-core-sysinfo-l1-2-4.dll\n - Kernel32.dll\n - API-MS-Win-Core-SysInfo-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-SysInfo-l1-2-0.dll\n - API-MS-Win-Core-SysInfo-l1-2-1.dll\n - API-MS-Win-Core-SysInfo-l1-2-2.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\n - API-MS-Win-Core-SysInfo-l1-2-3.dll\napi_name:\n - GetVersion\n---\n\n# GetVersion function\n\n\n## -description\n\n<b>GetVersion</b> may be altered or unavailable for releases after Windows 8.1. Instead, use the <a href=\"/windows/desktop/SysInfo/version-helper-apis\">Version Helper functions</a>. For Windows 10 apps, please see [Targeting your applications for Windows](/windows/win32/sysinfo/targeting-your-application-at-windows-8-1).\n\nWith the release of Windows 8.1, the behavior of the <b>GetVersion</b> API has changed in the value it will return for the operating system version. The value returned by the <b>GetVersion</b> function now depends on how the application is manifested. \n\nApplications not manifested for Windows 8.1 or Windows 10 will return the Windows 8 OS version value (6.2).  Once an application is manifested for a given operating system version, <b>GetVersion</b> will always return the version that the application is manifested for in future releases.  To manifest your applications for Windows 8.1 or Windows 10, refer to <a href=\"/windows/desktop/SysInfo/targeting-your-application-at-windows-8-1\">Targeting your application for Windows</a>.\n\n\n\n## -returns\n\nIf the function succeeds, the return value includes the major and minor version numbers of the operating system in the low-order word, and information about the operating system platform in the high-order word.\n\nFor all platforms, the low-order word contains the version number of the operating system. The low-order byte of this word specifies the major version number, in hexadecimal notation. The high-order byte specifies the minor version (revision) number, in hexadecimal notation. The  high-order bit is zero, the next 7 bits represent the build number, and the low-order byte is 5.\n\n## -remarks\n\nThe \n<a href=\"/windows/desktop/api/sysinfoapi/nf-sysinfoapi-getversionexa\">GetVersionEx</a> function was developed because many existing applications err when examining the packed <b>DWORD</b> value returned by \n<b>GetVersion</b>, transposing the major and minor version numbers. \n<b>GetVersionEx</b> forces applications to explicitly examine each element of version information. \n<a href=\"/windows/desktop/api/winbase/nf-winbase-verifyversioninfoa\">VerifyVersionInfo</a> eliminates further potential for error by comparing the required system version with the current system version for you.\n\n\n#### Examples\n\nThe following code fragment illustrates how to extract information from the \n<b>GetVersion</b> return value: <a href=\"/windows/desktop/api/winnt/ns-winnt-osversioninfoexa\">OSVERSIONINFOEX</a>\n\n\n\n```cpp\n#include <windows.h>\n#include <stdio.h>\n\nvoid main()\n{\n    DWORD dwVersion = 0; \n    DWORD dwMajorVersion = 0;\n    DWORD dwMinorVersion = 0; \n    DWORD dwBuild = 0;\n\n    dwVersion = GetVersion();\n \n    // Get the Windows version.\n\n    dwMajorVersion = (DWORD)(LOBYTE(LOWORD(dwVersion)));\n    dwMinorVersion = (DWORD)(HIBYTE(LOWORD(dwVersion)));\n\n    // Get the build number.\n\n    if (dwVersion < 0x80000000)              \n        dwBuild = (DWORD)(HIWORD(dwVersion));\n\n    printf(\"Version is %d.%d (%d)\\n\", \n                dwMajorVersion,\n                dwMinorVersion,\n                dwBuild);\n}\n\n```\n\n## -see-also\n\n- <a href=\"/windows/desktop/api/sysinfoapi/nf-sysinfoapi-getversionexa\">GetVersionEx</a>\n- <a href=\"/windows/desktop/api/winnt/ns-winnt-osversioninfoa\">OSVERSIONINFO</a>\n- <a href=\"/windows/desktop/api/winnt/ns-winnt-osversioninfoexa\">OSVERSIONINFOEX</a>\n- <a href=\"/windows/desktop/SysInfo/operating-system-version\">Operating System Version</a>\n- <a href=\"/windows/desktop/SysInfo/system-information-functions\">System Information Functions</a>\n- <a href=\"/windows/desktop/api/winbase/nf-winbase-verifyversioninfoa\">VerifyVersionInfo</a>\n- <a href=\"/windows/desktop/SysInfo/version-helper-apis\">Version Helper functions</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetVersionExW",
+    "impl": [
+     "dlls/kernelbase/version.c:1519"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

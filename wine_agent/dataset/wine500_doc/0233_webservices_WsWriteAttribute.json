@@ -1,0 +1,1796 @@
+{
+ "id": "0233",
+ "function": {
+  "name": "WsWriteAttribute",
+  "export_name": "WsWriteAttribute",
+  "module": "webservices",
+  "source_module": "webservices",
+  "exported_by": [
+   "webservices"
+  ],
+  "side": "PE",
+  "file": "dlls/webservices/writer.c",
+  "start_line": 4018,
+  "end_line": 4049,
+  "body_lines": 29,
+  "signature": "HRESULT WINAPI WsWriteAttribute( WS_XML_WRITER *handle, const WS_ATTRIBUTE_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size, WS_ERROR *error )",
+  "header_comment": "/**************************************************************************\n *          WsWriteAttribute\t\t[webservices.@]\n */",
+  "code": "HRESULT WINAPI WsWriteAttribute( WS_XML_WRITER *handle, const WS_ATTRIBUTE_DESCRIPTION *desc,\n                                 WS_WRITE_OPTION option, const void *value, ULONG size,\n                                 WS_ERROR *error )\n{\n    struct writer *writer = (struct writer *)handle;\n    HRESULT hr;\n\n    TRACE( \"%p %p %u %p %lu %p\\n\", handle, desc, option, value, size, error );\n    if (error) FIXME( \"ignoring error parameter\\n\" );\n\n    if (!writer || !desc || !desc->attributeLocalName || !desc->attributeNs || !value)\n        return E_INVALIDARG;\n\n    EnterCriticalSection( &writer->cs );\n\n    if (writer->magic != WRITER_MAGIC)\n    {\n        LeaveCriticalSection( &writer->cs );\n        return E_INVALIDARG;\n    }\n\n    if (writer->state != WRITER_STATE_STARTELEMENT) hr = WS_E_INVALID_OPERATION;\n    else if ((hr = write_add_attribute( writer, NULL, desc->attributeLocalName, desc->attributeNs, FALSE )) == S_OK)\n    {\n        writer->state = WRITER_STATE_STARTATTRIBUTE;\n        hr = write_type( writer, WS_ATTRIBUTE_TYPE_MAPPING, desc->type, desc->typeDescription, option, value, size );\n    }\n\n    LeaveCriticalSection( &writer->cs );\n    TRACE( \"returning %#lx\\n\", hr );\n    return hr;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <stdio.h>",
+   "#include <float.h>",
+   "#include <math.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winuser.h\"",
+   "#include \"webservices.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"webservices_private.h\""
+  ],
+  "resolution": [
+   "webservices!WsWriteAttribute [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/webservices/tests/writer.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "webservices",
+   "path": "sdk-api-src/content/webservices/nf-webservices-wswriteattribute.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/webservices/nf-webservices-wswriteattribute",
+   "documented_name": "wswriteattribute",
+   "file": "docs/0233_sdk-api_nf-webservices-wswriteattribute.md",
+   "text": "---\nUID: NF:webservices.WsWriteAttribute\ntitle: WsWriteAttribute function (webservices.h)\ndescription: Write a typed value as an XML attribute.\nhelpviewer_keywords: [\"WsWriteAttribute\",\"WsWriteAttribute function [Web Services for Windows]\",\"webservices/WsWriteAttribute\",\"wsw.wswriteattribute\"]\nold-location: wsw\\wswriteattribute.htm\ntech.root: wsw\nms.assetid: d1c02344-f5b9-4a59-b1c2-2dfb41df5ce1\nms.date: 12/05/2018\nms.keywords: WsWriteAttribute, WsWriteAttribute function [Web Services for Windows], webservices/WsWriteAttribute, wsw.wswriteattribute\nreq.header: webservices.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 7 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 R2 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: WebServices.lib\nreq.dll: WebServices.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - WsWriteAttribute\n - webservices/WsWriteAttribute\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - WebServices.dll\napi_name:\n - WsWriteAttribute\n---\n\n# WsWriteAttribute function\n\n\n## -description\n\nWrite a typed value as an XML attribute.\n\n## -parameters\n\n### -param writer [in]\n\nThe writer to write the attribute to.\n\n### -param attributeDescription [in]\n\nA pointer to a description of how to serialize the attribute.\n\n### -param writeOption [in]\n\nInformation about how the value is allocated.\n                    See <a href=\"/windows/desktop/api/webservices/ne-webservices-ws_write_option\">WS_WRITE_OPTION</a> for more information.\n\n### -param value\n\nA pointer to the value to serialize.\n\n### -param valueSize [in]\n\nThe size of the value being serialized, in bytes.\n                \n\nIf the value is <b>NULL</b>, then the size should be 0.\n\n### -param error [in, optional]\n\nSpecifies where additional error information should be stored if the function fails.\n\n## -returns\n\nThis function can return one of these values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WS_E_INVALID_FORMAT</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe input data was not in the expected format or did not have the expected value.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_INVALIDARG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOne or more arguments are invalid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_OUTOFMEMORY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nRan out of memory.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThis API writes the start attribute, attribute value, and end attribute.\n            \n\nIf the API fails, the state of input writer becomes undefined. The only APIs that may be used on the writer\n        if this occurs are <a href=\"/windows/desktop/api/webservices/nf-webservices-wssetoutput\">WsSetOutput</a> and <a href=\"/windows/desktop/api/webservices/nf-webservices-wssetoutputtobuffer\">WsSetOutputToBuffer</a> to return the writer to a usable state,\n        or <a href=\"/windows/desktop/api/webservices/nf-webservices-wsfreewriter\">WsFreeWriter</a> to free the writer."
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "write_add_attribute",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 2039,
+   "end_line": 2073,
+   "static": true,
+   "called_from": [
+    "WsWriteAttribute",
+    "write_add_nil_attribute",
+    "write_type_field"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:2100",
+    "dlls/webservices/writer.c:4687"
+   ],
+   "signature": "static HRESULT write_add_attribute( struct writer *writer, const WS_XML_STRING *prefix, const WS_XML_STRING *localname, const WS_XML_STRING *ns, BOOL single )",
+   "code": "static HRESULT write_add_attribute( struct writer *writer, const WS_XML_STRING *prefix,\n                                    const WS_XML_STRING *localname, const WS_XML_STRING *ns,\n                                    BOOL single )\n{\n    WS_XML_ATTRIBUTE *attr;\n    WS_XML_ELEMENT_NODE *elem = &writer->current->hdr;\n    HRESULT hr;\n\n    if (!(attr = calloc( 1, sizeof(*attr) ))) return E_OUTOFMEMORY;\n\n    if (!prefix && ns->length) prefix = elem->prefix;\n\n    attr->singleQuote = !!single;\n    if (prefix && !(attr->prefix = dup_xml_string( prefix, writer->dict_do_lookup )))\n    {\n        free_attribute( attr );\n        return E_OUTOFMEMORY;\n    }\n    if (!(attr->localName = dup_xml_string( localname, writer->dict_do_lookup )))\n    {\n        free_attribute( attr );\n        return E_OUTOFMEMORY;\n    }\n    if (!(attr->ns = dup_xml_string( ns, writer->dict_do_lookup )))\n    {\n        free_attribute( attr );\n        return E_OUTOFMEMORY;\n    }\n    if ((hr = append_attribute( elem, attr )) != S_OK)\n    {\n        free_attribute( attr );\n        return hr;\n    }\n    return S_OK;\n}"
+  },
+  {
+   "name": "write_type",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3940,
+   "end_line": 4013,
+   "static": true,
+   "called_from": [
+    "WsWriteAttribute",
+    "write_type_array",
+    "write_type_field"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:3718",
+    "dlls/webservices/writer.c:4077",
+    "dlls/webservices/writer.c:4116",
+    "dlls/webservices/writer.c:4122",
+    "dlls/webservices/writer.c:4198"
+   ],
+   "signature": "static HRESULT write_type( struct writer *writer, WS_TYPE_MAPPING mapping, WS_TYPE type, const void *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type( struct writer *writer, WS_TYPE_MAPPING mapping, WS_TYPE type,\n                           const void *desc, WS_WRITE_OPTION option, const void *value,\n                           ULONG size )\n{\n    switch (type)\n    {\n    case WS_BOOL_TYPE:\n        return write_type_bool( writer, mapping, desc, option, value, size );\n\n    case WS_INT8_TYPE:\n        return write_type_int8( writer, mapping, desc, option, value, size );\n\n    case WS_INT16_TYPE:\n        return write_type_int16( writer, mapping, desc, option, value, size );\n\n    case WS_INT32_TYPE:\n        return write_type_int32( writer, mapping, desc, option, value, size );\n\n    case WS_INT64_TYPE:\n        return write_type_int64( writer, mapping, desc, option, value, size );\n\n    case WS_UINT8_TYPE:\n        return write_type_uint8( writer, mapping, desc, option, value, size );\n\n    case WS_UINT16_TYPE:\n        return write_type_uint16( writer, mapping, desc, option, value, size );\n\n    case WS_UINT32_TYPE:\n        return write_type_uint32( writer, mapping, desc, option, value, size );\n\n    case WS_UINT64_TYPE:\n        return write_type_uint64( writer, mapping, desc, option, value, size );\n\n    case WS_DOUBLE_TYPE:\n        return write_type_double( writer, mapping, desc, option, value, size );\n\n    case WS_DATETIME_TYPE:\n        return write_type_datetime( writer, mapping, desc, option, value, size );\n\n    case WS_GUID_TYPE:\n        return write_type_guid( writer, mapping, desc, option, value, size );\n\n    case WS_UNIQUE_ID_TYPE:\n        return write_type_unique_id( writer, mapping, desc, option, value, size );\n\n    case WS_STRING_TYPE:\n        return write_type_string( writer, mapping, desc, option, value, size );\n\n    case WS_WSZ_TYPE:\n        return write_type_wsz( writer, mapping, desc, option, value, size );\n\n    case WS_BYTES_TYPE:\n        return write_type_bytes( writer, mapping, desc, option, value, size );\n\n    case WS_XML_STRING_TYPE:\n        return write_type_xml_string( writer, mapping, desc, option, value, size );\n\n    case WS_XML_QNAME_TYPE:\n        return write_type_qname( writer, mapping, desc, option, value, size );\n\n    case WS_DESCRIPTION_TYPE:\n        return write_type_description( writer, mapping, option, value, size );\n\n    case WS_STRUCT_TYPE:\n        return write_type_struct( writer, mapping, desc, option, value, size );\n\n    case WS_ENUM_TYPE:\n        return write_type_enum( writer, mapping, desc, option, value, size );\n\n    default:\n        FIXME( \"type %u not supported\\n\", type );\n        return E_NOTIMPL;\n    }\n}"
+  },
+  {
+   "name": "write_type_bool",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3159,
+   "end_line": 3180,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_bool( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_BOOL_DESCRIPTION *desc, WS_WRITE_OPTION option, const BOOL *value, ULONG size )",
+   "code": "static HRESULT write_type_bool( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                const WS_BOOL_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                const BOOL *value, ULONG size )\n{\n    WS_XML_BOOL_TEXT text_bool;\n    const BOOL *ptr;\n    HRESULT hr;\n\n    if (desc)\n    {\n        FIXME( \"description not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (!option || option == WS_WRITE_NILLABLE_VALUE) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, sizeof(BOOL), (const void **)&ptr )) != S_OK) return hr;\n    if (option == WS_WRITE_NILLABLE_POINTER && !ptr) return write_add_nil_attribute( writer );\n\n    text_bool.text.textType = WS_XML_TEXT_TYPE_BOOL;\n    text_bool.value         = *ptr;\n    return write_type_text( writer, mapping, &text_bool.text );\n}"
+  },
+  {
+   "name": "write_type_int8",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3182,
+   "end_line": 3203,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_int8( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_INT8_DESCRIPTION *desc, WS_WRITE_OPTION option, const BOOL *value, ULONG size )",
+   "code": "static HRESULT write_type_int8( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                const WS_INT8_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                const BOOL *value, ULONG size )\n{\n    WS_XML_INT32_TEXT text_int32;\n    const INT8 *ptr;\n    HRESULT hr;\n\n    if (desc)\n    {\n        FIXME( \"description not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (!option || option == WS_WRITE_NILLABLE_VALUE) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, sizeof(INT8), (const void **)&ptr )) != S_OK) return hr;\n    if (option == WS_WRITE_NILLABLE_POINTER && !ptr) return write_add_nil_attribute( writer );\n\n    text_int32.text.textType = WS_XML_TEXT_TYPE_INT32;\n    text_int32.value         = *ptr;\n    return write_type_text( writer, mapping, &text_int32.text );\n}"
+  },
+  {
+   "name": "write_type_int16",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3205,
+   "end_line": 3226,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_int16( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_INT16_DESCRIPTION *desc, WS_WRITE_OPTION option, const BOOL *value, ULONG size )",
+   "code": "static HRESULT write_type_int16( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                 const WS_INT16_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                 const BOOL *value, ULONG size )\n{\n    WS_XML_INT32_TEXT text_int32;\n    const INT16 *ptr;\n    HRESULT hr;\n\n    if (desc)\n    {\n        FIXME( \"description not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (!option || option == WS_WRITE_NILLABLE_VALUE) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, sizeof(INT16), (const void **)&ptr )) != S_OK) return hr;\n    if (option == WS_WRITE_NILLABLE_POINTER && !ptr) return write_add_nil_attribute( writer );\n\n    text_int32.text.textType = WS_XML_TEXT_TYPE_INT32;\n    text_int32.value         = *ptr;\n    return write_type_text( writer, mapping, &text_int32.text );\n}"
+  },
+  {
+   "name": "write_type_int32",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3228,
+   "end_line": 3249,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_int32( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_INT32_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_int32( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                 const WS_INT32_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                 const void *value, ULONG size )\n{\n    WS_XML_INT32_TEXT text_int32;\n    const INT32 *ptr;\n    HRESULT hr;\n\n    if (desc)\n    {\n        FIXME( \"description not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (!option || option == WS_WRITE_NILLABLE_VALUE) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, sizeof(INT32), (const void **)&ptr )) != S_OK) return hr;\n    if (option == WS_WRITE_NILLABLE_POINTER && !ptr) return write_add_nil_attribute( writer );\n\n    text_int32.text.textType = WS_XML_TEXT_TYPE_INT32;\n    text_int32.value         = *ptr;\n    return write_type_text( writer, mapping, &text_int32.text );\n}"
+  },
+  {
+   "name": "write_type_int64",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3251,
+   "end_line": 3272,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_int64( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_INT64_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_int64( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                 const WS_INT64_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                 const void *value, ULONG size )\n{\n    WS_XML_INT64_TEXT text_int64;\n    const INT64 *ptr;\n    HRESULT hr;\n\n    if (desc)\n    {\n        FIXME( \"description not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (!option || option == WS_WRITE_NILLABLE_VALUE) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, sizeof(INT64), (const void **)&ptr )) != S_OK) return hr;\n    if (option == WS_WRITE_NILLABLE_POINTER && !ptr) return write_add_nil_attribute( writer );\n\n    text_int64.text.textType = WS_XML_TEXT_TYPE_INT64;\n    text_int64.value         = *ptr;\n    return write_type_text( writer, mapping, &text_int64.text );\n}"
+  },
+  {
+   "name": "write_type_uint8",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3274,
+   "end_line": 3295,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_uint8( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_UINT8_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_uint8( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                 const WS_UINT8_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                 const void *value, ULONG size )\n{\n    WS_XML_UINT64_TEXT text_uint64;\n    const UINT8 *ptr;\n    HRESULT hr;\n\n    if (desc)\n    {\n        FIXME( \"description not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (!option || option == WS_WRITE_NILLABLE_VALUE) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, sizeof(UINT8), (const void **)&ptr )) != S_OK) return hr;\n    if (option == WS_WRITE_NILLABLE_POINTER && !ptr) return write_add_nil_attribute( writer );\n\n    text_uint64.text.textType = WS_XML_TEXT_TYPE_UINT64;\n    text_uint64.value         = *ptr;\n    return write_type_text( writer, mapping, &text_uint64.text );\n}"
+  },
+  {
+   "name": "write_type_uint16",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3297,
+   "end_line": 3318,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_uint16( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_UINT16_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_uint16( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                  const WS_UINT16_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                  const void *value, ULONG size )\n{\n    WS_XML_UINT64_TEXT text_uint64;\n    const UINT16 *ptr;\n    HRESULT hr;\n\n    if (desc)\n    {\n        FIXME( \"description not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (!option || option == WS_WRITE_NILLABLE_VALUE) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, sizeof(UINT16), (const void **)&ptr )) != S_OK) return hr;\n    if (option == WS_WRITE_NILLABLE_POINTER && !ptr) return write_add_nil_attribute( writer );\n\n    text_uint64.text.textType = WS_XML_TEXT_TYPE_UINT64;\n    text_uint64.value         = *ptr;\n    return write_type_text( writer, mapping, &text_uint64.text );\n}"
+  },
+  {
+   "name": "write_type_uint32",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3320,
+   "end_line": 3341,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_uint32( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_UINT32_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_uint32( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                  const WS_UINT32_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                  const void *value, ULONG size )\n{\n    WS_XML_UINT64_TEXT text_uint64;\n    const UINT32 *ptr;\n    HRESULT hr;\n\n    if (desc)\n    {\n        FIXME( \"description not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (!option || option == WS_WRITE_NILLABLE_VALUE) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, sizeof(UINT32), (const void **)&ptr )) != S_OK) return hr;\n    if (option == WS_WRITE_NILLABLE_POINTER && !ptr) return write_add_nil_attribute( writer );\n\n    text_uint64.text.textType = WS_XML_TEXT_TYPE_UINT64;\n    text_uint64.value         = *ptr;\n    return write_type_text( writer, mapping, &text_uint64.text );\n}"
+  },
+  {
+   "name": "write_type_uint64",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3343,
+   "end_line": 3364,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_uint64( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_UINT64_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_uint64( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                  const WS_UINT64_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                  const void *value, ULONG size )\n{\n    WS_XML_UINT64_TEXT text_uint64;\n    const UINT64 *ptr;\n    HRESULT hr;\n\n    if (desc)\n    {\n        FIXME( \"description not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (!option || option == WS_WRITE_NILLABLE_VALUE) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, sizeof(UINT64), (const void **)&ptr )) != S_OK) return hr;\n    if (option == WS_WRITE_NILLABLE_POINTER && !ptr) return write_add_nil_attribute( writer );\n\n    text_uint64.text.textType = WS_XML_TEXT_TYPE_UINT64;\n    text_uint64.value         = *ptr;\n    return write_type_text( writer, mapping, &text_uint64.text );\n}"
+  },
+  {
+   "name": "write_type_double",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3366,
+   "end_line": 3387,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_double( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_DOUBLE_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_double( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                  const WS_DOUBLE_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                  const void *value, ULONG size )\n{\n    WS_XML_DOUBLE_TEXT text_double;\n    const double *ptr;\n    HRESULT hr;\n\n    if (desc)\n    {\n        FIXME( \"description not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (!option || option == WS_WRITE_NILLABLE_VALUE) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, sizeof(double), (const void **)&ptr )) != S_OK) return hr;\n    if (option == WS_WRITE_NILLABLE_POINTER && !ptr) return write_add_nil_attribute( writer );\n\n    text_double.text.textType = WS_XML_TEXT_TYPE_DOUBLE;\n    text_double.value         = *ptr;\n    return write_type_text( writer, mapping, &text_double.text );\n}"
+  },
+  {
+   "name": "write_type_datetime",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3389,
+   "end_line": 3411,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_datetime( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_DATETIME_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_datetime( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                    const WS_DATETIME_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                    const void *value, ULONG size )\n{\n    WS_XML_DATETIME_TEXT text_datetime;\n    const WS_DATETIME *ptr;\n    HRESULT hr;\n\n    if (desc)\n    {\n        FIXME( \"description not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (!option || option == WS_WRITE_NILLABLE_VALUE) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, sizeof(WS_DATETIME), (const void **)&ptr )) != S_OK) return hr;\n    if (option == WS_WRITE_NILLABLE_POINTER && !ptr) return write_add_nil_attribute( writer );\n    if (ptr->ticks > TICKS_MAX || ptr->format > WS_DATETIME_FORMAT_NONE) return WS_E_INVALID_FORMAT;\n\n    text_datetime.text.textType = WS_XML_TEXT_TYPE_DATETIME;\n    text_datetime.value         = *ptr;\n    return write_type_text( writer, mapping, &text_datetime.text );\n}"
+  },
+  {
+   "name": "write_type_guid",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3413,
+   "end_line": 3434,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_guid( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_GUID_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_guid( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                const WS_GUID_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                const void *value, ULONG size )\n{\n    WS_XML_GUID_TEXT text_guid;\n    const GUID *ptr;\n    HRESULT hr;\n\n    if (desc)\n    {\n        FIXME( \"description not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (!option || option == WS_WRITE_NILLABLE_VALUE) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, sizeof(GUID), (const void **)&ptr )) != S_OK) return hr;\n    if (option == WS_WRITE_NILLABLE_POINTER && !ptr) return write_add_nil_attribute( writer );\n\n    text_guid.text.textType = WS_XML_TEXT_TYPE_GUID;\n    text_guid.value         = *ptr;\n    return write_type_text( writer, mapping, &text_guid.text );\n}"
+  },
+  {
+   "name": "write_type_unique_id",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3436,
+   "end_line": 3466,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_unique_id( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_UNIQUE_ID_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_unique_id( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                     const WS_UNIQUE_ID_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                     const void *value, ULONG size )\n{\n    WS_XML_UNIQUE_ID_TEXT text_unique_id;\n    WS_XML_UTF16_TEXT text_utf16;\n    const WS_UNIQUE_ID *ptr;\n    HRESULT hr;\n\n    if (desc)\n    {\n        FIXME( \"description not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (!option || option == WS_WRITE_NILLABLE_VALUE) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, sizeof(*ptr), (const void **)&ptr )) != S_OK) return hr;\n    if (option == WS_WRITE_NILLABLE_POINTER && !ptr) return write_add_nil_attribute( writer );\n\n    if (ptr->uri.length)\n    {\n        text_utf16.text.textType = WS_XML_TEXT_TYPE_UTF16;\n        text_utf16.bytes         = (BYTE *)ptr->uri.chars;\n        text_utf16.byteCount     = ptr->uri.length * sizeof(WCHAR);\n        return write_type_text( writer, mapping, &text_utf16.text );\n    }\n\n    text_unique_id.text.textType = WS_XML_TEXT_TYPE_UNIQUE_ID;\n    text_unique_id.value         = ptr->guid;\n    return write_type_text( writer, mapping, &text_unique_id.text );\n}"
+  },
+  {
+   "name": "write_type_string",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3468,
+   "end_line": 3491,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_string( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_STRING_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_string( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                  const WS_STRING_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                  const void *value, ULONG size )\n{\n    WS_XML_UTF16_TEXT utf16;\n    const WS_STRING *ptr;\n    HRESULT hr;\n\n    if (desc)\n    {\n        FIXME( \"description not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (!option) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, sizeof(WS_STRING), (const void **)&ptr )) != S_OK) return hr;\n    if (option == WS_WRITE_NILLABLE_POINTER && !ptr) return write_add_nil_attribute( writer );\n    if (!ptr->length) return S_OK;\n\n    utf16.text.textType = WS_XML_TEXT_TYPE_UTF16;\n    utf16.bytes         = (BYTE *)ptr->chars;\n    utf16.byteCount     = ptr->length * sizeof(WCHAR);\n    return write_type_text( writer, mapping, &utf16.text );\n}"
+  },
+  {
+   "name": "write_type_wsz",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3493,
+   "end_line": 3517,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_wsz( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_WSZ_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_wsz( struct writer *writer, WS_TYPE_MAPPING mapping,\n                               const WS_WSZ_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                               const void *value, ULONG size )\n{\n    WS_XML_UTF16_TEXT utf16;\n    const WCHAR *ptr;\n    HRESULT hr;\n    int len;\n\n    if (desc)\n    {\n        FIXME( \"description not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (!option || option == WS_WRITE_REQUIRED_VALUE || option == WS_WRITE_NILLABLE_VALUE) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, 0, (const void **)&ptr )) != S_OK) return hr;\n    if (option == WS_WRITE_NILLABLE_POINTER && !ptr) return write_add_nil_attribute( writer );\n    if (!(len = lstrlenW( ptr ))) return S_OK;\n\n    utf16.text.textType = WS_XML_TEXT_TYPE_UTF16;\n    utf16.bytes         = (BYTE *)ptr;\n    utf16.byteCount     = len * sizeof(WCHAR);\n    return write_type_text( writer, mapping, &utf16.text );\n}"
+  },
+  {
+   "name": "write_type_bytes",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3519,
+   "end_line": 3543,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_bytes( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_BYTES_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_bytes( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                 const WS_BYTES_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                 const void *value, ULONG size )\n{\n    WS_XML_BASE64_TEXT base64;\n    const WS_BYTES *ptr;\n    HRESULT hr;\n\n    if (desc)\n    {\n        FIXME( \"description not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (!option) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, sizeof(WS_BYTES), (const void **)&ptr )) != S_OK) return hr;\n    if ((option == WS_WRITE_NILLABLE_VALUE && !ptr->bytes) ||\n        (option == WS_WRITE_NILLABLE_POINTER && !ptr)) return write_add_nil_attribute( writer );\n    if (!ptr->length) return S_OK;\n\n    base64.text.textType = WS_XML_TEXT_TYPE_BASE64;\n    base64.bytes         = ptr->bytes;\n    base64.length        = ptr->length;\n    return write_type_text( writer, mapping, &base64.text );\n}"
+  },
+  {
+   "name": "write_type_xml_string",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3545,
+   "end_line": 3569,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_xml_string( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_XML_STRING_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_xml_string( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                      const WS_XML_STRING_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                      const void *value, ULONG size )\n{\n    WS_XML_UTF8_TEXT utf8;\n    const WS_XML_STRING *ptr;\n    HRESULT hr;\n\n    if (desc)\n    {\n        FIXME( \"description not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (!option) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, sizeof(WS_XML_STRING), (const void **)&ptr )) != S_OK) return hr;\n    if (option == WS_WRITE_NILLABLE_POINTER && !ptr) return write_add_nil_attribute( writer );\n    if (option == WS_WRITE_NILLABLE_VALUE && !ptr->bytes) return write_add_nil_attribute( writer );\n    if (!ptr->length) return S_OK;\n\n    utf8.text.textType = WS_XML_TEXT_TYPE_UTF8;\n    utf8.value.bytes   = ptr->bytes;\n    utf8.value.length  = ptr->length;\n    return write_type_text( writer, mapping, &utf8.text );\n}"
+  },
+  {
+   "name": "write_type_qname",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3589,
+   "end_line": 3616,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_qname( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_XML_QNAME_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_qname( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                 const WS_XML_QNAME_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                 const void *value, ULONG size )\n{\n    WS_XML_QNAME_TEXT qname;\n    const WS_XML_QNAME *ptr;\n    const WS_XML_STRING *prefix;\n    HRESULT hr;\n\n    if (desc)\n    {\n        FIXME( \"description not supported\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (!option) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, sizeof(*ptr), (const void **)&ptr )) != S_OK) return hr;\n    if (option == WS_WRITE_NILLABLE_POINTER && !ptr) return write_add_nil_attribute( writer );\n    if (option == WS_WRITE_NILLABLE_VALUE && !ptr->localName.bytes) return write_add_nil_attribute( writer );\n\n    if (((hr = find_prefix( writer, &ptr->ns, &prefix )) != S_OK)) return hr;\n\n    qname.text.textType = WS_XML_TEXT_TYPE_QNAME;\n    qname.prefix        = (WS_XML_STRING *)prefix;\n    qname.localName     = (WS_XML_STRING *)&ptr->localName;\n    qname.ns            = (WS_XML_STRING *)&ptr->ns;\n    return write_type_text( writer, mapping, &qname.text );\n}"
+  },
+  {
+   "name": "write_type_description",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3929,
+   "end_line": 3938,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_description( struct writer *writer, WS_TYPE_MAPPING mapping, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_description( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                       WS_WRITE_OPTION option, const void *value, ULONG size )\n{\n    const WS_STRUCT_DESCRIPTION *ptr;\n    HRESULT hr;\n\n    if ((hr = get_value_ptr( option, value, size, sizeof(*ptr), (const void **)&ptr )) != S_OK) return hr;\n    if (ptr) FIXME( \"ignoring type description %p\\n\", ptr );\n    return S_OK;\n}"
+  },
+  {
+   "name": "write_type_struct",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3877,
+   "end_line": 3898,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_struct( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_STRUCT_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_struct( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                  const WS_STRUCT_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                  const void *value, ULONG size )\n{\n    ULONG i, offset;\n    const void *ptr;\n    HRESULT hr;\n\n    if (!desc) return E_INVALIDARG;\n    if (desc->structOptions) FIXME( \"struct options %#lx not supported\\n\", desc->structOptions );\n\n    if ((hr = get_value_ptr( option, value, size, desc->size, &ptr )) != S_OK) return hr;\n    if (option == WS_WRITE_NILLABLE_POINTER && !ptr) return write_add_nil_attribute( writer );\n\n    for (i = 0; i < desc->fieldCount; i++)\n    {\n        offset = desc->fields[i]->offset;\n        if ((hr = write_type_field( writer, desc->fields[i], ptr, offset )) != S_OK) return hr;\n    }\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "write_type_enum",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3910,
+   "end_line": 3927,
+   "static": true,
+   "called_from": [
+    "write_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_enum( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_ENUM_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_enum( struct writer *writer, WS_TYPE_MAPPING mapping,\n                                const WS_ENUM_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                const void *value, ULONG size )\n{\n    const WS_XML_STRING *name;\n    WS_XML_UTF8_TEXT utf8;\n    const int *ptr;\n    HRESULT hr;\n\n    if (!desc) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, sizeof(*ptr), (const void **)&ptr )) != S_OK) return hr;\n    if (!(name = get_enum_value_name( desc, *ptr ))) return E_INVALIDARG;\n\n    utf8.text.textType = WS_XML_TEXT_TYPE_UTF8;\n    utf8.value.bytes   = name->bytes;\n    utf8.value.length  = name->length;\n    return write_type_text( writer, mapping, &utf8.text );\n}"
+  },
+  {
+   "name": "get_value_ptr",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3134,
+   "end_line": 3157,
+   "static": true,
+   "called_from": [
+    "write_type_bool",
+    "write_type_bytes",
+    "write_type_datetime",
+    "write_type_description",
+    "write_type_double",
+    "write_type_enum",
+    "write_type_guid",
+    "write_type_int16",
+    "write_type_int32",
+    "write_type_int64",
+    "write_type_int8",
+    "write_type_qname",
+    "write_type_string",
+    "write_type_struct",
+    "write_type_uint16",
+    "write_type_uint32",
+    "write_type_uint64",
+    "write_type_uint8",
+    "write_type_union",
+    "write_type_unique_id",
+    "write_type_wsz",
+    "write_type_xml_string"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT get_value_ptr( WS_WRITE_OPTION option, const void *value, ULONG size, ULONG expected_size, const void **ptr )",
+   "code": "static HRESULT get_value_ptr( WS_WRITE_OPTION option, const void *value, ULONG size, ULONG expected_size,\n                              const void **ptr )\n{\n    switch (option)\n    {\n    case WS_WRITE_REQUIRED_VALUE:\n    case WS_WRITE_NILLABLE_VALUE:\n        if (!value || size != expected_size) return E_INVALIDARG;\n        *ptr = value;\n        return S_OK;\n\n    case WS_WRITE_REQUIRED_POINTER:\n        if (size != sizeof(const void *) || !(*ptr = *(const void **)value)) return E_INVALIDARG;\n        return S_OK;\n\n    case WS_WRITE_NILLABLE_POINTER:\n        if (size != sizeof(const void *)) return E_INVALIDARG;\n        *ptr = *(const void **)value;\n        return S_OK;\n\n    default:\n        return E_INVALIDARG;\n    }\n}"
+  },
+  {
+   "name": "write_add_nil_attribute",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3121,
+   "end_line": 3132,
+   "static": true,
+   "called_from": [
+    "write_type_bool",
+    "write_type_bytes",
+    "write_type_datetime",
+    "write_type_double",
+    "write_type_guid",
+    "write_type_int16",
+    "write_type_int32",
+    "write_type_int64",
+    "write_type_int8",
+    "write_type_qname",
+    "write_type_string",
+    "write_type_struct",
+    "write_type_uint16",
+    "write_type_uint32",
+    "write_type_uint64",
+    "write_type_uint8",
+    "write_type_unique_id",
+    "write_type_wsz",
+    "write_type_xml_string"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_add_nil_attribute( struct writer *writer )",
+   "code": "static HRESULT write_add_nil_attribute( struct writer *writer )\n{\n    static const WS_XML_STRING prefix = {1, (BYTE *)\"a\"};\n    static const WS_XML_STRING localname = {3, (BYTE *)\"nil\"};\n    static const WS_XML_STRING ns = {41, (BYTE *)\"http://www.w3.org/2001/XMLSchema-instance\"};\n    static const WS_XML_UTF8_TEXT value = {{WS_XML_TEXT_TYPE_UTF8}, {4, (BYTE *)\"true\"}};\n    HRESULT hr;\n\n    if ((hr = write_add_attribute( writer, &prefix, &localname, &ns, FALSE )) != S_OK) return hr;\n    if ((hr = write_set_attribute_value( writer, &value.text )) != S_OK) return hr;\n    return add_namespace_attribute( writer, &prefix, &ns, FALSE );\n}"
+  },
+  {
+   "name": "write_type_text",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3090,
+   "end_line": 3119,
+   "static": true,
+   "called_from": [
+    "write_type_bool",
+    "write_type_bytes",
+    "write_type_datetime",
+    "write_type_double",
+    "write_type_enum",
+    "write_type_guid",
+    "write_type_int16",
+    "write_type_int32",
+    "write_type_int64",
+    "write_type_int8",
+    "write_type_qname",
+    "write_type_string",
+    "write_type_uint16",
+    "write_type_uint32",
+    "write_type_uint64",
+    "write_type_uint8",
+    "write_type_unique_id",
+    "write_type_wsz",
+    "write_type_xml_string"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_text( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_XML_TEXT *text )",
+   "code": "static HRESULT write_type_text( struct writer *writer, WS_TYPE_MAPPING mapping, const WS_XML_TEXT *text )\n{\n    switch (mapping)\n    {\n    case WS_ELEMENT_TYPE_MAPPING:\n    case WS_ELEMENT_CONTENT_TYPE_MAPPING:\n        return write_text_node( writer, text );\n\n    case WS_ATTRIBUTE_TYPE_MAPPING:\n        return write_set_attribute_value( writer, text );\n\n    case WS_ANY_ELEMENT_TYPE_MAPPING:\n        switch (writer->state)\n        {\n        case WRITER_STATE_STARTATTRIBUTE:\n            return write_set_attribute_value( writer, text );\n\n        case WRITER_STATE_STARTELEMENT:\n            return write_text_node( writer, text );\n\n        default:\n            FIXME( \"writer state %u not handled\\n\", writer->state );\n            return E_NOTIMPL;\n        }\n\n    default:\n        FIXME( \"mapping %u not implemented\\n\", mapping );\n        return E_NOTIMPL;\n    }\n}"
+  },
+  {
+   "name": "find_prefix",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3571,
+   "end_line": 3587,
+   "static": true,
+   "called_from": [
+    "write_type_qname"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:4398"
+   ],
+   "signature": "static HRESULT find_prefix( struct writer *writer, const WS_XML_STRING *ns, const WS_XML_STRING **prefix )",
+   "code": "static HRESULT find_prefix( struct writer *writer, const WS_XML_STRING *ns, const WS_XML_STRING **prefix )\n{\n    const struct node *node;\n    for (node = writer->current; node_type( node ) == WS_XML_NODE_TYPE_ELEMENT; node = node->parent)\n    {\n        const WS_XML_ELEMENT_NODE *elem = &node->hdr;\n        ULONG i;\n        for (i = 0; i < elem->attributeCount; i++)\n        {\n            if (!elem->attributes[i]->isXmlNs) continue;\n            if (WsXmlStringEquals( elem->attributes[i]->ns, ns, NULL ) != S_OK) continue;\n            *prefix = elem->attributes[i]->prefix;\n            return S_OK;\n        }\n    }\n    return WS_E_INVALID_FORMAT;\n}"
+  },
+  {
+   "name": "write_type_field",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3760,
+   "end_line": 3875,
+   "static": true,
+   "called_from": [
+    "write_type_struct",
+    "write_type_union"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:4897"
+   ],
+   "signature": "static HRESULT write_type_field( struct writer *writer, const WS_FIELD_DESCRIPTION *desc, const char *buf, ULONG offset )",
+   "code": "static HRESULT write_type_field( struct writer *writer, const WS_FIELD_DESCRIPTION *desc, const char *buf,\n                                 ULONG offset )\n{\n    HRESULT hr;\n    WS_TYPE_MAPPING mapping;\n    WS_WRITE_OPTION option;\n    ULONG count, size, field_options = desc->options;\n    const char *ptr = buf + offset;\n\n    if (field_options & ~(WS_FIELD_POINTER|WS_FIELD_OPTIONAL|WS_FIELD_NILLABLE|WS_FIELD_NILLABLE_ITEM))\n    {\n        FIXME( \"options %#lx not supported\\n\", desc->options );\n        return E_NOTIMPL;\n    }\n\n    /* zero-terminated strings and descriptions are always pointers */\n    if (desc->type == WS_WSZ_TYPE || desc->type == WS_DESCRIPTION_TYPE) field_options |= WS_FIELD_POINTER;\n\n    if (field_options & WS_FIELD_POINTER)\n        size = sizeof(const void *);\n    else\n        size = get_type_size( desc->type, desc->typeDescription );\n\n    if (is_nil_value( ptr, size ))\n    {\n        if (field_options & WS_FIELD_OPTIONAL) return S_OK;\n        if (field_options & (WS_FIELD_NILLABLE|WS_FIELD_NILLABLE_ITEM))\n        {\n            if (field_options & WS_FIELD_POINTER) option = WS_WRITE_NILLABLE_POINTER;\n            else option = WS_WRITE_NILLABLE_VALUE;\n        }\n        else\n        {\n            if (field_options & WS_FIELD_POINTER) option = WS_WRITE_REQUIRED_POINTER;\n            else option = WS_WRITE_REQUIRED_VALUE;\n        }\n    }\n    else\n    {\n        if (field_options & WS_FIELD_POINTER) option = WS_WRITE_REQUIRED_POINTER;\n        else option = WS_WRITE_REQUIRED_VALUE;\n    }\n\n    switch (desc->mapping)\n    {\n    case WS_TYPE_ATTRIBUTE_FIELD_MAPPING:\n        mapping = WS_ATTRIBUTE_TYPE_MAPPING;\n        break;\n\n    case WS_ATTRIBUTE_FIELD_MAPPING:\n        if (!desc->localName || !desc->ns) return E_INVALIDARG;\n        if ((hr = write_add_attribute( writer, NULL, desc->localName, desc->ns, FALSE )) != S_OK)\n            return hr;\n        writer->state = WRITER_STATE_STARTATTRIBUTE;\n\n        mapping = WS_ATTRIBUTE_TYPE_MAPPING;\n        break;\n\n    case WS_ELEMENT_FIELD_MAPPING:\n        if ((hr = write_element_node( writer, NULL, desc->localName, desc->ns )) != S_OK) return hr;\n        mapping = WS_ELEMENT_TYPE_MAPPING;\n        break;\n\n    case WS_ELEMENT_CHOICE_FIELD_MAPPING:\n        if (desc->type != WS_UNION_TYPE || !desc->typeDescription) return E_INVALIDARG;\n        option = (field_options & WS_FIELD_OPTIONAL) ? WS_WRITE_NILLABLE_VALUE : WS_WRITE_REQUIRED_VALUE;\n        return write_type_union( writer, desc->typeDescription, option, ptr, size );\n\n    case WS_REPEATING_ELEMENT_FIELD_MAPPING:\n    case WS_REPEATING_ELEMENT_CHOICE_FIELD_MAPPING:\n        count = *(const ULONG *)(buf + desc->countOffset);\n        return write_type_array( writer, desc, *(const char **)ptr, count );\n\n    case WS_TEXT_FIELD_MAPPING:\n        switch (writer->state)\n        {\n        case WRITER_STATE_STARTELEMENT:\n            mapping = WS_ELEMENT_CONTENT_TYPE_MAPPING;\n            break;\n\n        case WRITER_STATE_STARTATTRIBUTE:\n            mapping = WS_ATTRIBUTE_TYPE_MAPPING;\n            break;\n\n        default:\n            FIXME( \"unhandled writer state %u\\n\", writer->state );\n            return E_NOTIMPL;\n        }\n        break;\n\n    case WS_ANY_ATTRIBUTES_FIELD_MAPPING:\n        return S_OK;\n\n    default:\n        FIXME( \"field mapping %u not supported\\n\", desc->mapping );\n        return E_NOTIMPL;\n    }\n\n    if ((hr = write_type( writer, mapping, desc->type, desc->typeDescription, option, ptr, size )) != S_OK)\n        return hr;\n\n    switch (mapping)\n    {\n    case WS_ATTRIBUTE_TYPE_MAPPING:\n        writer->state = WRITER_STATE_STARTELEMENT;\n        break;\n\n    case WS_ELEMENT_TYPE_MAPPING:\n        if ((hr = write_endelement_node( writer )) != S_OK) return hr;\n        break;\n\n    default: break;\n    }\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "get_enum_value_name",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3900,
+   "end_line": 3908,
+   "static": true,
+   "called_from": [
+    "write_type_enum"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static const WS_XML_STRING *get_enum_value_name( const WS_ENUM_DESCRIPTION *desc, int value )",
+   "code": "static const WS_XML_STRING *get_enum_value_name( const WS_ENUM_DESCRIPTION *desc, int value )\n{\n    ULONG i;\n    for (i = 0; i < desc->valueCount; i++)\n    {\n        if (desc->values[i].value == value) return desc->values[i].name;\n    }\n    return NULL;\n}"
+  },
+  {
+   "name": "write_set_attribute_value",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 2446,
+   "end_line": 2498,
+   "static": true,
+   "called_from": [
+    "write_add_nil_attribute",
+    "write_type_text"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:2968",
+    "dlls/webservices/writer.c:3005",
+    "dlls/webservices/writer.c:3043",
+    "dlls/webservices/writer.c:3081",
+    "dlls/webservices/writer.c:4688"
+   ],
+   "signature": "static HRESULT write_set_attribute_value( struct writer *writer, const WS_XML_TEXT *value )",
+   "code": "static HRESULT write_set_attribute_value( struct writer *writer, const WS_XML_TEXT *value )\n{\n    WS_XML_ELEMENT_NODE *elem = &writer->current->hdr;\n    HRESULT hr;\n\n    switch (value->textType)\n    {\n    case WS_XML_TEXT_TYPE_UTF8:\n    case WS_XML_TEXT_TYPE_UTF16:\n    case WS_XML_TEXT_TYPE_BASE64:\n        break;\n\n    case WS_XML_TEXT_TYPE_BOOL:\n    case WS_XML_TEXT_TYPE_INT32:\n    case WS_XML_TEXT_TYPE_INT64:\n    case WS_XML_TEXT_TYPE_UINT64:\n    case WS_XML_TEXT_TYPE_DOUBLE:\n    case WS_XML_TEXT_TYPE_GUID:\n    case WS_XML_TEXT_TYPE_UNIQUE_ID:\n    case WS_XML_TEXT_TYPE_DATETIME:\n        if (elem->attributes[elem->attributeCount - 1]->value) return WS_E_INVALID_OPERATION;\n        break;\n\n    default:\n        FIXME( \"unhandled text type %u\\n\", value->textType );\n        return E_NOTIMPL;\n    }\n\n    switch (writer->output_enc)\n    {\n    case WS_XML_WRITER_ENCODING_TYPE_TEXT:\n    {\n        WS_XML_UTF8_TEXT *new, *old = (WS_XML_UTF8_TEXT *)elem->attributes[elem->attributeCount - 1]->value;\n        if ((hr = text_to_utf8text( value, old, NULL, &new )) != S_OK) return hr;\n        free( old );\n        elem->attributes[elem->attributeCount - 1]->value = &new->text;\n        break;\n    }\n    case WS_XML_WRITER_ENCODING_TYPE_BINARY:\n    {\n        WS_XML_TEXT *new, *old = elem->attributes[elem->attributeCount - 1]->value;\n        if ((hr = text_to_text( value, old, NULL, &new )) != S_OK) return hr;\n        free( old );\n        elem->attributes[elem->attributeCount - 1]->value = new;\n        break;\n    }\n    default:\n        FIXME( \"unhandled output encoding %u\\n\", writer->output_enc );\n        return E_NOTIMPL;\n    }\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "add_namespace_attribute",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1625,
+   "end_line": 1652,
+   "static": true,
+   "called_from": [
+    "set_namespaces",
+    "write_add_nil_attribute"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:4384",
+    "dlls/webservices/writer.c:4683"
+   ],
+   "signature": "static HRESULT add_namespace_attribute( struct writer *writer, const WS_XML_STRING *prefix, const WS_XML_STRING *ns, BOOL single )",
+   "code": "static HRESULT add_namespace_attribute( struct writer *writer, const WS_XML_STRING *prefix,\n                                        const WS_XML_STRING *ns, BOOL single )\n{\n    WS_XML_ATTRIBUTE *attr;\n    WS_XML_ELEMENT_NODE *elem = &writer->current->hdr;\n    HRESULT hr;\n\n    if (!(attr = calloc( 1, sizeof(*attr) ))) return E_OUTOFMEMORY;\n\n    attr->singleQuote = !!single;\n    attr->isXmlNs = 1;\n    if (prefix && !(attr->prefix = dup_xml_string( prefix, writer->dict_do_lookup )))\n    {\n        free_attribute( attr );\n        return E_OUTOFMEMORY;\n    }\n    if (!(attr->ns = dup_xml_string( ns, writer->dict_do_lookup )))\n    {\n        free_attribute( attr );\n        return E_OUTOFMEMORY;\n    }\n    if ((hr = append_attribute( elem, attr )) != S_OK)\n    {\n        free_attribute( attr );\n        return hr;\n    }\n    return S_OK;\n}"
+  },
+  {
+   "name": "write_text_node",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 2902,
+   "end_line": 2945,
+   "static": true,
+   "called_from": [
+    "write_type_text"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:2969",
+    "dlls/webservices/writer.c:3006",
+    "dlls/webservices/writer.c:3044",
+    "dlls/webservices/writer.c:3082",
+    "dlls/webservices/writer.c:4709"
+   ],
+   "signature": "static HRESULT write_text_node( struct writer *writer, const WS_XML_TEXT *text )",
+   "code": "static HRESULT write_text_node( struct writer *writer, const WS_XML_TEXT *text )\n{\n    WS_XML_TEXT_NODE *node = (WS_XML_TEXT_NODE *)writer->current;\n    ULONG offset = 0;\n    HRESULT hr;\n\n    if ((hr = write_commit( writer )) != S_OK) return hr;\n    if (node_type( writer->current ) != WS_XML_NODE_TYPE_TEXT)\n    {\n        if ((hr = write_add_text_node( writer, text )) != S_OK) return hr;\n        node = (WS_XML_TEXT_NODE *)writer->current;\n    }\n    else\n    {\n        switch (writer->output_enc)\n        {\n        case WS_XML_WRITER_ENCODING_TYPE_TEXT:\n        {\n            WS_XML_UTF8_TEXT *new, *old = (WS_XML_UTF8_TEXT *)node->text;\n            offset = old->value.length;\n            if ((hr = text_to_utf8text( text, old, &offset, &new )) != S_OK) return hr;\n            free( old );\n            node->text = &new->text;\n            break;\n        }\n        case WS_XML_WRITER_ENCODING_TYPE_BINARY:\n        {\n            WS_XML_TEXT *new, *old = node->text;\n            if ((hr = text_to_text( text, old, &offset, &new )) != S_OK) return hr;\n            free( old );\n            node->text = new;\n            break;\n        }\n        default:\n            FIXME( \"unhandled output encoding %u\\n\", writer->output_enc );\n            return E_NOTIMPL;\n        }\n    }\n\n    if ((hr = write_text( writer, node->text, offset )) != S_OK) return hr;\n\n    writer->state = WRITER_STATE_TEXT;\n    return S_OK;\n}"
+  },
+  {
+   "name": "write_element_node",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 2278,
+   "end_line": 2287,
+   "static": true,
+   "called_from": [
+    "write_type_array",
+    "write_type_field"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:2313",
+    "dlls/webservices/writer.c:4075",
+    "dlls/webservices/writer.c:4253",
+    "dlls/webservices/writer.c:4703",
+    "dlls/webservices/writer.c:4941"
+   ],
+   "signature": "static HRESULT write_element_node( struct writer *writer, const WS_XML_STRING *prefix, const WS_XML_STRING *localname, const WS_XML_STRING *ns )",
+   "code": "static HRESULT write_element_node( struct writer *writer, const WS_XML_STRING *prefix,\n                                   const WS_XML_STRING *localname, const WS_XML_STRING *ns )\n{\n    HRESULT hr;\n    if ((hr = write_commit( writer )) != S_OK) return hr;\n    if ((hr = write_add_element_node( writer, prefix, localname, ns )) != S_OK) return hr;\n    if ((hr = write_add_endelement_node( writer, writer->current )) != S_OK) return hr;\n    writer->state = WRITER_STATE_STARTELEMENT;\n    return S_OK;\n}"
+  },
+  {
+   "name": "write_type_union",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3700,
+   "end_line": 3716,
+   "static": true,
+   "called_from": [
+    "write_type_array",
+    "write_type_field"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_type_union( struct writer *writer, const WS_UNION_DESCRIPTION *desc, WS_WRITE_OPTION option, const void *value, ULONG size )",
+   "code": "static HRESULT write_type_union( struct writer *writer, const WS_UNION_DESCRIPTION *desc, WS_WRITE_OPTION option,\n                                 const void *value, ULONG size )\n{\n    ULONG i;\n    const void *ptr;\n    int enum_value;\n    HRESULT hr;\n\n    if (size < sizeof(enum_value)) return E_INVALIDARG;\n    if ((hr = get_value_ptr( option, value, size, desc->size, &ptr )) != S_OK) return hr;\n\n    enum_value = *(int *)(char *)ptr + desc->enumOffset;\n    if (enum_value == desc->noneEnumValue && option == WS_WRITE_NILLABLE_VALUE) return S_OK;\n\n    if ((hr = find_index( desc, enum_value, &i )) != S_OK) return hr;\n    return write_type_field( writer, &desc->fields[i]->field, ptr, desc->fields[i]->field.offset );\n}"
+  },
+  {
+   "name": "write_type_array",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3721,
+   "end_line": 3758,
+   "static": true,
+   "called_from": [
+    "write_type_field"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:4919"
+   ],
+   "signature": "static HRESULT write_type_array( struct writer *writer, const WS_FIELD_DESCRIPTION *desc, const char *buf, ULONG count )",
+   "code": "static HRESULT write_type_array( struct writer *writer, const WS_FIELD_DESCRIPTION *desc, const char *buf,\n                                 ULONG count )\n{\n    HRESULT hr = S_OK;\n    ULONG i, size, offset = 0;\n    WS_WRITE_OPTION option;\n\n    if (!(option = get_field_write_option( desc->type, desc->options ))) return E_INVALIDARG;\n\n    /* wrapper element */\n    if (desc->localName && ((hr = write_element_node( writer, NULL, desc->localName, desc->ns )) != S_OK))\n        return hr;\n\n    if (option == WS_WRITE_REQUIRED_VALUE || option == WS_WRITE_NILLABLE_VALUE)\n        size = get_type_size( desc->type, desc->typeDescription );\n    else\n        size = sizeof(const void *);\n\n    for (i = 0; i < count; i++)\n    {\n        if (desc->type == WS_UNION_TYPE)\n        {\n            if ((hr = write_type_union( writer, desc->typeDescription, option, buf + offset, size )) != S_OK)\n                return hr;\n        }\n        else\n        {\n            if ((hr = write_element_node( writer, NULL, desc->itemLocalName, desc->itemNs )) != S_OK) return hr;\n            if ((hr = write_type( writer, WS_ELEMENT_TYPE_MAPPING, desc->type, desc->typeDescription, option,\n                                  buf + offset, size )) != S_OK) return hr;\n            if ((hr = write_endelement_node( writer )) != S_OK) return hr;\n        }\n        offset += size;\n    }\n\n    if (desc->localName) hr = write_endelement_node( writer );\n    return hr;\n}"
+  },
+  {
+   "name": "write_endelement_node",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1938,
+   "end_line": 1953,
+   "static": true,
+   "called_from": [
+    "write_type_array",
+    "write_type_field"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:1976",
+    "dlls/webservices/writer.c:4080",
+    "dlls/webservices/writer.c:4256",
+    "dlls/webservices/writer.c:4712",
+    "dlls/webservices/writer.c:4975"
+   ],
+   "signature": "static HRESULT write_endelement_node( struct writer *writer )",
+   "code": "static HRESULT write_endelement_node( struct writer *writer )\n{\n    struct node *node;\n    HRESULT hr;\n\n    if (!(node = write_find_startelement( writer ))) return WS_E_INVALID_FORMAT;\n    if (writer->state == WRITER_STATE_STARTELEMENT)\n    {\n        if ((hr = set_namespaces( writer )) != S_OK) return hr;\n        if ((hr = write_startelement( writer )) != S_OK) return hr;\n    }\n    if ((hr = write_close_element( writer, node )) != S_OK) return hr;\n    writer->current = node->parent;\n    writer->state   = WRITER_STATE_ENDELEMENT;\n    return S_OK;\n}"
+  },
+  {
+   "name": "text_to_utf8text",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1103,
+   "end_line": 1244,
+   "static": false,
+   "called_from": [
+    "write_add_text_node",
+    "write_set_attribute_value",
+    "write_text_bin",
+    "write_text_node"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:1280",
+    "dlls/webservices/writer.c:1303",
+    "dlls/webservices/reader.c:171",
+    "dlls/webservices/reader.c:250"
+   ],
+   "signature": "HRESULT text_to_utf8text( const WS_XML_TEXT *text, const WS_XML_UTF8_TEXT *old, ULONG *offset, WS_XML_UTF8_TEXT **ret )",
+   "code": "HRESULT text_to_utf8text( const WS_XML_TEXT *text, const WS_XML_UTF8_TEXT *old, ULONG *offset,\n                          WS_XML_UTF8_TEXT **ret )\n{\n    ULONG len_old = old ? old->value.length : 0;\n    if (offset) *offset = len_old;\n\n    switch (text->textType)\n    {\n    case WS_XML_TEXT_TYPE_UTF8:\n    {\n        const WS_XML_UTF8_TEXT *src = (const WS_XML_UTF8_TEXT *)text;\n\n        if (!(*ret = alloc_utf8_text( NULL, len_old + src->value.length ))) return E_OUTOFMEMORY;\n        if (old) memcpy( (*ret)->value.bytes, old->value.bytes, len_old );\n        memcpy( (*ret)->value.bytes + len_old, src->value.bytes, src->value.length );\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_UTF16:\n    {\n        const WS_XML_UTF16_TEXT *src = (const WS_XML_UTF16_TEXT *)text;\n        const WCHAR *str = (const WCHAR *)src->bytes;\n        ULONG len = src->byteCount / sizeof(WCHAR), len_utf8;\n\n        if (src->byteCount % sizeof(WCHAR)) return E_INVALIDARG;\n        len_utf8 = WideCharToMultiByte( CP_UTF8, 0, str, len, NULL, 0, NULL, NULL );\n        if (!(*ret = alloc_utf8_text( NULL, len_old + len_utf8 ))) return E_OUTOFMEMORY;\n        if (old) memcpy( (*ret)->value.bytes, old->value.bytes, len_old );\n        WideCharToMultiByte( CP_UTF8, 0, str, len, (char *)(*ret)->value.bytes + len_old, len_utf8, NULL, NULL );\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_BASE64:\n    {\n        const WS_XML_BASE64_TEXT *base64 = (const WS_XML_BASE64_TEXT *)text;\n        ULONG len = ((4 * base64->length / 3) + 3) & ~3;\n\n        if (!(*ret = alloc_utf8_text( NULL, len_old + len ))) return E_OUTOFMEMORY;\n        if (old) memcpy( (*ret)->value.bytes, old->value.bytes, len_old );\n        (*ret)->value.length = encode_base64( base64->bytes, base64->length, (*ret)->value.bytes + len_old ) + len_old;\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_BOOL:\n    {\n        const WS_XML_BOOL_TEXT *bool_text = (const WS_XML_BOOL_TEXT *)text;\n\n        if (!(*ret = alloc_utf8_text( NULL, len_old + 5 ))) return E_OUTOFMEMORY;\n        if (old) memcpy( (*ret)->value.bytes, old->value.bytes, len_old );\n        (*ret)->value.length = format_bool( &bool_text->value, (*ret)->value.bytes + len_old ) + len_old;\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_INT32:\n    {\n        const WS_XML_INT32_TEXT *int32_text = (const WS_XML_INT32_TEXT *)text;\n        unsigned char buf[12]; /* \"-2147483648\" */\n        ULONG len = format_int32( &int32_text->value, buf );\n\n        if (!(*ret = alloc_utf8_text( NULL, len_old + len ))) return E_OUTOFMEMORY;\n        if (old) memcpy( (*ret)->value.bytes, old->value.bytes, len_old );\n        memcpy( (*ret)->value.bytes + len_old, buf, len );\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_INT64:\n    {\n        const WS_XML_INT64_TEXT *int64_text = (const WS_XML_INT64_TEXT *)text;\n        unsigned char buf[21]; /* \"-9223372036854775808\" */\n        ULONG len = format_int64( &int64_text->value, buf );\n\n        if (!(*ret = alloc_utf8_text( NULL, len_old + len ))) return E_OUTOFMEMORY;\n        if (old) memcpy( (*ret)->value.bytes, old->value.bytes, len_old );\n        memcpy( (*ret)->value.bytes + len_old, buf, len );\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_UINT64:\n    {\n        const WS_XML_UINT64_TEXT *uint64_text = (const WS_XML_UINT64_TEXT *)text;\n        unsigned char buf[21]; /* \"18446744073709551615\" */\n        ULONG len = format_uint64( &uint64_text->value, buf );\n\n        if (!(*ret = alloc_utf8_text( NULL, len_old + len ))) return E_OUTOFMEMORY;\n        if (old) memcpy( (*ret)->value.bytes, old->value.bytes, len_old );\n        memcpy( (*ret)->value.bytes + len_old, buf, len );\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_DOUBLE:\n    {\n        const WS_XML_DOUBLE_TEXT *double_text = (const WS_XML_DOUBLE_TEXT *)text;\n        unsigned char buf[32]; /* \"-1.1111111111111111E-308\", oversized to address Valgrind limitations */\n        unsigned int fpword = _control87( 0, 0 );\n        ULONG len;\n\n        _control87( _MCW_EM | _RC_NEAR | _PC_64, _MCW_EM | _MCW_RC | _MCW_PC );\n        len = format_double( &double_text->value, buf );\n        _control87( fpword, _MCW_EM | _MCW_RC | _MCW_PC );\n        if (!len) return E_NOTIMPL;\n\n        if (!(*ret = alloc_utf8_text( NULL, len_old + len ))) return E_OUTOFMEMORY;\n        if (old) memcpy( (*ret)->value.bytes, old->value.bytes, len_old );\n        memcpy( (*ret)->value.bytes + len_old, buf, len );\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_GUID:\n    {\n        const WS_XML_GUID_TEXT *id = (const WS_XML_GUID_TEXT *)text;\n\n        if (!(*ret = alloc_utf8_text( NULL, len_old + 37 ))) return E_OUTOFMEMORY;\n        if (old) memcpy( (*ret)->value.bytes, old->value.bytes, len_old );\n        (*ret)->value.length = format_guid( &id->value, (*ret)->value.bytes + len_old ) + len_old;\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_UNIQUE_ID:\n    {\n        const WS_XML_UNIQUE_ID_TEXT *id = (const WS_XML_UNIQUE_ID_TEXT *)text;\n\n        if (!(*ret = alloc_utf8_text( NULL, len_old + 46 ))) return E_OUTOFMEMORY;\n        if (old) memcpy( (*ret)->value.bytes, old->value.bytes, len_old );\n        (*ret)->value.length = format_urn( &id->value, (*ret)->value.bytes + len_old ) + len_old;\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_DATETIME:\n    {\n        const WS_XML_DATETIME_TEXT *dt = (const WS_XML_DATETIME_TEXT *)text;\n\n        if (!(*ret = alloc_utf8_text( NULL, len_old + 34 ))) return E_OUTOFMEMORY;\n        if (old) memcpy( (*ret)->value.bytes, old->value.bytes, len_old );\n        (*ret)->value.length = format_datetime( &dt->value, (*ret)->value.bytes + len_old ) + len_old;\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_QNAME:\n    {\n        const WS_XML_QNAME_TEXT *qn = (const WS_XML_QNAME_TEXT *)text;\n        ULONG len = qn->localName->length;\n\n        if (qn->prefix && qn->prefix->length) len += qn->prefix->length + 1;\n        if (!(*ret = alloc_utf8_text( NULL, len_old + len ))) return E_OUTOFMEMORY;\n        if (old) memcpy( (*ret)->value.bytes, old->value.bytes, len_old );\n        (*ret)->value.length = format_qname( qn->prefix, qn->localName, (*ret)->value.bytes + len_old ) + len_old;\n        return S_OK;\n    }\n    default:\n        FIXME( \"unhandled text type %u\\n\", text->textType );\n        return E_NOTIMPL;\n    }\n}"
+  },
+  {
+   "name": "text_to_text",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 2320,
+   "end_line": 2444,
+   "static": false,
+   "called_from": [
+    "write_add_text_node",
+    "write_set_attribute_value",
+    "write_text_node"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/reader.c:167",
+    "dlls/webservices/reader.c:246"
+   ],
+   "signature": "HRESULT text_to_text( const WS_XML_TEXT *text, const WS_XML_TEXT *old, ULONG *offset, WS_XML_TEXT **ret )",
+   "code": "HRESULT text_to_text( const WS_XML_TEXT *text, const WS_XML_TEXT *old, ULONG *offset, WS_XML_TEXT **ret )\n{\n    if (offset) *offset = 0;\n    switch (text->textType)\n    {\n    case WS_XML_TEXT_TYPE_UTF8:\n    {\n        const WS_XML_UTF8_TEXT *utf8 = (const WS_XML_UTF8_TEXT *)text;\n        const WS_XML_UTF8_TEXT *utf8_old = (const WS_XML_UTF8_TEXT *)old;\n        WS_XML_UTF8_TEXT *new;\n        ULONG len = utf8->value.length, len_old = utf8_old ? utf8_old->value.length : 0;\n\n        if (!(new = alloc_utf8_text( NULL, len_old + len ))) return E_OUTOFMEMORY;\n        if (utf8_old) memcpy( new->value.bytes, utf8_old->value.bytes, len_old );\n        memcpy( new->value.bytes + len_old, utf8->value.bytes, len );\n        if (offset) *offset = len_old;\n        *ret = &new->text;\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_UTF16:\n    {\n        const WS_XML_UTF16_TEXT *utf16 = (const WS_XML_UTF16_TEXT *)text;\n        const WS_XML_UTF16_TEXT *utf16_old = (const WS_XML_UTF16_TEXT *)old;\n        WS_XML_UTF16_TEXT *new;\n        ULONG len = utf16->byteCount, len_old = utf16_old ? utf16_old->byteCount : 0;\n\n        if (utf16->byteCount % sizeof(WCHAR)) return E_INVALIDARG;\n        if (!(new = alloc_utf16_text( NULL, len_old + len ))) return E_OUTOFMEMORY;\n        if (utf16_old) memcpy( new->bytes, utf16_old->bytes, len_old );\n        memcpy( new->bytes + len_old, utf16->bytes, len );\n        if (offset) *offset = len_old;\n        *ret = &new->text;\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_BASE64:\n    {\n        const WS_XML_BASE64_TEXT *base64 = (const WS_XML_BASE64_TEXT *)text;\n        const WS_XML_BASE64_TEXT *base64_old = (const WS_XML_BASE64_TEXT *)old;\n        WS_XML_BASE64_TEXT *new;\n        ULONG len = base64->length, len_old = base64_old ? base64_old->length : 0;\n\n        if (!(new = alloc_base64_text( NULL, len_old + len ))) return E_OUTOFMEMORY;\n        if (base64_old) memcpy( new->bytes, base64_old->bytes, len_old );\n        memcpy( new->bytes + len_old, base64->bytes, len );\n        if (offset) *offset = len_old;\n        *ret = &new->text;\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_BOOL:\n    {\n        const WS_XML_BOOL_TEXT *bool_text = (const WS_XML_BOOL_TEXT *)text;\n        WS_XML_BOOL_TEXT *new;\n\n        if (!(new = alloc_bool_text( bool_text->value ))) return E_OUTOFMEMORY;\n        *ret = &new->text;\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_INT32:\n    {\n        const WS_XML_INT32_TEXT *int32_text = (const WS_XML_INT32_TEXT *)text;\n        WS_XML_INT32_TEXT *new;\n\n        if (!(new = alloc_int32_text( int32_text->value ))) return E_OUTOFMEMORY;\n        *ret = &new->text;\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_INT64:\n    {\n        const WS_XML_INT64_TEXT *int64_text = (const WS_XML_INT64_TEXT *)text;\n        WS_XML_INT64_TEXT *new;\n\n        if (!(new = alloc_int64_text( int64_text->value ))) return E_OUTOFMEMORY;\n        *ret = &new->text;\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_UINT64:\n    {\n        const WS_XML_UINT64_TEXT *uint64_text = (const WS_XML_UINT64_TEXT *)text;\n        WS_XML_UINT64_TEXT *new;\n\n        if (!(new = alloc_uint64_text( uint64_text->value ))) return E_OUTOFMEMORY;\n        *ret = &new->text;\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_DOUBLE:\n    {\n        const WS_XML_DOUBLE_TEXT *double_text = (const WS_XML_DOUBLE_TEXT *)text;\n        WS_XML_DOUBLE_TEXT *new;\n\n        if (!(new = alloc_double_text( double_text->value ))) return E_OUTOFMEMORY;\n        *ret = &new->text;\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_GUID:\n    {\n        const WS_XML_GUID_TEXT *id = (const WS_XML_GUID_TEXT *)text;\n        WS_XML_GUID_TEXT *new;\n\n        if (!(new = alloc_guid_text( &id->value ))) return E_OUTOFMEMORY;\n        *ret = &new->text;\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_UNIQUE_ID:\n    {\n        const WS_XML_UNIQUE_ID_TEXT *id = (const WS_XML_UNIQUE_ID_TEXT *)text;\n        WS_XML_UNIQUE_ID_TEXT *new;\n\n        if (!(new = alloc_unique_id_text( &id->value ))) return E_OUTOFMEMORY;\n        *ret = &new->text;\n        return S_OK;\n    }\n    case WS_XML_TEXT_TYPE_DATETIME:\n    {\n        const WS_XML_DATETIME_TEXT *dt = (const WS_XML_DATETIME_TEXT *)text;\n        WS_XML_DATETIME_TEXT *new;\n\n        if (!(new = alloc_datetime_text( &dt->value ))) return E_OUTOFMEMORY;\n        *ret = &new->text;\n        return S_OK;\n    }\n    default:\n        FIXME( \"unhandled text type %u\\n\", text->textType );\n        return E_NOTIMPL;\n    }\n}"
+  },
+  {
+   "name": "write_commit",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 2109,
+   "end_line": 2120,
+   "static": true,
+   "called_from": [
+    "write_element_node",
+    "write_text_node"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:2151",
+    "dlls/webservices/writer.c:4294",
+    "dlls/webservices/writer.c:4397",
+    "dlls/webservices/writer.c:4662"
+   ],
+   "signature": "static HRESULT write_commit( struct writer *writer )",
+   "code": "static HRESULT write_commit( struct writer *writer )\n{\n    if (writer->state == WRITER_STATE_STARTELEMENT)\n    {\n        HRESULT hr;\n        if ((hr = set_namespaces( writer )) != S_OK) return hr;\n        if ((hr = write_startelement( writer )) != S_OK) return hr;\n        if ((hr = write_endstartelement( writer )) != S_OK) return hr;\n        writer->state = WRITER_STATE_ENDSTARTELEMENT;\n    }\n    return S_OK;\n}"
+  },
+  {
+   "name": "write_add_text_node",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 2500,
+   "end_line": 2545,
+   "static": true,
+   "called_from": [
+    "write_text_node"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:4404"
+   ],
+   "signature": "static HRESULT write_add_text_node( struct writer *writer, const WS_XML_TEXT *value )",
+   "code": "static HRESULT write_add_text_node( struct writer *writer, const WS_XML_TEXT *value )\n{\n    struct node *node;\n    WS_XML_TEXT_NODE *text;\n    HRESULT hr;\n\n    if (node_type( writer->current ) != WS_XML_NODE_TYPE_ELEMENT &&\n        node_type( writer->current ) != WS_XML_NODE_TYPE_BOF &&\n        node_type( writer->current ) != WS_XML_NODE_TYPE_CDATA) return WS_E_INVALID_FORMAT;\n\n    if (!(node = alloc_node( WS_XML_NODE_TYPE_TEXT ))) return E_OUTOFMEMORY;\n    text = (WS_XML_TEXT_NODE *)node;\n\n    switch (writer->output_enc)\n    {\n    case WS_XML_WRITER_ENCODING_TYPE_TEXT:\n    {\n        WS_XML_UTF8_TEXT *new;\n        if ((hr = text_to_utf8text( value, NULL, NULL, &new )) != S_OK)\n        {\n            free( node );\n            return hr;\n        }\n        text->text = &new->text;\n        break;\n    }\n    case WS_XML_WRITER_ENCODING_TYPE_BINARY:\n    {\n        WS_XML_TEXT *new;\n        if ((hr = text_to_text( value, NULL, NULL, &new )) != S_OK)\n        {\n            free( node );\n            return hr;\n        }\n        text->text = new;\n        break;\n    }\n    default:\n        FIXME( \"unhandled output encoding %u\\n\", writer->output_enc );\n        free( node );\n        return E_NOTIMPL;\n    }\n\n    write_insert_node( writer, writer->current, node );\n    return S_OK;\n}"
+  },
+  {
+   "name": "write_text",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 2888,
+   "end_line": 2900,
+   "static": true,
+   "called_from": [
+    "write_text_node"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:4405",
+    "dlls/webservices/writer.c:4780"
+   ],
+   "signature": "static HRESULT write_text( struct writer *writer, const WS_XML_TEXT *text, ULONG offset )",
+   "code": "static HRESULT write_text( struct writer *writer, const WS_XML_TEXT *text, ULONG offset )\n{\n    if (!writer->current->parent) return WS_E_INVALID_FORMAT;\n\n    switch (writer->output_enc)\n    {\n    case WS_XML_WRITER_ENCODING_TYPE_TEXT:   return write_text_text( writer, text, offset );\n    case WS_XML_WRITER_ENCODING_TYPE_BINARY: return write_text_bin( writer, text, offset );\n    default:\n        ERR( \"unhandled encoding %u\\n\", writer->output_enc );\n        return WS_E_NOT_SUPPORTED;\n    }\n}"
+  },
+  {
+   "name": "write_add_element_node",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 2233,
+   "end_line": 2267,
+   "static": true,
+   "called_from": [
+    "write_element_node"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_add_element_node( struct writer *writer, const WS_XML_STRING *prefix, const WS_XML_STRING *localname, const WS_XML_STRING *ns )",
+   "code": "static HRESULT write_add_element_node( struct writer *writer, const WS_XML_STRING *prefix,\n                                       const WS_XML_STRING *localname, const WS_XML_STRING *ns )\n{\n    struct node *node, *parent;\n    WS_XML_ELEMENT_NODE *elem;\n\n    if (!(parent = find_parent( writer ))) return WS_E_INVALID_FORMAT;\n\n    if (!prefix && node_type( parent ) == WS_XML_NODE_TYPE_ELEMENT)\n    {\n        elem = &parent->hdr;\n        if (WsXmlStringEquals( ns, elem->ns, NULL ) == S_OK) prefix = elem->prefix;\n    }\n\n    if (!(node = alloc_node( WS_XML_NODE_TYPE_ELEMENT ))) return E_OUTOFMEMORY;\n    elem = &node->hdr;\n\n    if (prefix && !(elem->prefix = dup_xml_string( prefix, writer->dict_do_lookup )))\n    {\n        free_node( node );\n        return E_OUTOFMEMORY;\n    }\n    if (!(elem->localName = dup_xml_string( localname, writer->dict_do_lookup )))\n    {\n        free_node( node );\n        return E_OUTOFMEMORY;\n    }\n    if (!(elem->ns = dup_xml_string( ns, writer->dict_do_lookup )))\n    {\n        free_node( node );\n        return E_OUTOFMEMORY;\n    }\n    write_insert_node( writer, parent, node );\n    return S_OK;\n}"
+  },
+  {
+   "name": "write_add_endelement_node",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 2269,
+   "end_line": 2276,
+   "static": true,
+   "called_from": [
+    "write_element_node"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_add_endelement_node( struct writer *writer, struct node *parent )",
+   "code": "static HRESULT write_add_endelement_node( struct writer *writer, struct node *parent )\n{\n    struct node *node;\n    if (!(node = alloc_node( WS_XML_NODE_TYPE_END_ELEMENT ))) return E_OUTOFMEMORY;\n    node->parent = parent;\n    list_add_tail( &parent->children, &node->entry );\n    return S_OK;\n}"
+  },
+  {
+   "name": "find_index",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3662,
+   "end_line": 3696,
+   "static": true,
+   "called_from": [
+    "write_type_union"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT find_index( const WS_UNION_DESCRIPTION *desc, int value, ULONG *idx )",
+   "code": "static HRESULT find_index( const WS_UNION_DESCRIPTION *desc, int value, ULONG *idx )\n{\n    ULONG i;\n\n    if (desc->valueIndices)\n    {\n        int c, min = 0, max = desc->fieldCount - 1;\n        while (min <= max)\n        {\n            i = (min + max) / 2;\n            c = value - desc->fields[desc->valueIndices[i]]->value;\n            if (c < 0)\n                max = i - 1;\n            else if (c > 0)\n                min = i + 1;\n            else\n            {\n                *idx = desc->valueIndices[i];\n                return S_OK;\n            }\n        }\n        return WS_E_INVALID_FORMAT;\n    }\n\n    /* fall back to linear search */\n    for (i = 0; i < desc->fieldCount; i++)\n    {\n        if (desc->fields[i]->value == value)\n        {\n            *idx = i;\n            return S_OK;\n        }\n    }\n    return WS_E_INVALID_FORMAT;\n}"
+  },
+  {
+   "name": "get_field_write_option",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 3618,
+   "end_line": 3660,
+   "static": true,
+   "called_from": [
+    "write_type_array"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static WS_WRITE_OPTION get_field_write_option( WS_TYPE type, ULONG options )",
+   "code": "static WS_WRITE_OPTION get_field_write_option( WS_TYPE type, ULONG options )\n{\n    if (options & WS_FIELD_POINTER)\n    {\n        if (options & (WS_FIELD_OPTIONAL|WS_FIELD_NILLABLE|WS_FIELD_NILLABLE_ITEM)) return WS_WRITE_NILLABLE_POINTER;\n        return WS_WRITE_REQUIRED_POINTER;\n    }\n\n    switch (type)\n    {\n    case WS_BOOL_TYPE:\n    case WS_INT8_TYPE:\n    case WS_INT16_TYPE:\n    case WS_INT32_TYPE:\n    case WS_INT64_TYPE:\n    case WS_UINT8_TYPE:\n    case WS_UINT16_TYPE:\n    case WS_UINT32_TYPE:\n    case WS_UINT64_TYPE:\n    case WS_DOUBLE_TYPE:\n    case WS_DATETIME_TYPE:\n    case WS_GUID_TYPE:\n    case WS_UNIQUE_ID_TYPE:\n    case WS_STRING_TYPE:\n    case WS_BYTES_TYPE:\n    case WS_XML_STRING_TYPE:\n    case WS_XML_QNAME_TYPE:\n    case WS_STRUCT_TYPE:\n    case WS_ENUM_TYPE:\n    case WS_UNION_TYPE:\n        if (options & (WS_FIELD_OPTIONAL|WS_FIELD_NILLABLE)) return WS_WRITE_NILLABLE_VALUE;\n        return WS_WRITE_REQUIRED_VALUE;\n\n    case WS_WSZ_TYPE:\n    case WS_DESCRIPTION_TYPE:\n        if (options & (WS_FIELD_OPTIONAL|WS_FIELD_NILLABLE)) return WS_WRITE_NILLABLE_POINTER;\n        return WS_WRITE_REQUIRED_POINTER;\n\n    default:\n        FIXME( \"unhandled type %u\\n\", type );\n        return 0;\n    }\n}"
+  },
+  {
+   "name": "write_find_startelement",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1861,
+   "end_line": 1869,
+   "static": true,
+   "called_from": [
+    "write_endelement_node"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static struct node *write_find_startelement( struct writer *writer )",
+   "code": "static struct node *write_find_startelement( struct writer *writer )\n{\n    struct node *node;\n    for (node = writer->current; node; node = node->parent)\n    {\n        if (node_type( node ) == WS_XML_NODE_TYPE_ELEMENT) return node;\n    }\n    return NULL;\n}"
+  },
+  {
+   "name": "set_namespaces",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1690,
+   "end_line": 1710,
+   "static": true,
+   "called_from": [
+    "write_commit",
+    "write_endelement_node"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:2027"
+   ],
+   "signature": "static HRESULT set_namespaces( struct writer *writer )",
+   "code": "static HRESULT set_namespaces( struct writer *writer )\n{\n    WS_XML_ELEMENT_NODE *elem = &writer->current->hdr;\n    HRESULT hr;\n    ULONG i;\n\n    if (elem->ns->length && !namespace_in_scope( elem, elem->prefix, elem->ns ))\n    {\n        if ((hr = add_namespace_attribute( writer, elem->prefix, elem->ns, FALSE )) != S_OK) return hr;\n        if ((hr = set_current_namespace( writer, elem->ns )) != S_OK) return hr;\n    }\n\n    for (i = 0; i < elem->attributeCount; i++)\n    {\n        const WS_XML_ATTRIBUTE *attr = elem->attributes[i];\n        if (!attr->ns->length || namespace_in_scope( elem, attr->prefix, attr->ns )) continue;\n        if ((hr = add_namespace_attribute( writer, attr->prefix, attr->ns, FALSE )) != S_OK) return hr;\n    }\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "write_startelement",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1849,
+   "end_line": 1859,
+   "static": true,
+   "called_from": [
+    "write_commit",
+    "write_endelement_node"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:2028",
+    "dlls/webservices/writer.c:4773"
+   ],
+   "signature": "static HRESULT write_startelement( struct writer *writer )",
+   "code": "static HRESULT write_startelement( struct writer *writer )\n{\n    switch (writer->output_enc)\n    {\n    case WS_XML_WRITER_ENCODING_TYPE_TEXT:   return write_startelement_text( writer );\n    case WS_XML_WRITER_ENCODING_TYPE_BINARY: return write_startelement_bin( writer );\n    default:\n        ERR( \"unhandled encoding %u\\n\", writer->output_enc );\n        return WS_E_NOT_SUPPORTED;\n    }\n}"
+  },
+  {
+   "name": "write_close_element",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1931,
+   "end_line": 1936,
+   "static": true,
+   "called_from": [
+    "write_endelement_node"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:4785"
+   ],
+   "signature": "static HRESULT write_close_element( struct writer *writer, struct node *node )",
+   "code": "static HRESULT write_close_element( struct writer *writer, struct node *node )\n{\n    WS_XML_ELEMENT_NODE *elem = &node->hdr;\n    elem->isEmpty = is_empty_element( node );\n    return write_endelement( writer, elem );\n}"
+  },
+  {
+   "name": "encode_base64",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1071,
+   "end_line": 1101,
+   "static": true,
+   "called_from": [
+    "text_to_utf8text"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static ULONG encode_base64( const unsigned char *bin, ULONG len, unsigned char *buf )",
+   "code": "static ULONG encode_base64( const unsigned char *bin, ULONG len, unsigned char *buf )\n{\n    static const char base64[] = \"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/\";\n    ULONG i = 0, x;\n\n    while (len > 0)\n    {\n        buf[i++] = base64[(bin[0] & 0xfc) >> 2];\n        x = (bin[0] & 3) << 4;\n        if (len == 1)\n        {\n            buf[i++] = base64[x];\n            buf[i++] = '=';\n            buf[i++] = '=';\n            break;\n        }\n        buf[i++] = base64[x | ((bin[1] & 0xf0) >> 4)];\n        x = (bin[1] & 0x0f) << 2;\n        if (len == 2)\n        {\n            buf[i++] = base64[x];\n            buf[i++] = '=';\n            break;\n        }\n        buf[i++] = base64[x | ((bin[2] & 0xc0) >> 6)];\n        buf[i++] = base64[bin[2] & 0x3f];\n        bin += 3;\n        len -= 3;\n    }\n    return i;\n}"
+  },
+  {
+   "name": "format_bool",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 867,
+   "end_line": 877,
+   "static": true,
+   "called_from": [
+    "text_to_utf8text"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static ULONG format_bool( const BOOL *ptr, unsigned char *buf )",
+   "code": "static ULONG format_bool( const BOOL *ptr, unsigned char *buf )\n{\n    static const unsigned char bool_true[] = {'t','r','u','e'}, bool_false[] = {'f','a','l','s','e'};\n    if (*ptr)\n    {\n        memcpy( buf, bool_true, sizeof(bool_true) );\n        return sizeof(bool_true);\n    }\n    memcpy( buf, bool_false, sizeof(bool_false) );\n    return sizeof(bool_false);\n}"
+  },
+  {
+   "name": "format_int32",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 879,
+   "end_line": 882,
+   "static": true,
+   "called_from": [
+    "text_to_utf8text"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static ULONG format_int32( const INT32 *ptr, unsigned char *buf )",
+   "code": "static ULONG format_int32( const INT32 *ptr, unsigned char *buf )\n{\n    return wsprintfA( (char *)buf, \"%d\", *ptr );\n}"
+  },
+  {
+   "name": "format_int64",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 884,
+   "end_line": 887,
+   "static": true,
+   "called_from": [
+    "text_to_utf8text"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static ULONG format_int64( const INT64 *ptr, unsigned char *buf )",
+   "code": "static ULONG format_int64( const INT64 *ptr, unsigned char *buf )\n{\n    return wsprintfA( (char *)buf, \"%I64d\", *ptr );\n}"
+  },
+  {
+   "name": "format_uint64",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 889,
+   "end_line": 892,
+   "static": true,
+   "called_from": [
+    "text_to_utf8text"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static ULONG format_uint64( const UINT64 *ptr, unsigned char *buf )",
+   "code": "static ULONG format_uint64( const UINT64 *ptr, unsigned char *buf )\n{\n    return wsprintfA( (char *)buf, \"%I64u\", *ptr );\n}"
+  },
+  {
+   "name": "format_double",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 894,
+   "end_line": 978,
+   "static": true,
+   "called_from": [
+    "text_to_utf8text"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static ULONG format_double( const double *ptr, unsigned char *buf )",
+   "code": "static ULONG format_double( const double *ptr, unsigned char *buf )\n{\n    static const double precision = 0.0000000000000001;\n    unsigned char *p = buf;\n    double val = *ptr;\n    int neg, mag, mag2 = 0, use_exp;\n\n    if (isnan( val ))\n    {\n        memcpy( buf, \"NaN\", 3 );\n        return 3;\n    }\n    if (isinf( val ))\n    {\n        if (val < 0)\n        {\n            memcpy( buf, \"-INF\", 4 );\n            return 4;\n        }\n        memcpy( buf, \"INF\", 3 );\n        return 3;\n    }\n    if (val == 0.0)\n    {\n        *p = '0';\n        return 1;\n    }\n\n    if ((neg = val < 0))\n    {\n        *p++ = '-';\n        val = -val;\n    }\n\n    mag = log10( val );\n    use_exp = (mag >= 15 || (neg && mag >= 1) || mag <= -1);\n    if (use_exp)\n    {\n        if (mag < 0) mag -= 1;\n        val = val / pow( 10.0, mag );\n        mag2 = mag;\n        mag = 0;\n    }\n    else if (mag < 1) mag = 0;\n\n    while (val > precision || mag >= 0)\n    {\n        double weight = pow( 10.0, mag );\n        if (weight > 0 && !isinf( weight ))\n        {\n            int digit = floor( val / weight );\n            val -= digit * weight;\n            *(p++) = '0' + digit;\n        }\n        if (!mag && val > precision) *(p++) = '.';\n        mag--;\n    }\n\n    if (use_exp)\n    {\n        int i, j;\n        *(p++) = 'E';\n        if (mag2 > 0) *(p++) = '+';\n        else\n        {\n            *(p++) = '-';\n            mag2 = -mag2;\n        }\n        mag = 0;\n        while (mag2 > 0)\n        {\n            *(p++) = '0' + mag2 % 10;\n            mag2 /= 10;\n            mag++;\n        }\n        for (i = -mag, j = -1; i < j; i++, j--)\n        {\n            p[i] ^= p[j];\n            p[j] ^= p[i];\n            p[i] ^= p[j];\n        }\n    }\n\n    return p - buf;\n}"
+  },
+  {
+   "name": "format_guid",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1042,
+   "end_line": 1048,
+   "static": true,
+   "called_from": [
+    "text_to_utf8text"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static ULONG format_guid( const GUID *ptr, unsigned char *buf )",
+   "code": "static ULONG format_guid( const GUID *ptr, unsigned char *buf )\n{\n    static const char fmt[] = \"%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x\";\n    return sprintf( (char *)buf, fmt, ptr->Data1, ptr->Data2, ptr->Data3,\n                    ptr->Data4[0], ptr->Data4[1], ptr->Data4[2], ptr->Data4[3],\n                    ptr->Data4[4], ptr->Data4[5], ptr->Data4[6], ptr->Data4[7] );\n}"
+  },
+  {
+   "name": "format_urn",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1050,
+   "end_line": 1056,
+   "static": true,
+   "called_from": [
+    "text_to_utf8text"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static ULONG format_urn( const GUID *ptr, unsigned char *buf )",
+   "code": "static ULONG format_urn( const GUID *ptr, unsigned char *buf )\n{\n    static const char fmt[] = \"urn:uuid:%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x\";\n    return sprintf( (char *)buf, fmt, ptr->Data1, ptr->Data2, ptr->Data3,\n                    ptr->Data4[0], ptr->Data4[1], ptr->Data4[2], ptr->Data4[3],\n                    ptr->Data4[4], ptr->Data4[5], ptr->Data4[6], ptr->Data4[7] );\n}"
+  },
+  {
+   "name": "format_datetime",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 986,
+   "end_line": 1040,
+   "static": true,
+   "called_from": [
+    "text_to_utf8text"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static ULONG format_datetime( const WS_DATETIME *ptr, unsigned char *buf )",
+   "code": "static ULONG format_datetime( const WS_DATETIME *ptr, unsigned char *buf )\n{\n    static const char fmt[] = \"%04u-%02u-%02uT%02u:%02u:%02u\";\n    int day, hour, min, sec, sec_frac, month = 0, year = 1, tz_hour;\n    unsigned __int64 ticks, day_ticks;\n    ULONG len;\n\n    if (ptr->format == WS_DATETIME_FORMAT_LOCAL &&\n        ptr->ticks >= TICKS_1601_01_01 + TZ_OFFSET * TICKS_PER_HOUR)\n    {\n        ticks = ptr->ticks - TZ_OFFSET * TICKS_PER_HOUR;\n        tz_hour = TZ_OFFSET;\n    }\n    else\n    {\n        ticks = ptr->ticks;\n        tz_hour = 0;\n    }\n    day = ticks / TICKS_PER_DAY;\n    day_ticks = ticks % TICKS_PER_DAY;\n    hour = day_ticks / TICKS_PER_HOUR;\n    min = (day_ticks % TICKS_PER_HOUR) / TICKS_PER_MIN;\n    sec = (day_ticks % TICKS_PER_MIN) / TICKS_PER_SEC;\n    sec_frac = day_ticks % TICKS_PER_SEC;\n\n    while (day >= year_size( year ))\n    {\n        day -= year_size( year );\n        year++;\n    }\n    while (day >= month_days[leap_year( year )][month])\n    {\n        day -= month_days[leap_year( year )][month];\n        month++;\n    }\n\n    len = sprintf( (char *)buf, fmt, year, month + 1, day + 1, hour, min, sec );\n    if (sec_frac)\n    {\n        static const char fmt_frac[] = \".%07u\";\n        len += sprintf( (char *)buf + len, fmt_frac, sec_frac );\n        while (buf[len - 1] == '0') len--;\n    }\n    if (ptr->format == WS_DATETIME_FORMAT_UTC)\n    {\n        buf[len++] = 'Z';\n    }\n    else if (ptr->format == WS_DATETIME_FORMAT_LOCAL)\n    {\n        static const char fmt_tz[] = \"%c%02u:00\";\n        len += sprintf( (char *)buf + len, fmt_tz, tz_hour ? '-' : '+', tz_hour );\n    }\n\n    return len;\n}"
+  },
+  {
+   "name": "format_qname",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1058,
+   "end_line": 1069,
+   "static": true,
+   "called_from": [
+    "text_to_utf8text"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static ULONG format_qname( const WS_XML_STRING *prefix, const WS_XML_STRING *localname, unsigned char *buf )",
+   "code": "static ULONG format_qname( const WS_XML_STRING *prefix, const WS_XML_STRING *localname, unsigned char *buf )\n{\n    ULONG len = 0;\n    if (prefix && prefix->length)\n    {\n        memcpy( buf, prefix->bytes, prefix->length );\n        len += prefix->length;\n        buf[len++] = ':';\n    }\n    memcpy( buf + len, localname->bytes, localname->length );\n    return len + localname->length;\n}"
+  },
+  {
+   "name": "write_endstartelement",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1991,
+   "end_line": 2001,
+   "static": true,
+   "called_from": [
+    "write_commit"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:2029",
+    "dlls/webservices/writer.c:4771",
+    "dlls/webservices/writer.c:4778",
+    "dlls/webservices/writer.c:4790",
+    "dlls/webservices/writer.c:4797"
+   ],
+   "signature": "static HRESULT write_endstartelement( struct writer *writer )",
+   "code": "static HRESULT write_endstartelement( struct writer *writer )\n{\n    switch (writer->output_enc)\n    {\n    case WS_XML_WRITER_ENCODING_TYPE_TEXT:   return write_endstartelement_text( writer );\n    case WS_XML_WRITER_ENCODING_TYPE_BINARY: return S_OK;\n    default:\n        ERR( \"unhandled encoding %u\\n\", writer->output_enc );\n        return WS_E_NOT_SUPPORTED;\n    }\n}"
+  },
+  {
+   "name": "write_insert_node",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 150,
+   "end_line": 155,
+   "static": true,
+   "called_from": [
+    "write_add_element_node",
+    "write_add_text_node"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:2127",
+    "dlls/webservices/writer.c:4621",
+    "dlls/webservices/writer.c:4880"
+   ],
+   "signature": "static void write_insert_node( struct writer *writer, struct node *parent, struct node *node )",
+   "code": "static void write_insert_node( struct writer *writer, struct node *parent, struct node *node )\n{\n    node->parent = parent;\n    list_add_before( list_tail( &parent->children ), &node->entry );\n    writer->current = node;\n}"
+  },
+  {
+   "name": "write_text_text",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 2547,
+   "end_line": 2565,
+   "static": true,
+   "called_from": [
+    "write_text"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_text_text( struct writer *writer, const WS_XML_TEXT *text, ULONG offset )",
+   "code": "static HRESULT write_text_text( struct writer *writer, const WS_XML_TEXT *text, ULONG offset )\n{\n    const WS_XML_UTF8_TEXT *utf8 = (const WS_XML_UTF8_TEXT *)text;\n    HRESULT hr;\n\n    if (node_type( writer->current->parent ) == WS_XML_NODE_TYPE_ELEMENT)\n    {\n        const struct escape *escapes[3] = { &escape_lt, &escape_gt, &escape_amp };\n        return write_bytes_escape( writer, utf8->value.bytes + offset, utf8->value.length - offset, escapes, 3 );\n    }\n    else if (node_type( writer->current->parent ) == WS_XML_NODE_TYPE_CDATA)\n    {\n        if ((hr = write_grow_buffer( writer, utf8->value.length - offset )) != S_OK) return hr;\n        write_bytes( writer, utf8->value.bytes + offset, utf8->value.length - offset );\n        return S_OK;\n    }\n\n    return WS_E_INVALID_FORMAT;\n}"
+  },
+  {
+   "name": "write_text_bin",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 2658,
+   "end_line": 2886,
+   "static": true,
+   "called_from": [
+    "write_text"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_text_bin( struct writer *writer, const WS_XML_TEXT *text, ULONG offset )",
+   "code": "static HRESULT write_text_bin( struct writer *writer, const WS_XML_TEXT *text, ULONG offset )\n{\n    enum record_type type;\n    BOOL use_dict = FALSE;\n    HRESULT hr;\n    ULONG id;\n\n    if (offset)\n    {\n        FIXME( \"no support for appending text in binary mode\\n\" );\n        return E_NOTIMPL;\n    }\n\n    if (text->textType == WS_XML_TEXT_TYPE_UTF8)\n    {\n        const WS_XML_UTF8_TEXT *utf8 = (const WS_XML_UTF8_TEXT *)text;\n        use_dict = get_string_id( writer, &utf8->value, &id );\n    }\n\n    switch ((type = get_text_record_type( text, use_dict )))\n    {\n    case RECORD_CHARS8_TEXT_WITH_ENDELEMENT:\n    {\n        const WS_XML_UTF8_TEXT *text_utf8;\n        WS_XML_UTF8_TEXT *new = NULL;\n        UINT8 len;\n\n        if (text->textType == WS_XML_TEXT_TYPE_UTF8) text_utf8 = (const WS_XML_UTF8_TEXT *)text;\n        else\n        {\n            if ((hr = text_to_utf8text( text, NULL, NULL, &new )) != S_OK) return hr;\n            text_utf8 = new;\n        }\n        len = text_utf8->value.length;\n        if ((hr = write_grow_buffer( writer, 1 + sizeof(len) + len )) != S_OK)\n        {\n            free( new );\n            return hr;\n        }\n        write_char( writer, type );\n        write_char( writer, len );\n        write_bytes( writer, text_utf8->value.bytes, len );\n        free( new );\n        return S_OK;\n    }\n    case RECORD_CHARS16_TEXT_WITH_ENDELEMENT:\n    {\n        const WS_XML_UTF8_TEXT *text_utf8;\n        WS_XML_UTF8_TEXT *new = NULL;\n        UINT16 len;\n\n        if (text->textType == WS_XML_TEXT_TYPE_UTF8) text_utf8 = (const WS_XML_UTF8_TEXT *)text;\n        else\n        {\n            if ((hr = text_to_utf8text( text, NULL, NULL, &new )) != S_OK) return hr;\n            text_utf8 = new;\n        }\n        len = text_utf8->value.length;\n        if ((hr = write_grow_buffer( writer, 1 + sizeof(len) + len )) != S_OK)\n        {\n            free( new );\n            return hr;\n        }\n        write_char( writer, type );\n        write_bytes( writer, (const BYTE *)&len, sizeof(len) );\n        write_bytes( writer, text_utf8->value.bytes, len );\n        free( new );\n        return S_OK;\n    }\n    case RECORD_BYTES8_TEXT:\n    {\n        const WS_XML_BASE64_TEXT *text_base64 = (const WS_XML_BASE64_TEXT *)text;\n        UINT8 rem = text_base64->length % 3, len = text_base64->length - rem;\n\n        if (len)\n        {\n            if ((hr = write_grow_buffer( writer, 1 + sizeof(len) + len )) != S_OK) return hr;\n            write_char( writer, rem ? RECORD_BYTES8_TEXT : RECORD_BYTES8_TEXT_WITH_ENDELEMENT );\n            write_char( writer, len );\n            write_bytes( writer, text_base64->bytes, len );\n        }\n        if (rem)\n        {\n            if ((hr = write_grow_buffer( writer, 3 )) != S_OK) return hr;\n            write_char( writer, RECORD_BYTES8_TEXT_WITH_ENDELEMENT );\n            write_char( writer, rem );\n            write_bytes( writer, (const BYTE *)text_base64->bytes + len, rem );\n        }\n        return S_OK;\n    }\n    case RECORD_BYTES16_TEXT:\n    {\n        const WS_XML_BASE64_TEXT *text_base64 = (const WS_XML_BASE64_TEXT *)text;\n        UINT16 rem = text_base64->length % 3, len = text_base64->length - rem;\n\n        if (len)\n        {\n            if ((hr = write_grow_buffer( writer, 1 + sizeof(len) + len )) != S_OK) return hr;\n            write_char( writer, rem ? RECORD_BYTES16_TEXT : RECORD_BYTES16_TEXT_WITH_ENDELEMENT );\n            write_bytes( writer, (const BYTE *)&len, sizeof(len) );\n            write_bytes( writer, text_base64->bytes, len );\n        }\n        if (rem)\n        {\n            if ((hr = write_grow_buffer( writer, 3 )) != S_OK) return hr;\n            write_char( writer, RECORD_BYTES8_TEXT_WITH_ENDELEMENT );\n            write_char( writer, rem );\n            write_bytes( writer, (const BYTE *)text_base64->bytes + len, rem );\n        }\n        return S_OK;\n    }\n    case RECORD_BYTES32_TEXT:\n    {\n        const WS_XML_BASE64_TEXT *text_base64 = (const WS_XML_BASE64_TEXT *)text;\n        UINT32 rem = text_base64->length % 3, len = text_base64->length - rem;\n        if (len)\n        {\n            if ((hr = write_grow_buffer( writer, 1 + sizeof(len) + len )) != S_OK) return hr;\n            write_char( writer, rem ? RECORD_BYTES32_TEXT : RECORD_BYTES32_TEXT_WITH_ENDELEMENT );\n            write_bytes( writer, (const BYTE *)&len, sizeof(len) );\n            write_bytes( writer, text_base64->bytes, len );\n        }\n        if (rem)\n        {\n            if ((hr = write_grow_buffer( writer, 3 )) != S_OK) return hr;\n            write_char( writer, RECORD_BYTES8_TEXT_WITH_ENDELEMENT );\n            write_char( writer, rem );\n            write_bytes( writer, (const BYTE *)text_base64->bytes + len, rem );\n        }\n        return S_OK;\n    }\n    case RECORD_ZERO_TEXT_WITH_ENDELEMENT:\n    case RECORD_ONE_TEXT_WITH_ENDELEMENT:\n    case RECORD_FALSE_TEXT_WITH_ENDELEMENT:\n    case RECORD_TRUE_TEXT_WITH_ENDELEMENT:\n    {\n        if ((hr = write_grow_buffer( writer, 1 )) != S_OK) return hr;\n        write_char( writer, type );\n        return S_OK;\n    }\n    case RECORD_INT8_TEXT_WITH_ENDELEMENT:\n    {\n        INT8 val = get_text_value_int( text );\n        if ((hr = write_grow_buffer( writer, 1 + sizeof(val) )) != S_OK) return hr;\n        write_char( writer, type );\n        write_char( writer, val );\n        return S_OK;\n    }\n    case RECORD_INT16_TEXT_WITH_ENDELEMENT:\n    {\n        INT16 val = get_text_value_int( text );\n        if ((hr = write_grow_buffer( writer, 1 + sizeof(val) )) != S_OK) return hr;\n        write_char( writer, type );\n        write_bytes( writer, (const BYTE *)&val, sizeof(val) );\n        return S_OK;\n    }\n    case RECORD_INT32_TEXT_WITH_ENDELEMENT:\n    {\n        INT32 val = get_text_value_int( text );\n        if ((hr = write_grow_buffer( writer, 1 + sizeof(val) )) != S_OK) return hr;\n        write_char( writer, type );\n        write_bytes( writer, (const BYTE *)&val, sizeof(val) );\n        return S_OK;\n    }\n    case RECORD_INT64_TEXT_WITH_ENDELEMENT:\n    {\n        INT64 val = get_text_value_int( text );\n        if ((hr = write_grow_buffer( writer, 1 + sizeof(val) )) != S_OK) return hr;\n        write_char( writer, type );\n        write_bytes( writer, (const BYTE *)&val, sizeof(val) );\n        return S_OK;\n    }\n    case RECORD_UINT64_TEXT_WITH_ENDELEMENT:\n    {\n        WS_XML_UINT64_TEXT *text_uint64 = (WS_XML_UINT64_TEXT *)text;\n        if ((hr = write_grow_buffer( writer, 1 + sizeof(text_uint64->value) )) != S_OK) return hr;\n        write_char( writer, type );\n        write_bytes( writer, (const BYTE *)&text_uint64->value, sizeof(text_uint64->value) );\n        return S_OK;\n    }\n    case RECORD_DOUBLE_TEXT_WITH_ENDELEMENT:\n    {\n        WS_XML_DOUBLE_TEXT *text_double = (WS_XML_DOUBLE_TEXT *)text;\n        if ((hr = write_grow_buffer( writer, 1 + sizeof(text_double->value) )) != S_OK) return hr;\n        write_char( writer, type );\n        write_bytes( writer, (const BYTE *)&text_double->value, sizeof(text_double->value) );\n        return S_OK;\n    }\n    case RECORD_GUID_TEXT_WITH_ENDELEMENT:\n    {\n        WS_XML_GUID_TEXT *text_guid = (WS_XML_GUID_TEXT *)text;\n        if ((hr = write_grow_buffer( writer, 1 + sizeof(text_guid->value) )) != S_OK) return hr;\n        write_char( writer, type );\n        write_bytes( writer, (const BYTE *)&text_guid->value, sizeof(text_guid->value) );\n        return S_OK;\n    }\n    case RECORD_UNIQUE_ID_TEXT_WITH_ENDELEMENT:\n    {\n        WS_XML_UNIQUE_ID_TEXT *text_unique_id = (WS_XML_UNIQUE_ID_TEXT *)text;\n        if ((hr = write_grow_buffer( writer, 1 + sizeof(text_unique_id->value) )) != S_OK) return hr;\n        write_char( writer, type );\n        write_bytes( writer, (const BYTE *)&text_unique_id->value, sizeof(text_unique_id->value) );\n        return S_OK;\n    }\n    case RECORD_DATETIME_TEXT_WITH_ENDELEMENT:\n    {\n        WS_XML_DATETIME_TEXT *text_datetime = (WS_XML_DATETIME_TEXT *)text;\n        UINT64 val = text_datetime->value.ticks;\n\n        assert( val <= TICKS_MAX );\n        if (text_datetime->value.format == WS_DATETIME_FORMAT_UTC) val |= (UINT64)1 << 62;\n        else if (text_datetime->value.format == WS_DATETIME_FORMAT_LOCAL) val |= (UINT64)1 << 63;\n\n        if ((hr = write_grow_buffer( writer, 1 + sizeof(val) )) != S_OK) return hr;\n        write_char( writer, type );\n        write_bytes( writer, (const BYTE *)&val, sizeof(val) );\n        return S_OK;\n    }\n    case RECORD_DICTIONARY_TEXT_WITH_ENDELEMENT:\n    {\n        if ((hr = write_grow_buffer( writer, 1 )) != S_OK) return hr;\n        write_char( writer, type );\n        return write_dict_string( writer, id );\n    }\n    default:\n        FIXME( \"unhandled record type %02x\\n\", type );\n        return E_NOTIMPL;\n    }\n}"
+  },
+  {
+   "name": "find_parent",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 157,
+   "end_line": 162,
+   "static": true,
+   "called_from": [
+    "write_add_element_node"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:2125",
+    "dlls/webservices/writer.c:4609",
+    "dlls/webservices/writer.c:4875"
+   ],
+   "signature": "static struct node *find_parent( struct writer *writer )",
+   "code": "static struct node *find_parent( struct writer *writer )\n{\n    if (is_valid_parent( writer->current )) return writer->current;\n    if (is_valid_parent( writer->current->parent )) return writer->current->parent;\n    return NULL;\n}"
+  },
+  {
+   "name": "namespace_in_scope",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1660,
+   "end_line": 1679,
+   "static": true,
+   "called_from": [
+    "set_namespaces"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:4383"
+   ],
+   "signature": "static BOOL namespace_in_scope( const WS_XML_ELEMENT_NODE *elem, const WS_XML_STRING *prefix, const WS_XML_STRING *ns )",
+   "code": "static BOOL namespace_in_scope( const WS_XML_ELEMENT_NODE *elem, const WS_XML_STRING *prefix,\n                                const WS_XML_STRING *ns )\n{\n    ULONG i;\n    const struct node *node;\n\n    for (node = (const struct node *)elem; node; node = node->parent)\n    {\n        if (node_type( node ) != WS_XML_NODE_TYPE_ELEMENT) break;\n\n        elem = &node->hdr;\n        for (i = 0; i < elem->attributeCount; i++)\n        {\n            if (!elem->attributes[i]->isXmlNs) continue;\n            if (str_equal( elem->attributes[i]->prefix, prefix ) &&\n                str_equal( elem->attributes[i]->ns, ns )) return TRUE;\n        }\n    }\n    return FALSE;\n}"
+  },
+  {
+   "name": "set_current_namespace",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1681,
+   "end_line": 1688,
+   "static": true,
+   "called_from": [
+    "set_namespaces"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT set_current_namespace( struct writer *writer, const WS_XML_STRING *ns )",
+   "code": "static HRESULT set_current_namespace( struct writer *writer, const WS_XML_STRING *ns )\n{\n    WS_XML_STRING *str;\n    if (!(str = dup_xml_string( ns, writer->dict_do_lookup ))) return E_OUTOFMEMORY;\n    free_xml_string( writer->current_ns );\n    writer->current_ns = str;\n    return S_OK;\n}"
+  },
+  {
+   "name": "write_startelement_text",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1762,
+   "end_line": 1782,
+   "static": true,
+   "called_from": [
+    "write_startelement"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_startelement_text( struct writer *writer )",
+   "code": "static HRESULT write_startelement_text( struct writer *writer )\n{\n    const WS_XML_ELEMENT_NODE *elem = &writer->current->hdr;\n    ULONG size;\n    HRESULT hr;\n\n    /* '<prefix:localname prefix:attr=\"value\"... xmlns:prefix=\"ns\"'... */\n\n    size = elem->localName->length + 1 /* '<' */;\n    if (elem->prefix && elem->prefix->length) size += elem->prefix->length + 1 /* ':' */;\n    if ((hr = write_grow_buffer( writer, size )) != S_OK) return hr;\n\n    write_char( writer, '<' );\n    if (elem->prefix && elem->prefix->length)\n    {\n        write_bytes( writer, elem->prefix->bytes, elem->prefix->length );\n        write_char( writer, ':' );\n    }\n    write_bytes( writer, elem->localName->bytes, elem->localName->length );\n    return write_attributes( writer, elem );\n}"
+  },
+  {
+   "name": "write_startelement_bin",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1800,
+   "end_line": 1847,
+   "static": true,
+   "called_from": [
+    "write_startelement"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_startelement_bin( struct writer *writer )",
+   "code": "static HRESULT write_startelement_bin( struct writer *writer )\n{\n    const WS_XML_ELEMENT_NODE *elem = &writer->current->hdr;\n    ULONG id;\n    enum record_type type = get_elem_record_type( elem, get_string_id(writer, elem->localName, &id) );\n    HRESULT hr;\n\n    if ((hr = write_grow_buffer( writer, 1 )) != S_OK) return hr;\n    write_char( writer, type );\n\n    if (type >= RECORD_PREFIX_ELEMENT_A && type <= RECORD_PREFIX_ELEMENT_Z)\n    {\n        if ((hr = write_string( writer, elem->localName->bytes, elem->localName->length )) != S_OK) return hr;\n        return write_attributes( writer, elem );\n    }\n    if (type >= RECORD_PREFIX_DICTIONARY_ELEMENT_A && type <= RECORD_PREFIX_DICTIONARY_ELEMENT_Z)\n    {\n        if ((hr = write_dict_string( writer, id )) != S_OK) return hr;\n        return write_attributes( writer, elem );\n    }\n\n    switch (type)\n    {\n    case RECORD_SHORT_ELEMENT:\n        if ((hr = write_string( writer, elem->localName->bytes, elem->localName->length )) != S_OK) return hr;\n        break;\n\n    case RECORD_ELEMENT:\n        if ((hr = write_string( writer, elem->prefix->bytes, elem->prefix->length )) != S_OK) return hr;\n        if ((hr = write_string( writer, elem->localName->bytes, elem->localName->length )) != S_OK) return hr;\n        break;\n\n    case RECORD_SHORT_DICTIONARY_ELEMENT:\n        if ((hr = write_dict_string( writer, id )) != S_OK) return hr;\n        break;\n\n    case RECORD_DICTIONARY_ELEMENT:\n        if ((hr = write_string( writer, elem->prefix->bytes, elem->prefix->length )) != S_OK) return hr;\n        if ((hr = write_dict_string( writer, id )) != S_OK) return hr;\n        break;\n\n    default:\n        ERR( \"unhandled record type %02x\\n\", type );\n        return WS_E_NOT_SUPPORTED;\n    }\n\n    return write_attributes( writer, elem );\n}"
+  },
+  {
+   "name": "is_empty_element",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1871,
+   "end_line": 1875,
+   "static": true,
+   "called_from": [
+    "write_close_element"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static inline BOOL is_empty_element( const struct node *node )",
+   "code": "static inline BOOL is_empty_element( const struct node *node )\n{\n    const struct node *head = LIST_ENTRY( list_head( &node->children ), struct node, entry );\n    return node_type( head ) == WS_XML_NODE_TYPE_END_ELEMENT;\n}"
+  },
+  {
+   "name": "write_endelement",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1919,
+   "end_line": 1929,
+   "static": true,
+   "called_from": [
+    "write_close_element"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_endelement( struct writer *writer, const WS_XML_ELEMENT_NODE *elem )",
+   "code": "static HRESULT write_endelement( struct writer *writer, const WS_XML_ELEMENT_NODE *elem )\n{\n    switch (writer->output_enc)\n    {\n    case WS_XML_WRITER_ENCODING_TYPE_TEXT:   return write_endelement_text( writer, elem );\n    case WS_XML_WRITER_ENCODING_TYPE_BINARY: return write_endelement_bin( writer );\n    default:\n        ERR( \"unhandled encoding %u\\n\", writer->output_enc );\n        return WS_E_NOT_SUPPORTED;\n    }\n}"
+  },
+  {
+   "name": "year_size",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 980,
+   "end_line": 983,
+   "static": true,
+   "called_from": [
+    "format_datetime"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static inline int year_size( int year )",
+   "code": "static inline int year_size( int year )\n{\n    return leap_year( year ) ? 366 : 365;\n}"
+  },
+  {
+   "name": "write_endstartelement_text",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1983,
+   "end_line": 1989,
+   "static": true,
+   "called_from": [
+    "write_endstartelement"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_endstartelement_text( struct writer *writer )",
+   "code": "static HRESULT write_endstartelement_text( struct writer *writer )\n{\n    HRESULT hr;\n    if ((hr = write_grow_buffer( writer, 1 )) != S_OK) return hr;\n    write_char( writer, '>' );\n    return S_OK;\n}"
+  },
+  {
+   "name": "write_bytes_escape",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 598,
+   "end_line": 623,
+   "static": true,
+   "called_from": [
+    "write_text_text"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:633"
+   ],
+   "signature": "static HRESULT write_bytes_escape( struct writer *writer, const BYTE *bytes, ULONG len, const struct escape **escapes, ULONG nb_escapes )",
+   "code": "static HRESULT write_bytes_escape( struct writer *writer, const BYTE *bytes, ULONG len,\n                                   const struct escape **escapes, ULONG nb_escapes )\n{\n    ULONG i, j, size;\n    const BYTE *ptr;\n    HRESULT hr;\n\n    for (i = 0; i < len; i++)\n    {\n        ptr = &bytes[i];\n        size = 1;\n        for (j = 0; j < nb_escapes; j++)\n        {\n            if (bytes[i] == escapes[j]->ch)\n            {\n                ptr = (const BYTE *)escapes[j]->entity;\n                size = escapes[j]->len;\n                break;\n            }\n        }\n        if ((hr = write_grow_buffer( writer, size )) != S_OK) return hr;\n        write_bytes( writer, ptr, size );\n    }\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "write_grow_buffer",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 550,
+   "end_line": 573,
+   "static": true,
+   "called_from": [
+    "write_bytes_escape",
+    "write_endelement_bin",
+    "write_endelement_text",
+    "write_endstartelement_text",
+    "write_startelement_bin",
+    "write_startelement_text",
+    "write_string",
+    "write_text_bin",
+    "write_text_text"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:649",
+    "dlls/webservices/writer.c:1260",
+    "dlls/webservices/writer.c:1273",
+    "dlls/webservices/writer.c:1284",
+    "dlls/webservices/writer.c:1307"
+   ],
+   "signature": "static HRESULT write_grow_buffer( struct writer *writer, ULONG size )",
+   "code": "static HRESULT write_grow_buffer( struct writer *writer, ULONG size )\n{\n    struct xmlbuf *buf = writer->output_buf;\n    SIZE_T new_size;\n    void *tmp;\n\n    if (writer->output_type == WS_XML_WRITER_OUTPUT_TYPE_STREAM)\n    {\n        if (size > STREAM_BUFSIZE) return WS_E_QUOTA_EXCEEDED;\n        return flush_writer( writer, STREAM_BUFSIZE - size, NULL, NULL );\n    }\n\n    if (buf->size >= writer->write_pos + size)\n    {\n        buf->bytes.length = writer->write_pos + size;\n        return S_OK;\n    }\n    new_size = max( buf->size * 2, writer->write_pos + size );\n    if (!(tmp = ws_realloc( buf->heap, buf->bytes.bytes, buf->size, new_size ))) return WS_E_QUOTA_EXCEEDED;\n    writer->write_bufptr = buf->bytes.bytes = tmp;\n    buf->size = new_size;\n    buf->bytes.length = writer->write_pos + size;\n    return S_OK;\n}"
+  },
+  {
+   "name": "write_bytes",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 580,
+   "end_line": 584,
+   "static": true,
+   "called_from": [
+    "write_bytes_escape",
+    "write_endelement_text",
+    "write_startelement_text",
+    "write_string",
+    "write_text_bin",
+    "write_text_text"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:654",
+    "dlls/webservices/writer.c:657",
+    "dlls/webservices/writer.c:1290",
+    "dlls/webservices/writer.c:1312",
+    "dlls/webservices/writer.c:1313"
+   ],
+   "signature": "static inline void write_bytes( struct writer *writer, const BYTE *bytes, ULONG len )",
+   "code": "static inline void write_bytes( struct writer *writer, const BYTE *bytes, ULONG len )\n{\n    memcpy( writer->write_bufptr + writer->write_pos, bytes, len );\n    writer->write_pos += len;\n}"
+  },
+  {
+   "name": "get_string_id",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 850,
+   "end_line": 865,
+   "static": true,
+   "called_from": [
+    "write_startelement_bin",
+    "write_text_bin"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:1256",
+    "dlls/webservices/writer.c:1434",
+    "dlls/webservices/writer.c:1583"
+   ],
+   "signature": "static BOOL get_string_id( struct writer *writer, const WS_XML_STRING *str, ULONG *id )",
+   "code": "static BOOL get_string_id( struct writer *writer, const WS_XML_STRING *str, ULONG *id )\n{\n    if (writer->dict && str->dictionary == writer->dict)\n    {\n        *id = str->id << 1;\n        return TRUE;\n    }\n    if (writer->dict_cb)\n    {\n        BOOL found = FALSE;\n        writer->dict_cb( writer->dict_cb_state, str, &found, id, NULL );\n        if (found) *id = (*id << 1) | 1;\n        return found;\n    }\n    return FALSE;\n}"
+  },
+  {
+   "name": "get_text_record_type",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 2567,
+   "end_line": 2656,
+   "static": true,
+   "called_from": [
+    "write_text_bin"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static enum record_type get_text_record_type( const WS_XML_TEXT *text, BOOL use_dict )",
+   "code": "static enum record_type get_text_record_type( const WS_XML_TEXT *text, BOOL use_dict )\n{\n    switch (text->textType)\n    {\n    case WS_XML_TEXT_TYPE_UTF8:\n    {\n        const WS_XML_UTF8_TEXT *text_utf8 = (const WS_XML_UTF8_TEXT *)text;\n        if (use_dict) return RECORD_DICTIONARY_TEXT_WITH_ENDELEMENT;\n        if (text_utf8->value.length <= MAX_UINT8) return RECORD_CHARS8_TEXT_WITH_ENDELEMENT;\n        if (text_utf8->value.length <= MAX_UINT16) return RECORD_CHARS16_TEXT_WITH_ENDELEMENT;\n        return RECORD_CHARS32_TEXT_WITH_ENDELEMENT;\n    }\n    case WS_XML_TEXT_TYPE_UTF16:\n    {\n        const WS_XML_UTF16_TEXT *text_utf16 = (const WS_XML_UTF16_TEXT *)text;\n        int len = text_utf16->byteCount / sizeof(WCHAR);\n        int len_utf8 = WideCharToMultiByte( CP_UTF8, 0, (const WCHAR *)text_utf16->bytes, len, NULL, 0, NULL, NULL );\n        if (len_utf8 <= MAX_UINT8) return RECORD_CHARS8_TEXT_WITH_ENDELEMENT;\n        if (len_utf8 <= MAX_UINT16) return RECORD_CHARS16_TEXT_WITH_ENDELEMENT;\n        return RECORD_CHARS32_TEXT_WITH_ENDELEMENT;\n    }\n    case WS_XML_TEXT_TYPE_BASE64:\n    {\n        const WS_XML_BASE64_TEXT *text_base64 = (const WS_XML_BASE64_TEXT *)text;\n        ULONG rem = text_base64->length % 3, len = text_base64->length - rem;\n        if (len <= MAX_UINT8) return RECORD_BYTES8_TEXT;\n        if (len <= MAX_UINT16) return RECORD_BYTES16_TEXT;\n        return RECORD_BYTES32_TEXT;\n    }\n    case WS_XML_TEXT_TYPE_BOOL:\n    {\n        const WS_XML_BOOL_TEXT *text_bool = (const WS_XML_BOOL_TEXT *)text;\n        return text_bool->value ? RECORD_TRUE_TEXT_WITH_ENDELEMENT : RECORD_FALSE_TEXT_WITH_ENDELEMENT;\n    }\n    case WS_XML_TEXT_TYPE_INT32:\n    {\n        const WS_XML_INT32_TEXT *text_int32 = (const WS_XML_INT32_TEXT *)text;\n        if (!text_int32->value) return RECORD_ZERO_TEXT_WITH_ENDELEMENT;\n        if (text_int32->value == 1) return RECORD_ONE_TEXT_WITH_ENDELEMENT;\n        if (text_int32->value >= MIN_INT8 && text_int32->value <= MAX_INT8) return RECORD_INT8_TEXT_WITH_ENDELEMENT;\n        if (text_int32->value >= MIN_INT16 && text_int32->value <= MAX_INT16) return RECORD_INT16_TEXT_WITH_ENDELEMENT;\n        return RECORD_INT32_TEXT_WITH_ENDELEMENT;\n    }\n    case WS_XML_TEXT_TYPE_INT64:\n    {\n        const WS_XML_INT64_TEXT *text_int64 = (const WS_XML_INT64_TEXT *)text;\n        if (!text_int64->value) return RECORD_ZERO_TEXT_WITH_ENDELEMENT;\n        if (text_int64->value == 1) return RECORD_ONE_TEXT_WITH_ENDELEMENT;\n        if (text_int64->value >= MIN_INT8 && text_int64->value <= MAX_INT8) return RECORD_INT8_TEXT_WITH_ENDELEMENT;\n        if (text_int64->value >= MIN_INT16 && text_int64->value <= MAX_INT16) return RECORD_INT16_TEXT_WITH_ENDELEMENT;\n        if (text_int64->value >= MIN_INT32 && text_int64->value <= MAX_INT32) return RECORD_INT32_TEXT_WITH_ENDELEMENT;\n        return RECORD_INT64_TEXT_WITH_ENDELEMENT;\n    }\n    case WS_XML_TEXT_TYPE_UINT64:\n    {\n        const WS_XML_UINT64_TEXT *text_uint64 = (const WS_XML_UINT64_TEXT *)text;\n        if (!text_uint64->value) return RECORD_ZERO_TEXT_WITH_ENDELEMENT;\n        if (text_uint64->value == 1) return RECORD_ONE_TEXT_WITH_ENDELEMENT;\n        if (text_uint64->value <= MAX_INT8) return RECORD_INT8_TEXT_WITH_ENDELEMENT;\n        if (text_uint64->value <= MAX_INT16) return RECORD_INT16_TEXT_WITH_ENDELEMENT;\n        if (text_uint64->value <= MAX_INT32) return RECORD_INT32_TEXT_WITH_ENDELEMENT;\n        if (text_uint64->value <= MAX_INT64) return RECORD_INT64_TEXT_WITH_ENDELEMENT;\n        return RECORD_UINT64_TEXT_WITH_ENDELEMENT;\n    }\n    case WS_XML_TEXT_TYPE_DOUBLE:\n    {\n        const WS_XML_DOUBLE_TEXT *text_double = (const WS_XML_DOUBLE_TEXT *)text;\n        if (!text_double->value) return RECORD_ZERO_TEXT_WITH_ENDELEMENT;\n        if (text_double->value == 1) return RECORD_ONE_TEXT_WITH_ENDELEMENT;\n        if (isinf( text_double->value ) || (INT64)text_double->value != text_double->value)\n            return RECORD_DOUBLE_TEXT_WITH_ENDELEMENT;\n        if (text_double->value <= MAX_INT8) return RECORD_INT8_TEXT_WITH_ENDELEMENT;\n        if (text_double->value <= MAX_INT16) return RECORD_INT16_TEXT_WITH_ENDELEMENT;\n        if (text_double->value <= MAX_INT32) return RECORD_INT32_TEXT_WITH_ENDELEMENT;\n        return RECORD_INT64_TEXT_WITH_ENDELEMENT;\n    }\n    case WS_XML_TEXT_TYPE_GUID:\n        return RECORD_GUID_TEXT_WITH_ENDELEMENT;\n\n    case WS_XML_TEXT_TYPE_UNIQUE_ID:\n        return RECORD_UNIQUE_ID_TEXT_WITH_ENDELEMENT;\n\n    case WS_XML_TEXT_TYPE_DATETIME:\n        return RECORD_DATETIME_TEXT_WITH_ENDELEMENT;\n\n    default:\n        FIXME( \"unhandled text type %u\\n\", text->textType );\n        return 0;\n    }\n}"
+  },
+  {
+   "name": "write_char",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 575,
+   "end_line": 578,
+   "static": true,
+   "called_from": [
+    "write_endelement_bin",
+    "write_endelement_text",
+    "write_endstartelement_text",
+    "write_startelement_bin",
+    "write_startelement_text",
+    "write_text_bin"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:651",
+    "dlls/webservices/writer.c:655",
+    "dlls/webservices/writer.c:658",
+    "dlls/webservices/writer.c:659",
+    "dlls/webservices/writer.c:661"
+   ],
+   "signature": "static inline void write_char( struct writer *writer, unsigned char ch )",
+   "code": "static inline void write_char( struct writer *writer, unsigned char ch )\n{\n    writer->write_bufptr[writer->write_pos++] = ch;\n}"
+  },
+  {
+   "name": "get_text_value_int",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 819,
+   "end_line": 848,
+   "static": true,
+   "called_from": [
+    "write_text_bin"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:1342",
+    "dlls/webservices/writer.c:1349",
+    "dlls/webservices/writer.c:1356",
+    "dlls/webservices/writer.c:1363"
+   ],
+   "signature": "static INT64 get_text_value_int( const WS_XML_TEXT *text )",
+   "code": "static INT64 get_text_value_int( const WS_XML_TEXT *text )\n{\n    switch (text->textType)\n    {\n    case WS_XML_TEXT_TYPE_INT32:\n    {\n        const WS_XML_INT32_TEXT *text_int32 = (const WS_XML_INT32_TEXT *)text;\n        return text_int32->value;\n    }\n    case WS_XML_TEXT_TYPE_INT64:\n    {\n        const WS_XML_INT64_TEXT *text_int64 = (const WS_XML_INT64_TEXT *)text;\n        return text_int64->value;\n    }\n    case WS_XML_TEXT_TYPE_UINT64:\n    {\n        const WS_XML_UINT64_TEXT *text_uint64 = (const WS_XML_UINT64_TEXT *)text;\n        return text_uint64->value;\n    }\n    case WS_XML_TEXT_TYPE_DOUBLE:\n    {\n        const WS_XML_DOUBLE_TEXT *text_double = (const WS_XML_DOUBLE_TEXT *)text;\n        return text_double->value;\n    }\n    default:\n        ERR( \"unhandled text type %u\\n\", text->textType );\n        assert(0);\n        return 0;\n    }\n}"
+  },
+  {
+   "name": "write_dict_string",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 722,
+   "end_line": 726,
+   "static": true,
+   "called_from": [
+    "write_startelement_bin",
+    "write_text_bin"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:1447",
+    "dlls/webservices/writer.c:1463",
+    "dlls/webservices/writer.c:1468",
+    "dlls/webservices/writer.c:1599",
+    "dlls/webservices/writer.c:1603"
+   ],
+   "signature": "static HRESULT write_dict_string( struct writer *writer, ULONG id )",
+   "code": "static HRESULT write_dict_string( struct writer *writer, ULONG id )\n{\n    if (id > 0x7fffffff) return E_INVALIDARG;\n    return write_int31( writer, id );\n}"
+  },
+  {
+   "name": "str_equal",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1654,
+   "end_line": 1658,
+   "static": true,
+   "called_from": [
+    "namespace_in_scope"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static inline BOOL str_equal( const WS_XML_STRING *str1, const WS_XML_STRING *str2 )",
+   "code": "static inline BOOL str_equal( const WS_XML_STRING *str1, const WS_XML_STRING *str2 )\n{\n    if (!str1 && !str2) return TRUE;\n    return WsXmlStringEquals( str1, str2, NULL ) == S_OK;\n}"
+  },
+  {
+   "name": "write_attributes",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1740,
+   "end_line": 1760,
+   "static": true,
+   "called_from": [
+    "write_startelement_bin",
+    "write_startelement_text"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_attributes( struct writer *writer, const WS_XML_ELEMENT_NODE *elem )",
+   "code": "static HRESULT write_attributes( struct writer *writer, const WS_XML_ELEMENT_NODE *elem )\n{\n    ULONG i;\n    HRESULT hr;\n    for (i = 0; i < elem->attributeCount; i++)\n    {\n        if (elem->attributes[i]->isXmlNs) continue;\n        if ((hr = write_attribute( writer, elem->attributes[i] )) != S_OK) return hr;\n    }\n    for (i = 0; i < elem->attributeCount; i++)\n    {\n        if (!elem->attributes[i]->isXmlNs || !elem->attributes[i]->prefix) continue;\n        if ((hr = write_namespace_attribute( writer, elem->attributes[i] )) != S_OK) return hr;\n    }\n    for (i = 0; i < elem->attributeCount; i++)\n    {\n        if (!elem->attributes[i]->isXmlNs || elem->attributes[i]->prefix) continue;\n        if ((hr = write_namespace_attribute( writer, elem->attributes[i] )) != S_OK) return hr;\n    }\n    return S_OK;\n}"
+  },
+  {
+   "name": "get_elem_record_type",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1784,
+   "end_line": 1798,
+   "static": true,
+   "called_from": [
+    "write_startelement_bin"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static enum record_type get_elem_record_type( const WS_XML_ELEMENT_NODE *elem, BOOL use_dict )",
+   "code": "static enum record_type get_elem_record_type( const WS_XML_ELEMENT_NODE *elem, BOOL use_dict )\n{\n    if (!elem->prefix || !elem->prefix->length)\n    {\n        if (use_dict) return RECORD_SHORT_DICTIONARY_ELEMENT;\n        return RECORD_SHORT_ELEMENT;\n    }\n    if (elem->prefix->length == 1 && elem->prefix->bytes[0] >= 'a' && elem->prefix->bytes[0] <= 'z')\n    {\n        if (use_dict) return RECORD_PREFIX_DICTIONARY_ELEMENT_A + elem->prefix->bytes[0] - 'a';\n        return RECORD_PREFIX_ELEMENT_A + elem->prefix->bytes[0] - 'a';\n    }\n    if (use_dict) return RECORD_DICTIONARY_ELEMENT;\n    return RECORD_ELEMENT;\n};"
+  },
+  {
+   "name": "write_string",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 713,
+   "end_line": 720,
+   "static": true,
+   "called_from": [
+    "write_startelement_bin"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:1442",
+    "dlls/webservices/writer.c:1454",
+    "dlls/webservices/writer.c:1458",
+    "dlls/webservices/writer.c:1459",
+    "dlls/webservices/writer.c:1467"
+   ],
+   "signature": "static HRESULT write_string( struct writer *writer, const BYTE *bytes, ULONG len )",
+   "code": "static HRESULT write_string( struct writer *writer, const BYTE *bytes, ULONG len )\n{\n    HRESULT hr;\n    if ((hr = write_int31( writer, len )) != S_OK) return hr;\n    if ((hr = write_grow_buffer( writer, len )) != S_OK) return hr;\n    write_bytes( writer, bytes, len );\n    return S_OK;\n}"
+  },
+  {
+   "name": "write_endelement_text",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1877,
+   "end_line": 1908,
+   "static": true,
+   "called_from": [
+    "write_endelement"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_endelement_text( struct writer *writer, const WS_XML_ELEMENT_NODE *elem )",
+   "code": "static HRESULT write_endelement_text( struct writer *writer, const WS_XML_ELEMENT_NODE *elem )\n{\n    ULONG size;\n    HRESULT hr;\n\n    /* '/>' */\n\n    if (elem->isEmpty && writer->state != WRITER_STATE_ENDSTARTELEMENT)\n    {\n        if ((hr = write_grow_buffer( writer, 2 )) != S_OK) return hr;\n        write_char( writer, '/' );\n        write_char( writer, '>' );\n        return S_OK;\n    }\n\n    /* '</prefix:localname>' */\n\n    size = elem->localName->length + 3 /* '</>' */;\n    if (elem->prefix && elem->prefix->length) size += elem->prefix->length + 1 /* ':' */;\n    if ((hr = write_grow_buffer( writer, size )) != S_OK) return hr;\n\n    write_char( writer, '<' );\n    write_char( writer, '/' );\n    if (elem->prefix && elem->prefix->length)\n    {\n        write_bytes( writer, elem->prefix->bytes, elem->prefix->length );\n        write_char( writer, ':' );\n    }\n    write_bytes( writer, elem->localName->bytes, elem->localName->length );\n    write_char( writer, '>' );\n    return S_OK;\n}"
+  },
+  {
+   "name": "write_endelement_bin",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1910,
+   "end_line": 1917,
+   "static": true,
+   "called_from": [
+    "write_endelement"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_endelement_bin( struct writer *writer )",
+   "code": "static HRESULT write_endelement_bin( struct writer *writer )\n{\n    HRESULT hr;\n    if (node_type( writer->current ) == WS_XML_NODE_TYPE_TEXT) return S_OK;\n    if ((hr = write_grow_buffer( writer, 1 )) != S_OK) return hr;\n    write_char( writer, RECORD_ENDELEMENT );\n    return S_OK;\n}"
+  },
+  {
+   "name": "flush_writer",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 505,
+   "end_line": 517,
+   "static": true,
+   "called_from": [
+    "write_grow_buffer"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:543"
+   ],
+   "signature": "static HRESULT flush_writer( struct writer *writer, ULONG min_size, const WS_ASYNC_CONTEXT *ctx, WS_ERROR *error )",
+   "code": "static HRESULT flush_writer( struct writer *writer, ULONG min_size, const WS_ASYNC_CONTEXT *ctx,\n                             WS_ERROR *error )\n{\n    WS_BYTES buf;\n\n    if (writer->write_pos < min_size) return S_OK;\n\n    buf.bytes  = writer->write_bufptr;\n    buf.length = writer->write_pos;\n    writer->output_cb( writer->output_cb_state, &buf, 1, ctx, error );\n    writer->write_pos = 0;\n    return S_OK;\n}"
+  },
+  {
+   "name": "write_int31",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 666,
+   "end_line": 711,
+   "static": true,
+   "called_from": [
+    "write_dict_string",
+    "write_string"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_int31( struct writer *writer, ULONG len )",
+   "code": "static HRESULT write_int31( struct writer *writer, ULONG len )\n{\n    HRESULT hr;\n\n    if (len > 0x7fffffff) return E_INVALIDARG;\n\n    if ((hr = write_grow_buffer( writer, 1 )) != S_OK) return hr;\n    if (len < 0x80)\n    {\n        write_char( writer, len );\n        return S_OK;\n    }\n    write_char( writer, (len & 0x7f) | 0x80 );\n\n    if ((hr = write_grow_buffer( writer, 1 )) != S_OK) return hr;\n    if ((len >>= 7) < 0x80)\n    {\n        write_char( writer, len );\n        return S_OK;\n    }\n    write_char( writer, (len & 0x7f) | 0x80 );\n\n    if ((hr = write_grow_buffer( writer, 1 )) != S_OK) return hr;\n    if ((len >>= 7) < 0x80)\n    {\n        write_char( writer, len );\n        return S_OK;\n    }\n    write_char( writer, (len & 0x7f) | 0x80 );\n\n    if ((hr = write_grow_buffer( writer, 1 )) != S_OK) return hr;\n    if ((len >>= 7) < 0x80)\n    {\n        write_char( writer, len );\n        return S_OK;\n    }\n    write_char( writer, (len & 0x7f) | 0x80 );\n\n    if ((hr = write_grow_buffer( writer, 1 )) != S_OK) return hr;\n    if ((len >>= 7) < 0x08)\n    {\n        write_char( writer, len );\n        return S_OK;\n    }\n    return WS_E_INVALID_FORMAT;\n}"
+  },
+  {
+   "name": "write_attribute",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1479,
+   "end_line": 1489,
+   "static": true,
+   "called_from": [
+    "write_attributes"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_attribute( struct writer *writer, const WS_XML_ATTRIBUTE *attr )",
+   "code": "static HRESULT write_attribute( struct writer *writer, const WS_XML_ATTRIBUTE *attr )\n{\n    switch (writer->output_enc)\n    {\n    case WS_XML_WRITER_ENCODING_TYPE_TEXT:   return write_attribute_text( writer, attr );\n    case WS_XML_WRITER_ENCODING_TYPE_BINARY: return write_attribute_bin( writer, attr );\n    default:\n        ERR( \"unhandled encoding %u\\n\", writer->output_enc );\n        return WS_E_NOT_SUPPORTED;\n    }\n}"
+  },
+  {
+   "name": "write_namespace_attribute",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 1613,
+   "end_line": 1623,
+   "static": true,
+   "called_from": [
+    "write_attributes"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT write_namespace_attribute( struct writer *writer, const WS_XML_ATTRIBUTE *attr )",
+   "code": "static HRESULT write_namespace_attribute( struct writer *writer, const WS_XML_ATTRIBUTE *attr )\n{\n    switch (writer->output_enc)\n    {\n    case WS_XML_WRITER_ENCODING_TYPE_TEXT:   return write_namespace_attribute_text( writer, attr );\n    case WS_XML_WRITER_ENCODING_TYPE_BINARY: return write_namespace_attribute_bin( writer, attr );\n    default:\n        ERR( \"unhandled encoding %u\\n\", writer->output_enc );\n        return WS_E_NOT_SUPPORTED;\n    }\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "escape",
+    "kind": "struct_decl",
+    "start_line": 586,
+    "end_line": 591,
+    "code": "struct escape\n{\n    char        ch;\n    const char *entity;\n    ULONG       len;\n};"
+   },
+   {
+    "name": "writer",
+    "kind": "struct_decl",
+    "start_line": 74,
+    "end_line": 99,
+    "code": "struct writer\n{\n    ULONG                        magic;\n    CRITICAL_SECTION             cs;\n    ULONG                        write_pos;\n    unsigned char               *write_bufptr;\n    enum writer_state            state;\n    struct node                 *root;\n    struct node                 *current;\n    WS_XML_STRING               *current_ns;\n    WS_XML_WRITER_ENCODING_TYPE  output_enc;\n    WS_CHARSET                   output_charset;\n    WS_XML_WRITER_OUTPUT_TYPE    output_type;\n    WS_WRITE_CALLBACK            output_cb;\n    void                        *output_cb_state;\n    struct xmlbuf               *output_buf;\n    BOOL                         output_buf_user;\n    WS_HEAP                     *output_heap;\n    unsigned char               *stream_buf;\n    const WS_XML_DICTIONARY     *dict;\n    BOOL                         dict_do_lookup;\n    WS_DYNAMIC_STRING_CALLBACK   dict_cb;\n    void                        *dict_cb_state;\n    ULONG                        prop_count;\n    struct prop                  prop[ARRAY_SIZE( writer_props )];\n};"
+   },
+   {
+    "name": "writer_state",
+    "kind": "enum_decl",
+    "start_line": 61,
+    "end_line": 72,
+    "code": "enum writer_state\n{\n    WRITER_STATE_INITIAL,\n    WRITER_STATE_STARTELEMENT,\n    WRITER_STATE_STARTATTRIBUTE,\n    WRITER_STATE_STARTCDATA,\n    WRITER_STATE_ENDSTARTELEMENT,\n    WRITER_STATE_TEXT,\n    WRITER_STATE_COMMENT,\n    WRITER_STATE_ENDELEMENT,\n    WRITER_STATE_ENDCDATA\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(webservices);"
+   },
+   {
+    "name": "escape_amp",
+    "type": "const struct escape",
+    "static": true,
+    "start_line": 594,
+    "end_line": 594,
+    "code": "static const struct escape escape_amp = { '&', \"&amp;\", 5 };"
+   },
+   {
+    "name": "escape_gt",
+    "type": "const struct escape",
+    "static": true,
+    "start_line": 593,
+    "end_line": 593,
+    "code": "static const struct escape escape_gt = { '>', \"&gt;\", 4 };"
+   },
+   {
+    "name": "escape_lt",
+    "type": "const struct escape",
+    "static": true,
+    "start_line": 592,
+    "end_line": 592,
+    "code": "static const struct escape escape_lt = { '<', \"&lt;\", 4 };"
+   }
+  ],
+  "macros": [
+   {
+    "name": "TZ_OFFSET",
+    "start_line": 985,
+    "end_line": 985,
+    "code": "#define TZ_OFFSET 8"
+   },
+   {
+    "name": "WRITER_MAGIC",
+    "start_line": 101,
+    "end_line": 101,
+    "code": "#define WRITER_MAGIC (('W' << 24) | ('R' << 16) | ('I' << 8) | 'T')"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "alloc_base64_text",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 865
+   },
+   {
+    "name": "alloc_bool_text",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 877
+   },
+   {
+    "name": "alloc_datetime_text",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 957
+   },
+   {
+    "name": "alloc_double_text",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 927
+   },
+   {
+    "name": "alloc_guid_text",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 937
+   },
+   {
+    "name": "alloc_int32_text",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 887
+   },
+   {
+    "name": "alloc_int64_text",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 897
+   },
+   {
+    "name": "alloc_node",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 71
+   },
+   {
+    "name": "alloc_uint64_text",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 907
+   },
+   {
+    "name": "alloc_unique_id_text",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 947
+   },
+   {
+    "name": "alloc_utf16_text",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 853
+   },
+   {
+    "name": "alloc_utf8_text",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 839
+   },
+   {
+    "name": "append_attribute",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 1137
+   },
+   {
+    "name": "dup_xml_string",
+    "file": "dlls/webservices/string.c",
+    "start_line": 221
+   },
+   {
+    "name": "free_attribute",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 82
+   },
+   {
+    "name": "free_node",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 92
+   },
+   {
+    "name": "free_xml_string",
+    "file": "dlls/webservices/string.c",
+    "start_line": 214
+   },
+   {
+    "name": "get_type_size",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 6085
+   },
+   {
+    "name": "ws_realloc",
+    "file": "dlls/webservices/heap.c",
+    "start_line": 97
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "WsXmlStringEquals",
+    "impl": [
+     "dlls/webservices/string.c:822"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   },
+   {
+    "name": "_assert",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/exit.c:319"
+    ]
+   },
+   {
+    "name": "_control87",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/math.c:1224"
+    ]
+   },
+   {
+    "name": "_dclass",
+    "module": "msvcr120",
+    "impl": []
+   },
+   {
+    "name": "_fdclass",
+    "module": "msvcr120",
+    "impl": []
+   },
+   {
+    "name": "calloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "floor",
+    "module": "ntdll",
+    "impl": []
+   },
+   {
+    "name": "free",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "log10",
+    "module": "msvcrtd",
+    "impl": []
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "pow",
+    "module": "ntdll",
+    "impl": []
+   },
+   {
+    "name": "wsprintfA",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/wsprintf.c:593"
+    ]
+   }
+  ],
+  "header_inline": [
+   "list_add_before",
+   "list_add_tail",
+   "list_head",
+   "list_tail",
+   "lstrlenW",
+   "sprintf",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "is_nil_value",
+   "is_valid_parent",
+   "leap_year",
+   "node_type"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "writer->dict_cb",
+    "in_function": "get_string_id",
+    "at": "dlls/webservices/writer.c:860",
+    "candidates": [
+     "cb @ dlls/webservices/writer.c:5012"
+    ]
+   },
+   {
+    "expr": "writer->output_cb",
+    "in_function": "flush_writer",
+    "at": "dlls/webservices/writer.c:514",
+    "candidates": [
+     "callback @ dlls/webservices/writer.c:344"
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,128 @@
+{
+ "id": "0202",
+ "function": {
+  "name": "VarFormatPercent",
+  "export_name": "VarFormatPercent",
+  "module": "oleaut32",
+  "source_module": "oleaut32",
+  "exported_by": [
+   "oleaut32"
+  ],
+  "side": "PE",
+  "file": "dlls/oleaut32/varformat.c",
+  "start_line": 2352,
+  "end_line": 2399,
+  "body_lines": 45,
+  "signature": "HRESULT WINAPI VarFormatPercent(LPVARIANT pVarIn, INT nDigits, INT nLeading, INT nParens, INT nGrouping, ULONG dwFlags, BSTR *pbstrOut)",
+  "header_comment": "/**********************************************************************\n *              VarFormatPercent [OLEAUT32.117]\n *\n * Format a variant value as a percentage.\n *\n * PARAMS\n *  pVarIn    [I] Variant to format\n *  nDigits   [I] Number of digits following the decimal point (-1 = user default)\n *  nLeading  [I] Use a leading zero (-2 = user default, -1 = yes, 0 = no)\n *  nParens   [I] Use brackets for values < 0 (-2 = user default, -1 = yes, 0 = no)\n *  nGrouping [I] Use grouping characters (-2 = user default, -1 = yes, 0 = no)\n *  dwFlags   [I] Currently unused, set to zero\n *  pbstrOut  [O] Destination for formatted string.\n *\n * RETURNS\n *  Success: S_OK. pbstrOut contains the formatted value.\n *  Failure: E_INVALIDARG, if any parameter is invalid.\n *           E_OUTOFMEMORY, if enough memory cannot be allocated.\n *           DISP_E_OVERFLOW, if overflow occurs during the conversion.\n *           DISP_E_TYPEMISMATCH, if the variant cannot be formatted.\n *\n * NOTES\n *  This function uses LOCALE_USER_DEFAULT when determining the number format\n *  characters to use.\n */",
+  "code": "HRESULT WINAPI VarFormatPercent(LPVARIANT pVarIn, INT nDigits, INT nLeading, INT nParens,\n                                INT nGrouping, ULONG dwFlags, BSTR *pbstrOut)\n{\n  WCHAR buff[256];\n  HRESULT hRet;\n  VARIANT vDbl;\n\n  TRACE(\"%s, %d, %d, %d, %d, %#lx, %p.\\n\", debugstr_variant(pVarIn), nDigits, nLeading,\n        nParens, nGrouping, dwFlags, pbstrOut);\n\n  if (!pVarIn || !pbstrOut || nDigits > 9)\n    return E_INVALIDARG;\n\n  *pbstrOut = NULL;\n\n  V_VT(&vDbl) = VT_EMPTY;\n  hRet = VariantCopyInd(&vDbl, pVarIn);\n\n  if (SUCCEEDED(hRet))\n  {\n    hRet = VariantChangeTypeEx(&vDbl, &vDbl, LOCALE_USER_DEFAULT, 0, VT_R8);\n\n    if (SUCCEEDED(hRet))\n    {\n      if (V_R8(&vDbl) > (R8_MAX / 100.0))\n        return DISP_E_OVERFLOW;\n\n      V_R8(&vDbl) *= 100.0;\n      hRet = VarFormatNumber(&vDbl, nDigits, nLeading, nParens,\n                             nGrouping, dwFlags, pbstrOut);\n\n      if (SUCCEEDED(hRet))\n      {\n        DWORD dwLen = lstrlenW(*pbstrOut);\n        BOOL bBracket = (*pbstrOut)[dwLen - 1] == ')';\n\n        dwLen -= bBracket;\n        memcpy(buff, *pbstrOut, dwLen * sizeof(WCHAR));\n        lstrcpyW(buff + dwLen, bBracket ? L\"%)\" : L\"%\");\n        SysFreeString(*pbstrOut);\n        *pbstrOut = SysAllocString(buff);\n        if (!*pbstrOut)\n          hRet = E_OUTOFMEMORY;\n      }\n    }\n  }\n  return hRet;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <string.h>",
+   "#include <stdlib.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"variant.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "oleaut32!VarFormatPercent [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/oleaut32/tests/varformat.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "oleauto",
+   "path": "sdk-api-src/content/oleauto/nf-oleauto-varformatpercent.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/oleauto/nf-oleauto-varformatpercent",
+   "documented_name": "varformatpercent",
+   "file": "docs/0202_sdk-api_nf-oleauto-varformatpercent.md",
+   "text": "---\nUID: NF:oleauto.VarFormatPercent\ntitle: VarFormatPercent function (oleauto.h)\ndescription: Formats a variant containing percentages into a string form.\nhelpviewer_keywords: [\"VarFormatPercent\",\"VarFormatPercent function [Automation]\",\"_oa96_VarFormatPercent\",\"automat.varformatpercent\",\"oleauto/VarFormatPercent\"]\nold-location: automat\\varformatpercent.htm\ntech.root: automat\nms.assetid: 3b0e4f05-6ca4-4685-bdaa-dd44a6a7d89e\nms.date: 12/05/2018\nms.keywords: VarFormatPercent, VarFormatPercent function [Automation], _oa96_VarFormatPercent, automat.varformatpercent, oleauto/VarFormatPercent\nreq.header: oleauto.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: OleAut32.lib\nreq.dll: OleAut32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - VarFormatPercent\n - oleauto/VarFormatPercent\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - OleAut32.dll\napi_name:\n - VarFormatPercent\n---\n\n# VarFormatPercent function\n\n\n## -description\n\nFormats a variant containing percentages into a string form.\n\n## -parameters\n\n### -param pvarIn [in]\n\nThe variant containing the value to format.\n\n### -param iNumDig [in]\n\nThe number of digits to pad to after the decimal point. Specify -1 to use the system default value.\n\n### -param iIncLead [in]\n\nSpecifies whether to include the leading digit on numbers.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt>-2</dt>\n</dl>\n</td>\n<td width=\"60%\">\nUse the system default.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt>-1</dt>\n</dl>\n</td>\n<td width=\"60%\">\nInclude the leading digit.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt>0</dt>\n</dl>\n</td>\n<td width=\"60%\">\nDo not include the leading digit.\n\n</td>\n</tr>\n</table>\n\n### -param iUseParens [in]\n\nSpecifies whether negative numbers should use parentheses.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt>-2</dt>\n</dl>\n</td>\n<td width=\"60%\">\nUse the system default.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt>-1</dt>\n</dl>\n</td>\n<td width=\"60%\">\nUse parentheses.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt>0</dt>\n</dl>\n</td>\n<td width=\"60%\">\nDo not use parentheses.\n\n</td>\n</tr>\n</table>\n\n### -param iGroup [in]\n\nSpecifies whether thousands should be grouped. For example 10,000 versus 10000. \n\n<div class=\"alert\"><b>Note</b>  Regular numbers and currencies have separate system defaults for all the above options.</div>\n<div> </div>\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt>-2</dt>\n</dl>\n</td>\n<td width=\"60%\">\nUse the system default.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt>-1</dt>\n</dl>\n</td>\n<td width=\"60%\">\nGroup thousands.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt>0</dt>\n</dl>\n</td>\n<td width=\"60%\">\nDo not group thousands.\n\n</td>\n</tr>\n</table>\n\n### -param dwFlags [in]\n\nVAR_CALENDAR_HIJRI is the only flag that can be set.\n\n### -param pbstrOut [out]\n\nReceives the formatted string that represents the variant.\n\n## -returns\n\nThis function can return one of these values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>S_OK</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nSuccess.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_INVALIDARG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOne or more of the arguments is not valid.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThis function uses the user's default locale while calling <a href=\"/previous-versions/windows/desktop/api/oleauto/nf-oleauto-vartokenizeformatstring\">VarTokenizeFormatString</a> and <a href=\"/previous-versions/windows/desktop/api/oleauto/nf-oleauto-varformatfromtokens\">VarFormatFromTokens</a>."
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 39,
+    "end_line": 39,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(variant);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "SysAllocString",
+    "impl": [
+     "dlls/oleaut32/oleaut.c:240"
+    ]
+   },
+   {
+    "name": "SysFreeString",
+    "impl": [
+     "dlls/oleaut32/oleaut.c:273"
+    ]
+   },
+   {
+    "name": "VarFormatNumber",
+    "impl": [
+     "dlls/oleaut32/varformat.c:2248"
+    ]
+   },
+   {
+    "name": "VariantChangeTypeEx",
+    "impl": [
+     "dlls/oleaut32/variant.c:966"
+    ]
+   },
+   {
+    "name": "VariantCopyInd",
+    "impl": [
+     "dlls/oleaut32/variant.c:824"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_variant",
+   "lstrcpyW",
+   "lstrlenW",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

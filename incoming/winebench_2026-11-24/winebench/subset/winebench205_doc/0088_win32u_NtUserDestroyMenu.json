@@ -1,0 +1,204 @@
+{
+ "id": "0088",
+ "function": {
+  "name": "NtUserDestroyMenu",
+  "export_name": "DestroyMenu",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "user.exe16",
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/menu.c",
+  "start_line": 644,
+  "end_line": 676,
+  "body_lines": 30,
+  "signature": "BOOL WINAPI NtUserDestroyMenu( HMENU handle )",
+  "header_comment": "/**********************************************************************\n *         NtUserDestroyMenu   (win32u.@)\n */",
+  "code": "BOOL WINAPI NtUserDestroyMenu( HMENU handle )\n{\n    struct menu *menu;\n\n    TRACE( \"(%p)\\n\", handle );\n\n    if (!(menu = free_user_handle( handle, NTUSER_OBJ_MENU ))) return FALSE;\n    if (menu == OBJ_OTHER_PROCESS) return FALSE;\n\n    /* DestroyMenu should not destroy system menu popup owner */\n    if ((menu->wFlags & (MF_POPUP | MF_SYSMENU)) == MF_POPUP && menu->hWnd)\n    {\n        NtUserDestroyWindow( menu->hWnd );\n        menu->hWnd = 0;\n    }\n\n    /* recursively destroy submenus */\n    if (menu->items)\n    {\n        struct menu_item *item = menu->items;\n        int i;\n\n        for (i = menu->nItems; i > 0; i--, item++)\n        {\n            if (item->fType & MF_POPUP) NtUserDestroyMenu( item->hSubMenu );\n            free( item->text );\n        }\n        free( menu->items );\n    }\n\n    free( menu );\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntgdi_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "user32!DestroyMenu [stdcall] -> NtUserDestroyMenu implicitly imported from win32u",
+   "win32u!NtUserDestroyMenu [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/menu.c",
+   "dlls/user32/tests/msg.c",
+   "dlls/user32/tests/win.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 27
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "user.exe16",
+   "source_module": "user.exe16",
+   "exported_by": [
+    "user.exe16"
+   ],
+   "file": "dlls/user.exe16/user.c",
+   "start_line": 1088,
+   "resolution": [
+    "user.exe16!DestroyMenu [pascal -ret16] -> internal symbol DestroyMenu16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 1091,
+   "signature": "BOOL16 WINAPI DestroyMenu16( HMENU16 hMenu )",
+   "code": "BOOL16 WINAPI DestroyMenu16( HMENU16 hMenu )\n{\n    return DestroyMenu( HMENU_32(hMenu) );\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-destroymenu.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-destroymenu",
+   "documented_name": "destroymenu",
+   "file": "docs/0088_sdk-api_nf-winuser-destroymenu.md",
+   "text": "---\nUID: NF:winuser.DestroyMenu\ntitle: DestroyMenu function (winuser.h)\ndescription: Destroys the specified menu and frees any memory that the menu occupies.\nhelpviewer_keywords: [\"DestroyMenu\",\"DestroyMenu function [Menus and Other Resources]\",\"_win32_DestroyMenu\",\"_win32_destroymenu_cpp\",\"menurc.destroymenu\",\"winui._win32_destroymenu\",\"winuser/DestroyMenu\"]\nold-location: menurc\\destroymenu.htm\ntech.root: menurc\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\resources\\menus\\menureference\\menufunctions\\destroymenu.htm\nms.date: 12/05/2018\nms.keywords: DestroyMenu, DestroyMenu function [Menus and Other Resources], _win32_DestroyMenu, _win32_destroymenu_cpp, menurc.destroymenu, winui._win32_destroymenu, winuser/DestroyMenu\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - DestroyMenu\n - winuser/DestroyMenu\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - User32.dll\n - Ext-MS-Win-NTUser-Menu-l1-1-0.dll\n - Ext-MS-Win-NTUser-Menu-l1-1-1.dll\n - ext-ms-win-ntuser-menu-l1-1-2.dll\n - Ext-MS-Win-NTUser-Menu-L1-1-3.dll\napi_name:\n - DestroyMenu\nreq.apiset: ext-ms-win-ntuser-menu-l1-1-0 (introduced in Windows 8)\n---\n\n# DestroyMenu function\n\n\n## -description\n\nDestroys the specified menu and frees any memory that the menu occupies.\n\n## -parameters\n\n### -param hMenu [in]\n\nType: <b>HMENU</b>\n\nA handle to the menu to be destroyed.\n\n## -returns\n\nType: <b>BOOL</b>\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero. To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nBefore closing, an application must use the <b>DestroyMenu</b> function to destroy a menu not assigned to a window. A menu that is assigned to a window is automatically destroyed when the application closes.\n\n<b>DestroyMenu</b> is recursive, that is, it will destroy the menu and all its submenus.\n\n\n#### Examples\n\nFor an example, see <a href=\"/windows/desktop/menurc/using-menus\">Displaying a Shortcut Menu</a>.\n\n<div class=\"code\"></div>\n\n## -see-also\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-createmenu\">CreateMenu</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-deletemenu\">DeleteMenu</a>\n\n\n\n<a href=\"/windows/desktop/menurc/menus\">Menus</a>\n\n\n\n<b>Reference</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-removemenu\">RemoveMenu</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-setmenuiteminfoa\">SetMenuItemInfo</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "menu",
+    "kind": "struct_decl",
+    "start_line": 55,
+    "end_line": 78,
+    "code": "struct menu\n{\n    HMENU       handle;         /* menu full handle */\n    struct menu_item  *items;   /* array of menu items */\n    WORD        wFlags;         /* menu flags (MF_POPUP, MF_SYSMENU) */\n    WORD        Width;          /* width of the whole menu */\n    WORD        Height;         /* height of the whole menu */\n    UINT        nItems;         /* number of items in the menu */\n    HWND        hWnd;           /* window containing the menu */\n    UINT        FocusedItem;    /* currently focused item */\n    HWND        hwndOwner;      /* window receiving the messages for ownerdraw */\n    BOOL        bScrolling;     /* scroll arrows are active */\n    UINT        nScrollPos;     /* current scroll position */\n    UINT        nTotalHeight;   /* total height of menu items inside menu */\n    RECT        items_rect;     /* rectangle within which the items lie, excludes margins and scroll arrows */\n    LONG        refcount;\n    UINT        dwStyle;        /* extended menu style */\n    UINT        cyMax;          /* max height of the whole menu, 0 is screen height */\n    HBRUSH      hbrBack;        /* brush for menu background */\n    DWORD       dwContextHelpID;\n    ULONG_PTR   dwMenuData;     /* application defined value */\n    HMENU       hSysMenuOwner;  /* handle to the dummy sys menu holder */\n    WORD        textOffset;     /* offset of text when items have both bitmaps and text */\n};"
+   },
+   {
+    "name": "menu_item",
+    "kind": "struct_decl",
+    "start_line": 37,
+    "end_line": 52,
+    "code": "struct menu_item\n{\n    UINT      fType;          /* item type */\n    UINT      fState;         /* item state */\n    UINT_PTR  wID;            /* item id  */\n    HMENU     hSubMenu;       /* pop-up menu */\n    HBITMAP   hCheckBit;      /* bitmap when checked */\n    HBITMAP   hUnCheckBit;    /* bitmap when unchecked */\n    LPWSTR    text;           /* item text */\n    ULONG_PTR dwItemData;     /* application defined */\n    LPWSTR    dwTypeData;     /* depends on fMask */\n    HBITMAP   hbmpItem;       /* bitmap */\n    RECT      rect;           /* item area (relative to the items_rect), see adjust_menu_item_rect */\n    UINT      xTab;           /* X position of text after Tab */\n    SIZE      bmpsize;        /* size needed for the HBMMENU_CALLBACK bitmap */\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 32,
+    "end_line": 32,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(menu);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "free_user_handle",
+    "file": "dlls/win32u/window.c",
+    "start_line": 274
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "NtUserDestroyWindow",
+    "impl": [
+     "dlls/win32u/window.c:5619"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [
+   "free"
+  ],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "win32u.NtUserDestroyMenu",
+  "category": {
+   "l1": "User interface",
+   "l2": "Resources (menus, icons, cursors, strings)",
+   "header": "winuser.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 33,
+   "body": 32,
+   "code": 16
+  },
+  "cyclomatic": 8,
+  "return_type": "BOOL",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 27,
+   "n_tests": 28,
+   "n_tests_other": 1,
+   "own_test_functions": [
+    "dlls/user32/tests/menu.c::test_AppendMenu",
+    "dlls/user32/tests/menu.c::test_InsertMenu",
+    "dlls/user32/tests/menu.c::test_emptypopup",
+    "dlls/user32/tests/menu.c::test_mbs_help",
+    "dlls/user32/tests/menu.c::test_menu_add_string",
+    "dlls/user32/tests/menu.c::test_menu_cancelmode",
+    "dlls/user32/tests/menu.c::test_menu_circref",
+    "dlls/user32/tests/menu.c::test_menu_flags",
+    "dlls/user32/tests/menu.c::test_menu_getmenuinfo",
+    "dlls/user32/tests/menu.c::test_menu_locked_by_window",
+    "dlls/user32/tests/menu.c::test_menu_maxdepth",
+    "dlls/user32/tests/menu.c::test_menu_ownerdraw",
+    "dlls/user32/tests/menu.c::test_menu_resource_layout",
+    "dlls/user32/tests/menu.c::test_menu_search_bycommand",
+    "dlls/user32/tests/menu.c::test_menu_setmenuinfo",
+    "dlls/user32/tests/menu.c::test_menu_trackagain",
+    "dlls/user32/tests/menu.c::test_menu_trackpopupmenu",
+    "dlls/user32/tests/menu.c::test_menualign",
+    "dlls/user32/tests/menu.c::test_subpopup_locked_by_menu",
+    "dlls/user32/tests/menu.c::test_system_menu",
+    "dlls/user32/tests/msg.c::test_TrackPopupMenu",
+    "dlls/user32/tests/msg.c::test_TrackPopupMenuEmpty",
+    "dlls/user32/tests/msg.c::test_menu_messages",
+    "dlls/user32/tests/win.c::test_AdjustWindowRect",
+    "dlls/user32/tests/win.c::test_SetMenu",
+    "dlls/user32/tests/win.c::test_capture_4",
+    "dlls/user32/tests/win.c::test_mdi"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-destroymenu",
+   "source": "win32",
+   "description": "Destroys the specified menu and frees any memory that the menu occupies.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "User32.dll"
+  },
+  "exports": [
+   "shlwapi.DestroyMenuWrap",
+   "user32.DestroyMenu",
+   "win32u.NtUserDestroyMenu"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

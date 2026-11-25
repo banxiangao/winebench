@@ -1,0 +1,172 @@
+{
+ "id": "0055",
+ "function": {
+  "name": "NtCreateKey",
+  "export_name": "NtCreateKey",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll"
+  ],
+  "side": "unix",
+  "file": "dlls/ntdll/unix/registry.c",
+  "start_line": 74,
+  "end_line": 114,
+  "body_lines": 38,
+  "signature": "NTSTATUS WINAPI NtCreateKey( HANDLE *key, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr, ULONG index, const UNICODE_STRING *class, ULONG options, ULONG *dispos )",
+  "header_comment": "/******************************************************************************\n *              NtCreateKey  (NTDLL.@)\n */",
+  "code": "NTSTATUS WINAPI NtCreateKey( HANDLE *key, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr,\n                             ULONG index, const UNICODE_STRING *class, ULONG options, ULONG *dispos )\n{\n    unsigned int ret;\n    data_size_t len;\n    struct object_attributes *objattr;\n\n    *key = 0;\n    if (attr->Length != sizeof(OBJECT_ATTRIBUTES)) return STATUS_INVALID_PARAMETER;\n    if (!attr->ObjectName->Length && !attr->RootDirectory) return STATUS_OBJECT_PATH_SYNTAX_BAD;\n    if ((ret = wine_server_alloc_object_attributes( attr, &objattr, &len ))) return ret;\n    objattr->attributes |= OBJ_OPENIF | OBJ_CASE_INSENSITIVE;\n\n    TRACE( \"(%p,%s,%s,%x,%x,%p)\\n\", attr->RootDirectory, debugstr_us(attr->ObjectName),\n           debugstr_us(class), options, access, key );\n\n    SERVER_START_REQ( create_key )\n    {\n        req->access     = access;\n        req->options    = options;\n        wine_server_add_data( req, objattr, len );\n        if (class) wine_server_add_data( req, class->Buffer, class->Length );\n        ret = wine_server_call( req );\n        *key = wine_server_ptr_handle( reply->hkey );\n    }\n    SERVER_END_REQ;\n\n    if (ret == STATUS_OBJECT_NAME_EXISTS)\n    {\n        if (dispos) *dispos = REG_OPENED_EXISTING_KEY;\n        ret = STATUS_SUCCESS;\n    }\n    else if (ret == STATUS_SUCCESS)\n    {\n        if (dispos) *dispos = REG_CREATED_NEW_KEY;\n    }\n\n    TRACE( \"<- %p\\n\", *key );\n    free( objattr );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"winternl.h\"",
+   "#include \"unix_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "ntdll!NtCreateKey [stdcall -syscall=0x001d]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntdll/tests/om.c",
+   "dlls/ntdll/tests/reg.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 14
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "wdm",
+   "path": "wdk-ddi-src/content/wdm/nf-wdm-zwcreatekey.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-zwcreatekey",
+   "documented_name": "zwcreatekey",
+   "file": "docs/0055_windows-driver-docs-ddi_nf-wdm-zwcreatekey.md",
+   "text": "---\nUID: NF:wdm.ZwCreateKey\ntitle: ZwCreateKey function (wdm.h)\ndescription: The ZwCreateKey routine creates a new registry key or opens an existing one.\ntech.root: kernel\nms.date: 12/14/2022\nkeywords: [\"ZwCreateKey function\"]\nms.keywords: NtCreateKey, ZwCreateKey, ZwCreateKey routine [Kernel-Mode Driver Architecture], k111_1ab9fba3-0c39-45b8-9a79-d33ad73c0642.xml, kernel.zwcreatekey, wdm/NtCreateKey, wdm/ZwCreateKey\nreq.header: wdm.h\nreq.include-header: Wdm.h, Ntddk.h, Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt:\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: IrqlZwPassive, PowerIrpDDis, ZwRegistryCreate, ZwRegistryOpen, HwStorPortProhibitedDDIs, ZwRegistryCreate(storport)\nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: PASSIVE_LEVEL\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - ZwCreateKey\n - wdm/ZwCreateKey\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - ZwCreateKey\n---\n\n## -description\n\nThe **ZwCreateKey** routine creates a new registry key or opens an existing one.\n\n## -parameters\n\n### -param KeyHandle [out]\n\nPointer to a HANDLE variable that receives a handle to the key.\n\n### -param DesiredAccess [in]\n\nSpecifies an [ACCESS_MASK](/windows-hardware/drivers/kernel/access-mask) value that determines the requested access to the object. In addition to the access rights that are defined for all types of objects (see [ACCESS_MASK](/windows-hardware/drivers/kernel/access-mask)), the caller can specify one or more of the following access rights, which are specific to object directories:\n\n| *DesiredAccess* flag | Allows caller to do this |\n|---|---|\n| KEY_QUERY_VALUE | Read key values. |\n| KEY_SET_VALUE | Write key values. |\n| KEY_CREATE_SUB_KEY | Create subkeys for the key. |\n| KEY_ENUMERATE_SUB_KEYS | Read the key's subkeys. |\n| KEY_CREATE_LINK | Create a symbolic link to the key. This flag is not used by device and intermediate drivers. |\n| KEY_NOTIFY | Ask to receive notification when the name, value, or attributes of the key change. For more information, see [ZwNotifyChangeKey](../ntifs/nf-ntifs-zwnotifychangekey.md). |\n\nThe caller can also specify one of the following constants, which combines several ACCESS_MASK flags.\n\n| Constant | Consists of these ACCESS_MASK flags |\n|---|---|\n| KEY_READ | STANDARD_RIGHTS_READ, KEY_QUERY_VALUE, KEY_ENUMERATE_SUB_KEYS, and KEY_NOTIFY |\n| KEY_WRITE | STANDARD_RIGHTS_WRITE, KEY_SET_VALUE, and KEY_CREATE_SUB_KEY |\n| KEY_EXECUTE | Same as KEY_READ. |\n| KEY_ALL_ACCESS | STANDARD_RIGHTS_ALL, KEY_QUERY_VALUE, KEY_SET_VALUE, KEY_CREATE_SUB_KEY, KEY_ENUMERATE_SUB_KEYS, KEY_NOTIFY, and KEY_CREATE_LINK |\n\n### -param ObjectAttributes [in]\n\nPointer to an [**OBJECT_ATTRIBUTES**](/windows/win32/api/ntdef/ns-ntdef-_object_attributes) structure that specifies the object name and other attributes. Use [InitializeObjectAttributes](/windows/win32/api/ntdef/nf-ntdef-initializeobjectattributes) to initialize this structure. If the caller is not running in a system thread context, it must set the OBJ_KERNEL_HANDLE attribute when it calls **InitializeObjectAttributes**.\n\n### -param TitleIndex\n\nDevice and intermediate drivers set this parameter to zero.\n\n### -param Class [in, optional]\n\nPointer to a Unicode string that contains the key's object class. This information is used by the configuration manager.\n\n### -param CreateOptions [in]\n\nSpecifies the options to apply when creating or opening a key, specified as a compatible combination of the following flags.\n\n| *CreateOptions* flag | Description |\n|---|---|\n| REG_OPTION_VOLATILE | Key is not preserved when the system is rebooted. |\n| REG_OPTION_NON_VOLATILE | Key is preserved when the system is rebooted. |\n| REG_OPTION_CREATE_LINK | The newly created key is a symbolic link. This flag is not used by device and intermediate drivers. |\n| REG_OPTION_BACKUP_RESTORE | Key should be created or opened with special privileges that allow backup and restore operations. This flag is not used by device and intermediate drivers. |\n\n### -param Disposition [out, optional]\n\nPointer to a variable that receives a value indicating whether a new key was created or an existing one opened.\n\n| *Disposition* value | Description |\n|---|---|\n| REG_CREATED_NEW_KEY | A new key was created. |\n| REG_OPENED_EXISTING_KEY | An existing key was opened. |\n\n## -returns\n\n**ZwCreateKey** returns STATUS_SUCCESS on success, or the appropriate NTSTATUS error code on failure.\n\n## -remarks\n\n**ZwCreateKey** supplies a handle that the caller can use to manipulate a registry key. For more information, see [Using the Registry in a Driver](/windows-hardware/drivers/kernel/using-the-registry-in-a-driver).\n\nOnce the handle pointed to by *KeyHandle* is no longer in use, the driver must call [ZwClose](../ntifs/nf-ntifs-ntclose.md) to close it.\n\nThere are two alternate ways to specify the name of the file to be created or opened with **ZwCreateKey**:\n\n1. As a fully qualified pathname, supplied in the **ObjectName** member of the input *ObjectAttributes*. The pathnames of registry keys begin with **\\Registry**.\n\n1. As pathname relative to another registry key, represented by the handle in the **RootDirectory** member of the input *ObjectAttributes*.\n\nIf the key specified by *ObjectAttributes* does not exist, the routine attempts to create the key. For this attempt to succeed, the new key must be a direct subkey of the key that is referred to by **RootDirectory**, and the key that **RootDirectory** refers to must have been opened for KEY_CREATE_SUB_KEY access.\n\nIf the specified key already exists, it is opened and its value is not affected in any way.\n\nThe security attributes specified by *ObjectAttributes* when a key is created determine whether the specified *DesiredAccess* is granted on subsequent calls to **ZwCreateKey** and [ZwOpenKey](./nf-wdm-zwopenkey.md).\n\nIf the caller is not running in a system thread context, it must ensure that any handles it creates are private handles. Otherwise, the handle can be accessed by the process in whose context the driver is running. For more information, see [Object Handles](/windows-hardware/drivers/kernel/object-handles).\n\nFor more information about working with registry keys, see [Using the Registry in a Driver](/windows-hardware/drivers/kernel/using-the-registry-in-a-driver).\n\nIf the call to this function occurs in user mode, you should use the name \"**NtCreateKey**\" instead of \"**ZwCreateKey**\".\n\nThe **NtCreateKey** routine in the Windows kernel is not directly accessible to kernel-mode drivers.\n\nFor calls from kernel-mode drivers, the **Nt*Xxx*** and **Zw*Xxx*** versions of a Windows Native System Services routine can behave differently in the way that they handle and interpret input parameters. For more information about the relationship between the **Nt*Xxx*** and **Zw*Xxx*** versions of a routine, see [Using Nt and Zw Versions of the Native System Services Routines](/windows-hardware/drivers/kernel/using-nt-and-zw-versions-of-the-native-system-services-routines).\n\n## -see-also\n\n[ACCESS_MASK](/windows-hardware/drivers/kernel/access-mask)\n\n[InitializeObjectAttributes](/windows/win32/api/ntdef/nf-ntdef-initializeobjectattributes)\n\n[Using Nt and Zw Versions of the Native System Services Routines](/windows-hardware/drivers/kernel/using-nt-and-zw-versions-of-the-native-system-services-routines)\n\n[ZwClose](../ntifs/nf-ntifs-ntclose.md)\n\n[ZwDeleteKey](./nf-wdm-zwdeletekey.md)\n\n[ZwEnumerateKey](./nf-wdm-zwenumeratekey.md)\n\n[ZwEnumerateValueKey](./nf-wdm-zwenumeratevaluekey.md)\n\n[ZwFlushKey](./nf-wdm-zwflushkey.md)\n\n[ZwNotifyChangeKey](../ntifs/nf-ntifs-zwnotifychangekey.md)\n\n[ZwOpenKey](./nf-wdm-zwopenkey.md)\n\n[ZwQueryValueKey](./nf-wdm-zwqueryvaluekey.md)\n\n[ZwSetValueKey](./nf-wdm-zwsetvaluekey.md)"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(reg);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "wine_server_alloc_object_attributes",
+    "file": "dlls/ntdll/unix/sync.c",
+    "start_line": 204
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "memset",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   },
+   {
+    "name": "wine_server_call",
+    "impl": [
+     "dlls/ntdll/loader.c:3436"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_dbg_log",
+   "wine_server_add_data",
+   "wine_server_ptr_handle"
+  ],
+  "system": [
+   "free"
+  ],
+  "unresolved": [
+   "debugstr_us"
+  ],
+  "server_requests": [
+   {
+    "request": "create_key",
+    "handler": "server/registry.c:2125"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ntdll.NtCreateKey",
+  "category": {
+   "l1": "System services",
+   "l2": "Registry",
+   "header": "wdm.h",
+   "textbook": "Information maintenance",
+   "basis": "name_rule"
+  },
+  "loc": {
+   "total": 41,
+   "body": 39,
+   "code": 26
+  },
+  "cyclomatic": 10,
+  "return_type": "NTSTATUS",
+  "n_params": 7,
+  "tests": {
+   "n_tests_own": 14,
+   "n_tests": 15,
+   "n_tests_other": 1,
+   "own_test_functions": [
+    "dlls/ntdll/tests/om.c::test_name_limits",
+    "dlls/ntdll/tests/om.c::test_null_in_object_name",
+    "dlls/ntdll/tests/om.c::test_query_object",
+    "dlls/ntdll/tests/om.c::test_zero_access",
+    "dlls/ntdll/tests/reg.c::_check_enum_value",
+    "dlls/ntdll/tests/reg.c::test_NtCreateKey",
+    "dlls/ntdll/tests/reg.c::test_NtDeleteKey",
+    "dlls/ntdll/tests/reg.c::test_NtOpenKey",
+    "dlls/ntdll/tests/reg.c::test_NtQueryKey",
+    "dlls/ntdll/tests/reg.c::test_NtRegLoadKeyEx",
+    "dlls/ntdll/tests/reg.c::test_NtRenameKey",
+    "dlls/ntdll/tests/reg.c::test_notify",
+    "dlls/ntdll/tests/reg.c::test_redirection",
+    "dlls/ntdll/tests/reg.c::test_symlinks"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-zwcreatekey",
+   "source": "ddi",
+   "description": "The ZwCreateKey routine creates a new registry key or opens an existing one.",
+   "min_windows": "",
+   "documented_dll": "NtosKrnl.exe"
+  },
+  "exports": [
+   "ntdll.NtCreateKey",
+   "ntdll.ZwCreateKey",
+   "ntoskrnl.exe.ZwCreateKey"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

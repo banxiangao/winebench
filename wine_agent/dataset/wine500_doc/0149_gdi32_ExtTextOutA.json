@@ -1,0 +1,162 @@
+{
+ "id": "0149",
+ "function": {
+  "name": "ExtTextOutA",
+  "export_name": "ExtTextOutA",
+  "module": "gdi32",
+  "source_module": "gdi32",
+  "exported_by": [
+   "gdi32"
+  ],
+  "side": "PE",
+  "file": "dlls/gdi32/text.c",
+  "start_line": 1002,
+  "end_line": 1056,
+  "body_lines": 52,
+  "signature": "BOOL WINAPI ExtTextOutA( HDC hdc, INT x, INT y, UINT flags, const RECT *rect, const char *str, UINT count, const INT *dx )",
+  "header_comment": "/***********************************************************************\n *           ExtTextOutA    (GDI32.@)\n */",
+  "code": "BOOL WINAPI ExtTextOutA( HDC hdc, INT x, INT y, UINT flags, const RECT *rect,\n                         const char *str, UINT count, const INT *dx )\n{\n    INT wlen;\n    UINT codepage;\n    WCHAR *p;\n    BOOL ret;\n    INT *dxW = NULL;\n\n    if (count > INT_MAX) return FALSE;\n\n    if (flags & ETO_GLYPH_INDEX)\n        return ExtTextOutW( hdc, x, y, flags, rect, (const WCHAR *)str, count, dx );\n\n    p = text_mbtowc( hdc, str, count, &wlen, &codepage );\n\n    if (dx)\n    {\n        unsigned int i = 0, j = 0;\n\n        /* allocate enough for a ETO_PDY */\n        dxW = HeapAlloc( GetProcessHeap(), 0, 2 * wlen * sizeof(INT) );\n        while (i < count)\n        {\n            if (IsDBCSLeadByteEx( codepage, str[i] ))\n            {\n                if (flags & ETO_PDY)\n                {\n                    dxW[j++] = dx[i * 2]     + dx[(i + 1) * 2];\n                    dxW[j++] = dx[i * 2 + 1] + dx[(i + 1) * 2 + 1];\n                }\n                else\n                    dxW[j++] = dx[i] + dx[i + 1];\n                i = i + 2;\n            }\n            else\n            {\n                if (flags & ETO_PDY)\n                {\n                    dxW[j++] = dx[i * 2];\n                    dxW[j++] = dx[i * 2 + 1];\n                }\n                else\n                    dxW[j++] = dx[i];\n                i = i + 1;\n            }\n        }\n    }\n\n    ret = ExtTextOutW( hdc, x, y, flags, rect, p, wlen, dxW );\n\n    HeapFree( GetProcessHeap(), 0, p );\n    HeapFree( GetProcessHeap(), 0, dxW );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <limits.h>",
+   "#include <assert.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winnls.h\"",
+   "#include \"usp10.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"gdi_private.h\"",
+   "#include \"resource.h\""
+  ],
+  "resolution": [
+   "gdi32!ExtTextOutA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdi32/tests/dib.c",
+   "dlls/gdi32/tests/font.c",
+   "dlls/gdi32/tests/metafile.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-exttextouta.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-exttextouta",
+   "documented_name": "exttextouta",
+   "file": "docs/0149_sdk-api_nf-wingdi-exttextouta.md",
+   "text": "---\nUID: NF:wingdi.ExtTextOutA\ntitle: ExtTextOutA function (wingdi.h)\ndescription: The ExtTextOut function draws text using the currently selected font, background color, and text color. You can optionally provide dimensions to be used for clipping, opaquing, or both. (ANSI)\nhelpviewer_keywords: [\"ETO_CLIPPED\", \"ETO_GLYPH_INDEX\", \"ETO_IGNORELANGUAGE\", \"ETO_NUMERICSLATIN\", \"ETO_NUMERICSLOCAL\", \"ETO_OPAQUE\", \"ETO_PDY\", \"ETO_RTLREADING\", \"ExtTextOutA\", \"wingdi/ExtTextOutA\"]\nold-location: gdi\\exttextout.htm\ntech.root: gdi\nms.assetid: 74f8fcb8-8ad4-47f2-a330-fa56713bdb37\nms.date: 12/05/2018\nms.keywords: ETO_CLIPPED, ETO_GLYPH_INDEX, ETO_IGNORELANGUAGE, ETO_NUMERICSLATIN, ETO_NUMERICSLOCAL, ETO_OPAQUE, ETO_PDY, ETO_RTLREADING, ExtTextOut, ExtTextOut function [Windows GDI], ExtTextOutA, ExtTextOutW, _win32_ExtTextOut, gdi.exttextout, wingdi/ExtTextOut, wingdi/ExtTextOutA, wingdi/ExtTextOutW\nreq.header: wingdi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: ExtTextOutW (Unicode) and ExtTextOutA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ExtTextOutA\n - wingdi/ExtTextOutA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - gdi32.dll\n - Ext-MS-Win-GDI-Font-l1-1-1.dll\n - ext-ms-win-gdi-font-l1-1-2.dll\n - Ext-MS-Win-GDI-Font-L1-1-3.dll\n - GDI32Full.dll\napi_name:\n - ExtTextOut\n - ExtTextOutA\n - ExtTextOutW\n---\n\n# ExtTextOutA function\n\n\n## -description\n\nThe <b>ExtTextOut</b> function draws text using the currently selected font, background color, and text color. You can optionally provide dimensions to be used for clipping, opaquing, or both.\n\n## -parameters\n\n### -param hdc [in]\n\nA handle to the device context.\n\n### -param x [in]\n\nThe x-coordinate, in logical coordinates, of the reference point used to position the string.\n\n### -param y [in]\n\nThe y-coordinate, in logical coordinates, of the reference point used to position the string.\n\n### -param options [in]\n\nSpecifies how to use the application-defined rectangle. This parameter can be one or more of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"ETO_CLIPPED\"></a><a id=\"eto_clipped\"></a><dl>\n<dt><b>ETO_CLIPPED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe text will be clipped to the rectangle.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"ETO_GLYPH_INDEX\"></a><a id=\"eto_glyph_index\"></a><dl>\n<dt><b>ETO_GLYPH_INDEX</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <i>lpString</i> array refers to an array returned from <a href=\"/windows/desktop/api/wingdi/nf-wingdi-getcharacterplacementa\">GetCharacterPlacement</a> and should be parsed directly by GDI as no further language-specific processing is required. Glyph indexing only applies to TrueType fonts, but the flag can be used for bitmap and vector fonts to indicate that no further language processing is necessary and GDI should process the string directly. Note that all glyph indexes are 16-bit values even though the string is assumed to be an array of 8-bit values for raster fonts.\n\nFor ExtTextOutW, the glyph indexes are saved to a metafile. However, to display the correct characters the metafile must be played back using the same font. For ExtTextOutA, the glyph indexes are not saved.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"ETO_IGNORELANGUAGE\"></a><a id=\"eto_ignorelanguage\"></a><dl>\n<dt><b>ETO_IGNORELANGUAGE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReserved for system use. If an application sets this flag, it loses international scripting support and in some cases it may display no text at all.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"ETO_NUMERICSLATIN\"></a><a id=\"eto_numericslatin\"></a><dl>\n<dt><b>ETO_NUMERICSLATIN</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nTo display numbers, use European digits.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"ETO_NUMERICSLOCAL\"></a><a id=\"eto_numericslocal\"></a><dl>\n<dt><b>ETO_NUMERICSLOCAL</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nTo display numbers, use digits appropriate to the locale.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"ETO_OPAQUE\"></a><a id=\"eto_opaque\"></a><dl>\n<dt><b>ETO_OPAQUE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe current background color should be used to fill the rectangle.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"ETO_PDY\"></a><a id=\"eto_pdy\"></a><dl>\n<dt><b>ETO_PDY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nWhen this is set, the array pointed to by <i>lpDx</i> contains pairs of values. The first value of each pair is, as usual, the distance between origins of adjacent character cells, but the second value is the displacement along the vertical direction of the font.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"ETO_RTLREADING\"></a><a id=\"eto_rtlreading\"></a><dl>\n<dt><b>ETO_RTLREADING</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\n<b>Middle East language edition of Windows:</b> If this value is specified and a Hebrew or Arabic font is selected into the device context, the string is output using right-to-left reading order. If this value is not specified, the string is output in left-to-right order. The same effect can be achieved by setting the TA_RTLREADING value in <a href=\"/windows/desktop/api/wingdi/nf-wingdi-settextalign\">SetTextAlign</a>. This value is preserved for backward compatibility.\n\n</td>\n</tr>\n</table>\n \n\nThe ETO_GLYPH_INDEX and ETO_RTLREADING values cannot be used together. Because ETO_GLYPH_INDEX implies that all language processing has been completed, the function ignores the ETO_RTLREADING flag if also specified.\n\n### -param lprect [in]\n\nA pointer to an optional <a href=\"/windows/desktop/api/windef/ns-windef-rect\">RECT</a> structure that specifies the dimensions, in logical coordinates, of a rectangle that is used for clipping, opaquing, or both.\n\n### -param lpString [in]\n\nA pointer to a string that specifies the text to be drawn. The string does not need to be zero-terminated, since <i>cbCount</i> specifies the length of the string.\n\n### -param c [in]\n\nThe <a href=\"/windows/desktop/gdi/specifying-length-of-text-output-string\">length of the string</a> pointed to by <i>lpString</i>.\n\nThis value may not exceed 8192.\n\n### -param lpDx [in]\n\nA pointer to an optional array of values that indicate the distance between origins of adjacent character cells. For example, lpDx[<i>i</i>] logical units separate the origins of character cell <i>i</i> and character cell <i>i</i> + 1.\n\n## -returns\n\nIf the string is drawn, the return value is nonzero. However, if the ANSI version of <b>ExtTextOut</b> is called with ETO_GLYPH_INDEX, the function returns <b>TRUE</b> even though the function does nothing.\n\nIf the function fails, the return value is zero.\n\n## -remarks\n\nThe current text-alignment settings for the specified device context determine how the reference point is used to position the text. The text-alignment settings are retrieved by calling the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-gettextalign\">GetTextAlign</a> function. The text-alignment settings are altered by calling the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-settextalign\">SetTextAlign</a> function. You can use the following values for text alignment. Only one flag can be chosen from those that affect horizontal and vertical alignment. In addition, only one of the two flags that alter the current position can be chosen.\n\n\n\n<table>\n<tr>\n<th>Term</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<a id=\"TA_BASELINE\"></a><a id=\"ta_baseline\"></a>TA_BASELINE\n\n</td>\n<td width=\"60%\">\nThe reference point will be on the base line of the text.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<a id=\"TA_BOTTOM\"></a><a id=\"ta_bottom\"></a>TA_BOTTOM\n\n</td>\n<td width=\"60%\">\nThe reference point will be on the bottom edge of the bounding rectangle.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<a id=\"TA_TOP\"></a><a id=\"ta_top\"></a>TA_TOP\n\n</td>\n<td width=\"60%\">\nThe reference point will be on the top edge of the bounding rectangle.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<a id=\"TA_CENTER\"></a><a id=\"ta_center\"></a>TA_CENTER\n\n</td>\n<td width=\"60%\">\nThe reference point will be aligned horizontally with the center of the bounding rectangle.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<a id=\"TA_LEFT\"></a><a id=\"ta_left\"></a>TA_LEFT\n\n</td>\n<td width=\"60%\">\nThe reference point will be on the left edge of the bounding rectangle.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<a id=\"TA_RIGHT\"></a><a id=\"ta_right\"></a>TA_RIGHT\n\n</td>\n<td width=\"60%\">\nThe reference point will be on the right edge of the bounding rectangle.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<a id=\"TA_NOUPDATECP\"></a><a id=\"ta_noupdatecp\"></a>TA_NOUPDATECP\n\n</td>\n<td width=\"60%\">\nThe current position is not updated after each text output call. The reference point is passed to the text output function.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<a id=\"TA_RTLREADING\"></a><a id=\"ta_rtlreading\"></a>TA_RTLREADING\n\n</td>\n<td width=\"60%\">\n<b>Middle East language edition of Windows:</b> The text is laid out in right to left reading order, as opposed to the default left to right order. This applies only when the font selected into the device context is either Hebrew or Arabic.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<a id=\"TA_UPDATECP\"></a><a id=\"ta_updatecp\"></a>TA_UPDATECP\n\n</td>\n<td width=\"60%\">\nThe current position is updated after each text output call. The current position is used as the reference point.\n\n</td>\n</tr>\n</table>\n \n\nIf the <i>lpDx</i> parameter is <b>NULL</b>, the <b>ExtTextOut</b> function uses the default spacing between characters. The character-cell origins and the contents of the array pointed to by the <i>lpDx</i> parameter are specified in logical units. A character-cell origin is defined as the upper-left corner of the character cell.\n\nBy default, the current position is not used or updated by this function. However, an application can call the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-settextalign\">SetTextAlign</a> function with the <i>fMode</i> parameter set to TA_UPDATECP to permit the system to use and update the current position each time the application calls <b>ExtTextOut</b> for a specified device context. When this flag is set, the system ignores the <i>X</i> and <i>Y</i> parameters on subsequent <b>ExtTextOut</b> calls.\n\nFor the ANSI version of <b>ExtTextOut</b>, the <i>lpDx</i> array has the same number of INT values as there are bytes in <i>lpString</i>. For DBCS characters, you can apportion the dx in the <i>lpDx</i> entries between the lead byte and the trail byte, as long as the sum of the two bytes adds up to the desired dx. For DBCS characters with the Unicode version of <b>ExtTextOut</b>, each Unicode glyph gets a single <i>pdx</i> entry.\n\nNote, the <i>alpDx</i> values from <a href=\"/windows/desktop/api/wingdi/nf-wingdi-gettextextentexpointa\">GetTextExtentExPoint</a> are not the same as the <i>lpDx</i> values for <b>ExtTextOut</b>. To use the <i>alpDx</i> values in <i>lpDx</i>, you must first process them.\n\n\n**ExtTextOut** will use [Uniscribe](/windows/win32/intl/uniscribe) when necessary resulting in font fallback. The ETO_IGNORELANGUAGE flag will inhibit this behavior and should not be passed.\n\nAdditionally, **ExtTextOut** will perform internal batching of calls before transitioning to kernel mode, mitigating some of the performance concerns when weighing usage of **PolyTextOut** versus **ExtTextOut**.\n\n> [!TIP]\n>  **ExtTextOut** is strongly recommended over **PolyTextOut** for modern development due to its ability to handle display of different languages.\n\n#### Examples\n\nFor an example, see \"Setting Fonts for Menu-Item Text Strings\" in <a href=\"/windows/desktop/menurc/using-menus\">Using Menus</a>.\n\n<div class=\"code\"></div>\n\n\n\n\n> [!NOTE]\n> The wingdi.h header defines ExtTextOut as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/gdi/font-and-text-functions\">Font and Text Functions</a>\n\n\n\n<a href=\"/windows/desktop/gdi/fonts-and-text\">Fonts and Text Overview</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-gettextalign\">GetTextAlign</a>\n\n\n\n<a href=\"/windows/desktop/api/windef/ns-windef-rect\">RECT</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-selectobject\">SelectObject</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-setbkcolor\">SetBkColor</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-settextalign\">SetTextAlign</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-settextcolor\">SetTextColor</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "text_mbtowc",
+   "file": "dlls/gdi32/text.c",
+   "start_line": 715,
+   "end_line": 731,
+   "static": true,
+   "called_from": [
+    "ExtTextOutA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/text.c:1282",
+    "dlls/gdi32/text.c:1477",
+    "dlls/gdi32/text.c:1794",
+    "dlls/gdi32/text.c:2074"
+   ],
+   "signature": "static WCHAR *text_mbtowc( HDC hdc, const char *str, INT count, INT *plenW, UINT *ret_cp )",
+   "code": "static WCHAR *text_mbtowc( HDC hdc, const char *str, INT count, INT *plenW, UINT *ret_cp )\n{\n    UINT cp;\n    INT lenW;\n    LPWSTR strW;\n\n    cp = GdiGetCodePage( hdc );\n\n    if (count == -1) count = strlen( str );\n    lenW = MultiByteToWideChar( cp, 0, str, count, NULL, 0 );\n    strW = HeapAlloc( GetProcessHeap(), 0, lenW * sizeof(WCHAR) );\n    MultiByteToWideChar( cp, 0, str, count, strW, lenW );\n    TRACE( \"mapped %s -> %s\\n\", debugstr_an(str, count), debugstr_wn(strW, lenW) );\n    if (plenW) *plenW = lenW;\n    if (ret_cp) *ret_cp = cp;\n    return strW;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 59,
+    "end_line": 59,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(bidi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "ExtTextOutW",
+    "impl": [
+     "dlls/gdi32/text.c:956"
+    ]
+   },
+   {
+    "name": "GdiGetCodePage",
+    "impl": [
+     "dlls/gdi32/text.c:832"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "HeapAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "IsDBCSLeadByteEx",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:6737"
+    ]
+   },
+   {
+    "name": "MultiByteToWideChar",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7070"
+    ]
+   },
+   {
+    "name": "strlen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:423"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "debugstr_an",
+   "debugstr_wn",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

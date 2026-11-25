@@ -1,0 +1,571 @@
+{
+ "id": "0070",
+ "function": {
+  "name": "_dup2",
+  "export_name": "_dup2",
+  "module": "msvcrt",
+  "source_module": "msvcrt",
+  "exported_by": [
+   "crtdll",
+   "msvcr100",
+   "msvcr110",
+   "msvcr120",
+   "msvcr120_app",
+   "msvcr70",
+   "msvcr71",
+   "msvcr80",
+   "msvcr90",
+   "msvcrt",
+   "msvcrt20",
+   "msvcrt40",
+   "msvcrtd",
+   "ucrtbase"
+  ],
+  "side": "PE",
+  "file": "dlls/msvcrt/file.c",
+  "start_line": 1224,
+  "end_line": 1278,
+  "body_lines": 52,
+  "signature": "int CDECL _dup2(int od, int nd)",
+  "header_comment": "/*********************************************************************\n *\t\t_dup2 (MSVCRT.@)\n * NOTES\n * MSDN isn't clear on this point, but the remarks for _pipe\n * indicate file descriptors duplicated with _dup and _dup2 are always\n * inheritable.\n */",
+  "code": "int CDECL _dup2(int od, int nd)\n{\n  ioinfo *info_od, *info_nd;\n  int ret;\n\n  TRACE(\"(od=%d, nd=%d)\\n\", od, nd);\n\n  if (od < nd)\n  {\n    info_od = get_ioinfo(od);\n    info_nd = get_ioinfo_alloc_fd(nd);\n  }\n  else\n  {\n    info_nd = get_ioinfo_alloc_fd(nd);\n    info_od = get_ioinfo(od);\n  }\n\n  if (info_nd == &MSVCRT___badioinfo)\n  {\n      *_errno() = EBADF;\n      ret = -1;\n  }\n  else if (info_od->wxflag & WX_OPEN)\n  {\n    HANDLE handle;\n\n    if (DuplicateHandle(GetCurrentProcess(), info_od->handle,\n     GetCurrentProcess(), &handle, 0, TRUE, DUPLICATE_SAME_ACCESS))\n    {\n      int wxflag = info_od->wxflag & ~WX_DONTINHERIT;\n\n      if (info_nd->wxflag & WX_OPEN)\n        _close(nd);\n\n      msvcrt_set_fd(info_nd, handle, wxflag);\n      /* _dup2 returns 0, not nd, on success */\n      ret = 0;\n    }\n    else\n    {\n      ret = -1;\n      msvcrt_set_errno(GetLastError());\n    }\n  }\n  else\n  {\n    *_errno() = EBADF;\n    ret = -1;\n  }\n\n  release_ioinfo(info_od);\n  release_ioinfo(info_nd);\n  return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <direct.h>",
+   "#include <fcntl.h>",
+   "#include <io.h>",
+   "#include <share.h>",
+   "#include <stdarg.h>",
+   "#include <sys/locking.h>",
+   "#include <sys/types.h>",
+   "#include <sys/utime.h>",
+   "#include <time.h>",
+   "#include <limits.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wincon.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"msvcrt.h\"",
+   "#include \"mtdll.h\"",
+   "#include \"wine/asm.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/asm.h\""
+  ],
+  "resolution": [
+   "msvcrt!_dup2 [cdecl] -> internal symbol _dup2"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/msvcrt/tests/file.c",
+   "dlls/ucrtbase/tests/file.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 7
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "cpp-docs",
+   "header": "",
+   "path": "docs/c-runtime-library/reference/dup-dup2.md",
+   "url": "https://learn.microsoft.com/cpp/c-runtime-library/reference/dup-dup2",
+   "documented_name": "_dup2",
+   "file": "docs/0070_cpp-docs_dup-dup2.md",
+   "text": "---\ndescription: \"Learn more about: _dup, _dup2\"\ntitle: \"_dup, _dup2\"\nms.date: \"4/2/2020\"\napi_name: [\"_dup\", \"_dup2\", \"_o__dup\", \"_o__dup2\"]\napi_location: [\"msvcrt.dll\", \"msvcr80.dll\", \"msvcr90.dll\", \"msvcr100.dll\", \"msvcr100_clr0400.dll\", \"msvcr110.dll\", \"msvcr110_clr0400.dll\", \"msvcr120.dll\", \"msvcr120_clr0400.dll\", \"ucrtbase.dll\", \"api-ms-win-crt-stdio-l1-1-0.dll\"]\napi_type: [\"DLLExport\"]\ntopic_type: [\"apiref\"]\nf1_keywords: [\"_dup2\", \"_dup\"]\nhelpviewer_keywords: [\"_dup2 function\", \"dup function\", \"file handles [C++], duplicating\", \"file handles [C++], reassigning\", \"dup2 function\", \"_dup function\"]\n---\n# `_dup`, `_dup2`\n\nCreates a second file descriptor for an open file (**`_dup`**), or reassigns a file descriptor (**`_dup2`**).\n\n## Syntax\n\n```C\nint _dup( int fd );\nint _dup2( int fd1, int fd2 );\n```\n\n### Parameters\n\n*`fd`*, *`fd1`*\\\nFile descriptors referring to open file.\n\n*`fd2`*\\\nAny file descriptor.\n\n## Return value\n\n**`_dup`** returns a new file descriptor. **`_dup2`** returns 0 to indicate success. If an error occurs, each function returns -1 and sets `errno` to `EBADF` if the file descriptor is invalid, or to `EMFILE` if no more file descriptors are available. When passed an invalid file descriptor, the function also invokes the invalid parameter handler, as described in [Parameter validation](../parameter-validation.md).\n\nFor more information about return codes, see [`errno`, `_doserrno`, `_sys_errlist`, and `_sys_nerr`](../errno-doserrno-sys-errlist-and-sys-nerr.md).\n\n## Remarks\n\nThe **`_dup`** and **`_dup2`** functions associate a second file descriptor with a currently open file. These functions can be used to associate a predefined file descriptor, such as that for **`stdout`**, with a different file. Operations on the file can be carried out using either file descriptor. The type of access allowed for the file is unaffected by the creation of a new descriptor. **`_dup`** returns the next available file descriptor for the given file. **`_dup2`** forces *`fd2`* to refer to the same file as *`fd1`*. If *`fd2`* is associated with an open file at the time of the call, that file is closed.\n\nBoth **`_dup`** and **`_dup2`** accept file descriptors as parameters. To pass a stream (`FILE *`) to either of these functions, use [`_fileno`](fileno.md). The **`fileno`** routine returns the file descriptor currently associated with the given stream. The following example shows how to associate **`stderr`** (defined as `FILE *` in `stdio.h`) with a file descriptor:\n\n```C\nint cstderr = _dup( _fileno( stderr ));\n```\n\nBy default, this function's global state is scoped to the application. To change this behavior, see [Global state in the CRT](../global-state.md).\n\n## Requirements\n\n| Routine | Required header |\n|---|---|\n| **`_dup`** | `<io.h>` |\n| **`_dup2`** | `<io.h>` |\n\nThe console isn't supported in Universal Windows Platform (UWP) apps. The standard stream handles that are associated with the console, **`stdin`**, **`stdout`**, and **`stderr`**, must be redirected before C run-time functions can use them in UWP apps. For more compatibility information, see [Compatibility](../compatibility.md).\n\n## Example\n\n```C\n// crt_dup.c\n// This program uses the variable old to save\n// the original stdout. It then opens a new file named\n// DataFile and forces stdout to refer to it. Finally, it\n// restores stdout to its original state.\n\n#include <io.h>\n#include <stdlib.h>\n#include <stdio.h>\n\nint main( void )\n{\n   int old;\n   FILE *DataFile;\n\n   old = _dup( 1 );   // \"old\" now refers to \"stdout\"\n                      // Note:  file descriptor 1 == \"stdout\"\n   if( old == -1 )\n   {\n      perror( \"_dup( 1 ) failure\" );\n      exit( 1 );\n   }\n   _write( old, \"This goes to stdout first\\n\", 26 );\n   if( fopen_s( &DataFile, \"data\", \"w\" ) != 0 )\n   {\n      puts( \"Can't open file 'data'\\n\" );\n      exit( 1 );\n   }\n\n   // stdout now refers to file \"data\"\n   if( -1 == _dup2( _fileno( DataFile ), 1 ) )\n   {\n      perror( \"Can't _dup2 stdout\" );\n      exit( 1 );\n   }\n   puts( \"This goes to file 'data'\\n\" );\n\n   // Flush stdout stream buffer so it goes to correct file\n   fflush( stdout );\n   fclose( DataFile );\n\n   // Restore original stdout\n   _dup2( old, 1 );\n   puts( \"This goes to stdout\\n\" );\n   puts( \"The file 'data' contains:\" );\n   _flushall();\n   system( \"type data\" );\n}\n```\n\n```Output\nThis goes to stdout first\nThis goes to stdout\n\nThe file 'data' contains:\nThis goes to file 'data'\n```\n\n## See also\n\n[Low-level I/O](../low-level-i-o.md)\\\n[`_close`](close.md)\\\n[`_creat`, `_wcreat`](creat-wcreat.md)\\\n[`_open`, `_wopen`](open-wopen.md)\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_ioinfo",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 390,
+   "end_line": 398,
+   "static": true,
+   "called_from": [
+    "_dup2",
+    "get_ioinfo_alloc_fd"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:522",
+    "dlls/msvcrt/file.c:1077",
+    "dlls/msvcrt/file.c:1187",
+    "dlls/msvcrt/file.c:1301",
+    "dlls/msvcrt/file.c:1399"
+   ],
+   "signature": "static inline ioinfo* get_ioinfo(int fd)",
+   "code": "static inline ioinfo* get_ioinfo(int fd)\n{\n    ioinfo *ret = get_ioinfo_nolock(fd);\n    if(ret == &MSVCRT___badioinfo)\n        return ret;\n    init_ioinfo_cs(ret);\n    EnterCriticalSection(&ret->crit);\n    return ret;\n}"
+  },
+  {
+   "name": "get_ioinfo_alloc_fd",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 440,
+   "end_line": 452,
+   "static": true,
+   "called_from": [
+    "_dup2"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:721",
+    "dlls/msvcrt/file.c:737"
+   ],
+   "signature": "static inline ioinfo* get_ioinfo_alloc_fd(int fd)",
+   "code": "static inline ioinfo* get_ioinfo_alloc_fd(int fd)\n{\n    ioinfo *ret;\n\n    ret = get_ioinfo(fd);\n    if(ret != &MSVCRT___badioinfo)\n        return ret;\n\n    if(!alloc_pioinfo_block(fd))\n        return &MSVCRT___badioinfo;\n\n    return get_ioinfo(fd);\n}"
+  },
+  {
+   "name": "msvcrt_set_fd",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 560,
+   "end_line": 573,
+   "static": true,
+   "called_from": [
+    "_dup2"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:586"
+   ],
+   "signature": "static void msvcrt_set_fd(ioinfo *fdinfo, HANDLE hand, int flag)",
+   "code": "static void msvcrt_set_fd(ioinfo *fdinfo, HANDLE hand, int flag)\n{\n  flag &= ~(WX_ATEOF | WX_READNL);\n  msvcrt_set_fdinfo(fdinfo, hand, flag);\n  if (hand != MSVCRT_NO_CONSOLE)\n  {\n    switch (fdinfo-MSVCRT___pioinfo[0])\n    {\n    case 0: SetStdHandle(STD_INPUT_HANDLE,  hand); break;\n    case 1: SetStdHandle(STD_OUTPUT_HANDLE, hand); break;\n    case 2: SetStdHandle(STD_ERROR_HANDLE,  hand); break;\n    }\n  }\n}"
+  },
+  {
+   "name": "release_ioinfo",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 487,
+   "end_line": 491,
+   "static": true,
+   "called_from": [
+    "_dup2"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:546",
+    "dlls/msvcrt/file.c:587",
+    "dlls/msvcrt/file.c:724",
+    "dlls/msvcrt/file.c:757",
+    "dlls/msvcrt/file.c:1109"
+   ],
+   "signature": "static inline void release_ioinfo(ioinfo *info)",
+   "code": "static inline void release_ioinfo(ioinfo *info)\n{\n    if(info!=&MSVCRT___badioinfo && ioinfo_is_crit_init(info))\n        LeaveCriticalSection(&info->crit);\n}"
+  },
+  {
+   "name": "get_ioinfo_nolock",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 367,
+   "end_line": 376,
+   "static": true,
+   "called_from": [
+    "get_ioinfo"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:461",
+    "dlls/msvcrt/file.c:467",
+    "dlls/msvcrt/file.c:630",
+    "dlls/msvcrt/file.c:661",
+    "dlls/msvcrt/file.c:679"
+   ],
+   "signature": "static inline ioinfo* get_ioinfo_nolock(int fd)",
+   "code": "static inline ioinfo* get_ioinfo_nolock(int fd)\n{\n    ioinfo *ret = NULL;\n    if(fd>=0 && fd<MSVCRT_MAX_FILES)\n        ret = MSVCRT___pioinfo[fd/MSVCRT_FD_BLOCK_SIZE];\n    if(!ret)\n        return &MSVCRT___badioinfo;\n\n    return ret + (fd%MSVCRT_FD_BLOCK_SIZE);\n}"
+  },
+  {
+   "name": "init_ioinfo_cs",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 378,
+   "end_line": 388,
+   "static": true,
+   "called_from": [
+    "get_ioinfo"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:470"
+   ],
+   "signature": "static inline void init_ioinfo_cs(ioinfo *info)",
+   "code": "static inline void init_ioinfo_cs(ioinfo *info)\n{\n    if(!ioinfo_is_crit_init(info)) {\n        LOCK_FILES();\n        if(!ioinfo_is_crit_init(info)) {\n            InitializeCriticalSection(&info->crit);\n            ioinfo_set_crit_init(info);\n        }\n        UNLOCK_FILES();\n    }\n}"
+  },
+  {
+   "name": "alloc_pioinfo_block",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 400,
+   "end_line": 438,
+   "static": true,
+   "called_from": [
+    "get_ioinfo_alloc_fd"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:465"
+   ],
+   "signature": "static inline BOOL alloc_pioinfo_block(int fd)",
+   "code": "static inline BOOL alloc_pioinfo_block(int fd)\n{\n    ioinfo *block;\n    int i;\n\n    if(fd<0 || fd>=MSVCRT_MAX_FILES)\n    {\n        *_errno() = ENFILE;\n        return FALSE;\n    }\n\n    block = calloc(MSVCRT_FD_BLOCK_SIZE, sizeof(ioinfo));\n    if(!block)\n    {\n        WARN(\":out of memory!\\n\");\n        *_errno() = ENOMEM;\n        return FALSE;\n    }\n    for(i=0; i<MSVCRT_FD_BLOCK_SIZE; i++)\n    {\n        block[i].handle = INVALID_HANDLE_VALUE;\n        if (ioinfo_is_crit_init(&block[i]))\n        {\n            /* Initialize crit section on block allocation for _MSVC_VER >= 140,\n             * ioinfo_is_crit_init() is always TRUE. */\n            InitializeCriticalSection(&block[i].crit);\n        }\n    }\n    if(InterlockedCompareExchangePointer((void**)&MSVCRT___pioinfo[fd/MSVCRT_FD_BLOCK_SIZE], block, NULL))\n    {\n        if (ioinfo_is_crit_init(&block[0]))\n        {\n            for(i = 0; i < MSVCRT_FD_BLOCK_SIZE; ++i)\n                DeleteCriticalSection(&block[i].crit);\n        }\n        free(block);\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "msvcrt_set_fdinfo",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 549,
+   "end_line": 558,
+   "static": true,
+   "called_from": [
+    "msvcrt_set_fd"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:723",
+    "dlls/msvcrt/file.c:755"
+   ],
+   "signature": "static void msvcrt_set_fdinfo(ioinfo *fdinfo, HANDLE hand, int flag)",
+   "code": "static void msvcrt_set_fdinfo(ioinfo *fdinfo, HANDLE hand, int flag)\n{\n  fdinfo->handle = hand;\n  fdinfo->wxflag = WX_OPEN | flag;\n  fdinfo->lookahead[0] = '\\n';\n  fdinfo->lookahead[1] = '\\n';\n  fdinfo->lookahead[2] = '\\n';\n  ioinfo_set_unicode(fdinfo, FALSE);\n  ioinfo_set_textmode(fdinfo, TEXTMODE_ANSI);\n}"
+  },
+  {
+   "name": "ioinfo_is_crit_init",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 202,
+   "end_line": 205,
+   "static": true,
+   "called_from": [
+    "alloc_pioinfo_block",
+    "init_ioinfo_cs",
+    "release_ioinfo"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:161",
+    "dlls/msvcrt/file.c:170",
+    "dlls/msvcrt/file.c:1372"
+   ],
+   "signature": "static inline BOOL ioinfo_is_crit_init(ioinfo *info)",
+   "code": "static inline BOOL ioinfo_is_crit_init(ioinfo *info)\n{\n    return info->exflag & EF_CRIT_INIT;\n}"
+  },
+  {
+   "name": "ioinfo_set_crit_init",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 207,
+   "end_line": 210,
+   "static": true,
+   "called_from": [
+    "init_ioinfo_cs"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:166",
+    "dlls/msvcrt/file.c:175"
+   ],
+   "signature": "static inline void ioinfo_set_crit_init(ioinfo *info)",
+   "code": "static inline void ioinfo_set_crit_init(ioinfo *info)\n{\n    info->exflag |= EF_CRIT_INIT;\n}"
+  },
+  {
+   "name": "ioinfo_set_unicode",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 237,
+   "end_line": 243,
+   "static": true,
+   "called_from": [
+    "msvcrt_set_fdinfo"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:191",
+    "dlls/msvcrt/file.c:2503"
+   ],
+   "signature": "static inline void ioinfo_set_unicode(ioinfo *info, BOOL unicode)",
+   "code": "static inline void ioinfo_set_unicode(ioinfo *info, BOOL unicode)\n{\n    if (unicode)\n        info->exflag |= EF_UNK_UNICODE;\n    else\n        info->exflag &= ~EF_UNK_UNICODE;\n}"
+  },
+  {
+   "name": "ioinfo_set_textmode",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 221,
+   "end_line": 235,
+   "static": true,
+   "called_from": [
+    "msvcrt_set_fdinfo"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:186",
+    "dlls/msvcrt/file.c:2506",
+    "dlls/msvcrt/file.c:2508",
+    "dlls/msvcrt/file.c:3112",
+    "dlls/msvcrt/file.c:3119"
+   ],
+   "signature": "static inline void ioinfo_set_textmode(ioinfo *info, enum textmode mode)",
+   "code": "static inline void ioinfo_set_textmode(ioinfo *info, enum textmode mode)\n{\n    info->exflag &= EF_CRIT_INIT | EF_UNK_UNICODE;\n    switch (mode)\n    {\n        case TEXTMODE_ANSI:\n            break;\n        case TEXTMODE_UTF8:\n            info->exflag |= EF_UTF8;\n            break;\n        case TEXTMODE_UTF16LE:\n            info->exflag |= EF_UTF16;\n            break;\n    }\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "ioinfo",
+    "kind": "typedef_decl",
+    "start_line": 129,
+    "end_line": 144,
+    "code": "typedef struct {\n    HANDLE              handle;\n    unsigned char       wxflag;\n    char                lookahead[3];\n    int                 exflag;\n    CRITICAL_SECTION    crit;\n#if _MSVCR_VER >= 80\n    char textmode : 7;\n    char unicode : 1;\n    char pipech2[2];\n    __int64 startpos;\n    BOOL utf8translations;\n    char dbcsBuffer[1];\n    BOOL dbcsBufferUsed;\n#endif\n} ioinfo;"
+   },
+   {
+    "name": "textmode",
+    "kind": "enum_decl",
+    "start_line": 95,
+    "end_line": 100,
+    "code": "enum textmode\n{\n    TEXTMODE_ANSI,\n    TEXTMODE_UTF8,\n    TEXTMODE_UTF16LE,\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "MSVCRT___badioinfo",
+    "type": "ioinfo",
+    "static": false,
+    "start_line": 149,
+    "end_line": 149,
+    "code": "ioinfo MSVCRT___badioinfo = { INVALID_HANDLE_VALUE, WX_TEXT };"
+   },
+   {
+    "name": "MSVCRT___pioinfo",
+    "type": "ioinfo *[64]",
+    "static": false,
+    "start_line": 156,
+    "end_line": 156,
+    "code": "ioinfo * MSVCRT___pioinfo[MSVCRT_MAX_FILES/MSVCRT_FD_BLOCK_SIZE] = { 0 };"
+   },
+   {
+    "name": "MSVCRT_file_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 308,
+    "end_line": 308,
+    "code": "static CRITICAL_SECTION MSVCRT_file_cs = { &MSVCRT_file_cs_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 49,
+    "end_line": 49,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(msvcrt);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "EF_CRIT_INIT",
+    "start_line": 199,
+    "end_line": 199,
+    "code": "#define EF_CRIT_INIT      0x04"
+   },
+   {
+    "name": "EF_UNK_UNICODE",
+    "start_line": 200,
+    "end_line": 200,
+    "code": "#define EF_UNK_UNICODE    0x08"
+   },
+   {
+    "name": "EF_UTF16",
+    "start_line": 198,
+    "end_line": 198,
+    "code": "#define EF_UTF16          0x02"
+   },
+   {
+    "name": "EF_UTF8",
+    "start_line": 197,
+    "end_line": 197,
+    "code": "#define EF_UTF8           0x01"
+   },
+   {
+    "name": "LOCK_FILES",
+    "start_line": 309,
+    "end_line": 309,
+    "code": "#define LOCK_FILES()    do { EnterCriticalSection(&MSVCRT_file_cs); } while (0)"
+   },
+   {
+    "name": "MSVCRT_FD_BLOCK_SIZE",
+    "start_line": 127,
+    "end_line": 127,
+    "code": "#define MSVCRT_FD_BLOCK_SIZE 32"
+   },
+   {
+    "name": "MSVCRT_MAX_FILES",
+    "start_line": 126,
+    "end_line": 126,
+    "code": "#define MSVCRT_MAX_FILES 2048"
+   },
+   {
+    "name": "UNLOCK_FILES",
+    "start_line": 310,
+    "end_line": 310,
+    "code": "#define UNLOCK_FILES()  do { LeaveCriticalSection(&MSVCRT_file_cs); } while (0)"
+   },
+   {
+    "name": "WX_ATEOF",
+    "start_line": 82,
+    "end_line": 82,
+    "code": "#define WX_ATEOF          0x02"
+   },
+   {
+    "name": "WX_DONTINHERIT",
+    "start_line": 85,
+    "end_line": 85,
+    "code": "#define WX_DONTINHERIT    0x10"
+   },
+   {
+    "name": "WX_OPEN",
+    "start_line": 81,
+    "end_line": 81,
+    "code": "#define WX_OPEN           0x01"
+   },
+   {
+    "name": "WX_READNL",
+    "start_line": 83,
+    "end_line": 83,
+    "code": "#define WX_READNL         0x04  /* read started with \\n */"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "msvcrt_set_errno",
+    "file": "dlls/msvcrt/errno.c",
+    "start_line": 131
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "_close",
+    "impl": [
+     "dlls/msvcrt/file.c:1185"
+    ]
+   },
+   {
+    "name": "_errno",
+    "impl": [
+     "dlls/msvcrt/errno.c:214"
+    ]
+   },
+   {
+    "name": "calloc",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "free",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "DeleteCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:271"
+    ]
+   },
+   {
+    "name": "DuplicateHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:745"
+    ]
+   },
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "InitializeCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:200"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "SetStdHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:1434"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetCurrentProcess",
+   "GetLastError",
+   "_InterlockedCompareExchangePointer",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "msvcrt._dup2",
+  "category": {
+   "l1": "C runtime library",
+   "l2": "Input and output",
+   "header": "",
+   "textbook": "File management",
+   "basis": "crt_category"
+  },
+  "loc": {
+   "total": 55,
+   "body": 54,
+   "code": 30
+  },
+  "cyclomatic": 6,
+  "return_type": "int",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 7,
+   "n_tests": 7,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/msvcrt/tests/file.c::test_dup2",
+    "dlls/msvcrt/tests/file.c::test_stat",
+    "dlls/msvcrt/tests/file.c::test_std_stream_buffering",
+    "dlls/msvcrt/tests/file.c::test_std_stream_open",
+    "dlls/msvcrt/tests/file.c::test_stdin",
+    "dlls/ucrtbase/tests/file.c::test_std_stream_buffering",
+    "dlls/ucrtbase/tests/file.c::test_std_stream_open"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/cpp/c-runtime-library/reference/dup-dup2",
+   "source": "crt",
+   "description": "Learn more about: _dup, _dup2",
+   "min_windows": "",
+   "documented_dll": ""
+  },
+  "exports": [
+   "msvcrt._dup2",
+   "msvcrt20._dup2",
+   "msvcrt40._dup2",
+   "ucrtbase._dup2",
+   "ucrtbase._o__dup2"
+  ],
+  "subset": {
+   "selected_by": "topup",
+   "lower_bound_used": 6,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

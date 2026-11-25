@@ -1,0 +1,148 @@
+{
+ "id": "0253",
+ "function": {
+  "name": "InternetGetConnectedStateExW",
+  "export_name": "InternetGetConnectedStateExW",
+  "module": "wininet",
+  "source_module": "wininet",
+  "exported_by": [
+   "wininet"
+  ],
+  "side": "PE",
+  "file": "dlls/wininet/internet.c",
+  "start_line": 1562,
+  "end_line": 1636,
+  "body_lines": 72,
+  "signature": "BOOL WINAPI InternetGetConnectedStateExW(LPDWORD lpdwStatus, LPWSTR lpszConnectionName, DWORD dwNameLen, DWORD dwReserved)",
+  "header_comment": "/***********************************************************************\n *           InternetGetConnectedStateExW (WININET.@)\n *\n * Return connected state\n *\n * PARAMS\n *\n * lpdwStatus         [O] Flags specifying the status of the internet connection.\n * lpszConnectionName [O] Pointer to buffer to receive the friendly name of the internet connection.\n * dwNameLen          [I] Size of the buffer, in characters.\n * dwReserved         [I] Reserved. Must be set to 0.\n *\n * RETURNS\n *    TRUE if connected\n *    if lpdwStatus is not null, return the status (off line,\n *    modem, lan...) in it.\n *    FALSE if not connected\n *\n * NOTES\n *   If the system has no available network connections, an empty string is\n *   stored in lpszConnectionName. If there is a LAN connection, a localized\n *   \"LAN Connection\" string is stored. Presumably, if only a dial-up\n *   connection is available then the name of the dial-up connection is\n *   returned. Why any application, other than the \"Internet Settings\" CPL,\n *   would want to use this function instead of the simpler InternetGetConnectedStateW\n *   function is beyond me.\n */",
+  "code": "BOOL WINAPI InternetGetConnectedStateExW(LPDWORD lpdwStatus, LPWSTR lpszConnectionName,\n                                         DWORD dwNameLen, DWORD dwReserved)\n{\n    IP_ADAPTER_ADDRESSES *buf = NULL, *aa;\n    ULONG size = 0;\n    DWORD status;\n\n    TRACE(\"(%p, %p, %ld, 0x%08lx)\\n\", lpdwStatus, lpszConnectionName, dwNameLen, dwReserved);\n\n    /* Must be zero */\n    if(dwReserved)\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return FALSE;\n    }\n\n    for (;;)\n    {\n        ULONG flags = GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER |\n                      GAA_FLAG_SKIP_FRIENDLY_NAME | GAA_FLAG_INCLUDE_GATEWAYS;\n        ULONG errcode = GetAdaptersAddresses(AF_UNSPEC, flags, NULL, buf, &size);\n\n        if (errcode == ERROR_SUCCESS)\n            break;\n        free(buf);\n        if (errcode == ERROR_BUFFER_OVERFLOW && !(buf = malloc(size)))\n            errcode = ERROR_NOT_ENOUGH_MEMORY;\n        if (errcode != ERROR_BUFFER_OVERFLOW)\n        {\n            if (errcode != ERROR_NO_DATA)\n            {\n                SetLastError(errcode);\n                return FALSE;\n            }\n            buf = NULL;\n            break;\n        }\n    }\n\n    status = INTERNET_RAS_INSTALLED;\n    for (aa = buf; aa; aa = aa->Next)\n    {\n        /* Connected, but not necessarily to internet */\n        if (aa->FirstUnicastAddress)\n            status |= INTERNET_CONNECTION_OFFLINE;\n\n        /* Connected to internet */\n        if (aa->FirstGatewayAddress)\n        {\n            WARN(\"always returning LAN connection.\\n\");\n            status &= ~INTERNET_CONNECTION_OFFLINE;\n            status |= INTERNET_CONNECTION_LAN;\n            break;\n        }\n    }\n    free(buf);\n\n    if (lpdwStatus) *lpdwStatus = status;\n\n    /* When the buffer size is zero LoadStringW fills the buffer with a pointer to\n     * the resource, avoid it as we must not change the buffer in this case */\n    if (lpszConnectionName && dwNameLen)\n    {\n        *lpszConnectionName = '\\0';\n        if (status & INTERNET_CONNECTION_LAN)\n            LoadStringW(WININET_hModule, IDS_LANCONNECTION, lpszConnectionName, dwNameLen);\n    }\n\n    if (!(status & (INTERNET_CONNECTION_LAN | INTERNET_CONNECTION_MODEM | INTERNET_CONNECTION_PROXY)))\n    {\n        SetLastError(ERROR_SUCCESS);\n        return FALSE;\n    }\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"winsock2.h\"",
+   "#include \"ws2ipdef.h\"",
+   "#include <string.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <stdlib.h>",
+   "#include <ctype.h>",
+   "#include <assert.h>",
+   "#include <wchar.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winuser.h\"",
+   "#include \"wininet.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"winerror.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"ws2tcpip.h\"",
+   "#include \"winternl.h\"",
+   "#include \"iphlpapi.h\"",
+   "#include \"dhcpcsdk.h\"",
+   "#include \"internet.h\"",
+   "#include \"resource.h\""
+  ],
+  "resolution": [
+   "wininet!InternetGetConnectedStateExW [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/wininet/tests/internet.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wininet",
+   "path": "sdk-api-src/content/wininet/nf-wininet-internetgetconnectedstateexw.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wininet/nf-wininet-internetgetconnectedstateexw",
+   "documented_name": "internetgetconnectedstateexw",
+   "file": "docs/0253_sdk-api_nf-wininet-internetgetconnectedstateexw.md",
+   "text": "---\nUID: NF:wininet.InternetGetConnectedStateExW\ntitle: InternetGetConnectedStateExW function (wininet.h)\ndescription: The InternetGetConnectedStateExW (Unicode) function (wininet.h) retrieves the connected state of the specified Internet connection and is not recommended for use.\nhelpviewer_keywords: [\"INTERNET_CONNECTION_CONFIGURED\", \"INTERNET_CONNECTION_LAN\", \"INTERNET_CONNECTION_MODEM\", \"INTERNET_CONNECTION_MODEM_BUSY\", \"INTERNET_CONNECTION_OFFLINE\", \"INTERNET_CONNECTION_PROXY\", \"InternetGetConnectedStateEx\", \"InternetGetConnectedStateEx function [WinINet]\", \"InternetGetConnectedStateExW\", \"_inet_internetgetconnectedstateex_function\", \"wininet.internetgetconnectedstateex\"]\nold-location: wininet\\internetgetconnectedstateex.htm\ntech.root: wininet\nms.assetid: 0b27b86d-6e55-4022-84ce-d4116d71f124\nms.date: 08/10/2022\nms.keywords: INTERNET_CONNECTION_CONFIGURED, INTERNET_CONNECTION_LAN, INTERNET_CONNECTION_MODEM, INTERNET_CONNECTION_MODEM_BUSY, INTERNET_CONNECTION_OFFLINE, INTERNET_CONNECTION_PROXY, InternetGetConnectedStateEx, InternetGetConnectedStateEx function [WinINet], InternetGetConnectedStateExA, InternetGetConnectedStateExW, _inet_internetgetconnectedstateex_function, wininet.internetgetconnectedstateex, winineti/InternetGetConnectedStateEx, winineti/InternetGetConnectedStateExA, winineti/InternetGetConnectedStateExW\nreq.header: wininet.h\nreq.include-header: Wininet.h, Winineti.h, Wininet.h, Winineti.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: InternetGetConnectedStateExW (Unicode) and InternetGetConnectedStateExA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Wininet.lib\nreq.dll: Wininet.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - InternetGetConnectedStateExW\n - wininet/InternetGetConnectedStateExW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Wininet.dll\napi_name:\n - InternetGetConnectedStateEx\n - InternetGetConnectedStateExA\n - InternetGetConnectedStateExW\n---\n\n# InternetGetConnectedStateExW function\n\n\n## -description\n\n<div class=\"alert\"><b>Note</b>  Using this API is not recommended, use the <a href=\"/windows/desktop/api/netlistmgr/nf-netlistmgr-inetworklistmanager-getconnectivity\">INetworkListManager::GetConnectivity</a> method instead.</div><div> </div>Retrieves the connected state of the specified Internet connection.\n\n## -parameters\n\n### -param lpdwFlags [out]\n\nPointer to a variable that receives the connection description. This parameter may return a valid flag even when the function returns <b>FALSE</b>. This parameter can be a combination of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_CONNECTION_CONFIGURED\"></a><a id=\"internet_connection_configured\"></a><dl>\n<dt><b>INTERNET_CONNECTION_CONFIGURED</b></dt>\n<dt>0x40</dt>\n</dl>\n</td>\n<td width=\"60%\">\nLocal system has a valid connection to the Internet, but it might or might not be currently connected.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_CONNECTION_LAN_\"></a><a id=\"internet_connection_lan_\"></a><dl>\n<dt><b>INTERNET_CONNECTION_LAN </b></dt>\n<dt>0x02</dt>\n</dl>\n</td>\n<td width=\"60%\">\nLocal system uses a local area network to connect to the Internet.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_CONNECTION_MODEM\"></a><a id=\"internet_connection_modem\"></a><dl>\n<dt><b>INTERNET_CONNECTION_MODEM</b></dt>\n<dt> 0x01</dt>\n</dl>\n</td>\n<td width=\"60%\">\nLocal system uses a modem to connect to the Internet.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_CONNECTION_MODEM_BUSY\"></a><a id=\"internet_connection_modem_busy\"></a><dl>\n<dt><b>INTERNET_CONNECTION_MODEM_BUSY</b></dt>\n<dt> 0x08</dt>\n</dl>\n</td>\n<td width=\"60%\">\nNo longer used.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_CONNECTION_OFFLINE_\"></a><a id=\"internet_connection_offline_\"></a><dl>\n<dt><b>INTERNET_CONNECTION_OFFLINE </b></dt>\n<dt>0x20</dt>\n</dl>\n</td>\n<td width=\"60%\">\nLocal system is in offline mode.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_CONNECTION_PROXY\"></a><a id=\"internet_connection_proxy\"></a><dl>\n<dt><b>INTERNET_CONNECTION_PROXY</b></dt>\n<dt> 0x04</dt>\n</dl>\n</td>\n<td width=\"60%\">\nLocal system uses a proxy server to connect to the Internet.\n\n</td>\n</tr>\n</table>\n\n### -param lpszConnectionName [out]\n\nPointer to a string value that receives the connection name.\n\n### -param cchNameLen\n\nTBD\n\n### -param dwReserved [in]\n\nThis parameter is reserved and must be <b>NULL</b>.\n\n\n#### - dwNameLen [in]\n\nSize of the \n<i>lpszConnectionName</i> string, in <b>TCHARs</b>.\n\n## -returns\n\nReturns <b>TRUE</b> if there is an Internet connection, or <b>FALSE</b> if there is no Internet connection, or if all possible Internet connections are not currently active. For more information, see the Remarks section.\n\nWhen <a href=\"/windows/desktop/api/wininet/nf-wininet-internetgetconnectedstate\">InternetGetConnectedState</a> returns <b>FALSE</b>, the application can call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> to retrieve the error code.\n\n## -remarks\n\nA return value of <b>TRUE</b> from <a href=\"/windows/desktop/api/wininet/nf-wininet-internetgetconnectedstate\">InternetGetConnectedState</a> indicates that at least one connection to the Internet is available.  It does not guarantee that a connection to a specific host can be established.    Applications should always check for errors returned from API calls that connect to a server. <a href=\"/windows/desktop/api/wininet/nf-wininet-internetcheckconnectiona\">InternetCheckConnection</a> can be called to determine if a connection to a specific destination can be established.\n\nA return value of <b>TRUE</b> indicates that either the modem connection is active, or a LAN connection is active and a proxy is properly configured for the LAN. A return value of <b>FALSE</b> indicates that neither the modem nor the LAN is connected. If <b>FALSE</b> is returned, the <b>INTERNET_CONNECTION_CONFIGURED</b> flag may be set to indicate that autodial is configured to \"always dial\" but is not currently active. If autodial is not configured, the function returns <b>FALSE</b>.\n\nLike all other aspects of the WinINet API, this function cannot be safely called from within DllMain or the constructors and destructors of global objects.\n\n<div class=\"alert\"><b>Note</b>  WinINet does not support server implementations. In addition, it should not be used from a service.  For server implementations or services use <a href=\"/windows/desktop/WinHttp/winhttp-start-page\">Microsoft Windows HTTP Services (WinHTTP)</a>.</div>\n<div> </div>\n\n\n\n\n> [!NOTE]\n> The wininet.h header defines InternetGetConnectedStateEx as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/WinInet/establishing-a-dial-up-connection-to-the-internet\">Establishing a Dial-Up Connection to the Internet</a>\n\n\n\n<a href=\"/windows/desktop/WinInet/wininet-functions\">WinINet Functions</a>\n"
+  },
+  {
+   "repo": "sdk-api",
+   "header": "winineti",
+   "path": "sdk-api-src/content/winineti/nf-winineti-internetgetconnectedstateexw.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winineti/nf-winineti-internetgetconnectedstateexw",
+   "documented_name": "internetgetconnectedstateexw",
+   "file": "docs/0253_sdk-api_nf-winineti-internetgetconnectedstateexw.md",
+   "text": "---\nUID: NF:winineti.InternetGetConnectedStateExW\ntitle: InternetGetConnectedStateExW function (winineti.h)\ndescription: The InternetGetConnectedStateExW (Unicode) function retrieves the connected state of the specified Internet connection. Using this API is not recommended, use the INetworkListManager::GetConnectivity method instead.\nhelpviewer_keywords: [\"INTERNET_CONNECTION_CONFIGURED\", \"INTERNET_CONNECTION_LAN\", \"INTERNET_CONNECTION_MODEM\", \"INTERNET_CONNECTION_MODEM_BUSY\", \"INTERNET_CONNECTION_OFFLINE\", \"INTERNET_CONNECTION_PROXY\", \"InternetGetConnectedStateEx\", \"InternetGetConnectedStateEx function [WinINet]\", \"InternetGetConnectedStateExW\", \"_inet_internetgetconnectedstateex_function\", \"wininet.internetgetconnectedstateex\", \"winineti/InternetGetConnectedStateEx\", \"winineti/InternetGetConnectedStateExW\"]\nold-location: wininet\\internetgetconnectedstateex.htm\ntech.root: wininet\nms.assetid: 0b27b86d-6e55-4022-84ce-d4116d71f124\nms.date: 08/15/2022\nms.keywords: INTERNET_CONNECTION_CONFIGURED, INTERNET_CONNECTION_LAN, INTERNET_CONNECTION_MODEM, INTERNET_CONNECTION_MODEM_BUSY, INTERNET_CONNECTION_OFFLINE, INTERNET_CONNECTION_PROXY, InternetGetConnectedStateEx, InternetGetConnectedStateEx function [WinINet], InternetGetConnectedStateExA, InternetGetConnectedStateExW, _inet_internetgetconnectedstateex_function, wininet.internetgetconnectedstateex, winineti/InternetGetConnectedStateEx, winineti/InternetGetConnectedStateExA, winineti/InternetGetConnectedStateExW\nreq.header: winineti.h\nreq.include-header: Wininet.h, Winineti.h, Wininet.h, Winineti.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: InternetGetConnectedStateExW (Unicode) and InternetGetConnectedStateExA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Wininet.lib\nreq.dll: Wininet.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - InternetGetConnectedStateExW\n - winineti/InternetGetConnectedStateExW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Wininet.dll\napi_name:\n - InternetGetConnectedStateEx\n - InternetGetConnectedStateExA\n - InternetGetConnectedStateExW\n---\n\n# InternetGetConnectedStateExW function\n\n\n## -description\n\n<div class=\"alert\"><b>Note</b>  Using this API is not recommended, use the <a href=\"/windows/desktop/api/netlistmgr/nf-netlistmgr-inetworklistmanager-getconnectivity\">INetworkListManager::GetConnectivity</a> method instead.</div><div> </div>Retrieves the connected state of the specified Internet connection.\n\n## -parameters\n\n### -param lpdwFlags [out]\n\nPointer to a variable that receives the connection description. This parameter may return a valid flag even when the function returns <b>FALSE</b>. This parameter can be a combination of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_CONNECTION_CONFIGURED\"></a><a id=\"internet_connection_configured\"></a><dl>\n<dt><b>INTERNET_CONNECTION_CONFIGURED</b></dt>\n<dt>0x40</dt>\n</dl>\n</td>\n<td width=\"60%\">\nLocal system has a valid connection to the Internet, but it might or might not be currently connected.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_CONNECTION_LAN_\"></a><a id=\"internet_connection_lan_\"></a><dl>\n<dt><b>INTERNET_CONNECTION_LAN </b></dt>\n<dt>0x02</dt>\n</dl>\n</td>\n<td width=\"60%\">\nLocal system uses a local area network to connect to the Internet.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_CONNECTION_MODEM\"></a><a id=\"internet_connection_modem\"></a><dl>\n<dt><b>INTERNET_CONNECTION_MODEM</b></dt>\n<dt> 0x01</dt>\n</dl>\n</td>\n<td width=\"60%\">\nLocal system uses a modem to connect to the Internet.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_CONNECTION_MODEM_BUSY\"></a><a id=\"internet_connection_modem_busy\"></a><dl>\n<dt><b>INTERNET_CONNECTION_MODEM_BUSY</b></dt>\n<dt> 0x08</dt>\n</dl>\n</td>\n<td width=\"60%\">\nNo longer used.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_CONNECTION_OFFLINE_\"></a><a id=\"internet_connection_offline_\"></a><dl>\n<dt><b>INTERNET_CONNECTION_OFFLINE </b></dt>\n<dt>0x20</dt>\n</dl>\n</td>\n<td width=\"60%\">\nLocal system is in offline mode.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_CONNECTION_PROXY\"></a><a id=\"internet_connection_proxy\"></a><dl>\n<dt><b>INTERNET_CONNECTION_PROXY</b></dt>\n<dt> 0x04</dt>\n</dl>\n</td>\n<td width=\"60%\">\nLocal system uses a proxy server to connect to the Internet.\n\n</td>\n</tr>\n</table>\n\n### -param lpszConnectionName [out]\n\nPointer to a string value that receives the connection name.\n\n### -param cchNameLen\n\nTBD\n\n### -param dwReserved [in]\n\nThis parameter is reserved and must be <b>NULL</b>.\n\n\n#### - dwNameLen [in]\n\nSize of the \n<i>lpszConnectionName</i> string, in <b>TCHARs</b>.\n\n## -returns\n\nReturns <b>TRUE</b> if there is an Internet connection, or <b>FALSE</b> if there is no Internet connection, or if all possible Internet connections are not currently active. For more information, see the Remarks section.\n\nWhen <a href=\"/windows/desktop/api/wininet/nf-wininet-internetgetconnectedstate\">InternetGetConnectedState</a> returns <b>FALSE</b>, the application can call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> to retrieve the error code.\n\n## -remarks\n\nA return value of <b>TRUE</b> from <a href=\"/windows/desktop/api/wininet/nf-wininet-internetgetconnectedstate\">InternetGetConnectedState</a> indicates that at least one connection to the Internet is available.  It does not guarantee that a connection to a specific host can be established.    Applications should always check for errors returned from API calls that connect to a server. <a href=\"/windows/desktop/api/wininet/nf-wininet-internetcheckconnectiona\">InternetCheckConnection</a> can be called to determine if a connection to a specific destination can be established.\n\nA return value of <b>TRUE</b> indicates that either the modem connection is active, or a LAN connection is active and a proxy is properly configured for the LAN. A return value of <b>FALSE</b> indicates that neither the modem nor the LAN is connected. If <b>FALSE</b> is returned, the <b>INTERNET_CONNECTION_CONFIGURED</b> flag may be set to indicate that autodial is configured to \"always dial\" but is not currently active. If autodial is not configured, the function returns <b>FALSE</b>.\n\nLike all other aspects of the WinINet API, this function cannot be safely called from within DllMain or the constructors and destructors of global objects.\n\n<div class=\"alert\"><b>Note</b>  WinINet does not support server implementations. In addition, it should not be used from a service.  For server implementations or services use <a href=\"/windows/desktop/WinHttp/winhttp-start-page\">Microsoft Windows HTTP Services (WinHTTP)</a>.</div>\n<div> </div>\n\n\n\n\n> [!NOTE]\n> The winineti.h header defines InternetGetConnectedStateEx as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/WinInet/establishing-a-dial-up-connection-to-the-internet\">Establishing a Dial-Up Connection to the Internet</a>\n\n\n\n<a href=\"/windows/desktop/WinInet/wininet-functions\">WinINet Functions</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "WININET_hModule",
+    "type": "HMODULE",
+    "static": false,
+    "start_line": 67,
+    "end_line": 67,
+    "code": "HMODULE WININET_hModule;"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 58,
+    "end_line": 58,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(wininet);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "GetAdaptersAddresses",
+    "module": "iphlpapi",
+    "impl": [
+     "dlls/iphlpapi/iphlpapi_main.c:1329"
+    ]
+   },
+   {
+    "name": "LoadStringW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/resource.c:149"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

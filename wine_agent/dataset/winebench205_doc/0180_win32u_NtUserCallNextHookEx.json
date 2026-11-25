@@ -1,0 +1,253 @@
+{
+ "id": "0180",
+ "function": {
+  "name": "NtUserCallNextHookEx",
+  "export_name": "CallNextHookEx",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "user.exe16",
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/hook.c",
+  "start_line": 362,
+  "end_line": 394,
+  "body_lines": 30,
+  "signature": "LRESULT WINAPI NtUserCallNextHookEx( HHOOK hhook, INT code, WPARAM wparam, LPARAM lparam )",
+  "header_comment": "/***********************************************************************\n *\t     NtUserCallNextHookEx (win32u.@)\n */",
+  "code": "LRESULT WINAPI NtUserCallNextHookEx( HHOOK hhook, INT code, WPARAM wparam, LPARAM lparam )\n{\n    struct user_thread_info *thread_info = get_user_thread_info();\n    struct win_hook_params info;\n    WCHAR module[MAX_PATH];\n\n    memset( &info, 0, sizeof(info) );\n\n    SERVER_START_REQ( get_hook_info )\n    {\n        req->handle = wine_server_user_handle( thread_info->hook );\n        req->get_next = 1;\n        req->event = EVENT_MIN;\n        wine_server_set_reply( req, module, sizeof(module) - sizeof(WCHAR) );\n        if (!wine_server_call_err( req ))\n        {\n            module[wine_server_reply_size(req) / sizeof(WCHAR)] = 0;\n            info.handle       = wine_server_ptr_handle( reply->handle );\n            info.id           = reply->id;\n            info.pid          = reply->pid;\n            info.tid          = reply->tid;\n            info.proc         = wine_server_get_ptr( reply->proc );\n            info.next_unicode = reply->unicode;\n        }\n    }\n    SERVER_END_REQ;\n\n    info.code   = code;\n    info.wparam = wparam;\n    info.lparam = lparam;\n    info.prev_unicode = thread_info->hook_unicode;\n    return call_hook( &info, module, 0, 0, FALSE );\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"win32u_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "user32!CallNextHookEx [stdcall] -> NtUserCallNextHookEx implicitly imported from win32u",
+   "win32u!NtUserCallNextHookEx [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/dialog.c",
+   "dlls/user32/tests/msg.c",
+   "dlls/user32/tests/testdll.c",
+   "dlls/user32/tests/win.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 15
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "user.exe16",
+   "source_module": "user.exe16",
+   "exported_by": [
+    "user.exe16"
+   ],
+   "file": "dlls/user.exe16/hook.c",
+   "start_line": 523,
+   "resolution": [
+    "user.exe16!CallNextHookEx [pascal] -> internal symbol CallNextHookEx16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 669,
+   "signature": "LRESULT WINAPI CallNextHookEx16( HHOOK hhook, INT16 code, WPARAM16 wparam, LPARAM lparam )",
+   "code": "LRESULT WINAPI CallNextHookEx16( HHOOK hhook, INT16 code, WPARAM16 wparam, LPARAM lparam )\n{\n    struct hook16_queue_info *info;\n    LRESULT ret = 0;\n\n    if (!(info = get_hook_info( FALSE ))) return 0;\n\n    switch (info->id)\n    {\n    case WH_MSGFILTER:\n    {\n        MSG16 *msg16 = MapSL(lparam);\n        MSG msg32;\n\n        map_msg_16_to_32( msg16, &msg32 );\n        ret = CallNextHookEx( hhook, code, wparam, (LPARAM)&msg32 );\n        break;\n    }\n\n    case WH_GETMESSAGE:\n    {\n        MSG16 *msg16 = MapSL(lparam);\n        MSG msg32;\n\n        map_msg_16_to_32( msg16, &msg32 );\n        ret = CallNextHookEx( hhook, code, wparam, (LPARAM)&msg32 );\n        map_msg_32_to_16( &msg32, msg16 );\n        break;\n    }\n\n    case WH_CALLWNDPROC:\n    {\n        CWPSTRUCT16 *cwp16 = MapSL(lparam);\n        LRESULT result;\n        struct wndproc_hook_params params;\n\n        params.hhook  = hhook;\n        params.code   = code;\n        params.wparam = wparam;\n        ret = WINPROC_CallProc16To32A( wndproc_hook_callback, cwp16->hwnd, cwp16->message,\n                                       cwp16->wParam, cwp16->lParam, &result, &params );\n        break;\n    }\n\n    case WH_CBT:\n        switch (code)\n        {\n        case HCBT_CREATEWND:\n            {\n                CBT_CREATEWNDA cbtcw32;\n                CREATESTRUCTA cs32;\n                CBT_CREATEWND16 *cbtcw16 = MapSL(lparam);\n                CREATESTRUCT16 *cs16 = MapSL( (SEGPTR)cbtcw16->lpcs );\n\n                cbtcw32.lpcs = &cs32;\n                cbtcw32.hwndInsertAfter = WIN_Handle32( cbtcw16->hwndInsertAfter );\n\n                cs32.lpCreateParams = (LPVOID)cs16->lpCreateParams;\n                cs32.hInstance      = HINSTANCE_32(cs16->hInstance);\n                cs32.hMenu          = HMENU_32(cs16->hMenu);\n                cs32.hwndParent     = WIN_Handle32(cs16->hwndParent);\n                cs32.cy             = cs16->cy;\n                cs32.cx             = cs16->cx;\n                cs32.y              = cs16->y;\n                cs32.x              = cs16->x;\n                cs32.style          = cs16->style;\n                cs32.lpszName       = MapSL( cs16->lpszName );\n                cs32.lpszClass      = MapSL( cs16->lpszClass );\n                cs32.dwExStyle      = cs16->dwExStyle;\n\n                ret = CallNextHookEx( hhook, code, wparam, (LPARAM)&cbtcw32 );\n                cbtcw16->hwndInsertAfter = HWND_16( cbtcw32.hwndInsertAfter );\n                break;\n            }\n        case HCBT_ACTIVATE:\n            {\n                CBTACTIVATESTRUCT16 *cas16 = MapSL(lparam);\n                CBTACTIVATESTRUCT cas32;\n                cas32.fMouse = cas16->fMouse;\n                cas32.hWndActive = WIN_Handle32(cas16->hWndActive);\n                ret = CallNextHookEx( hhook, code, wparam, (LPARAM)&cas32 );\n                break;\n            }\n        case HCBT_CLICKSKIPPED:\n            {\n                MOUSEHOOKSTRUCT16 *ms16 = MapSL(lparam);\n                MOUSEHOOKSTRUCT ms32;\n\n                ms32.pt.x = ms16->pt.x;\n                ms32.pt.y = ms16->pt.y;\n                /* wHitTestCode may be negative, so convince compiler to do\n                   correct sign extension. Yay. :| */\n                ms32.wHitTestCode = (INT)(INT16)ms16->wHitTestCode;\n                ms32.dwExtraInfo = ms16->dwExtraInfo;\n                ms32.hwnd = WIN_Handle32( ms16->hwnd );\n                ret = CallNextHookEx( hhook, code, wparam, (LPARAM)&ms32 );\n                break;\n            }\n        case HCBT_MOVESIZE:\n            {\n                RECT16 *rect16 = MapSL(lparam);\n                RECT rect32;\n\n                rect32.left   = rect16->left;\n                rect32.top    = rect16->top;\n                rect32.right  = rect16->right;\n                rect32.bottom = rect16->bottom;\n                ret = CallNextHookEx( hhook, code, wparam, (LPARAM)&rect32 );\n                break;\n            }\n        }\n        break;\n\n    case WH_MOUSE:\n    {\n        MOUSEHOOKSTRUCT16 *ms16 = MapSL(lparam);\n        MOUSEHOOKSTRUCT ms32;\n\n        ms32.pt.x = ms16->pt.x;\n        ms32.pt.y = ms16->pt.y;\n        /* wHitTestCode may be negative, so convince compiler to do\n           correct sign extension. Yay. :| */\n        ms32.wHitTestCode = (INT)((INT16)ms16->wHitTestCode);\n        ms32.dwExtraInfo = ms16->dwExtraInfo;\n        ms32.hwnd = WIN_Handle32(ms16->hwnd);\n        ret = CallNextHookEx( hhook, code, wparam, (LPARAM)&ms32 );\n        break;\n    }\n\n    case WH_SHELL:\n    case WH_KEYBOARD:\n        ret = CallNextHookEx( hhook, code, wparam, lparam );\n        break;\n\n    case WH_HARDWARE:\n    case WH_FOREGROUNDIDLE:\n    case WH_CALLWNDPROCRET:\n    case WH_SYSMSGFILTER:\n    case WH_JOURNALRECORD:\n    case WH_JOURNALPLAYBACK:\n    default:\n        FIXME(\"\\t[%i] 16to32 translation unimplemented\\n\", info->id);\n        ret = CallNextHookEx( hhook, code, wparam, lparam );\n        break;\n    }\n    return ret;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-callnexthookex.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-callnexthookex",
+   "documented_name": "callnexthookex",
+   "file": "docs/0180_sdk-api_nf-winuser-callnexthookex.md",
+   "text": "---\nUID: NF:winuser.CallNextHookEx\ntitle: CallNextHookEx function (winuser.h)\ndescription: Passes the hook information to the next hook procedure in the current hook chain. A hook procedure can call this function either before or after processing the hook information.\nhelpviewer_keywords: [\"CallNextHookEx\",\"CallNextHookEx function [Windows and Messages]\",\"_win32_CallNextHookEx\",\"_win32_callnexthookex_cpp\",\"winmsg.callnexthookex\",\"winui._win32_callnexthookex\",\"winuser/CallNextHookEx\"]\nold-location: winmsg\\callnexthookex.htm\ntech.root: winmsg\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\windowing\\hooks\\hookreference\\hookfunctions\\callnexthookex.htm\nms.date: 12/05/2018\nms.keywords: CallNextHookEx, CallNextHookEx function [Windows and Messages], _win32_CallNextHookEx, _win32_callnexthookex_cpp, winmsg.callnexthookex, winui._win32_callnexthookex, winuser/CallNextHookEx\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CallNextHookEx\n - winuser/CallNextHookEx\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-rtcore-ntuser-window-ext-l1-1-1.dll\n - ext-ms-win-ntuser-window-l1-1-6.dll\n - ext-ms-win-ntuser-window-l1-1-5.dll\n - User32.dll\n - Ext-MS-Win-NTUser-Window-l1-1-0.dll\n - Ext-MS-Win-NTUser-Window-l1-1-1.dll\n - Ext-MS-Win-NTUser-Window-l1-1-2.dll\n - Ext-MS-Win-RTCore-NTUser-Window-Ext-l1-1-0.dll\n - minuser.dll\n - ext-ms-win-ntuser-window-l1-1-3.dll\n - Ext-MS-Win-NTUser-Window-L1-1-4.dll\napi_name:\n - CallNextHookEx\nreq.apiset: ext-ms-win-ntuser-window-l1-1-0 (introduced in Windows 8)\n---\n\n# CallNextHookEx function\n\n\n## -description\n\nPasses the hook information to the next hook procedure in the current hook chain. A hook procedure can call this function either before or after processing the hook information.\n\n## -parameters\n\n### -param hhk [in, optional]\n\nType: <b>HHOOK</b>\n\nThis parameter is ignored.\n\n### -param nCode [in]\n\nType: <b>int</b>\n\nThe hook code passed to the current hook procedure. The next hook procedure uses this code to determine how to process the hook information.\n\n### -param wParam [in]\n\nType: <b>WPARAM</b>\n\nThe <i>wParam</i> value passed to the current hook procedure. The meaning of this parameter depends on the type of hook associated with the current hook chain.\n\n### -param lParam [in]\n\nType: <b>LPARAM</b>\n\nThe <i>lParam</i> value passed to the current hook procedure. The meaning of this parameter depends on the type of hook associated with the current hook chain.\n\n## -returns\n\nType: <b>LRESULT</b>\n\nThis value is returned by the next hook procedure in the chain. The current hook procedure must also return this value. The meaning of the return value depends on the hook type. For more information, see the descriptions of the individual hook procedures.\n\n## -remarks\n\nHook procedures are installed in chains for particular hook types. <b>CallNextHookEx</b> calls the next hook in the chain. \n\nCalling <b>CallNextHookEx</b> is optional, but it is highly recommended; otherwise, other applications that have installed hooks will not receive hook notifications and may behave incorrectly as a result. You should call <b>CallNextHookEx</b> unless you absolutely need to prevent the notification from being seen by other applications.\n\n## -see-also\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/winmsg/hooks\">Hooks</a>\n\n\n\n<b>Reference</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-setwindowshookexa\">SetWindowsHookEx</a>\n\n\n\n[UnhookWindowsHookEx function](nf-winuser-unhookwindowshookex.md)\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "call_hook",
+   "file": "dlls/win32u/hook.c",
+   "start_line": 206,
+   "end_line": 357,
+   "static": true,
+   "called_from": [
+    "NtUserCallNextHookEx"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/hook.c:426",
+    "dlls/win32u/hook.c:469"
+   ],
+   "signature": "static LRESULT call_hook( struct win_hook_params *info, const WCHAR *module, size_t lparam_size, size_t message_size, BOOL ansi )",
+   "code": "static LRESULT call_hook( struct win_hook_params *info, const WCHAR *module, size_t lparam_size,\n                          size_t message_size, BOOL ansi )\n{\n    DWORD_PTR ret = 0;\n\n    if (info->tid)\n    {\n        struct hook_extra_info h_extra;\n        h_extra.handle = info->handle;\n        h_extra.lparam = info->lparam;\n\n        TRACE( \"calling hook in thread %04x %s code %x wp %lx lp %lx\\n\",\n               info->tid, hook_names[info->id-WH_MINHOOK],\n               info->code, (long)info->wparam, info->lparam );\n\n        switch(info->id)\n        {\n        case WH_KEYBOARD_LL:\n            send_internal_message_timeout( info->pid, info->tid, WM_WINE_KEYBOARD_LL_HOOK,\n                                           info->wparam, (LPARAM)&h_extra, SMTO_ABORTIFHUNG,\n                                           get_ll_hook_timeout(), &ret );\n            break;\n        case WH_MOUSE_LL:\n            send_internal_message_timeout( info->pid, info->tid, WM_WINE_MOUSE_LL_HOOK,\n                                           info->wparam, (LPARAM)&h_extra, SMTO_ABORTIFHUNG,\n                                           get_ll_hook_timeout(), &ret );\n            break;\n        default:\n            ERR(\"Unknown hook id %d\\n\", info->id);\n            assert(0);\n            break;\n        }\n    }\n    else if (info->proc)\n    {\n        struct user_thread_info *thread_info = get_user_thread_info();\n        size_t size, lparam_offset = 0, message_offset = 0;\n        size_t lparam_ret_size = lparam_size;\n        HHOOK prev = thread_info->hook;\n        BOOL prev_unicode = thread_info->hook_unicode;\n        struct win_hook_params *params = info;\n        void *ret_ptr, *extra_buffer = NULL;\n        SIZE_T extra_buffer_size = 0;\n        size_t reply_size;\n        ULONG ret_len;\n\n        size = FIELD_OFFSET( struct win_hook_params, module[module ? lstrlenW( module ) + 1 : 1] );\n\n        if (lparam_size)\n        {\n            if (params->id == WH_CBT && params->code == HCBT_CREATEWND)\n            {\n                CBT_CREATEWNDW *cbtc = (CBT_CREATEWNDW *)params->lparam;\n                message_size = user_message_size( (HWND)params->wparam, WM_NCCREATE,\n                                                  0, (LPARAM)cbtc->lpcs, TRUE, FALSE, &reply_size );\n                lparam_size = lparam_ret_size = 0;\n            }\n\n            if (lparam_size)\n            {\n                lparam_offset = (size + 15) & ~15; /* align offset */\n                size = lparam_offset + lparam_size;\n            }\n\n            if (message_size)\n            {\n                message_offset = (size + 15) & ~15; /* align offset */\n                size = message_offset + message_size;\n            }\n        }\n\n        if (size > sizeof(*info))\n        {\n            if (!(params = malloc( size ))) return 0;\n            memcpy( params, info, FIELD_OFFSET( struct win_hook_params, module ));\n        }\n        if (module)\n            wcscpy( params->module, module );\n        else\n            params->module[0] = 0;\n\n        if (lparam_size)\n            memcpy( (char *)params + lparam_offset, (const void *)params->lparam, lparam_size );\n\n        if (message_size)\n        {\n            switch (params->id)\n            {\n            case WH_CBT:\n                {\n                    CBT_CREATEWNDW *cbtc = (CBT_CREATEWNDW *)params->lparam;\n                    LPARAM lp = (LPARAM)cbtc->lpcs;\n                    pack_user_message( (char *)params + message_offset, message_size,\n                                       WM_CREATE, 0, lp, FALSE, &extra_buffer );\n                }\n                break;\n            case WH_CALLWNDPROC:\n                {\n                    CWPSTRUCT *cwp = (CWPSTRUCT *)((char *)params + lparam_offset);\n                    pack_user_message( (char *)params + message_offset, message_size,\n                                       cwp->message, cwp->wParam, cwp->lParam, ansi, &extra_buffer );\n                }\n                break;\n            case WH_CALLWNDPROCRET:\n                {\n                    CWPRETSTRUCT *cwpret = (CWPRETSTRUCT *)((char *)params + lparam_offset);\n                    pack_user_message( (char *)params + message_offset, message_size,\n                                       cwpret->message, cwpret->wParam, cwpret->lParam, ansi, &extra_buffer );\n                }\n                break;\n            }\n        }\n\n        /*\n         * Windows protects from stack overflow in recursive hook calls. Different Windows\n         * allow different depths.\n         */\n        if (thread_info->hook_call_depth >= 25)\n        {\n            WARN(\"Too many hooks called recursively, skipping call.\\n\");\n            if (params != info) free( params );\n            if (extra_buffer)\n                NtFreeVirtualMemory( GetCurrentProcess(), &extra_buffer, &extra_buffer_size, MEM_RELEASE );\n            return 0;\n        }\n\n        TRACE( \"calling hook %p %s code %x wp %lx lp %lx module %s\\n\",\n               params->proc, hook_names[params->id-WH_MINHOOK], params->code, (long)params->wparam,\n               params->lparam, debugstr_w(module) );\n\n        thread_info->hook = params->handle;\n        thread_info->hook_unicode = params->next_unicode;\n        thread_info->hook_call_depth++;\n        if (!KeUserModeCallback( NtUserCallWindowsHook, params, size, &ret_ptr, &ret_len ) &&\n            ret_len >= sizeof(ret))\n        {\n            LRESULT *result_ptr = ret_ptr;\n            ret = *result_ptr;\n            if (ret_len == sizeof(ret) + lparam_ret_size)\n                memcpy( (void *)params->lparam, result_ptr + 1, ret_len - sizeof(ret) );\n        }\n        thread_info->hook = prev;\n        thread_info->hook_unicode = prev_unicode;\n        thread_info->hook_call_depth--;\n\n        if (params != info) free( params );\n        if (extra_buffer)\n            NtFreeVirtualMemory( GetCurrentProcess(), &extra_buffer, &extra_buffer_size, MEM_RELEASE );\n    }\n\n    return ret;\n}"
+  },
+  {
+   "name": "get_ll_hook_timeout",
+   "file": "dlls/win32u/hook.c",
+   "start_line": 194,
+   "end_line": 198,
+   "static": true,
+   "called_from": [
+    "call_hook"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static UINT get_ll_hook_timeout(void)",
+   "code": "static UINT get_ll_hook_timeout(void)\n{\n    /* FIXME: should retrieve LowLevelHooksTimeout in HKEY_CURRENT_USER\\Control Panel\\Desktop */\n    return 2000;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 32,
+    "end_line": 32,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(hook);"
+   },
+   {
+    "name": "hook_names",
+    "type": "const char *const[17]",
+    "static": true,
+    "start_line": 34,
+    "end_line": 53,
+    "code": "static const char * const hook_names[NB_HOOKS] =\n{\n    \"WH_MSGFILTER\",\n    \"WH_JOURNALRECORD\",\n    \"WH_JOURNALPLAYBACK\",\n    \"WH_KEYBOARD\",\n    \"WH_GETMESSAGE\",\n    \"WH_CALLWNDPROC\",\n    \"WH_CBT\",\n    \"WH_SYSMSGFILTER\",\n    \"WH_MOUSE\",\n    \"WH_HARDWARE\",\n    \"WH_DEBUG\",\n    \"WH_SHELL\",\n    \"WH_FOREGROUNDIDLE\",\n    \"WH_CALLWNDPROCRET\",\n    \"WH_KEYBOARD_LL\",\n    \"WH_MOUSE_LL\",\n    \"WH_WINEVENT\"\n};"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "get_user_thread_info",
+    "file": "dlls/win32u/syscall.c",
+    "start_line": 190
+   },
+   {
+    "name": "pack_user_message",
+    "file": "dlls/win32u/message.c",
+    "start_line": 1838
+   },
+   {
+    "name": "send_internal_message_timeout",
+    "file": "dlls/win32u/message.c",
+    "start_line": 3873
+   },
+   {
+    "name": "user_message_size",
+    "file": "dlls/win32u/message.c",
+    "start_line": 1672
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "NtFreeVirtualMemory",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/virtual.c:5486"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_w",
+   "lstrlenW",
+   "ntdll_wcscpy",
+   "wine_dbg_log",
+   "wine_server_call_err",
+   "wine_server_get_ptr",
+   "wine_server_ptr_handle",
+   "wine_server_reply_size",
+   "wine_server_set_reply",
+   "wine_server_user_handle"
+  ],
+  "system": [
+   "__assert_fail",
+   "free",
+   "malloc",
+   "memcpy",
+   "memset"
+  ],
+  "unresolved": [
+   "KeUserModeCallback"
+  ],
+  "server_requests": [
+   {
+    "request": "get_hook_info",
+    "handler": "server/hook.c:544"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "win32u.NtUserCallNextHookEx",
+  "category": {
+   "l1": "User input and messaging",
+   "l2": "Windows and messages",
+   "header": "winuser.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 33,
+   "body": 32,
+   "code": 23
+  },
+  "cyclomatic": 2,
+  "return_type": "LRESULT",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 15,
+   "n_tests": 22,
+   "n_tests_other": 7,
+   "own_test_functions": [
+    "dlls/user32/tests/dialog.c::hook_proc",
+    "dlls/user32/tests/dialog.c::hook_proc2",
+    "dlls/user32/tests/dialog.c::msgbox_hook_proc",
+    "dlls/user32/tests/msg.c::KeyboardHookProc",
+    "dlls/user32/tests/msg.c::call_window_proc_hook",
+    "dlls/user32/tests/msg.c::cbt_global_hook_proc",
+    "dlls/user32/tests/msg.c::cbt_hook_proc",
+    "dlls/user32/tests/msg.c::keyboard_recursive_cbt_hook_proc",
+    "dlls/user32/tests/msg.c::keyboard_recursive_hook_proc",
+    "dlls/user32/tests/msg.c::mouse_recursive_cbt_hook_proc",
+    "dlls/user32/tests/msg.c::mouse_recursive_hook_proc",
+    "dlls/user32/tests/msg.c::rec_get_message_hook",
+    "dlls/user32/tests/testdll.c::dummy_hook_proc",
+    "dlls/user32/tests/win.c::cbt_hook_proc",
+    "dlls/user32/tests/win.c::cbt_proc"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-callnexthookex",
+   "source": "win32",
+   "description": "Passes the hook information to the next hook procedure in the current hook chain. A hook procedure can call this function either before or after processing the hook information.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "User32.dll"
+  },
+  "exports": [
+   "user32.CallNextHookEx",
+   "win32u.NtUserCallNextHookEx"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

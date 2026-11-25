@@ -1,0 +1,1717 @@
+{
+ "id": "0115",
+ "function": {
+  "name": "WinHttpReceiveResponse",
+  "export_name": "WinHttpReceiveResponse",
+  "module": "winhttp",
+  "source_module": "winhttp",
+  "exported_by": [
+   "winhttp"
+  ],
+  "side": "PE",
+  "file": "dlls/winhttp/request.c",
+  "start_line": 3343,
+  "end_line": 3367,
+  "body_lines": 22,
+  "signature": "BOOL WINAPI WinHttpReceiveResponse( HINTERNET hrequest, LPVOID reserved )",
+  "header_comment": "/***********************************************************************\n *          WinHttpReceiveResponse (winhttp.@)\n */",
+  "code": "BOOL WINAPI WinHttpReceiveResponse( HINTERNET hrequest, LPVOID reserved )\n{\n    DWORD ret;\n    struct request *request;\n\n    TRACE(\"%p, %p\\n\", hrequest, reserved);\n\n    if (!(request = (struct request *)grab_object( hrequest )))\n    {\n        SetLastError( ERROR_INVALID_HANDLE );\n        return FALSE;\n    }\n    if (request->hdr.type != WINHTTP_HANDLE_TYPE_REQUEST)\n    {\n        release_object( &request->hdr );\n        SetLastError( ERROR_WINHTTP_INCORRECT_HANDLE_TYPE );\n        return FALSE;\n    }\n\n    ret = receive_response( request );\n\n    release_object( &request->hdr );\n    SetLastError( ret );\n    return !ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <wchar.h>",
+   "#include <zlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"ws2tcpip.h\"",
+   "#include \"ole2.h\"",
+   "#include \"initguid.h\"",
+   "#include \"httprequest.h\"",
+   "#include \"httprequestid.h\"",
+   "#include \"schannel.h\"",
+   "#include \"winhttp.h\"",
+   "#include \"ntsecapi.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"winhttp_private.h\""
+  ],
+  "resolution": [
+   "winhttp!WinHttpReceiveResponse [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/winhttp/tests/winhttp.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 27
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winhttp",
+   "path": "sdk-api-src/content/winhttp/nf-winhttp-winhttpreceiveresponse.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winhttp/nf-winhttp-winhttpreceiveresponse",
+   "documented_name": "winhttpreceiveresponse",
+   "file": "docs/0115_sdk-api_nf-winhttp-winhttpreceiveresponse.md",
+   "text": "---\nUID: NF:winhttp.WinHttpReceiveResponse\ntitle: WinHttpReceiveResponse function (winhttp.h)\ndescription: The WinHttpReceiveResponse function waits to receive the response to an HTTP request initiated by WinHttpSendRequest.\nhelpviewer_keywords: [\"WinHttpReceiveResponse\",\"WinHttpReceiveResponse function [WinHTTP]\",\"http.winhttpreceiveresponse\",\"winhttp.winhttpreceiveresponse_function\",\"winhttp/WinHttpReceiveResponse\"]\nold-location: http\\winhttpreceiveresponse.htm\ntech.root: http\nms.assetid: 0b79e73b-9f6a-42eb-9108-1ba142ad7c48\nms.date: 12/05/2018\nms.keywords: WinHttpReceiveResponse, WinHttpReceiveResponse function [WinHTTP], http.winhttpreceiveresponse, winhttp.winhttpreceiveresponse_function, winhttp/WinHttpReceiveResponse\nreq.header: winhttp.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP, Windows 2000 Professional with SP3 [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003, Windows 2000 Server with SP3 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Winhttp.lib\nreq.dll: Winhttp.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: WinHTTP 5.0 and Internet Explorer 5.01 or later on Windows XP and Windows 2000.\nms.custom: 19H1\nf1_keywords:\n - WinHttpReceiveResponse\n - winhttp/WinHttpReceiveResponse\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Winhttp.dll\napi_name:\n - WinHttpReceiveResponse\n---\n\n# WinHttpReceiveResponse function\n\n\n## -description\n\nThe <b>WinHttpReceiveResponse</b> function waits to receive the response to an HTTP request initiated by <a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpsendrequest\">WinHttpSendRequest</a>. When <b>WinHttpReceiveResponse</b> completes successfully, the status code and response headers have been received and are available for the application to inspect using <a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpqueryheaders\">WinHttpQueryHeaders</a>. An application must call <b>WinHttpReceiveResponse</b> before it can use <a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpquerydataavailable\">WinHttpQueryDataAvailable</a> and <a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpreaddata\">WinHttpReadData</a> to access the response entity body (if any).\n\n## -parameters\n\n### -param hRequest [in]\n\n<a href=\"/windows/desktop/WinHttp/hinternet-handles-in-winhttp\">HINTERNET</a> handle returned by \n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpopenrequest\">WinHttpOpenRequest</a> and sent by \n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpsendrequest\">WinHttpSendRequest</a>.  Wait until <b>WinHttpSendRequest</b> has completed for this handle before calling  <b>WinHttpReceiveResponse</b>.\n\n### -param lpReserved [in]\n\nThis parameter is reserved and must be <b>NULL</b>.\n\n## -returns\n\nReturns <b>TRUE</b> if successful, or <b>FALSE</b> otherwise. For extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>. Among the error codes returned are the following.\n\n<table>\n<tr>\n<th>Error Code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_CANNOT_CONNECT</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturned if  connection to the server failed.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_CHUNKED_ENCODING_HEADER_SIZE_OVERFLOW</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturned when an overflow condition is encountered in the course of parsing chunked encoding.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_CLIENT_AUTH_CERT_NEEDED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturned when the server requests client authentication.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_CONNECTION_ERROR</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe connection with the server has been reset or terminated, or an incompatible SSL protocol was encountered. For example, WinHTTP version 5.1 does not support SSL2 unless the client specifically enables it.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_HEADER_COUNT_EXCEEDED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturned when a larger number of headers were present in a response than WinHTTP could receive.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_HEADER_SIZE_OVERFLOW</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturned by <a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpreceiveresponse\">WinHttpReceiveResponse</a> when the size of headers received  exceeds the limit for the request handle.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_INCORRECT_HANDLE_STATE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe requested operation cannot be carried out because the handle supplied is not in the correct state.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_INCORRECT_HANDLE_TYPE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe type of handle supplied is incorrect for this operation.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_INTERNAL_ERROR</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn internal error has occurred.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_INVALID_SERVER_RESPONSE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe server response could not be parsed.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_INVALID_URL</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe URL is invalid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_LOGIN_FAILURE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe login attempt failed.  When this error is encountered, the request handle should be closed with \n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpclosehandle\">WinHttpCloseHandle</a>.  A new request handle must be created before retrying the function that originally produced this error.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_NAME_NOT_RESOLVED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe server name could not be resolved.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_OPERATION_CANCELLED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe operation was canceled, usually because the handle on which the request was operating was closed before the operation completed.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_REDIRECT_FAILED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe redirection failed because either the scheme changed or all attempts made to redirect failed (default is five attempts).\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_RESEND_REQUEST</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe WinHTTP function failed.  The desired function can be retried on the same request handle.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_RESPONSE_DRAIN_OVERFLOW</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturned when an incoming response exceeds an internal WinHTTP size limit.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_SECURE_FAILURE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOne or more errors were found in the Secure Sockets Layer (SSL) certificate sent by the server.  To determine what type of error was encountered, check for a \n<a href=\"/windows/desktop/api/winhttp/nc-winhttp-winhttp_status_callback\">WINHTTP_CALLBACK_STATUS_SECURE_FAILURE</a> notification in a status callback function.  For more information, see \n<a href=\"/windows/desktop/api/winhttp/nc-winhttp-winhttp_status_callback\">WINHTTP_STATUS_CALLBACK</a>.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_TIMEOUT</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe request has timed out.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_UNRECOGNIZED_SCHEME</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe URL specified a scheme other than \"http:\" or \"https:\".\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOT_ENOUGH_MEMORY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nNot enough memory was available to complete the requested operation. (Windows error code)\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nEven when  WinHTTP is used in asynchronous mode (that is, when <b>WINHTTP_FLAG_ASYNC</b> has been set in <a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpopen\">WinHttpOpen</a>), this function can operate either synchronously or asynchronously.  If this function returns <b>FALSE</b>, this function failed and you can call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> to get extended error information. If this function returns <b>TRUE</b>, the application should expect either the <b>WINHTTP_CALLBACK_STATUS_HEADERS_AVAILABLE</b> completion callback, indicating success, or the <b>WINHTTP_CALLBACK_STATUS_REQUEST_ERROR</b> completion callback, indicating that the operation completed asynchronously, but failed.\n\nIf a status callback function has been installed with \n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpsetstatuscallback\">WinHttpSetStatusCallback</a>, then those of the following notifications  that  have been set in the <i>dwNotificationFlags</i> parameter of <b>WinHttpSetStatusCallback</b> indicate progress in receiving the response:\n\n<ul>\n<li>WINHTTP_CALLBACK_STATUS_RECEIVING_RESPONSE </li>\n<li>WINHTTP_CALLBACK_STATUS_RESPONSE_RECEIVED</li>\n<li>WINHTTP_CALLBACK_STATUS_HEADERS_AVAILABLE</li>\n<li>WINHTTP_CALLBACK_STATUS_INTERMEDIATE_RESPONSE </li>\n<li>WINHTTP_CALLBACK_STATUS_REDIRECT</li>\n</ul>\nIf the server closes the connection, the following notifications will also be reported, provided that they have been set in the <i>dwNotificationFlags</i> parameter of <a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpsetstatuscallback\">WinHttpSetStatusCallback</a>:\n\n<ul>\n<li>WINHTTP_CALLBACK_STATUS_CLOSING_CONNECTION</li>\n<li>WINHTTP_CALLBACK_STATUS_CONNECTION_CLOSED</li>\n</ul>\n<div class=\"alert\"><b>Note</b>  For Windows XP and Windows 2000, see the <a href=\"/windows/desktop/WinHttp/winhttp-start-page\">Run-Time Requirements</a> section of the WinHttp start page.</div>\n<div> </div>\n\n#### Examples\n\nThis example shows code that  writes data to an HTTP server.  The server name supplied in the example, www.wingtiptoys.com, is fictitious and must be replaced with the name of a server for which you have write access.\n\n\n```cpp\n    LPSTR pszData = \"WinHttpWriteData Example\";\n    DWORD dwBytesWritten = 0;\n    BOOL  bResults = FALSE;\n    HINTERNET hSession = NULL,\n              hConnect = NULL,\n              hRequest = NULL;\n\n    // Use WinHttpOpen to obtain a session handle.\n    hSession = WinHttpOpen(  L\"A WinHTTP Example Program/1.0\", \n                             WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,\n                             WINHTTP_NO_PROXY_NAME, \n                             WINHTTP_NO_PROXY_BYPASS, 0);\n\n    // Specify an HTTP server.\n    if (hSession)\n        hConnect = WinHttpConnect( hSession, L\"www.wingtiptoys.com\",\n                                   INTERNET_DEFAULT_HTTP_PORT, 0);\n\n    // Create an HTTP Request handle.\n    if (hConnect)\n        hRequest = WinHttpOpenRequest( hConnect, L\"PUT\", \n                                       L\"/writetst.txt\", \n                                       NULL, WINHTTP_NO_REFERER, \n                                       WINHTTP_DEFAULT_ACCEPT_TYPES, \n                                       0);\n\n    // Send a Request.\n    if (hRequest) \n        bResults = WinHttpSendRequest( hRequest, \n                                       WINHTTP_NO_ADDITIONAL_HEADERS,\n                                       0, WINHTTP_NO_REQUEST_DATA, 0, \n                                       (DWORD)strlen(pszData), 0);\n\n    // Write data to the server.\n    if (bResults)\n        bResults = WinHttpWriteData( hRequest, pszData, \n                                     (DWORD)strlen(pszData), \n                                     &dwBytesWritten);\n\n    // End the request.\n    if (bResults)\n        bResults = WinHttpReceiveResponse( hRequest, NULL);\n\n    // Report any errors.\n    if (!bResults)\n        printf(\"Error %d has occurred.\\n\",GetLastError());\n\n\n    // Close any open handles.\n    if (hRequest) WinHttpCloseHandle(hRequest);\n    if (hConnect) WinHttpCloseHandle(hConnect);\n    if (hSession) WinHttpCloseHandle(hSession);\n\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/WinHttp/about-winhttp\">About Microsoft Windows HTTP Services (WinHTTP)</a>\n\n\n\n<a href=\"/windows/desktop/WinHttp/winhttp-versions\">WinHTTP Versions</a>\n\n\n\n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpclosehandle\">WinHttpCloseHandle</a>\n\n\n\n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpopen\">WinHttpOpen</a>\n\n\n\n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpopenrequest\">WinHttpOpenRequest</a>\n\n\n\n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpsendrequest\">WinHttpSendRequest</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "receive_response",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 3228,
+   "end_line": 3327,
+   "static": true,
+   "called_from": [
+    "WinHttpReceiveResponse",
+    "task_receive_response"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD receive_response( struct request *request )",
+   "code": "static DWORD receive_response( struct request *request )\n{\n    BOOL async = request->connect->hdr.flags & WINHTTP_FLAG_ASYNC;\n    DWORD ret, size, query, status;\n\n    TRACE( \"request state %d\\n\", request->state );\n\n    switch (request->state)\n    {\n    case REQUEST_STATE_RECURSIVE_REQUEST:\n        TRACE( \"sending request again\\n\" );\n        if ((ret = send_request( request, NULL, 0, request->optional, request->optional_len, 0, 0, FALSE ))) goto done;\n        break;\n\n    case REQUEST_STATE_SENDING_REQUEST:\n        if (!async)\n        {\n            ret = ERROR_WINHTTP_INCORRECT_HANDLE_STATE;\n            goto done;\n        }\n        request->state = REQUEST_STATE_READ_RESPONSE_QUEUED;\n        return queue_receive_response( request );\n\n    case REQUEST_STATE_REQUEST_SENT:\n    case REQUEST_STATE_READ_RESPONSE_QUEUED:\n        break;\n\n    default:\n        ret = ERROR_WINHTTP_INCORRECT_HANDLE_STATE;\n        goto done;\n    }\n\n    request->state = REQUEST_STATE_RECEIVING_RESPONSE;\n    send_callback( &request->hdr, WINHTTP_CALLBACK_STATUS_RECEIVING_RESPONSE, NULL, 0 );\n\n    netconn_set_timeout( request->netconn, FALSE, get_receive_response_timeout( request ));\n    ret = read_reply( request );\n\n    request->state = REQUEST_STATE_RESPONSE_RECEIVED;\n    send_callback( &request->hdr, WINHTTP_CALLBACK_STATUS_RESPONSE_RECEIVED, &request->reply_len, sizeof(request->reply_len) );\n    if (ret) goto done;\n\n    size = sizeof(DWORD);\n    query = WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER;\n    if ((ret = query_headers( request, query, NULL, &status, &size, NULL ))) goto done;\n\n    if ((ret = set_content_length( request, status ))) goto done;\n\n    if (!(request->hdr.disable_flags & WINHTTP_DISABLE_COOKIES)) record_cookies( request );\n\n    if (status == HTTP_STATUS_REDIRECT && is_passport_request( request ))\n    {\n        ret = handle_passport_redirect( request );\n        goto done;\n    }\n    if (status == HTTP_STATUS_MOVED || status == HTTP_STATUS_REDIRECT ||\n        status == HTTP_STATUS_REDIRECT_KEEP_VERB || status == HTTP_STATUS_PERMANENT_REDIRECT)\n    {\n        if (request->hdr.disable_flags & WINHTTP_DISABLE_REDIRECTS ||\n            request->hdr.redirect_policy == WINHTTP_OPTION_REDIRECT_POLICY_NEVER) goto done;\n\n        if (++request->redirect_count > request->max_redirects)\n        {\n            ret = ERROR_WINHTTP_REDIRECT_FAILED;\n            goto done;\n        }\n\n        if ((ret = handle_redirect( request, status ))) goto done;\n    }\n    else if (status == HTTP_STATUS_DENIED || status == HTTP_STATUS_PROXY_AUTH_REQ)\n    {\n        if (request->hdr.disable_flags & WINHTTP_DISABLE_AUTHENTICATION) goto done;\n\n        if (handle_authorization( request, status )) goto done;\n    }\n    else goto done;\n\n    request->state = REQUEST_STATE_RECURSIVE_REQUEST;\n    return async ? queue_receive_response( request ) : receive_response( request );\n\ndone:\n    if (!ret)\n    {\n        request->state = REQUEST_STATE_RESPONSE_RECEIVED;\n        if (request->netconn) netconn_set_timeout( request->netconn, FALSE, request->receive_timeout );\n    }\n    if (async)\n    {\n        if (!ret) send_callback( &request->hdr, WINHTTP_CALLBACK_STATUS_HEADERS_AVAILABLE, NULL, 0 );\n        else\n        {\n            WINHTTP_ASYNC_RESULT result;\n            result.dwResult = API_RECEIVE_RESPONSE;\n            result.dwError  = ret;\n            send_callback( &request->hdr, WINHTTP_CALLBACK_STATUS_REQUEST_ERROR, &result, sizeof(result) );\n        }\n        return ERROR_SUCCESS;\n    }\n    return ret;\n}"
+  },
+  {
+   "name": "send_request",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2451,
+   "end_line": 2579,
+   "static": true,
+   "called_from": [
+    "receive_response"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/request.c:2583",
+    "dlls/winhttp/request.c:2589",
+    "dlls/winhttp/request.c:2622",
+    "dlls/winhttp/request.c:2643"
+   ],
+   "signature": "static DWORD send_request( struct request *request, const WCHAR *headers, DWORD headers_len, void *optional, DWORD optional_len, DWORD total_len, DWORD_PTR context, BOOL async )",
+   "code": "static DWORD send_request( struct request *request, const WCHAR *headers, DWORD headers_len, void *optional,\n                           DWORD optional_len, DWORD total_len, DWORD_PTR context, BOOL async )\n{\n    struct connect *connect = request->connect;\n    struct session *session = connect->session;\n    DWORD ret, len, buflen;\n    WCHAR buf[21];\n    char *wire_req;\n    int bytes_sent;\n    BOOL chunked;\n\n    TRACE( \"request state %d.\\n\", request->state );\n\n    request->reply_len = 0;\n    request->state = REQUEST_STATE_NONE;\n\n    if (request->flags & REQUEST_FLAG_WEBSOCKET_UPGRADE\n        && request->websocket_set_send_buffer_size < MIN_WEBSOCKET_SEND_BUFFER_SIZE)\n    {\n        WARN( \"Invalid send buffer size %u.\\n\", request->websocket_set_send_buffer_size );\n        ret = ERROR_NOT_ENOUGH_MEMORY;\n        goto end;\n    }\n\n    drain_data_stream( request );\n    finished_reading( request );\n\n    if (session->agent)\n        process_header( request, L\"User-Agent\", session->agent, WINHTTP_ADDREQ_FLAG_ADD_IF_NEW, TRUE );\n\n    if (connect->hostname)\n        add_host_header( request, WINHTTP_ADDREQ_FLAG_ADD_IF_NEW );\n\n    if (request->creds[TARGET_SERVER][SCHEME_NTLM].username)\n        do_authorization( request, WINHTTP_AUTH_TARGET_SERVER, WINHTTP_AUTH_SCHEME_NTLM );\n    else if (request->creds[TARGET_SERVER][SCHEME_BASIC].username)\n        do_authorization( request, WINHTTP_AUTH_TARGET_SERVER, WINHTTP_AUTH_SCHEME_BASIC );\n\n    clear_response_headers( request );\n\n    buflen = sizeof(buf);\n    chunked = !query_headers( request, WINHTTP_QUERY_FLAG_REQUEST_HEADERS | WINHTTP_QUERY_TRANSFER_ENCODING,\n                              NULL, buf, &buflen, NULL ) && !wcsicmp( buf, L\"chunked\" );\n    if (!chunked && (total_len || (request->verb && (!wcscmp( request->verb, L\"POST\" )\n                               || !wcscmp( request->verb, L\"PUT\" )))))\n    {\n        WCHAR length[21]; /* decimal long int + null */\n        swprintf( length, ARRAY_SIZE(length), L\"%lu\", total_len );\n        process_header( request, L\"Content-Length\", length, WINHTTP_ADDREQ_FLAG_ADD_IF_NEW, TRUE );\n    }\n    if (request->flags & REQUEST_FLAG_WEBSOCKET_UPGRADE)\n    {\n        request->websocket_send_buffer_size = request->websocket_set_send_buffer_size;\n        process_header( request, L\"Upgrade\", L\"websocket\", WINHTTP_ADDREQ_FLAG_ADD_IF_NEW, TRUE );\n        process_header( request, L\"Connection\", L\"Upgrade\", WINHTTP_ADDREQ_FLAG_ADD_IF_NEW, TRUE );\n        process_header( request, L\"Sec-WebSocket-Version\", L\"13\", WINHTTP_ADDREQ_FLAG_ADD_IF_NEW, TRUE );\n        if ((ret = add_websocket_key_header( request ))) return ret;\n    }\n    else if (!(request->hdr.disable_flags & WINHTTP_DISABLE_KEEP_ALIVE))\n    {\n        process_header( request, L\"Connection\", L\"Keep-Alive\", WINHTTP_ADDREQ_FLAG_ADD_IF_NEW, TRUE );\n    }\n    if (request->hdr.flags & WINHTTP_FLAG_REFRESH)\n    {\n        process_header( request, L\"Pragma\", L\"no-cache\", WINHTTP_ADDREQ_FLAG_ADD_IF_NEW, TRUE );\n        process_header( request, L\"Cache-Control\", L\"no-cache\", WINHTTP_ADDREQ_FLAG_ADD_IF_NEW, TRUE );\n    }\n    if (headers && (ret = add_request_headers( request, headers, headers_len,\n                                               WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE )))\n    {\n        TRACE( \"failed to add request headers: %lu\\n\", ret );\n        return ret;\n    }\n    if (request->hdr.decompression)\n    {\n        WCHAR encoding[16];\n        if (request->hdr.decompression == WINHTTP_DECOMPRESSION_FLAG_ALL) wcscpy( encoding, L\"gzip, deflate\" );\n        else if (request->hdr.decompression == WINHTTP_DECOMPRESSION_FLAG_GZIP) wcscpy( encoding, L\"gzip\" );\n        else if (request->hdr.decompression == WINHTTP_DECOMPRESSION_FLAG_DEFLATE) wcscpy( encoding, L\"deflate\" );\n        process_header( request, L\"Accept-Encoding\", encoding, WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE, TRUE );\n    }\n    if (!(request->hdr.disable_flags & WINHTTP_DISABLE_COOKIES) && (ret = add_cookie_headers( request )))\n    {\n        WARN( \"failed to add cookie headers: %lu\\n\", ret );\n        return ret;\n    }\n\n    if (context) request->hdr.context = context;\n\n    if ((ret = open_connection( request ))) goto end;\n    if (!(wire_req = build_wire_request( request, &len )))\n    {\n        ret = ERROR_OUTOFMEMORY;\n        goto end;\n    }\n    TRACE(\"full request: %s\\n\", debugstr_a(wire_req));\n\n    request->state = REQUEST_STATE_SENDING_REQUEST;\n    send_callback( &request->hdr, WINHTTP_CALLBACK_STATUS_SENDING_REQUEST, NULL, 0 );\n\n    ret = netconn_send( request->netconn, wire_req, len, &bytes_sent, NULL );\n    free( wire_req );\n    if (ret) goto end;\n\n    if (optional_len)\n    {\n        if ((ret = netconn_send( request->netconn, optional, optional_len, &bytes_sent, NULL ))) goto end;\n        request->optional = optional;\n        request->optional_len = optional_len;\n        len += optional_len;\n    }\n\n    request->state = REQUEST_STATE_REQUEST_SENT;\n    send_callback( &request->hdr, WINHTTP_CALLBACK_STATUS_REQUEST_SENT, &len, sizeof(len) );\n\nend:\n    if (async)\n    {\n        if (!ret) send_callback( &request->hdr, WINHTTP_CALLBACK_STATUS_SENDREQUEST_COMPLETE, NULL, 0 );\n        else\n        {\n            WINHTTP_ASYNC_RESULT result;\n            result.dwResult = API_SEND_REQUEST;\n            result.dwError  = ret;\n            send_callback( &request->hdr, WINHTTP_CALLBACK_STATUS_REQUEST_ERROR, &result, sizeof(result) );\n        }\n    }\n    return ret;\n}"
+  },
+  {
+   "name": "queue_receive_response",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 3217,
+   "end_line": 3226,
+   "static": true,
+   "called_from": [
+    "receive_response"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD queue_receive_response( struct request *request )",
+   "code": "static DWORD queue_receive_response( struct request *request )\n{\n    struct receive_response *r;\n    DWORD ret;\n\n    if (!(r = malloc( sizeof(*r) ))) return ERROR_OUTOFMEMORY;\n    if ((ret = queue_task( &request->queue, task_receive_response, &r->task_hdr, &request->hdr )))\n        free( r );\n    return ret;\n}"
+  },
+  {
+   "name": "get_receive_response_timeout",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2009,
+   "end_line": 2013,
+   "static": true,
+   "called_from": [
+    "open_connection",
+    "receive_response"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static int get_receive_response_timeout( struct request *request )",
+   "code": "static int get_receive_response_timeout( struct request *request )\n{\n    if (request->receive_response_timeout == -1) return ACTUAL_DEFAULT_RECEIVE_RESPONSE_TIMEOUT;\n    return request->receive_response_timeout;\n}"
+  },
+  {
+   "name": "read_reply",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2913,
+   "end_line": 3029,
+   "static": true,
+   "called_from": [
+    "receive_response",
+    "secure_proxy_connect"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD read_reply( struct request *request )",
+   "code": "static DWORD read_reply( struct request *request )\n{\n    char buffer[MAX_REPLY_LEN];\n    DWORD ret, buflen, len, offset, crlf_len = 2; /* lstrlenW(crlf) */\n    const char *status_text, *ptr;\n    WCHAR *versionW, *status_textW, *raw_headers;\n    WCHAR status_code[4]; /* sizeof(\"nnn\") */\n\n    if (!request->netconn) return ERROR_WINHTTP_INCORRECT_HANDLE_STATE;\n\n    do\n    {\n        buflen = MAX_REPLY_LEN;\n        if ((ret = read_line( request, buffer, &buflen ))) return ret;\n\n        /* first line should look like 'HTTP/1.x nnn OK' where nnn is the status code */\n        if (!(ptr = strchr( buffer, ' ' ))) return ERROR_WINHTTP_INVALID_SERVER_RESPONSE;\n        len = ptr - buffer;\n\n        while (*ptr == ' ') ptr++;\n        if (!isdigit( ptr[0] ) || !isdigit( ptr[1] ) || !isdigit( ptr[2] )) return ERROR_WINHTTP_INVALID_SERVER_RESPONSE;\n        status_code[0] = *ptr++;\n        status_code[1] = *ptr++;\n        status_code[2] = *ptr++;\n        status_code[3] = 0;\n\n        while (*ptr == ' ') ptr++;\n        status_text = ptr;\n\n        TRACE( \"version [%s] status code [%s] status text [%s]\\n\", debugstr_an(buffer, len),\n               debugstr_w(status_code), debugstr_a(status_text) );\n\n    } while (!wcscmp( status_code, L\"100\" )); /* ignore \"100 Continue\" responses */\n\n    if ((ret = process_header( request, L\"Status\", status_code,\n                               WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE, FALSE ))) return ret;\n\n    if (!(versionW = malloc( (len + 1) * sizeof(WCHAR) ))) return ERROR_OUTOFMEMORY;\n    MultiByteToWideChar( CP_ACP, 0, buffer, len, versionW, len );\n    versionW[len] = 0;\n\n    free( request->version );\n    request->version = versionW;\n\n    len = strlen( status_text ) + 1;\n    if (!(status_textW = malloc( len * sizeof(WCHAR) ))) return ERROR_OUTOFMEMORY;\n    MultiByteToWideChar( CP_ACP, 0, status_text, len, status_textW, len );\n\n    free( request->status_text );\n    request->status_text = status_textW;\n\n    len = max( buflen + crlf_len, INITIAL_HEADER_BUFFER_LEN );\n    if (!(raw_headers = malloc( len * sizeof(WCHAR) ))) return ERROR_OUTOFMEMORY;\n    MultiByteToWideChar( CP_ACP, 0, buffer, buflen, raw_headers, buflen );\n    memcpy( raw_headers + buflen - 1, L\"\\r\\n\", sizeof(L\"\\r\\n\") );\n\n    free( request->raw_headers );\n    request->raw_headers = raw_headers;\n\n    offset = buflen + crlf_len - 1;\n    for (;;)\n    {\n        struct header *header;\n        int lenW;\n\n        buflen = MAX_REPLY_LEN;\n        if (read_line( request, buffer, &buflen )) return ERROR_SUCCESS;\n        if (!*buffer) buflen = 1;\n\n        while (len - offset < buflen + crlf_len)\n        {\n            WCHAR *tmp;\n            len *= 2;\n            if (!(tmp = realloc( raw_headers, len * sizeof(WCHAR) ))) return ERROR_OUTOFMEMORY;\n            request->raw_headers = raw_headers = tmp;\n        }\n        if (!*buffer)\n        {\n            memcpy( raw_headers + offset, L\"\\r\\n\", sizeof(L\"\\r\\n\") );\n            break;\n        }\n        lenW = MultiByteToWideChar( CP_ACP, 0, buffer, buflen, raw_headers + offset, buflen );\n\n        if (!(header = parse_header( raw_headers + offset, lenW - 1, TRUE ))) break;\n        if ((ret = process_header( request, header->field, header->value, WINHTTP_ADDREQ_FLAG_ADD, FALSE )))\n        {\n            free_header( header );\n            break;\n        }\n\n        lenW = wcslen( header->field );\n        assert( len - offset >= lenW + 1 );\n        memcpy( raw_headers + offset, header->field, lenW * sizeof(WCHAR) );\n        offset += lenW;\n\n        lenW = 2;\n        assert( len - offset >= lenW + 1 );\n        memcpy( raw_headers + offset, L\": \", lenW * sizeof(WCHAR) );\n        offset += lenW;\n\n        lenW = wcslen( header->value );\n        assert( len - offset >= lenW + 1 );\n        memcpy( raw_headers + offset, header->value, lenW * sizeof(WCHAR) );\n        offset += lenW;\n\n        lenW = crlf_len;\n        assert( len - offset >= lenW + 1 );\n        memcpy( raw_headers + offset, L\"\\r\\n\", lenW * sizeof(WCHAR) );\n        offset += lenW;\n\n        raw_headers[offset] = 0;\n        free_header( header );\n    }\n\n    TRACE(\"raw headers: %s\\n\", debugstr_w(raw_headers));\n    return ret;\n}"
+  },
+  {
+   "name": "query_headers",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1049,
+   "end_line": 1251,
+   "static": true,
+   "called_from": [
+    "finished_reading",
+    "get_authvalue",
+    "get_redirect_url",
+    "is_passport_request",
+    "query_auth_schemes",
+    "receive_response",
+    "send_request",
+    "set_content_length"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/request.c:1283"
+   ],
+   "signature": "static DWORD query_headers( struct request *request, DWORD level, const WCHAR *name, void *buffer, DWORD *buflen, DWORD *index )",
+   "code": "static DWORD query_headers( struct request *request, DWORD level, const WCHAR *name, void *buffer, DWORD *buflen,\n                            DWORD *index )\n{\n    struct header *header = NULL;\n    BOOL request_only;\n    int requested_index, header_index = -1;\n    DWORD attr, len, ret = ERROR_WINHTTP_HEADER_NOT_FOUND;\n\n    request_only = level & WINHTTP_QUERY_FLAG_REQUEST_HEADERS;\n    requested_index = index ? *index : 0;\n\n    attr = level & ~QUERY_MODIFIER_MASK;\n    switch (attr)\n    {\n    case WINHTTP_QUERY_CUSTOM:\n    {\n        header_index = get_header_index( request, name, requested_index, request_only );\n        break;\n    }\n    case WINHTTP_QUERY_RAW_HEADERS:\n    {\n        WCHAR *headers, *p, *q;\n\n        if (request_only)\n            headers = build_request_string( request );\n        else\n            headers = request->raw_headers;\n\n        if (!(p = headers)) return ERROR_OUTOFMEMORY;\n        for (len = 0; *p; p++) if (*p != '\\r') len++;\n\n        if (!buffer || len * sizeof(WCHAR) > *buflen) ret = ERROR_INSUFFICIENT_BUFFER;\n        else\n        {\n            for (p = headers, q = buffer; *p; p++, q++)\n            {\n                if (*p != '\\r') *q = *p;\n                else\n                {\n                    *q = 0;\n                    p++; /* skip '\\n' */\n                }\n            }\n            TRACE(\"returning data: %s\\n\", debugstr_wn(buffer, len));\n            if (len) len--;\n            ret = ERROR_SUCCESS;\n        }\n        *buflen = len * sizeof(WCHAR);\n        if (request_only) free( headers );\n        return ret;\n    }\n    case WINHTTP_QUERY_RAW_HEADERS_CRLF:\n    {\n        WCHAR *headers;\n\n        if (request_only)\n            headers = build_request_string( request );\n        else\n            headers = request->raw_headers;\n\n        if (!headers) return ERROR_OUTOFMEMORY;\n        len = lstrlenW( headers ) * sizeof(WCHAR);\n        if (!buffer || len + sizeof(WCHAR) > *buflen)\n        {\n            len += sizeof(WCHAR);\n            ret = ERROR_INSUFFICIENT_BUFFER;\n        }\n        else\n        {\n            memcpy( buffer, headers, len + sizeof(WCHAR) );\n            TRACE(\"returning data: %s\\n\", debugstr_wn(buffer, len / sizeof(WCHAR)));\n            ret = ERROR_SUCCESS;\n        }\n        *buflen = len;\n        if (request_only) free( headers );\n        return ret;\n    }\n    case WINHTTP_QUERY_VERSION:\n        len = lstrlenW( request->version ) * sizeof(WCHAR);\n        if (!buffer || len + sizeof(WCHAR) > *buflen)\n        {\n            len += sizeof(WCHAR);\n            ret = ERROR_INSUFFICIENT_BUFFER;\n        }\n        else\n        {\n            lstrcpyW( buffer, request->version );\n            TRACE(\"returning string: %s\\n\", debugstr_w(buffer));\n            ret = ERROR_SUCCESS;\n        }\n        *buflen = len;\n        return ret;\n\n    case WINHTTP_QUERY_STATUS_TEXT:\n        len = lstrlenW( request->status_text ) * sizeof(WCHAR);\n        if (!buffer || len + sizeof(WCHAR) > *buflen)\n        {\n            len += sizeof(WCHAR);\n            ret = ERROR_INSUFFICIENT_BUFFER;\n        }\n        else\n        {\n            lstrcpyW( buffer, request->status_text );\n            TRACE(\"returning string: %s\\n\", debugstr_w(buffer));\n            ret = ERROR_SUCCESS;\n        }\n        *buflen = len;\n        return ret;\n\n    case WINHTTP_QUERY_REQUEST_METHOD:\n        len = lstrlenW( request->verb ) * sizeof(WCHAR);\n        if (!buffer || len + sizeof(WCHAR) > *buflen)\n        {\n            len += sizeof(WCHAR);\n            ret = ERROR_INSUFFICIENT_BUFFER;\n        }\n        else\n        {\n            lstrcpyW( buffer, request->verb );\n            TRACE(\"returning string: %s\\n\", debugstr_w(buffer));\n            ret = ERROR_SUCCESS;\n        }\n        *buflen = len;\n        return ret;\n\n    default:\n        if (attr >= ARRAY_SIZE(attribute_table)) return ERROR_INVALID_PARAMETER;\n        if (!attribute_table[attr])\n        {\n            FIXME( \"attribute %lu not implemented\\n\", attr );\n            return ERROR_WINHTTP_HEADER_NOT_FOUND;\n        }\n        TRACE(\"attribute %s\\n\", debugstr_w(attribute_table[attr]));\n        header_index = get_header_index( request, attribute_table[attr], requested_index, request_only );\n        break;\n    }\n\n    if (header_index >= 0)\n    {\n        header = &request->headers[header_index];\n    }\n    if (!header || (request_only && !header->is_request)) return ERROR_WINHTTP_HEADER_NOT_FOUND;\n    if (level & WINHTTP_QUERY_FLAG_NUMBER)\n    {\n        if (!buffer || sizeof(DWORD) > *buflen) ret = ERROR_INSUFFICIENT_BUFFER;\n        else\n        {\n            DWORD *number = buffer;\n            *number = wcstoul( header->value, NULL, 10 );\n            TRACE(\"returning number: %lu\\n\", *number);\n            ret = ERROR_SUCCESS;\n        }\n        *buflen = sizeof(DWORD);\n    }\n    else if (level & WINHTTP_QUERY_FLAG_NUMBER64)\n    {\n        if (attr != WINHTTP_QUERY_CONTENT_LENGTH)\n        {\n            WARN( \"WINHTTP_QUERY_FLAG_NUMBER64 with attr %lu.\\n\", attr );\n            return ERROR_WINHTTP_INVALID_QUERY_REQUEST;\n        }\n        if (!buffer || sizeof(ULONG64) > *buflen) ret = ERROR_INSUFFICIENT_BUFFER;\n        else\n        {\n            ULONG64 *number = buffer;\n            *number = wcstoull( header->value, NULL, 10 );\n            TRACE( \"returning number: %I64u\\n\", *number );\n            ret = ERROR_SUCCESS;\n        }\n        *buflen = sizeof(ULONG64);\n    }\n    else if (level & WINHTTP_QUERY_FLAG_SYSTEMTIME)\n    {\n        SYSTEMTIME *st = buffer;\n        if (!buffer || sizeof(SYSTEMTIME) > *buflen) ret = ERROR_INSUFFICIENT_BUFFER;\n        else if (WinHttpTimeToSystemTime( header->value, st ))\n        {\n            TRACE(\"returning time: %04d/%02d/%02d - %d - %02d:%02d:%02d.%02d\\n\",\n                  st->wYear, st->wMonth, st->wDay, st->wDayOfWeek,\n                  st->wHour, st->wMinute, st->wSecond, st->wMilliseconds);\n            ret = ERROR_SUCCESS;\n        }\n        *buflen = sizeof(SYSTEMTIME);\n    }\n    else if (header->value)\n    {\n        len = lstrlenW( header->value ) * sizeof(WCHAR);\n        if (!buffer || len + sizeof(WCHAR) > *buflen)\n        {\n            len += sizeof(WCHAR);\n            ret = ERROR_INSUFFICIENT_BUFFER;\n        }\n        else\n        {\n            lstrcpyW( buffer, header->value );\n            TRACE(\"returning string: %s\\n\", debugstr_w(buffer));\n            ret = ERROR_SUCCESS;\n        }\n        *buflen = len;\n    }\n    if (!ret && index) *index += 1;\n    return ret;\n}"
+  },
+  {
+   "name": "set_content_length",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2788,
+   "end_line": 2842,
+   "static": true,
+   "called_from": [
+    "receive_response"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD set_content_length( struct request *request, DWORD status )",
+   "code": "static DWORD set_content_length( struct request *request, DWORD status )\n{\n    WCHAR buf[21];\n    DWORD buflen = sizeof(buf), ret = ERROR_SUCCESS;\n\n    if (status == HTTP_STATUS_NO_CONTENT || status == HTTP_STATUS_NOT_MODIFIED ||\n        status == HTTP_STATUS_SWITCH_PROTOCOLS || !wcscmp( request->verb, L\"HEAD\" ))\n    {\n        request->content_length = 0;\n    }\n    else\n    {\n        if (query_headers( request, WINHTTP_QUERY_CONTENT_LENGTH, NULL, buf, &buflen, NULL ))\n            request->content_length = ~0ull;\n        else\n            request->content_length = wcstoull( buf, NULL, 10 );\n\n        buflen = sizeof(buf);\n        if (!query_headers( request, WINHTTP_QUERY_TRANSFER_ENCODING, NULL, buf, &buflen, NULL ) &&\n            !wcsicmp( buf, L\"chunked\" ))\n        {\n            struct chunked_stream *chunked_stream;\n\n            if (!(chunked_stream = malloc( sizeof(*chunked_stream) ))) return ERROR_OUTOFMEMORY;\n\n            chunked_stream->data_stream.vtbl = &chunked_stream_vtbl;\n            chunked_stream->buf.size = chunked_stream->buf.pos = 0;\n            chunked_stream->chunk_size = 0;\n            chunked_stream->state = CHUNKED_STREAM_STATE_READING_CHUNK_SIZE;\n\n            if (request->read.size)\n            {\n                memcpy( chunked_stream->buf.buf, request->read.buf + request->read.pos, request->read.size );\n                chunked_stream->buf.size = request->read.size;\n                request->read.size = request->read.pos = 0;\n            }\n            request->data_stream = &chunked_stream->data_stream;\n            request->content_length = ~0ull;\n            query_data_stream( request, NULL ); /* start first chunk */\n        }\n\n        if (request->hdr.decompression)\n        {\n            buflen = sizeof(buf);\n            if (!query_headers( request, WINHTTP_QUERY_CONTENT_ENCODING, NULL, buf, &buflen, NULL ))\n            {\n                if (!wcsicmp( buf, L\"gzip\" )) ret = init_gzip_stream( request, TRUE );\n                else if (!wcsicmp( buf, L\"deflate\" )) ret = init_gzip_stream( request, FALSE );\n                else WARN( \"unexpected content encoding %s\\n\", debugstr_w(buf) );\n            }\n        }\n    }\n    request->content_read = 0;\n    return ret;\n}"
+  },
+  {
+   "name": "record_cookies",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 3031,
+   "end_line": 3043,
+   "static": true,
+   "called_from": [
+    "receive_response"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void record_cookies( struct request *request )",
+   "code": "static void record_cookies( struct request *request )\n{\n    unsigned int i;\n\n    for (i = 0; i < request->num_headers; i++)\n    {\n        struct header *set_cookie = &request->headers[i];\n        if (!wcsicmp( set_cookie->field, L\"Set-Cookie\" ) && !set_cookie->is_request)\n        {\n            set_cookies( request, set_cookie->value );\n        }\n    }\n}"
+  },
+  {
+   "name": "is_passport_request",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 3180,
+   "end_line": 3193,
+   "static": true,
+   "called_from": [
+    "receive_response"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL is_passport_request( struct request *request )",
+   "code": "static BOOL is_passport_request( struct request *request )\n{\n    static const WCHAR passportW[] = {'P','a','s','s','p','o','r','t','1','.','4'};\n    WCHAR buf[1024];\n    DWORD len = ARRAY_SIZE(buf);\n\n    if (!(request->connect->session->passport_flags & WINHTTP_ENABLE_PASSPORT_AUTH) ||\n        query_headers( request, WINHTTP_QUERY_WWW_AUTHENTICATE, NULL, buf, &len, NULL )) return FALSE;\n\n    if (!wcsnicmp( buf, passportW, ARRAY_SIZE(passportW) ) &&\n        (buf[ARRAY_SIZE(passportW)] == ' ' || !buf[ARRAY_SIZE(passportW)])) return TRUE;\n\n    return FALSE;\n}"
+  },
+  {
+   "name": "handle_passport_redirect",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 3195,
+   "end_line": 3213,
+   "static": true,
+   "called_from": [
+    "receive_response"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD handle_passport_redirect( struct request *request )",
+   "code": "static DWORD handle_passport_redirect( struct request *request )\n{\n    DWORD ret, flags = WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE;\n    int i, len = lstrlenW( request->raw_headers );\n    WCHAR *p = request->raw_headers;\n\n    if ((ret = process_header( request, L\"Status\", L\"401\", flags, FALSE ))) return ret;\n\n    for (i = 0; i < len; i++)\n    {\n        if (i <= len - 3 && p[i] == '3' && p[i + 1] == '0' && p[i + 2] == '2')\n        {\n            p[i] = '4';\n            p[i + 2] = '1';\n            break;\n        }\n    }\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "handle_redirect",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 3063,
+   "end_line": 3178,
+   "static": true,
+   "called_from": [
+    "receive_response"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD handle_redirect( struct request *request, DWORD status )",
+   "code": "static DWORD handle_redirect( struct request *request, DWORD status )\n{\n    DWORD ret, len, len_loc = 0;\n    URL_COMPONENTS uc;\n    struct connect *connect = request->connect;\n    INTERNET_PORT port;\n    WCHAR *hostname = NULL, *location = NULL;\n\n    if ((ret = get_redirect_url( request, &location, &len_loc ))) return ret;\n\n    memset( &uc, 0, sizeof(uc) );\n    uc.dwStructSize = sizeof(uc);\n    uc.dwSchemeLength = uc.dwHostNameLength = uc.dwUrlPathLength = uc.dwExtraInfoLength = ~0u;\n\n    if (!WinHttpCrackUrl( location, len_loc, 0, &uc )) /* assume relative redirect */\n    {\n        WCHAR *path, *p;\n\n        ret = ERROR_OUTOFMEMORY;\n        if (location[0] == '/')\n        {\n            if (!(path = malloc( (len_loc + 1) * sizeof(WCHAR) ))) goto end;\n            memcpy( path, location, len_loc * sizeof(WCHAR) );\n            path[len_loc] = 0;\n        }\n        else\n        {\n            if ((p = wcsrchr( request->path, '/' ))) *p = 0;\n            len = lstrlenW( request->path ) + 1 + len_loc;\n            if (!(path = malloc( (len + 1) * sizeof(WCHAR) ))) goto end;\n            lstrcpyW( path, request->path );\n            lstrcatW( path, L\"/\" );\n            memcpy( path + lstrlenW(path), location, len_loc * sizeof(WCHAR) );\n            path[len_loc] = 0;\n        }\n        free( request->path );\n        request->path = path;\n        ret = ERROR_SUCCESS;\n\n        send_callback( &request->hdr, WINHTTP_CALLBACK_STATUS_REDIRECT, location, len_loc + 1 );\n    }\n    else\n    {\n        if (uc.nScheme == INTERNET_SCHEME_HTTP && request->hdr.flags & WINHTTP_FLAG_SECURE)\n        {\n            if (request->hdr.redirect_policy == WINHTTP_OPTION_REDIRECT_POLICY_DISALLOW_HTTPS_TO_HTTP)\n            {\n                ret = ERROR_WINHTTP_REDIRECT_FAILED;\n                goto end;\n            }\n            TRACE(\"redirect from secure page to non-secure page\\n\");\n            request->hdr.flags &= ~WINHTTP_FLAG_SECURE;\n        }\n        else if (uc.nScheme == INTERNET_SCHEME_HTTPS && !(request->hdr.flags & WINHTTP_FLAG_SECURE))\n        {\n            TRACE(\"redirect from non-secure page to secure page\\n\");\n            request->hdr.flags |= WINHTTP_FLAG_SECURE;\n        }\n\n        send_callback( &request->hdr, WINHTTP_CALLBACK_STATUS_REDIRECT, location, len_loc + 1 );\n\n        len = uc.dwHostNameLength;\n        if (!(hostname = malloc( (len + 1) * sizeof(WCHAR) )))\n        {\n            ret = ERROR_OUTOFMEMORY;\n            goto end;\n        }\n        memcpy( hostname, uc.lpszHostName, len * sizeof(WCHAR) );\n        hostname[len] = 0;\n\n        port = uc.nPort ? uc.nPort : (uc.nScheme == INTERNET_SCHEME_HTTPS ? 443 : 80);\n        if (wcsicmp( connect->hostname, hostname ) || connect->serverport != port)\n        {\n            free( connect->hostname );\n            connect->hostname = hostname;\n            connect->hostport = port;\n            if (!set_server_for_hostname( connect, hostname, port ))\n            {\n                ret = ERROR_OUTOFMEMORY;\n                goto end;\n            }\n\n            netconn_release( request->netconn );\n            request->netconn = NULL;\n            request->content_length = request->content_read = 0;\n            reset_data_stream( request );\n        }\n        else free( hostname );\n\n        if ((ret = add_host_header( request, WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE ))) goto end;\n\n        free( request->path );\n        request->path = NULL;\n        if (uc.dwUrlPathLength)\n        {\n            len = uc.dwUrlPathLength + uc.dwExtraInfoLength;\n            if (!(request->path = malloc( (len + 1) * sizeof(WCHAR) ))) goto end;\n            memcpy( request->path, uc.lpszUrlPath, (len + 1) * sizeof(WCHAR) );\n            request->path[len] = 0;\n        }\n        else request->path = wcsdup( L\"/\" );\n    }\n\n    if (status != HTTP_STATUS_REDIRECT_KEEP_VERB && status != HTTP_STATUS_PERMANENT_REDIRECT &&\n        !wcscmp( request->verb, L\"POST\" ))\n    {\n        free( request->verb );\n        request->verb = wcsdup( L\"GET\" );\n        request->optional = NULL;\n        request->optional_len = 0;\n    }\n\nend:\n    free( location );\n    return ret;\n}"
+  },
+  {
+   "name": "handle_authorization",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2720,
+   "end_line": 2751,
+   "static": true,
+   "called_from": [
+    "receive_response"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD handle_authorization( struct request *request, DWORD status )",
+   "code": "static DWORD handle_authorization( struct request *request, DWORD status )\n{\n    DWORD ret, i, schemes, first, level, target;\n\n    switch (status)\n    {\n    case HTTP_STATUS_DENIED:\n        target = WINHTTP_AUTH_TARGET_SERVER;\n        level  = WINHTTP_QUERY_WWW_AUTHENTICATE;\n        break;\n\n    case HTTP_STATUS_PROXY_AUTH_REQ:\n        target = WINHTTP_AUTH_TARGET_PROXY;\n        level  = WINHTTP_QUERY_PROXY_AUTHENTICATE;\n        break;\n\n    default:\n        ERR( \"unhandled status %lu\\n\", status );\n        return ERROR_WINHTTP_INTERNAL_ERROR;\n    }\n\n    if ((ret = query_auth_schemes( request, level, &schemes, &first ))) return ret;\n    if (do_authorization( request, target, first )) return ERROR_SUCCESS;\n\n    schemes &= ~first;\n    for (i = 0; i < ARRAY_SIZE( auth_schemes ); i++)\n    {\n        if (!(schemes & auth_schemes[i].scheme)) continue;\n        if (do_authorization( request, target, auth_schemes[i].scheme )) return ERROR_SUCCESS;\n    }\n    return ERROR_WINHTTP_LOGIN_FAILURE;\n}"
+  },
+  {
+   "name": "drain_data_stream",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 86,
+   "end_line": 89,
+   "static": true,
+   "called_from": [
+    "send_request"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD drain_data_stream( struct request *request )",
+   "code": "static DWORD drain_data_stream( struct request *request )\n{\n    return request->data_stream->vtbl->drain_data( request->data_stream, request );\n}"
+  },
+  {
+   "name": "finished_reading",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2228,
+   "end_line": 2260,
+   "static": true,
+   "called_from": [
+    "send_request"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/request.c:3513"
+   ],
+   "signature": "static void finished_reading( struct request *request )",
+   "code": "static void finished_reading( struct request *request )\n{\n    BOOL close = FALSE, close_request_headers = FALSE;\n    WCHAR connection[20];\n    DWORD size = sizeof(connection), size2 = size;\n\n    if (!request->netconn) return;\n\n    if (request->netconn->socket == -1) close = TRUE;\n    else if (request->hdr.disable_flags & WINHTTP_DISABLE_KEEP_ALIVE) close = TRUE;\n    else if (!query_headers( request, WINHTTP_QUERY_CONNECTION, NULL, connection, &size, NULL ) ||\n             !query_headers( request, WINHTTP_QUERY_PROXY_CONNECTION, NULL, connection, &size2, NULL ))\n    {\n        if (!wcsicmp( connection, L\"close\" )) close = TRUE;\n    }\n    else if (!wcscmp( request->version, L\"HTTP/1.0\" )) close = TRUE;\n\n    size = size2 = sizeof(connection);\n    if (!query_headers( request, WINHTTP_QUERY_CONNECTION | WINHTTP_QUERY_FLAG_REQUEST_HEADERS, NULL, connection, &size, NULL ) ||\n        !query_headers( request, WINHTTP_QUERY_PROXY_CONNECTION | WINHTTP_QUERY_FLAG_REQUEST_HEADERS, NULL, connection, &size2, NULL ))\n    {\n        if (!wcsicmp( connection, L\"close\" )) close_request_headers = TRUE;\n    }\n\n    if (close || close_request_headers)\n    {\n        if (close_request_headers) send_callback( &request->hdr, WINHTTP_CALLBACK_STATUS_CLOSING_CONNECTION, 0, 0 );\n        netconn_release( request->netconn );\n        if (close_request_headers) send_callback( &request->hdr, WINHTTP_CALLBACK_STATUS_CONNECTION_CLOSED, 0, 0 );\n    }\n    else cache_connection( request->netconn );\n    request->netconn = NULL;\n}"
+  },
+  {
+   "name": "process_header",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 848,
+   "end_line": 907,
+   "static": false,
+   "called_from": [
+    "add_host_header",
+    "add_request_headers",
+    "add_websocket_key_header",
+    "do_authorization",
+    "handle_passport_redirect",
+    "read_reply",
+    "send_request"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/session.c:1451"
+   ],
+   "signature": "DWORD process_header( struct request *request, const WCHAR *field, const WCHAR *value, DWORD flags, BOOL request_only )",
+   "code": "DWORD process_header( struct request *request, const WCHAR *field, const WCHAR *value, DWORD flags, BOOL request_only )\n{\n    int index;\n    struct header hdr;\n\n    TRACE( \"%s: %s %#lx\\n\", debugstr_w(field), debugstr_w(value), flags );\n\n    if ((index = get_header_index( request, field, 0, request_only )) >= 0)\n    {\n        if (flags & WINHTTP_ADDREQ_FLAG_ADD_IF_NEW) return ERROR_WINHTTP_HEADER_ALREADY_EXISTS;\n    }\n\n    if (flags & WINHTTP_ADDREQ_FLAG_REPLACE)\n    {\n        if (index >= 0)\n        {\n            delete_header( request, index );\n            if (!value || !value[0]) return ERROR_SUCCESS;\n        }\n        else if (!(flags & WINHTTP_ADDREQ_FLAG_ADD)) return ERROR_WINHTTP_HEADER_NOT_FOUND;\n\n        hdr.field = (LPWSTR)field;\n        hdr.value = (LPWSTR)value;\n        hdr.is_request = request_only;\n        return insert_header( request, &hdr );\n    }\n    else if (value)\n    {\n\n        if ((flags & (WINHTTP_ADDREQ_FLAG_COALESCE_WITH_COMMA | WINHTTP_ADDREQ_FLAG_COALESCE_WITH_SEMICOLON)) &&\n            index >= 0)\n        {\n            WCHAR *tmp;\n            int len, len_orig, len_value;\n            struct header *header = &request->headers[index];\n\n            len_orig = lstrlenW( header->value );\n            len_value = lstrlenW( value );\n\n            len = len_orig + len_value + 2;\n            if (!(tmp = realloc( header->value, (len + 1) * sizeof(WCHAR) ))) return ERROR_OUTOFMEMORY;\n            header->value = tmp;\n            header->value[len_orig++] = (flags & WINHTTP_ADDREQ_FLAG_COALESCE_WITH_COMMA) ? ',' : ';';\n            header->value[len_orig++] = ' ';\n\n            memcpy( &header->value[len_orig], value, len_value * sizeof(WCHAR) );\n            header->value[len] = 0;\n            return ERROR_SUCCESS;\n        }\n        else\n        {\n            hdr.field = (LPWSTR)field;\n            hdr.value = (LPWSTR)value;\n            hdr.is_request = request_only;\n            return insert_header( request, &hdr );\n        }\n    }\n\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "add_host_header",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2193,
+   "end_line": 2212,
+   "static": true,
+   "called_from": [
+    "handle_redirect",
+    "send_request"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD add_host_header( struct request *request, DWORD modifier )",
+   "code": "static DWORD add_host_header( struct request *request, DWORD modifier )\n{\n    DWORD ret, len;\n    WCHAR *host;\n    struct connect *connect = request->connect;\n    INTERNET_PORT port;\n\n    port = connect->hostport ? connect->hostport : (request->hdr.flags & WINHTTP_FLAG_SECURE ? 443 : 80);\n\n    if (port == INTERNET_DEFAULT_HTTP_PORT || port == INTERNET_DEFAULT_HTTPS_PORT)\n    {\n        return process_header( request, L\"Host\", connect->hostname, modifier, TRUE );\n    }\n    len = lstrlenW( connect->hostname ) + 7; /* sizeof(\":65535\") */\n    if (!(host = malloc( len * sizeof(WCHAR) ))) return ERROR_OUTOFMEMORY;\n    swprintf( host, len, L\"%s:%u\", connect->hostname, port );\n    ret = process_header( request, L\"Host\", host, modifier, TRUE );\n    free( host );\n    return ret;\n}"
+  },
+  {
+   "name": "do_authorization",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1564,
+   "end_line": 1791,
+   "static": true,
+   "called_from": [
+    "handle_authorization",
+    "send_request"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL do_authorization( struct request *request, DWORD target, DWORD scheme_flag )",
+   "code": "static BOOL do_authorization( struct request *request, DWORD target, DWORD scheme_flag )\n{\n    struct authinfo *authinfo, **auth_ptr;\n    enum auth_scheme scheme = scheme_from_flag( scheme_flag );\n    const WCHAR *auth_target, *username, *password;\n    WCHAR auth_value[2048], *auth_reply;\n    DWORD len = sizeof(auth_value), len_scheme, flags;\n    BOOL ret, has_auth_value;\n\n    if (scheme == SCHEME_INVALID) return FALSE;\n\n    switch (target)\n    {\n    case WINHTTP_AUTH_TARGET_SERVER:\n        has_auth_value = get_authvalue( request, WINHTTP_QUERY_WWW_AUTHENTICATE, scheme_flag, auth_value, len );\n        auth_ptr = &request->authinfo;\n        auth_target = L\"Authorization\";\n        if (request->creds[TARGET_SERVER][scheme].username)\n        {\n            if (scheme != SCHEME_BASIC && !has_auth_value) return FALSE;\n            username = request->creds[TARGET_SERVER][scheme].username;\n            password = request->creds[TARGET_SERVER][scheme].password;\n        }\n        else\n        {\n            if (!has_auth_value) return FALSE;\n            username = request->connect->username;\n            password = request->connect->password;\n        }\n        break;\n\n    case WINHTTP_AUTH_TARGET_PROXY:\n        if (!get_authvalue( request, WINHTTP_QUERY_PROXY_AUTHENTICATE, scheme_flag, auth_value, len ))\n            return FALSE;\n        auth_ptr = &request->proxy_authinfo;\n        auth_target = L\"Proxy-Authorization\";\n        if (request->creds[TARGET_PROXY][scheme].username)\n        {\n            username = request->creds[TARGET_PROXY][scheme].username;\n            password = request->creds[TARGET_PROXY][scheme].password;\n        }\n        else\n        {\n            username = request->connect->session->proxy_username;\n            password = request->connect->session->proxy_password;\n        }\n        break;\n\n    default:\n        WARN( \"unknown target %#lx\\n\", target );\n        return FALSE;\n    }\n    authinfo = *auth_ptr;\n\n    switch (scheme)\n    {\n    case SCHEME_BASIC:\n    {\n        int userlen, passlen;\n\n        if (!username || !password) return FALSE;\n        if ((!authinfo && !(authinfo = alloc_authinfo())) || authinfo->finished) return FALSE;\n\n        userlen = WideCharToMultiByte( CP_UTF8, 0, username, lstrlenW( username ), NULL, 0, NULL, NULL );\n        passlen = WideCharToMultiByte( CP_UTF8, 0, password, lstrlenW( password ), NULL, 0, NULL, NULL );\n\n        authinfo->data_len = userlen + 1 + passlen;\n        if (!(authinfo->data = malloc( authinfo->data_len ))) return FALSE;\n\n        WideCharToMultiByte( CP_UTF8, 0, username, -1, authinfo->data, userlen, NULL, NULL );\n        authinfo->data[userlen] = ':';\n        WideCharToMultiByte( CP_UTF8, 0, password, -1, authinfo->data + userlen + 1, passlen, NULL, NULL );\n\n        authinfo->scheme   = SCHEME_BASIC;\n        authinfo->finished = TRUE;\n        break;\n    }\n    case SCHEME_NTLM:\n    case SCHEME_NEGOTIATE:\n    {\n        SECURITY_STATUS status;\n        SecBufferDesc out_desc, in_desc;\n        SecBuffer out, in;\n        ULONG flags = ISC_REQ_CONNECTION|ISC_REQ_USE_DCE_STYLE|ISC_REQ_MUTUAL_AUTH|ISC_REQ_DELEGATE;\n        const WCHAR *p;\n        BOOL first = FALSE;\n\n        if (!authinfo)\n        {\n            TimeStamp exp;\n            SEC_WINNT_AUTH_IDENTITY_W id;\n            WCHAR *domain, *user;\n\n            if (!username || !password || !(authinfo = alloc_authinfo())) return FALSE;\n\n            first = TRUE;\n            domain = (WCHAR *)username;\n            user = wcschr( username, '\\\\' );\n\n            if (user) user++;\n            else\n            {\n                user = (WCHAR *)username;\n                domain = NULL;\n            }\n            id.Flags          = SEC_WINNT_AUTH_IDENTITY_UNICODE;\n            id.User           = user;\n            id.UserLength     = lstrlenW( user );\n            id.Domain         = domain;\n            id.DomainLength   = domain ? user - domain - 1 : 0;\n            id.Password       = (WCHAR *)password;\n            id.PasswordLength = lstrlenW( password );\n\n            status = AcquireCredentialsHandleW( NULL, (SEC_WCHAR *)auth_schemes[scheme].str,\n                                                SECPKG_CRED_OUTBOUND, NULL, &id, NULL, NULL,\n                                                &authinfo->cred, &exp );\n            if (status == SEC_E_OK)\n            {\n                PSecPkgInfoW info;\n                status = QuerySecurityPackageInfoW( (SEC_WCHAR *)auth_schemes[scheme].str, &info );\n                if (status == SEC_E_OK)\n                {\n                    authinfo->max_token = info->cbMaxToken;\n                    FreeContextBuffer( info );\n                }\n            }\n            if (status != SEC_E_OK)\n            {\n                WARN( \"AcquireCredentialsHandleW for scheme %s failed with error %#lx\\n\",\n                     debugstr_w(auth_schemes[scheme].str), status );\n                free( authinfo );\n                return FALSE;\n            }\n            authinfo->scheme = scheme;\n        }\n        else if (authinfo->finished) return FALSE;\n\n        if ((lstrlenW( auth_value ) < auth_schemes[authinfo->scheme].len ||\n            wcsnicmp( auth_value, auth_schemes[authinfo->scheme].str, auth_schemes[authinfo->scheme].len )))\n        {\n            ERR(\"authentication scheme changed from %s to %s\\n\",\n                debugstr_w(auth_schemes[authinfo->scheme].str), debugstr_w(auth_value));\n            destroy_authinfo( authinfo );\n            *auth_ptr = NULL;\n            return FALSE;\n        }\n        in.BufferType = SECBUFFER_TOKEN;\n        in.cbBuffer   = 0;\n        in.pvBuffer   = NULL;\n\n        in_desc.ulVersion = 0;\n        in_desc.cBuffers  = 1;\n        in_desc.pBuffers  = &in;\n\n        p = auth_value + auth_schemes[scheme].len;\n        if (*p == ' ')\n        {\n            int len = lstrlenW( ++p );\n            in.cbBuffer = decode_base64( p, len, NULL );\n            if (!(in.pvBuffer = malloc( in.cbBuffer ))) {\n                destroy_authinfo( authinfo );\n                *auth_ptr = NULL;\n                return FALSE;\n            }\n            decode_base64( p, len, in.pvBuffer );\n        }\n        out.BufferType = SECBUFFER_TOKEN;\n        out.cbBuffer   = authinfo->max_token;\n        if (!(out.pvBuffer = malloc( authinfo->max_token )))\n        {\n            free( in.pvBuffer );\n            destroy_authinfo( authinfo );\n            *auth_ptr = NULL;\n            return FALSE;\n        }\n        out_desc.ulVersion = 0;\n        out_desc.cBuffers  = 1;\n        out_desc.pBuffers  = &out;\n\n        status = InitializeSecurityContextW( first ? &authinfo->cred : NULL, first ? NULL : &authinfo->ctx,\n                                             first ? request->connect->servername : NULL, flags, 0,\n                                             SECURITY_NETWORK_DREP, in.pvBuffer ? &in_desc : NULL, 0,\n                                             &authinfo->ctx, &out_desc, &authinfo->attr, &authinfo->exp );\n        free( in.pvBuffer );\n        if (status == SEC_E_OK)\n        {\n            free( authinfo->data );\n            authinfo->data     = out.pvBuffer;\n            authinfo->data_len = out.cbBuffer;\n            authinfo->finished = TRUE;\n            TRACE(\"sending last auth packet\\n\");\n        }\n        else if (status == SEC_I_CONTINUE_NEEDED)\n        {\n            free( authinfo->data );\n            authinfo->data     = out.pvBuffer;\n            authinfo->data_len = out.cbBuffer;\n            TRACE(\"sending next auth packet\\n\");\n        }\n        else\n        {\n            ERR( \"InitializeSecurityContextW failed with error %#lx\\n\", status );\n            free( out.pvBuffer );\n            destroy_authinfo( authinfo );\n            *auth_ptr = NULL;\n            return FALSE;\n        }\n        break;\n    }\n    default:\n        ERR(\"invalid scheme %u\\n\", scheme);\n        return FALSE;\n    }\n    *auth_ptr = authinfo;\n\n    len_scheme = auth_schemes[authinfo->scheme].len;\n    len = len_scheme + 1 + ((authinfo->data_len + 2) * 4) / 3;\n    if (!(auth_reply = malloc( (len + 1) * sizeof(WCHAR) ))) return FALSE;\n\n    memcpy( auth_reply, auth_schemes[authinfo->scheme].str, len_scheme * sizeof(WCHAR) );\n    auth_reply[len_scheme] = ' ';\n    encode_base64( authinfo->data, authinfo->data_len, auth_reply + len_scheme + 1 );\n\n    flags = WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE;\n    ret = !process_header( request, auth_target, auth_reply, flags, TRUE );\n    free( auth_reply );\n    return ret;\n}"
+  },
+  {
+   "name": "clear_response_headers",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2214,
+   "end_line": 2226,
+   "static": true,
+   "called_from": [
+    "send_request"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void clear_response_headers( struct request *request )",
+   "code": "static void clear_response_headers( struct request *request )\n{\n    unsigned int i;\n\n    for (i = 0; i < request->num_headers; i++)\n    {\n        if (!request->headers[i].field) continue;\n        if (!request->headers[i].value) continue;\n        if (request->headers[i].is_request) continue;\n        delete_header( request, i );\n        i--;\n    }\n}"
+  },
+  {
+   "name": "add_websocket_key_header",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2442,
+   "end_line": 2449,
+   "static": true,
+   "called_from": [
+    "send_request"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD add_websocket_key_header( struct request *request )",
+   "code": "static DWORD add_websocket_key_header( struct request *request )\n{\n    WCHAR *key = create_websocket_key();\n    if (!key) return ERROR_OUTOFMEMORY;\n    process_header( request, L\"Sec-WebSocket-Key\", key, WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE, TRUE );\n    free( key );\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "add_request_headers",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 909,
+   "end_line": 940,
+   "static": false,
+   "called_from": [
+    "send_request"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/cookie.c:369",
+    "dlls/winhttp/request.c:969"
+   ],
+   "signature": "DWORD add_request_headers( struct request *request, const WCHAR *headers, DWORD len, DWORD flags )",
+   "code": "DWORD add_request_headers( struct request *request, const WCHAR *headers, DWORD len, DWORD flags )\n{\n    DWORD ret = ERROR_WINHTTP_INVALID_HEADER;\n    struct header *header;\n    const WCHAR *p, *q;\n\n    if (len == ~0u) len = lstrlenW( headers );\n    if (!len) return ERROR_SUCCESS;\n\n    p = headers;\n    do\n    {\n        const WCHAR *end;\n\n        if (p >= headers + len) break;\n\n        for (q = p; q < headers + len && *q != '\\r' && *q != '\\n'; ++q)\n            ;\n        end = q;\n        while (q < headers + len && (*q == '\\r' || *q == '\\n'))\n            ++q;\n\n        if ((header = parse_header( p, end - p, FALSE )))\n        {\n            ret = process_header( request, header->field, header->value, flags, TRUE );\n            free_header( header );\n        }\n        p = q;\n    } while (!ret);\n\n    return ret;\n}"
+  },
+  {
+   "name": "open_connection",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2015,
+   "end_line": 2183,
+   "static": true,
+   "called_from": [
+    "send_request"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD open_connection( struct request *request )",
+   "code": "static DWORD open_connection( struct request *request )\n{\n    BOOL is_secure = request->hdr.flags & WINHTTP_FLAG_SECURE;\n    struct hostdata *host = NULL, *iter;\n    struct netconn *netconn = NULL;\n    struct connect *connect;\n    WCHAR *addressW = NULL;\n    INTERNET_PORT port;\n    DWORD ret, len;\n\n    if (request->netconn) goto done;\n\n    connect = request->connect;\n    port = connect->serverport ? connect->serverport : (request->hdr.flags & WINHTTP_FLAG_SECURE ? 443 : 80);\n\n    EnterCriticalSection( &connection_pool_cs );\n\n    LIST_FOR_EACH_ENTRY( iter, &connection_pool, struct hostdata, entry )\n    {\n        if (iter->port == port && !wcscmp( connect->servername, iter->hostname ) && !is_secure == !iter->secure)\n        {\n            host = iter;\n            host->ref++;\n            break;\n        }\n    }\n\n    if (!host)\n    {\n        if ((host = malloc( sizeof(*host) )))\n        {\n            host->ref = 1;\n            host->secure = is_secure;\n            host->port = port;\n            list_init( &host->connections );\n            if ((host->hostname = wcsdup( connect->servername )))\n            {\n                list_add_head( &connection_pool, &host->entry );\n            }\n            else\n            {\n                free( host );\n                host = NULL;\n            }\n        }\n    }\n\n    LeaveCriticalSection( &connection_pool_cs );\n\n    if (!host) return ERROR_OUTOFMEMORY;\n\n    for (;;)\n    {\n        EnterCriticalSection( &connection_pool_cs );\n        if (!list_empty( &host->connections ))\n        {\n            netconn = LIST_ENTRY( list_head( &host->connections ), struct netconn, entry );\n            list_remove( &netconn->entry );\n        }\n        LeaveCriticalSection( &connection_pool_cs );\n        if (!netconn) break;\n\n        if (netconn_is_alive( netconn )) break;\n        TRACE(\"connection %p no longer alive, closing\\n\", netconn);\n        netconn_release( netconn );\n        netconn = NULL;\n    }\n\n    if (!connect->resolved && netconn)\n    {\n        connect->sockaddr = netconn->sockaddr;\n        connect->resolved = TRUE;\n    }\n\n    if (!connect->resolved)\n    {\n        len = lstrlenW( host->hostname ) + 1;\n        send_callback( &request->hdr, WINHTTP_CALLBACK_STATUS_RESOLVING_NAME, host->hostname, len );\n\n        if ((ret = netconn_resolve( host->hostname, port, 0, &connect->sockaddr, request->resolve_timeout )))\n        {\n            release_host( host );\n            return ret;\n        }\n        connect->resolved = TRUE;\n\n        if (!(addressW = addr_to_str( &connect->sockaddr )))\n        {\n            release_host( host );\n            return ERROR_OUTOFMEMORY;\n        }\n        len = lstrlenW( addressW ) + 1;\n        send_callback( &request->hdr, WINHTTP_CALLBACK_STATUS_NAME_RESOLVED, addressW, len );\n    }\n\n    if (!netconn)\n    {\n        if (!addressW && !(addressW = addr_to_str( &connect->sockaddr )))\n        {\n            release_host( host );\n            return ERROR_OUTOFMEMORY;\n        }\n\n        TRACE(\"connecting to %s:%u\\n\", debugstr_w(addressW), port);\n\n        len = lstrlenW( addressW ) + 1;\n        send_callback( &request->hdr, WINHTTP_CALLBACK_STATUS_CONNECTING_TO_SERVER, addressW, len );\n\n        if ((ret = netconn_create( host, &connect->sockaddr, request->connect_timeout, &netconn )))\n        {\n            free( addressW );\n            release_host( host );\n            return ret;\n        }\n        netconn_set_timeout( netconn, TRUE, request->send_timeout );\n        netconn_set_timeout( netconn, FALSE, get_receive_response_timeout( request ));\n\n        request->netconn = netconn;\n\n        if (is_secure)\n        {\n            if (connect->session->proxy_server && wcsicmp( connect->hostname, connect->servername ))\n            {\n                if ((ret = secure_proxy_connect( request )))\n                {\n                    request->netconn = NULL;\n                    free( addressW );\n                    netconn_release( netconn );\n                    return ret;\n                }\n            }\n\n            CertFreeCertificateContext( request->server_cert );\n            request->server_cert = NULL;\n\n            if ((ret = ensure_cred_handle( request )) ||\n                (ret = netconn_secure_connect( netconn, connect->hostname, request->security_flags,\n                                               &request->cred_handle, request->check_revocation )))\n            {\n                request->netconn = NULL;\n                free( addressW );\n                netconn_release( netconn );\n                return ret;\n            }\n        }\n\n        send_callback( &request->hdr, WINHTTP_CALLBACK_STATUS_CONNECTED_TO_SERVER, addressW, lstrlenW(addressW) + 1 );\n    }\n    else\n    {\n        TRACE(\"using connection %p\\n\", netconn);\n\n        netconn_set_timeout( netconn, TRUE, request->send_timeout );\n        netconn_set_timeout( netconn, FALSE, get_receive_response_timeout( request ));\n        request->netconn = netconn;\n    }\n\n    if (netconn->secure && !(request->server_cert = netconn_get_certificate( netconn )))\n    {\n        free( addressW );\n        netconn_release( netconn );\n        return ERROR_WINHTTP_SECURE_FAILURE;\n    }\n\ndone:\n    reset_data_stream( request );\n    free( addressW );\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "build_wire_request",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2383,
+   "end_line": 2430,
+   "static": true,
+   "called_from": [
+    "send_request"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static char *build_wire_request( struct request *request, DWORD *len )",
+   "code": "static char *build_wire_request( struct request *request, DWORD *len )\n{\n    char *path, *ptr, *ret;\n    DWORD i, len_path;\n\n    if (!(path = build_wire_path( request, &len_path ))) return NULL;\n\n    *len = str_to_wire( request->verb, -1, NULL, 0 ) + 1; /* ' ' */\n    *len += len_path + 1; /* ' ' */\n    *len += str_to_wire( request->version, -1, NULL, 0 );\n\n    for (i = 0; i < request->num_headers; i++)\n    {\n        if (request->headers[i].is_request)\n        {\n            *len += str_to_wire( request->headers[i].field, -1, NULL, 0 ) + 2; /* ': ' */\n            *len += str_to_wire( request->headers[i].value, -1, NULL, 0 ) + 2; /* '\\r\\n' */\n        }\n    }\n    *len += 4; /* '\\r\\n\\r\\n' */\n\n    if ((ret = ptr = malloc( *len + 1 )))\n    {\n        ptr += str_to_wire( request->verb, -1, ptr, 0 );\n        *ptr++ = ' ';\n        memcpy( ptr, path, len_path );\n        ptr += len_path;\n        *ptr++ = ' ';\n        ptr += str_to_wire( request->version, -1, ptr, 0 );\n\n        for (i = 0; i < request->num_headers; i++)\n        {\n            if (request->headers[i].is_request)\n            {\n                *ptr++ = '\\r';\n                *ptr++ = '\\n';\n                ptr += str_to_wire( request->headers[i].field, -1, ptr, 0 );\n                *ptr++ = ':';\n                *ptr++ = ' ';\n                ptr += str_to_wire( request->headers[i].value, -1, ptr, 0 );\n            }\n        }\n        memcpy( ptr, \"\\r\\n\\r\\n\", sizeof(\"\\r\\n\\r\\n\") );\n    }\n\n    free( path );\n    return ret;\n}"
+  },
+  {
+   "name": "queue_task",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 626,
+   "end_line": 656,
+   "static": false,
+   "called_from": [
+    "queue_receive_response"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/socket.c:528",
+    "dlls/winhttp/socket.c:682",
+    "dlls/winhttp/socket.c:939",
+    "dlls/winhttp/socket.c:1015",
+    "dlls/winhttp/socket.c:1166"
+   ],
+   "signature": "DWORD queue_task( struct queue *queue, TASK_CALLBACK task, struct task_header *task_hdr, struct object_header *obj )",
+   "code": "DWORD queue_task( struct queue *queue, TASK_CALLBACK task, struct task_header *task_hdr, struct object_header *obj )\n{\n    BOOL callback_running;\n\n    TRACE(\"queueing %p in %p\\n\", task_hdr, queue);\n    task_hdr->callback = task;\n    task_hdr->completion_sent = 0;\n    task_hdr->refs = 1;\n    task_hdr->obj = obj;\n    addref_object( obj );\n\n    AcquireSRWLockExclusive( &queue->lock );\n    list_add_tail( &queue->queued_tasks, &task_hdr->entry );\n    if (!(callback_running = queue->callback_running))\n    {\n        if ((queue->callback_running = TrySubmitThreadpoolCallback( task_callback, queue, NULL )))\n            callback_running = TRUE;\n        else\n            list_remove( &task_hdr->entry );\n    }\n    ReleaseSRWLockExclusive( &queue->lock );\n\n    if (!callback_running)\n    {\n        release_object( obj );\n        ERR( \"Submiting threadpool callback failed, err %lu.\\n\", GetLastError() );\n        return ERROR_OUTOFMEMORY;\n    }\n\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "task_receive_response",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 3329,
+   "end_line": 3338,
+   "static": true,
+   "called_from": [
+    "queue_receive_response"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void task_receive_response( void *ctx, BOOL abort )",
+   "code": "static void task_receive_response( void *ctx, BOOL abort )\n{\n    struct receive_response *r = ctx;\n    struct request *request = (struct request *)r->task_hdr.obj;\n\n    if (abort) return;\n\n    TRACE(\"running %p\\n\", ctx);\n    receive_response( request );\n}"
+  },
+  {
+   "name": "read_line",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2871,
+   "end_line": 2908,
+   "static": true,
+   "called_from": [
+    "read_reply"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD read_line( struct request *request, char *buffer, DWORD *len )",
+   "code": "static DWORD read_line( struct request *request, char *buffer, DWORD *len )\n{\n    int count, bytes_read, pos = 0;\n    DWORD ret;\n\n    for (;;)\n    {\n        char *eol = memchr( request->read.buf + request->read.pos, '\\n', request->read.size );\n        if (eol)\n        {\n            count = eol - (char *)(request->read.buf + request->read.pos);\n            bytes_read = count + 1;\n        }\n        else count = bytes_read = request->read.size;\n\n        count = min( count, *len - pos );\n        memcpy( buffer + pos, request->read.buf + request->read.pos, count );\n        pos += count;\n        remove_data( request, bytes_read );\n        if (eol) break;\n\n        if ((ret = read_more_data( request ))) return ret;\n        if (!request->read.size)\n        {\n            *len = 0;\n            TRACE(\"returning empty string\\n\");\n            return ERROR_WINHTTP_INVALID_SERVER_RESPONSE;\n        }\n    }\n    if (pos < *len)\n    {\n        if (pos && buffer[pos - 1] == '\\r') pos--;\n        *len = pos + 1;\n    }\n    buffer[*len - 1] = 0;\n    TRACE(\"returning %s\\n\", debugstr_a(buffer));\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "parse_header",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 728,
+   "end_line": 786,
+   "static": true,
+   "called_from": [
+    "add_request_headers",
+    "read_reply"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static struct header *parse_header( const WCHAR *string, size_t string_len, BOOL reply )",
+   "code": "static struct header *parse_header( const WCHAR *string, size_t string_len, BOOL reply )\n{\n    const WCHAR *p, *q, *name_end;\n    struct header *header;\n    int len;\n\n    p = string;\n    if (!(q = wcschr( p, ':' )))\n    {\n        WARN(\"no ':' in line %s\\n\", debugstr_w(string));\n        return NULL;\n    }\n    name_end = q;\n    if (reply)\n    {\n        while (name_end != string)\n        {\n            if (name_end[-1] != ' ') break;\n            --name_end;\n        }\n    }\n    if (name_end == string)\n    {\n        WARN(\"empty field name in line %s\\n\", debugstr_w(string));\n        return NULL;\n    }\n    while (p != name_end)\n    {\n        if (!valid_token_char( *p ))\n        {\n            WARN(\"invalid character in field name %s\\n\", debugstr_w(string));\n            return NULL;\n        }\n        p++;\n    }\n    len = name_end - string;\n    if (!(header = calloc( 1, sizeof(*header) ))) return NULL;\n    if (!(header->field = malloc( (len + 1) * sizeof(WCHAR) )))\n    {\n        free( header );\n        return NULL;\n    }\n    memcpy( header->field, string, len * sizeof(WCHAR) );\n    header->field[len] = 0;\n\n    q++; /* skip past colon */\n    while (*q == ' ') q++;\n    len = (string + string_len) - q;\n\n    if (!(header->value = malloc( (len + 1) * sizeof(WCHAR) )))\n    {\n        free_header( header );\n        return NULL;\n    }\n    memcpy( header->value, q, len * sizeof(WCHAR) );\n    header->value[len] = 0;\n\n    return header;\n}"
+  },
+  {
+   "name": "free_header",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 700,
+   "end_line": 705,
+   "static": true,
+   "called_from": [
+    "add_request_headers",
+    "parse_header",
+    "read_reply"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void free_header( struct header *header )",
+   "code": "static void free_header( struct header *header )\n{\n    free( header->field );\n    free( header->value );\n    free( header );\n}"
+  },
+  {
+   "name": "get_header_index",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 788,
+   "end_line": 806,
+   "static": true,
+   "called_from": [
+    "process_header",
+    "query_headers",
+    "remove_header"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static int get_header_index( struct request *request, const WCHAR *field, int requested_index, BOOL request_only )",
+   "code": "static int get_header_index( struct request *request, const WCHAR *field, int requested_index, BOOL request_only )\n{\n    int index;\n\n    TRACE(\"%s\\n\", debugstr_w(field));\n\n    for (index = 0; index < request->num_headers; index++)\n    {\n        if (wcsicmp( request->headers[index].field, field )) continue;\n        if (request_only && !request->headers[index].is_request) continue;\n        if (!request_only && request->headers[index].is_request) continue;\n\n        if (!requested_index) break;\n        requested_index--;\n    }\n    if (index >= request->num_headers) index = -1;\n    TRACE(\"returning %d\\n\", index);\n    return index;\n}"
+  },
+  {
+   "name": "build_request_string",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1002,
+   "end_line": 1044,
+   "static": true,
+   "called_from": [
+    "query_headers"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static WCHAR *build_request_string( struct request *request )",
+   "code": "static WCHAR *build_request_string( struct request *request )\n{\n    WCHAR *path, *ret;\n    unsigned int i, len;\n\n    if (!wcsicmp( request->connect->hostname, request->connect->servername )) path = request->path;\n    else if (!(path = build_absolute_request_path( request, NULL ))) return NULL;\n\n    len = lstrlenW( request->verb ) + 1 /* ' ' */;\n    len += lstrlenW( path ) + 1 /* ' ' */;\n    len += lstrlenW( request->version );\n\n    for (i = 0; i < request->num_headers; i++)\n    {\n        if (request->headers[i].is_request)\n            len += lstrlenW( request->headers[i].field ) + lstrlenW( request->headers[i].value ) + 4; /* '\\r\\n: ' */\n    }\n    len += 4; /* '\\r\\n\\r\\n' */\n\n    if ((ret = malloc( (len + 1) * sizeof(WCHAR) )))\n    {\n        lstrcpyW( ret, request->verb );\n        lstrcatW( ret, L\" \" );\n        lstrcatW( ret, path );\n        lstrcatW( ret, L\" \" );\n        lstrcatW( ret, request->version );\n\n        for (i = 0; i < request->num_headers; i++)\n        {\n            if (request->headers[i].is_request)\n            {\n                lstrcatW( ret, L\"\\r\\n\" );\n                lstrcatW( ret, request->headers[i].field );\n                lstrcatW( ret, L\": \" );\n                lstrcatW( ret, request->headers[i].value );\n            }\n        }\n        lstrcatW( ret, L\"\\r\\n\\r\\n\" );\n    }\n\n    if (path != request->path) free( path );\n    return ret;\n}"
+  },
+  {
+   "name": "query_data_stream",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 49,
+   "end_line": 58,
+   "static": true,
+   "called_from": [
+    "set_content_length"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/request.c:3383"
+   ],
+   "signature": "static DWORD query_data_stream( struct request *request, DWORD *size )",
+   "code": "static DWORD query_data_stream( struct request *request, DWORD *size )\n{\n    DWORD ret = ERROR_SUCCESS;\n\n    if (!request->read.size)\n        ret = request->data_stream->vtbl->fill_buffer( request->data_stream, request, &request->read );\n\n    if (size) *size = request->read.size;\n    return ret;\n}"
+  },
+  {
+   "name": "init_gzip_stream",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2753,
+   "end_line": 2785,
+   "static": true,
+   "called_from": [
+    "set_content_length"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD init_gzip_stream( struct request *request, BOOL is_gzip )",
+   "code": "static DWORD init_gzip_stream( struct request *request, BOOL is_gzip )\n{\n    struct gzip_stream *gzip_stream;\n    int zres;\n\n    if (!(gzip_stream = calloc( 1, sizeof(*gzip_stream) ))) return ERROR_OUTOFMEMORY;\n\n    gzip_stream->data_stream.vtbl = &gzip_stream_vtbl;\n    gzip_stream->zstream.zalloc = gzip_zalloc;\n    gzip_stream->zstream.zfree = gzip_zfree;\n\n    zres = inflateInit2( &gzip_stream->zstream, is_gzip ? 31 : 15 );\n    if (zres != Z_OK)\n    {\n        ERR( \"inflateInit failed: %d\\n\", zres );\n        free( gzip_stream );\n        return ERROR_OUTOFMEMORY;\n    }\n\n    if (request->read.size)\n    {\n        memcpy( gzip_stream->buf.buf, request->read.buf + request->read.pos, request->read.size );\n        gzip_stream->buf.size = request->read.size;\n        request->read.pos = request->read.size = 0;\n    }\n\n    gzip_stream->parent = request->data_stream;\n    request->data_stream = &gzip_stream->data_stream;\n\n    remove_header( request, L\"Content-Length\", FALSE );\n    request->content_length = ~0ull;\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "get_redirect_url",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 3045,
+   "end_line": 3061,
+   "static": true,
+   "called_from": [
+    "handle_redirect"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD get_redirect_url( struct request *request, WCHAR **ret_url, DWORD *ret_len )",
+   "code": "static DWORD get_redirect_url( struct request *request, WCHAR **ret_url, DWORD *ret_len )\n{\n    DWORD size, ret;\n    WCHAR *url;\n\n    ret = query_headers( request, WINHTTP_QUERY_LOCATION, NULL, NULL, &size, NULL );\n    if (ret != ERROR_INSUFFICIENT_BUFFER) return ret;\n    if (!(url = malloc( size ))) return ERROR_OUTOFMEMORY;\n    if ((ret = query_headers( request, WINHTTP_QUERY_LOCATION, NULL, url, &size, NULL )))\n    {\n        free( url );\n        return ret;\n    }\n    *ret_url = url;\n    *ret_len = size / sizeof(WCHAR);\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "reset_data_stream",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 96,
+   "end_line": 101,
+   "static": true,
+   "called_from": [
+    "handle_redirect",
+    "open_connection"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void reset_data_stream( struct request *request )",
+   "code": "static void reset_data_stream( struct request *request )\n{\n    destroy_data_stream( request->data_stream );\n    request->data_stream = &request->netconn_stream.data_stream;\n    request->read.pos = request->read.size = 0;\n}"
+  },
+  {
+   "name": "query_auth_schemes",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1325,
+   "end_line": 1362,
+   "static": true,
+   "called_from": [
+    "handle_authorization"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/request.c:1393",
+    "dlls/winhttp/request.c:1397"
+   ],
+   "signature": "static DWORD query_auth_schemes( struct request *request, DWORD level, DWORD *supported, DWORD *first )",
+   "code": "static DWORD query_auth_schemes( struct request *request, DWORD level, DWORD *supported, DWORD *first )\n{\n    DWORD ret, index = 0, supported_schemes = 0, first_scheme = 0;\n\n    for (;;)\n    {\n        WCHAR *buffer;\n        DWORD size, scheme;\n\n        size = 0;\n        ret = query_headers( request, level, NULL, NULL, &size, &index );\n        if (ret != ERROR_INSUFFICIENT_BUFFER)\n        {\n            if (index) ret = ERROR_SUCCESS;\n            break;\n        }\n\n        if (!(buffer = malloc( size ))) return ERROR_OUTOFMEMORY;\n        if ((ret = query_headers( request, level, NULL, buffer, &size, &index )))\n        {\n            free( buffer );\n            return ret;\n        }\n        scheme = auth_scheme_from_header( buffer );\n        free( buffer );\n        if (!scheme) continue;\n\n        if (!first_scheme) first_scheme = scheme;\n        supported_schemes |= scheme;\n    }\n\n    if (!ret)\n    {\n        *supported = supported_schemes;\n        *first = first_scheme;\n    }\n    return ret;\n}"
+  },
+  {
+   "name": "cache_connection",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1945,
+   "end_line": 1965,
+   "static": true,
+   "called_from": [
+    "finished_reading"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void cache_connection( struct netconn *netconn )",
+   "code": "static void cache_connection( struct netconn *netconn )\n{\n    TRACE( \"caching connection %p\\n\", netconn );\n\n    EnterCriticalSection( &connection_pool_cs );\n\n    netconn->keep_until = GetTickCount64() + DEFAULT_KEEP_ALIVE_TIMEOUT;\n    list_add_head( &netconn->host->connections, &netconn->entry );\n\n    if (!connection_collector_running)\n    {\n        HMODULE module;\n\n        GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (const WCHAR *)winhttp_instance, &module );\n\n        if (TrySubmitThreadpoolCallback( connection_collector, NULL, NULL )) connection_collector_running = TRUE;\n        else FreeLibrary( winhttp_instance );\n    }\n\n    LeaveCriticalSection( &connection_pool_cs );\n}"
+  },
+  {
+   "name": "delete_header",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 829,
+   "end_line": 840,
+   "static": true,
+   "called_from": [
+    "clear_response_headers",
+    "process_header",
+    "remove_header"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void delete_header( struct request *request, DWORD index )",
+   "code": "static void delete_header( struct request *request, DWORD index )\n{\n    if (!request->num_headers || index >= request->num_headers) return;\n    request->num_headers--;\n\n    free( request->headers[index].field );\n    free( request->headers[index].value );\n\n    memmove( &request->headers[index], &request->headers[index + 1],\n             (request->num_headers - index) * sizeof(struct header) );\n    memset( &request->headers[request->num_headers], 0, sizeof(struct header) );\n}"
+  },
+  {
+   "name": "insert_header",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 808,
+   "end_line": 827,
+   "static": true,
+   "called_from": [
+    "process_header"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD insert_header( struct request *request, struct header *header )",
+   "code": "static DWORD insert_header( struct request *request, struct header *header )\n{\n    DWORD count = request->num_headers + 1;\n    struct header *hdrs;\n\n    if (request->headers)\n    {\n        if ((hdrs = realloc( request->headers, sizeof(*header) * count )))\n            memset( &hdrs[count - 1], 0, sizeof(*header) );\n    }\n    else hdrs = calloc( 1, sizeof(*header) );\n    if (!hdrs) return ERROR_OUTOFMEMORY;\n\n    request->headers = hdrs;\n    request->headers[count - 1].field = wcsdup( header->field );\n    request->headers[count - 1].value = wcsdup( header->value );\n    request->headers[count - 1].is_request = header->is_request;\n    request->num_headers = count;\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "scheme_from_flag",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1305,
+   "end_line": 1311,
+   "static": true,
+   "called_from": [
+    "do_authorization"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/request.c:2653"
+   ],
+   "signature": "static enum auth_scheme scheme_from_flag( DWORD flag )",
+   "code": "static enum auth_scheme scheme_from_flag( DWORD flag )\n{\n    int i;\n\n    for (i = 0; i < ARRAY_SIZE( auth_schemes ); i++) if (flag == auth_schemes[i].scheme) return i;\n    return SCHEME_INVALID;\n}"
+  },
+  {
+   "name": "get_authvalue",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1552,
+   "end_line": 1562,
+   "static": true,
+   "called_from": [
+    "do_authorization"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL get_authvalue( struct request *request, DWORD level, DWORD scheme, WCHAR *buffer, DWORD len )",
+   "code": "static BOOL get_authvalue( struct request *request, DWORD level, DWORD scheme, WCHAR *buffer, DWORD len )\n{\n    DWORD size, index = 0;\n    for (;;)\n    {\n        size = len;\n        if (query_headers( request, level, NULL, buffer, &size, &index )) return FALSE;\n        if (auth_scheme_from_header( buffer ) == scheme) break;\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "alloc_authinfo",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1521,
+   "end_line": 1537,
+   "static": true,
+   "called_from": [
+    "do_authorization"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static struct authinfo *alloc_authinfo(void)",
+   "code": "static struct authinfo *alloc_authinfo(void)\n{\n    struct authinfo *ret;\n\n    if (!(ret = malloc( sizeof(*ret) ))) return NULL;\n\n    SecInvalidateHandle( &ret->cred );\n    SecInvalidateHandle( &ret->ctx );\n    memset( &ret->exp, 0, sizeof(ret->exp) );\n    ret->scheme    = 0;\n    ret->attr      = 0;\n    ret->max_token = 0;\n    ret->data      = NULL;\n    ret->data_len  = 0;\n    ret->finished  = FALSE;\n    return ret;\n}"
+  },
+  {
+   "name": "destroy_authinfo",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1539,
+   "end_line": 1550,
+   "static": false,
+   "called_from": [
+    "do_authorization"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/session.c:751",
+    "dlls/winhttp/session.c:752",
+    "dlls/rpcrt4/rpc_transport.c (other module)",
+    "dlls/wininet/http.c (other module)"
+   ],
+   "signature": "void destroy_authinfo( struct authinfo *authinfo )",
+   "code": "void destroy_authinfo( struct authinfo *authinfo )\n{\n    if (!authinfo) return;\n\n    if (SecIsValidHandle( &authinfo->ctx ))\n        DeleteSecurityContext( &authinfo->ctx );\n    if (SecIsValidHandle( &authinfo->cred ))\n        FreeCredentialsHandle( &authinfo->cred );\n\n    free( authinfo->data );\n    free( authinfo );\n}"
+  },
+  {
+   "name": "decode_base64",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1459,
+   "end_line": 1519,
+   "static": true,
+   "called_from": [
+    "do_authorization"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static unsigned int decode_base64( const WCHAR *base64, unsigned int len, char *buf )",
+   "code": "static unsigned int decode_base64( const WCHAR *base64, unsigned int len, char *buf )\n{\n    unsigned int i = 0;\n    char c0, c1, c2, c3;\n    const WCHAR *p = base64;\n\n    while (len > 4)\n    {\n        if ((c0 = decode_char( p[0] )) > 63) return 0;\n        if ((c1 = decode_char( p[1] )) > 63) return 0;\n        if ((c2 = decode_char( p[2] )) > 63) return 0;\n        if ((c3 = decode_char( p[3] )) > 63) return 0;\n\n        if (buf)\n        {\n            buf[i + 0] = (c0 << 2) | (c1 >> 4);\n            buf[i + 1] = (c1 << 4) | (c2 >> 2);\n            buf[i + 2] = (c2 << 6) |  c3;\n        }\n        len -= 4;\n        i += 3;\n        p += 4;\n    }\n    if (p[2] == '=')\n    {\n        if ((c0 = decode_char( p[0] )) > 63) return 0;\n        if ((c1 = decode_char( p[1] )) > 63) return 0;\n\n        if (buf) buf[i] = (c0 << 2) | (c1 >> 4);\n        i++;\n    }\n    else if (p[3] == '=')\n    {\n        if ((c0 = decode_char( p[0] )) > 63) return 0;\n        if ((c1 = decode_char( p[1] )) > 63) return 0;\n        if ((c2 = decode_char( p[2] )) > 63) return 0;\n\n        if (buf)\n        {\n            buf[i + 0] = (c0 << 2) | (c1 >> 4);\n            buf[i + 1] = (c1 << 4) | (c2 >> 2);\n        }\n        i += 2;\n    }\n    else\n    {\n        if ((c0 = decode_char( p[0] )) > 63) return 0;\n        if ((c1 = decode_char( p[1] )) > 63) return 0;\n        if ((c2 = decode_char( p[2] )) > 63) return 0;\n        if ((c3 = decode_char( p[3] )) > 63) return 0;\n\n        if (buf)\n        {\n            buf[i + 0] = (c0 << 2) | (c1 >> 4);\n            buf[i + 1] = (c1 << 4) | (c2 >> 2);\n            buf[i + 2] = (c2 << 6) |  c3;\n        }\n        i += 3;\n    }\n    return i;\n}"
+  },
+  {
+   "name": "encode_base64",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1408,
+   "end_line": 1447,
+   "static": true,
+   "called_from": [
+    "create_websocket_key",
+    "do_authorization"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static UINT encode_base64( const char *bin, unsigned int len, WCHAR *base64 )",
+   "code": "static UINT encode_base64( const char *bin, unsigned int len, WCHAR *base64 )\n{\n    UINT n = 0, x;\n    static const char base64enc[] =\n        \"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/\";\n\n    while (len > 0)\n    {\n        /* first 6 bits, all from bin[0] */\n        base64[n++] = base64enc[(bin[0] & 0xfc) >> 2];\n        x = (bin[0] & 3) << 4;\n\n        /* next 6 bits, 2 from bin[0] and 4 from bin[1] */\n        if (len == 1)\n        {\n            base64[n++] = base64enc[x];\n            base64[n++] = '=';\n            base64[n++] = '=';\n            break;\n        }\n        base64[n++] = base64enc[x | ((bin[1] & 0xf0) >> 4)];\n        x = (bin[1] & 0x0f) << 2;\n\n        /* next 6 bits 4 from bin[1] and 2 from bin[2] */\n        if (len == 2)\n        {\n            base64[n++] = base64enc[x];\n            base64[n++] = '=';\n            break;\n        }\n        base64[n++] = base64enc[x | ((bin[2] & 0xc0) >> 6)];\n\n        /* last 6 bits, all from bin [2] */\n        base64[n++] = base64enc[bin[2] & 0x3f];\n        bin += 3;\n        len -= 3;\n    }\n    base64[n] = 0;\n    return n;\n}"
+  },
+  {
+   "name": "create_websocket_key",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2432,
+   "end_line": 2440,
+   "static": true,
+   "called_from": [
+    "add_websocket_key_header"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static WCHAR *create_websocket_key(void)",
+   "code": "static WCHAR *create_websocket_key(void)\n{\n    WCHAR *ret;\n    char buf[16];\n    DWORD base64_len = ((sizeof(buf) + 2) * 4) / 3;\n    if (!RtlGenRandom( buf, sizeof(buf) )) return NULL;\n    if ((ret = malloc( (base64_len + 1) * sizeof(WCHAR) ))) encode_base64( buf, sizeof(buf), ret );\n    return ret;\n}"
+  },
+  {
+   "name": "release_host",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1891,
+   "end_line": 1903,
+   "static": false,
+   "called_from": [
+    "open_connection"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/net.c:306"
+   ],
+   "signature": "void release_host( struct hostdata *host )",
+   "code": "void release_host( struct hostdata *host )\n{\n    LONG ref;\n\n    EnterCriticalSection( &connection_pool_cs );\n    if (!(ref = --host->ref)) list_remove( &host->entry );\n    LeaveCriticalSection( &connection_pool_cs );\n    if (ref) return;\n\n    assert( list_empty( &host->connections ) );\n    free( host->hostname );\n    free( host );\n}"
+  },
+  {
+   "name": "addr_to_str",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1859,
+   "end_line": 1878,
+   "static": true,
+   "called_from": [
+    "open_connection"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static WCHAR *addr_to_str( struct sockaddr_storage *addr )",
+   "code": "static WCHAR *addr_to_str( struct sockaddr_storage *addr )\n{\n    char buf[INET6_ADDRSTRLEN];\n    void *src;\n\n    switch (addr->ss_family)\n    {\n    case AF_INET:\n        src = &((struct sockaddr_in *)addr)->sin_addr;\n        break;\n    case AF_INET6:\n        src = &((struct sockaddr_in6 *)addr)->sin6_addr;\n        break;\n    default:\n        WARN(\"unsupported address family %d\\n\", addr->ss_family);\n        return NULL;\n    }\n    if (!inet_ntop( addr->ss_family, src, buf, sizeof(buf) )) return NULL;\n    return strdupAW( buf );\n}"
+  },
+  {
+   "name": "secure_proxy_connect",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1839,
+   "end_line": 1857,
+   "static": true,
+   "called_from": [
+    "open_connection"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD secure_proxy_connect( struct request *request )",
+   "code": "static DWORD secure_proxy_connect( struct request *request )\n{\n    WCHAR *str;\n    char *strA;\n    int len, bytes_sent;\n    DWORD ret;\n\n    if (!(str = build_proxy_connect_string( request ))) return ERROR_OUTOFMEMORY;\n    strA = strdupWA( str );\n    free( str );\n    if (!strA) return ERROR_OUTOFMEMORY;\n\n    len = strlen( strA );\n    ret = netconn_send( request->netconn, strA, len, &bytes_sent, NULL );\n    free( strA );\n    if (!ret) ret = read_reply( request );\n\n    return ret;\n}"
+  },
+  {
+   "name": "ensure_cred_handle",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1978,
+   "end_line": 2007,
+   "static": true,
+   "called_from": [
+    "open_connection"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD ensure_cred_handle( struct request *request )",
+   "code": "static DWORD ensure_cred_handle( struct request *request )\n{\n    SECURITY_STATUS status = SEC_E_OK;\n\n    if (request->cred_handle_initialized) return ERROR_SUCCESS;\n\n    if (!request->cred_handle_initialized)\n    {\n        SCHANNEL_CRED cred;\n        memset( &cred, 0, sizeof(cred) );\n        cred.dwVersion             = SCHANNEL_CRED_VERSION;\n        cred.grbitEnabledProtocols = map_secure_protocols( request->connect->session->secure_protocols );\n        if (request->client_cert)\n        {\n            cred.paCred = &request->client_cert;\n            cred.cCreds = 1;\n        }\n        status = AcquireCredentialsHandleW( NULL, (WCHAR *)UNISP_NAME_W, SECPKG_CRED_OUTBOUND, NULL,\n                                            &cred, NULL, NULL, &request->cred_handle, NULL );\n        if (status == SEC_E_OK)\n            request->cred_handle_initialized = TRUE;\n    }\n\n    if (status != SEC_E_OK)\n    {\n        WARN( \"AcquireCredentialsHandleW failed: %#lx\\n\", status );\n        return status;\n    }\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "build_wire_path",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2339,
+   "end_line": 2381,
+   "static": true,
+   "called_from": [
+    "build_wire_request"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static char *build_wire_path( struct request *request, DWORD *ret_len )",
+   "code": "static char *build_wire_path( struct request *request, DWORD *ret_len )\n{\n    WCHAR *full_path;\n    const WCHAR *start, *path, *query = NULL;\n    DWORD len, len_path = 0, len_query = 0;\n    enum escape_flags path_flags, query_flags;\n    char *ret;\n\n    if (!wcsicmp( request->connect->hostname, request->connect->servername )) start = full_path = request->path;\n    else if (!(full_path = build_absolute_request_path( request, &start ))) return NULL;\n\n    len = lstrlenW( full_path );\n    if ((path = wcschr( start, '/' )))\n    {\n        len_path = lstrlenW( path );\n        if ((query = wcschr( path, '?' )))\n        {\n            len_query = lstrlenW( query );\n            len_path -= len_query;\n        }\n    }\n\n    if (request->hdr.flags & WINHTTP_FLAG_ESCAPE_DISABLE) path_flags = ESCAPE_MASK_DISABLE;\n    else if (request->hdr.flags & WINHTTP_FLAG_ESCAPE_PERCENT) path_flags = ESCAPE_MASK_PERCENT;\n    else path_flags = ESCAPE_MASK_DEFAULT;\n\n    if (request->hdr.flags & WINHTTP_FLAG_ESCAPE_DISABLE_QUERY) query_flags = ESCAPE_MASK_DISABLE;\n    else query_flags = path_flags;\n\n    *ret_len = str_to_wire( full_path, len - len_path - len_query, NULL, 0 );\n    if (path) *ret_len += str_to_wire( path, len_path, NULL, path_flags );\n    if (query) *ret_len += str_to_wire( query, len_query, NULL, query_flags );\n\n    if ((ret = malloc( *ret_len + 1 )))\n    {\n        len = str_to_wire( full_path, len - len_path - len_query, ret, 0 );\n        if (path) len += str_to_wire( path, len_path, ret + len, path_flags );\n        if (query) str_to_wire( query, len_query, ret + len, query_flags );\n    }\n\n    if (full_path != request->path) free( full_path );\n    return ret;\n}"
+  },
+  {
+   "name": "str_to_wire",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2323,
+   "end_line": 2337,
+   "static": true,
+   "called_from": [
+    "build_wire_path",
+    "build_wire_request"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD str_to_wire( const WCHAR *src, int src_len, char *dst, enum escape_flags flags )",
+   "code": "static DWORD str_to_wire( const WCHAR *src, int src_len, char *dst, enum escape_flags flags )\n{\n    DWORD len;\n    char *utf8;\n\n    if (src_len < 0) src_len = lstrlenW( src );\n    len = WideCharToMultiByte( CP_UTF8, 0, src, src_len, NULL, 0, NULL, NULL );\n    if (!(utf8 = malloc( len ))) return 0;\n\n    WideCharToMultiByte( CP_UTF8, 0, src, -1, utf8, len, NULL, NULL );\n    len = escape_string( utf8, len, dst, flags );\n    free( utf8 );\n\n    return len;\n}"
+  },
+  {
+   "name": "task_callback",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 606,
+   "end_line": 624,
+   "static": true,
+   "called_from": [
+    "queue_task"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void CALLBACK task_callback( TP_CALLBACK_INSTANCE *instance, void *ctx )",
+   "code": "static void CALLBACK task_callback( TP_CALLBACK_INSTANCE *instance, void *ctx )\n{\n    struct task_header *task, *next_task;\n    struct queue *queue = ctx;\n\n    TRACE( \"instance %p.\\n\", instance );\n\n    task = get_next_task( queue, NULL );\n    while (task)\n    {\n        task->callback( task, FALSE );\n        /* Queue object may be freed by release_object() unless there is another task referencing it. */\n        next_task = get_next_task( queue, task );\n        release_object( task->obj );\n        release_task( task );\n        task = next_task;\n    }\n    TRACE( \"instance %p exiting.\\n\", instance );\n}"
+  },
+  {
+   "name": "remove_data",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2845,
+   "end_line": 2849,
+   "static": true,
+   "called_from": [
+    "read_line"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void remove_data( struct request *request, int count )",
+   "code": "static void remove_data( struct request *request, int count )\n{\n    if (!(request->read.size -= count)) request->read.pos = 0;\n    else request->read.pos += count;\n}"
+  },
+  {
+   "name": "read_more_data",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2852,
+   "end_line": 2869,
+   "static": true,
+   "called_from": [
+    "read_line"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD read_more_data( struct request *request )",
+   "code": "static DWORD read_more_data( struct request *request )\n{\n    int len, max_len;\n    DWORD ret;\n\n    if (request->read.pos)\n    {\n        if (request->read.size) memmove( request->read.buf, request->read.buf + request->read.pos, request->read.size );\n        request->read.pos = 0;\n    }\n    max_len = sizeof(request->read.buf) - request->read.size;\n\n    ret = netconn_recv( request->netconn, request->read.buf + request->read.size, max_len, 0, &len );\n\n    request->reply_len += len;\n    request->read.size += len;\n    return ret;\n}"
+  },
+  {
+   "name": "valid_token_char",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 707,
+   "end_line": 726,
+   "static": true,
+   "called_from": [
+    "parse_header"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL valid_token_char( WCHAR c )",
+   "code": "static BOOL valid_token_char( WCHAR c )\n{\n    if (c < 32 || c == 127) return FALSE;\n    switch (c)\n    {\n    case '(': case ')':\n    case '<': case '>':\n    case '@': case ',':\n    case ';': case ':':\n    case '\\\\': case '\\\"':\n    case '/': case '[':\n    case ']': case '?':\n    case '=': case '{':\n    case '}': case ' ':\n    case '\\t':\n        return FALSE;\n    default:\n        return TRUE;\n    }\n}"
+  },
+  {
+   "name": "build_absolute_request_path",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 976,
+   "end_line": 1000,
+   "static": true,
+   "called_from": [
+    "build_request_string",
+    "build_wire_path"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static WCHAR *build_absolute_request_path( struct request *request, const WCHAR **path )",
+   "code": "static WCHAR *build_absolute_request_path( struct request *request, const WCHAR **path )\n{\n    const WCHAR *scheme;\n    WCHAR *ret;\n    int len, offset;\n\n    scheme = (request->netconn ? request->netconn->secure : (request->hdr.flags & WINHTTP_FLAG_SECURE)) ? L\"https\" : L\"http\";\n\n    len = lstrlenW( scheme ) + lstrlenW( request->connect->hostname ) + 4; /* '://' + nul */\n    if (request->connect->hostport) len += 6; /* ':' between host and port, up to 5 for port */\n\n    len += lstrlenW( request->path );\n    if ((ret = malloc( len * sizeof(WCHAR) )))\n    {\n        offset = swprintf( ret, len, L\"%s://%s\", scheme, request->connect->hostname );\n        if (request->connect->hostport)\n        {\n            offset += swprintf( ret + offset, len - offset, L\":%u\", request->connect->hostport );\n        }\n        lstrcpyW( ret + offset, request->path );\n        if (path) *path = ret + offset;\n    }\n\n    return ret;\n}"
+  },
+  {
+   "name": "gzip_zalloc",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 467,
+   "end_line": 470,
+   "static": true,
+   "called_from": [
+    "init_gzip_stream"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static voidpf gzip_zalloc( voidpf opaque, uInt items, uInt size )",
+   "code": "static voidpf gzip_zalloc( voidpf opaque, uInt items, uInt size )\n{\n    return malloc( items * size );\n}"
+  },
+  {
+   "name": "gzip_zfree",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 472,
+   "end_line": 475,
+   "static": true,
+   "called_from": [
+    "init_gzip_stream"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void gzip_zfree( voidpf opaque, voidpf address )",
+   "code": "static void gzip_zfree( voidpf opaque, voidpf address )\n{\n    free( address );\n}"
+  },
+  {
+   "name": "remove_header",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 842,
+   "end_line": 846,
+   "static": true,
+   "called_from": [
+    "init_gzip_stream"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void remove_header( struct request *request, const WCHAR *header, BOOL request_only )",
+   "code": "static void remove_header( struct request *request, const WCHAR *header, BOOL request_only )\n{\n    int index = get_header_index( request, header, 0, request_only );\n    if (index != -1) delete_header( request, index );\n}"
+  },
+  {
+   "name": "destroy_data_stream",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 91,
+   "end_line": 94,
+   "static": false,
+   "called_from": [
+    "reset_data_stream"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/session.c:774",
+    "dlls/winhttp/request.c:454",
+    "dlls/wininet/http.c (other module)"
+   ],
+   "signature": "void destroy_data_stream( struct data_stream *stream )",
+   "code": "void destroy_data_stream( struct data_stream *stream )\n{\n    stream->vtbl->destroy( stream );\n}"
+  },
+  {
+   "name": "auth_scheme_from_header",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1313,
+   "end_line": 1323,
+   "static": true,
+   "called_from": [
+    "get_authvalue",
+    "query_auth_schemes"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD auth_scheme_from_header( const WCHAR *header )",
+   "code": "static DWORD auth_scheme_from_header( const WCHAR *header )\n{\n    unsigned int i;\n\n    for (i = 0; i < ARRAY_SIZE( auth_schemes ); i++)\n    {\n        if (!wcsnicmp( header, auth_schemes[i].str, auth_schemes[i].len ) &&\n            (header[auth_schemes[i].len] == ' ' || !header[auth_schemes[i].len])) return auth_schemes[i].scheme;\n    }\n    return 0;\n}"
+  },
+  {
+   "name": "connection_collector",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1907,
+   "end_line": 1943,
+   "static": true,
+   "called_from": [
+    "cache_connection"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void CALLBACK connection_collector( TP_CALLBACK_INSTANCE *instance, void *ctx )",
+   "code": "static void CALLBACK connection_collector( TP_CALLBACK_INSTANCE *instance, void *ctx )\n{\n    unsigned int remaining_connections;\n    struct netconn *netconn, *next_netconn;\n    struct hostdata *host, *next_host;\n    ULONGLONG now;\n\n    do\n    {\n        /* FIXME: Use more sophisticated method */\n        Sleep(5000);\n        remaining_connections = 0;\n        now = GetTickCount64();\n\n        EnterCriticalSection(&connection_pool_cs);\n\n        LIST_FOR_EACH_ENTRY_SAFE(host, next_host, &connection_pool, struct hostdata, entry)\n        {\n            LIST_FOR_EACH_ENTRY_SAFE(netconn, next_netconn, &host->connections, struct netconn, entry)\n            {\n                if (netconn->keep_until < now)\n                {\n                    TRACE(\"freeing %p\\n\", netconn);\n                    list_remove(&netconn->entry);\n                    netconn_release(netconn);\n                }\n                else remaining_connections++;\n            }\n        }\n\n        if (!remaining_connections) connection_collector_running = FALSE;\n\n        LeaveCriticalSection(&connection_pool_cs);\n    } while(remaining_connections);\n\n    FreeLibraryWhenCallbackReturns( instance, winhttp_instance );\n}"
+  },
+  {
+   "name": "decode_char",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1449,
+   "end_line": 1457,
+   "static": true,
+   "called_from": [
+    "decode_base64"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static inline char decode_char( WCHAR c )",
+   "code": "static inline char decode_char( WCHAR c )\n{\n    if (c >= 'A' && c <= 'Z') return c - 'A';\n    if (c >= 'a' && c <= 'z') return c - 'a' + 26;\n    if (c >= '0' && c <= '9') return c - '0' + 52;\n    if (c == '+') return 62;\n    if (c == '/') return 63;\n    return 64;\n}"
+  },
+  {
+   "name": "build_proxy_connect_string",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1793,
+   "end_line": 1835,
+   "static": true,
+   "called_from": [
+    "secure_proxy_connect"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static WCHAR *build_proxy_connect_string( struct request *request )",
+   "code": "static WCHAR *build_proxy_connect_string( struct request *request )\n{\n    WCHAR *ret, *host;\n    unsigned int i;\n    int len = lstrlenW( request->connect->hostname ) + 7;\n\n    if (!(host = malloc( len * sizeof(WCHAR) ))) return NULL;\n    len = swprintf( host, len, L\"%s:%u\", request->connect->hostname, request->connect->hostport );\n\n    len += ARRAY_SIZE(L\"CONNECT\");\n    len += ARRAY_SIZE(L\"HTTP/1.1\");\n\n    for (i = 0; i < request->num_headers; i++)\n    {\n        if (request->headers[i].is_request)\n            len += lstrlenW( request->headers[i].field ) + lstrlenW( request->headers[i].value ) + 4; /* '\\r\\n: ' */\n    }\n    len += 4; /* '\\r\\n\\r\\n' */\n\n    if ((ret = malloc( (len + 1) * sizeof(WCHAR) )))\n    {\n        lstrcpyW( ret, L\"CONNECT\" );\n        lstrcatW( ret, L\" \" );\n        lstrcatW( ret, host );\n        lstrcatW( ret, L\" \" );\n        lstrcatW( ret, L\"HTTP/1.1\" );\n\n        for (i = 0; i < request->num_headers; i++)\n        {\n            if (request->headers[i].is_request)\n            {\n                lstrcatW( ret, L\"\\r\\n\" );\n                lstrcatW( ret, request->headers[i].field );\n                lstrcatW( ret, L\": \" );\n                lstrcatW( ret, request->headers[i].value );\n            }\n        }\n        lstrcatW( ret, L\"\\r\\n\\r\\n\" );\n    }\n\n    free( host );\n    return ret;\n}"
+  },
+  {
+   "name": "map_secure_protocols",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1967,
+   "end_line": 1976,
+   "static": true,
+   "called_from": [
+    "ensure_cred_handle"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD map_secure_protocols( DWORD mask )",
+   "code": "static DWORD map_secure_protocols( DWORD mask )\n{\n    DWORD ret = 0;\n    if (mask & WINHTTP_FLAG_SECURE_PROTOCOL_SSL2) ret |= SP_PROT_SSL2_CLIENT;\n    if (mask & WINHTTP_FLAG_SECURE_PROTOCOL_SSL3) ret |= SP_PROT_SSL3_CLIENT;\n    if (mask & WINHTTP_FLAG_SECURE_PROTOCOL_TLS1) ret |= SP_PROT_TLS1_CLIENT;\n    if (mask & WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_1) ret |= SP_PROT_TLS1_1_CLIENT;\n    if (mask & WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2) ret |= SP_PROT_TLS1_2_CLIENT;\n    return ret;\n}"
+  },
+  {
+   "name": "escape_string",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2292,
+   "end_line": 2321,
+   "static": true,
+   "called_from": [
+    "str_to_wire"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD escape_string( const char *src, DWORD len, char *dst, enum escape_flags flags )",
+   "code": "static DWORD escape_string( const char *src, DWORD len, char *dst, enum escape_flags flags )\n{\n    static const char hex[] = \"0123456789ABCDEF\";\n    DWORD i, ret = len;\n    char *ptr = dst;\n\n    for (i = 0; i < len; i++)\n    {\n        if ((flags & ESCAPE_FLAG_STRIP_CRLF) && (src[i] == '\\r' || src[i] == '\\n'))\n        {\n            ret--;\n            continue;\n        }\n        if (need_escape( src[i], flags ))\n        {\n            if (dst)\n            {\n                ptr[0] = '%';\n                ptr[1] = hex[(src[i] >> 4) & 0xf];\n                ptr[2] = hex[src[i] & 0xf];\n                ptr += 3;\n            }\n            ret += 2;\n        }\n        else if (dst) *ptr++ = src[i];\n    }\n\n    if (dst) dst[ret] = 0;\n    return ret;\n}"
+  },
+  {
+   "name": "get_next_task",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 580,
+   "end_line": 604,
+   "static": true,
+   "called_from": [
+    "task_callback"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static struct task_header *get_next_task( struct queue *queue, struct task_header *prev_task )",
+   "code": "static struct task_header *get_next_task( struct queue *queue, struct task_header *prev_task )\n{\n    struct task_header *task;\n    struct list *entry;\n\n    AcquireSRWLockExclusive( &queue->lock );\n    assert( queue->callback_running );\n    if (prev_task)\n    {\n        list_remove( &prev_task->entry );\n        release_task( prev_task );\n    }\n    if ((entry = list_head( &queue->queued_tasks )))\n    {\n        task = LIST_ENTRY( entry, struct task_header, entry );\n        addref_task( task );\n    }\n    else\n    {\n        task = NULL;\n        queue->callback_running = FALSE;\n    }\n    ReleaseSRWLockExclusive( &queue->lock );\n    return task;\n}"
+  },
+  {
+   "name": "release_task",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 574,
+   "end_line": 578,
+   "static": true,
+   "called_from": [
+    "get_next_task",
+    "task_callback"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/request.c:685"
+   ],
+   "signature": "static void release_task( struct task_header *task )",
+   "code": "static void release_task( struct task_header *task )\n{\n    if (!InterlockedDecrement( &task->refs ))\n        free( task );\n}"
+  },
+  {
+   "name": "need_escape",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 2278,
+   "end_line": 2290,
+   "static": true,
+   "called_from": [
+    "escape_string"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static inline BOOL need_escape( char ch, enum escape_flags flags )",
+   "code": "static inline BOOL need_escape( char ch, enum escape_flags flags )\n{\n    static const char unsafe[] = \"\\\"#<>[\\\\]^`{|}\";\n    const char *ptr = unsafe;\n\n    if ((flags & ESCAPE_FLAG_SPACE) && ch == ' ') return TRUE;\n    if ((flags & ESCAPE_FLAG_PERCENT) && ch == '%') return TRUE;\n    if ((flags & ESCAPE_FLAG_NON_PRINTABLE) && ch < 0x20) return TRUE;\n    if ((flags & ESCAPE_FLAG_DEL) && ch == 0x7f) return TRUE;\n    if ((flags & ESCAPE_FLAG_8BIT) && (ch & 0x80)) return TRUE;\n    if ((flags & ESCAPE_FLAG_UNSAFE)) while (*ptr) { if (ch == *ptr++) return TRUE; }\n    return FALSE;\n}"
+  },
+  {
+   "name": "addref_task",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 569,
+   "end_line": 572,
+   "static": true,
+   "called_from": [
+    "get_next_task"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/request.c:677"
+   ],
+   "signature": "static void addref_task( struct task_header *task )",
+   "code": "static void addref_task( struct task_header *task )\n{\n    InterlockedIncrement( &task->refs );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "chunked_stream",
+    "kind": "struct_decl",
+    "start_line": 160,
+    "end_line": 175,
+    "code": "struct chunked_stream\n{\n    struct data_stream data_stream;\n    struct read_buffer buf;\n    DWORD chunk_size;\n    enum\n    {\n        CHUNKED_STREAM_STATE_READING_CHUNK_SIZE,\n        CHUNKED_STREAM_STATE_DISCARD_EOL_AFTER_SIZE,\n        CHUNKED_STREAM_STATE_READING_CHUNK,\n        CHUNKED_STREAM_STATE_DISCARD_EOL_AFTER_DATA,\n        CHUNKED_STREAM_STATE_DISCARD_EOL_AT_END,\n        CHUNKED_STREAM_STATE_END_OF_STREAM,\n        CHUNKED_STREAM_STATE_ERROR\n    } state;\n};"
+   },
+   {
+    "name": "enum (unnamed at /w/wine/dlls/winhttp/request.c:165:5)",
+    "kind": "enum_decl",
+    "start_line": 165,
+    "end_line": 174,
+    "code": "    enum\n    {\n        CHUNKED_STREAM_STATE_READING_CHUNK_SIZE,\n        CHUNKED_STREAM_STATE_DISCARD_EOL_AFTER_SIZE,\n        CHUNKED_STREAM_STATE_READING_CHUNK,\n        CHUNKED_STREAM_STATE_DISCARD_EOL_AFTER_DATA,\n        CHUNKED_STREAM_STATE_DISCARD_EOL_AT_END,\n        CHUNKED_STREAM_STATE_END_OF_STREAM,\n        CHUNKED_STREAM_STATE_ERROR\n    } state;"
+   },
+   {
+    "name": "escape_flags",
+    "kind": "enum_decl",
+    "start_line": 2262,
+    "end_line": 2271,
+    "code": "enum escape_flags\n{\n    ESCAPE_FLAG_NON_PRINTABLE = 0x01,\n    ESCAPE_FLAG_SPACE         = 0x02,\n    ESCAPE_FLAG_PERCENT       = 0x04,\n    ESCAPE_FLAG_UNSAFE        = 0x08,\n    ESCAPE_FLAG_DEL           = 0x10,\n    ESCAPE_FLAG_8BIT          = 0x20,\n    ESCAPE_FLAG_STRIP_CRLF    = 0x40,\n};"
+   },
+   {
+    "name": "gzip_stream",
+    "kind": "struct_decl",
+    "start_line": 365,
+    "end_line": 372,
+    "code": "struct gzip_stream\n{\n    struct data_stream data_stream;\n    struct data_stream *parent;\n    z_stream zstream;\n    struct read_buffer buf;\n    BOOL end_of_data;\n};"
+   },
+   {
+    "name": "struct (unnamed at /w/wine/dlls/winhttp/request.c:1290:14)",
+    "kind": "struct_decl",
+    "start_line": 1290,
+    "end_line": 1295,
+    "code": "static const struct\n{\n    const WCHAR *str;\n    unsigned int len;\n    DWORD scheme;\n}"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 42,
+    "end_line": 42,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(winhttp);"
+   },
+   {
+    "name": "attribute_table",
+    "type": "const WCHAR *[75]",
+    "static": true,
+    "start_line": 477,
+    "end_line": 554,
+    "code": "static const WCHAR *attribute_table[] =\n{\n    L\"Mime-Version\",                /* WINHTTP_QUERY_MIME_VERSION               = 0  */\n    L\"Content-Type\"  ,              /* WINHTTP_QUERY_CONTENT_TYPE               = 1  */\n    L\"Content-Transfer-Encoding\",   /* WINHTTP_QUERY_CONTENT_TRANSFER_ENCODING  = 2  */\n    L\"Content-ID\",                  /* WINHTTP_QUERY_CONTENT_ID                 = 3  */\n    NULL,                           /* WINHTTP_QUERY_CONTENT_DESCRIPTION        = 4  */\n    L\"Content-Length\",              /* WINHTTP_QUERY_CONTENT_LENGTH             = 5  */\n    L\"Content-Language\",            /* WINHTTP_QUERY_CONTENT_LANGUAGE           = 6  */\n    L\"Allow\",                       /* WINHTTP_QUERY_ALLOW                      = 7  */\n    L\"Public\",                      /* WINHTTP_QUERY_PUBLIC                     = 8  */\n    L\"Date\",                        /* WINHTTP_QUERY_DATE                       = 9  */\n    L\"Expires\",                     /* WINHTTP_QUERY_EXPIRES                    = 10 */\n    L\"Last-Modified\",               /* WINHTTP_QUERY_LAST_MODIFIED              = 11 */\n    NULL,                           /* WINHTTP_QUERY_MESSAGE_ID                 = 12 */\n    L\"URI\",                         /* WINHTTP_QUERY_URI                        = 13 */\n    L\"From\",                        /* WINHTTP_QUERY_DERIVED_FROM               = 14 */\n    NULL,                           /* WINHTTP_QUERY_COST                       = 15 */\n    NULL,                           /* WINHTTP_QUERY_LINK                       = 16 */\n    L\"Pragma\",                      /* WINHTTP_QUERY_PRAGMA                     = 17 */\n    NULL,                           /* WINHTTP_QUERY_VERSION                    = 18 */\n    L\"Status\",                      /* WINHTTP_QUERY_STATUS_CODE                = 19 */\n    NULL,                           /* WINHTTP_QUERY_STATUS_TEXT                = 20 */\n    NULL,                           /* WINHTTP_QUERY_RAW_HEADERS                = 21 */\n    NULL,                           /* WINHTTP_QUERY_RAW_HEADERS_CRLF           = 22 */\n    L\"Connection\",                  /* WINHTTP_QUERY_CONNECTION                 = 23 */\n    L\"Accept\",                      /* WINHTTP_QUERY_ACCEPT                     = 24 */\n    L\"Accept-Charset\",              /* WINHTTP_QUERY_ACCEPT_CHARSET             = 25 */\n    L\"Accept-Encoding\",             /* WINHTTP_QUERY_ACCEPT_ENCODING            = 26 */\n    L\"Accept-Language\",             /* WINHTTP_QUERY_ACCEPT_LANGUAGE            = 27 */\n    L\"Authorization\",               /* WINHTTP_QUERY_AUTHORIZATION              = 28 */\n    L\"Content-Encoding\",            /* WINHTTP_QUERY_CONTENT_ENCODING           = 29 */\n    NULL,                           /* WINHTTP_QUERY_FORWARDED                  = 30 */\n    NULL,                           /* WINHTTP_QUERY_FROM                       = 31 */\n    L\"If-Modified-Since\",           /* WINHTTP_QUERY_IF_MODIFIED_SINCE          = 32 */\n    L\"Location\",                    /* WINHTTP_QUERY_LOCATION                   = 33 */\n    NULL,                           /* WINHTTP_QUERY_ORIG_URI                   = 34 */\n    L\"Referer\",                     /* WINHTTP_QUERY_REFERER                    = 35 */\n    L\"Retry-After\",                 /* WINHTTP_QUERY_RETRY_AFTER                = 36 */\n    L\"Server\",                      /* WINHTTP_QUERY_SERVER                     = 37 */\n    NULL,                           /* WINHTTP_TITLE                            = 38 */\n    L\"User-Agent\",                  /* WINHTTP_QUERY_USER_AGENT                 = 39 */\n    L\"WWW-Authenticate\",            /* WINHTTP_QUERY_WWW_AUTHENTICATE           = 40 */\n    L\"Proxy-Authenticate\",          /* WINHTTP_QUERY_PROXY_AUTHENTICATE         = 41 */\n    L\"Accept-Ranges\",               /* WINHTTP_QUERY_ACCEPT_RANGES              = 42 */\n    L\"Set-Cookie\",                  /* WINHTTP_QUERY_SET_COOKIE                 = 43 */\n    L\"Cookie\",                      /* WINHTTP_QUERY_COOKIE                     = 44 */\n    NULL,                           /* WINHTTP_QUERY_REQUEST_METHOD             = 45 */\n    NULL,                           /* WINHTTP_QUERY_REFRESH                    = 46 */\n    NULL,                           /* WINHTTP_QUERY_CONTENT_DISPOSITION        = 47 */\n    L\"Age\",                         /* WINHTTP_QUERY_AGE                        = 48 */\n    L\"Cache-Control\",               /* WINHTTP_QUERY_CACHE_CONTROL              = 49 */\n    L\"Content-Base\",                /* WINHTTP_QUERY_CONTENT_BASE               = 50 */\n    L\"Content-Location\",            /* WINHTTP_QUERY_CONTENT_LOCATION           = 51 */\n    L\"Content-MD5\",                 /* WINHTTP_QUERY_CONTENT_MD5                = 52 */\n    L\"Content-Range\",               /* WINHTTP_QUERY_CONTENT_RANGE              = 53 */\n    L\"ETag\",                        /* WINHTTP_QUERY_ETAG                       = 54 */\n    L\"Host\",                        /* WINHTTP_QUERY_HOST                       = 55 */\n    L\"If-Match\",                    /* WINHTTP_QUERY_IF_MATCH                   = 56 */\n    L\"If-None-Match\",               /* WINHTTP_QUERY_IF_NONE_MATCH              = 57 */\n    L\"If-Range\",                    /* WINHTTP_QUERY_IF_RANGE                   = 58 */\n    L\"If-Unmodified-Since\",         /* WINHTTP_QUERY_IF_UNMODIFIED_SINCE        = 59 */\n    L\"Max-Forwards\",                /* WINHTTP_QUERY_MAX_FORWARDS               = 60 */\n    L\"Proxy-Authorization\",         /* WINHTTP_QUERY_PROXY_AUTHORIZATION        = 61 */\n    L\"Range\",                       /* WINHTTP_QUERY_RANGE                      = 62 */\n    L\"Transfer-Encoding\",           /* WINHTTP_QUERY_TRANSFER_ENCODING          = 63 */\n    L\"Upgrade\",                     /* WINHTTP_QUERY_UPGRADE                    = 64 */\n    L\"Vary\",                        /* WINHTTP_QUERY_VARY                       = 65 */\n    L\"Via\",                         /* WINHTTP_QUERY_VIA                        = 66 */\n    L\"Warning\",                     /* WINHTTP_QUERY_WARNING                    = 67 */\n    L\"Expect\",                      /* WINHTTP_QUERY_EXPECT                     = 68 */\n    L\"Proxy-Connection\",            /* WINHTTP_QUERY_PROXY_CONNECTION           = 69 */\n    L\"Unless-Modified-Since\",       /* WINHTTP_QUERY_UNLESS_MODIFIED_SINCE      = 70 */\n    NULL,                           /* WINHTTP_QUERY_PROXY_SUPPORT              = 75 */\n    NULL,                           /* WINHTTP_QUERY_AUTHENTICATION_INFO        = 76 */\n    NULL,                           /* WINHTTP_QUERY_PASSPORT_URLS              = 77 */\n    NULL                            /* WINHTTP_QUERY_PASSPORT_CONFIG            = 78 */\n};"
+   },
+   {
+    "name": "auth_schemes",
+    "type": "const struct (unnamed struct at /w/wine/dlls/winhttp/request.c:1290:14)[5]",
+    "static": true,
+    "start_line": 1296,
+    "end_line": 1303,
+    "code": "auth_schemes[] =\n{\n    { L\"Basic\",     ARRAY_SIZE(L\"Basic\") - 1,     WINHTTP_AUTH_SCHEME_BASIC },\n    { L\"NTLM\",      ARRAY_SIZE(L\"NTLM\") - 1,      WINHTTP_AUTH_SCHEME_NTLM },\n    { L\"Passport\",  ARRAY_SIZE(L\"Passport\") - 1,  WINHTTP_AUTH_SCHEME_PASSPORT },\n    { L\"Digest\",    ARRAY_SIZE(L\"Digest\") - 1,    WINHTTP_AUTH_SCHEME_DIGEST },\n    { L\"Negotiate\", ARRAY_SIZE(L\"Negotiate\") - 1, WINHTTP_AUTH_SCHEME_NEGOTIATE }\n};"
+   },
+   {
+    "name": "chunked_stream_vtbl",
+    "type": "const struct data_stream_vtbl",
+    "static": false,
+    "start_line": 357,
+    "end_line": 363,
+    "code": "const struct data_stream_vtbl chunked_stream_vtbl =\n{\n    chunked_fill_buffer,\n    chunked_end_of_data,\n    chunked_drain_data,\n    chunked_destroy\n};"
+   },
+   {
+    "name": "connection_collector_running",
+    "type": "BOOL",
+    "static": true,
+    "start_line": 1905,
+    "end_line": 1905,
+    "code": "static BOOL connection_collector_running;"
+   },
+   {
+    "name": "connection_pool",
+    "type": "struct list",
+    "static": true,
+    "start_line": 1889,
+    "end_line": 1889,
+    "code": "static struct list connection_pool = LIST_INIT( connection_pool );"
+   },
+   {
+    "name": "connection_pool_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 1887,
+    "end_line": 1887,
+    "code": "static CRITICAL_SECTION connection_pool_cs = { &connection_pool_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "gzip_stream_vtbl",
+    "type": "const struct data_stream_vtbl",
+    "static": true,
+    "start_line": 459,
+    "end_line": 465,
+    "code": "static const struct data_stream_vtbl gzip_stream_vtbl =\n{\n    gzip_fill_buffer,\n    gzip_end_of_data,\n    gzip_drain_data,\n    gzip_destroy\n};"
+   }
+  ],
+  "macros": [
+   {
+    "name": "ACTUAL_DEFAULT_RECEIVE_RESPONSE_TIMEOUT",
+    "start_line": 46,
+    "end_line": 46,
+    "code": "#define ACTUAL_DEFAULT_RECEIVE_RESPONSE_TIMEOUT 21000"
+   },
+   {
+    "name": "DEFAULT_KEEP_ALIVE_TIMEOUT",
+    "start_line": 44,
+    "end_line": 44,
+    "code": "#define DEFAULT_KEEP_ALIVE_TIMEOUT 30000"
+   },
+   {
+    "name": "ESCAPE_MASK_DEFAULT",
+    "start_line": 2273,
+    "end_line": 2274,
+    "code": "#define ESCAPE_MASK_DEFAULT (ESCAPE_FLAG_NON_PRINTABLE | ESCAPE_FLAG_SPACE | ESCAPE_FLAG_UNSAFE |\\\n                             ESCAPE_FLAG_DEL | ESCAPE_FLAG_8BIT)"
+   },
+   {
+    "name": "ESCAPE_MASK_DISABLE",
+    "start_line": 2276,
+    "end_line": 2276,
+    "code": "#define ESCAPE_MASK_DISABLE (ESCAPE_FLAG_SPACE | ESCAPE_FLAG_8BIT | ESCAPE_FLAG_STRIP_CRLF)"
+   },
+   {
+    "name": "ESCAPE_MASK_PERCENT",
+    "start_line": 2275,
+    "end_line": 2275,
+    "code": "#define ESCAPE_MASK_PERCENT (ESCAPE_FLAG_PERCENT | ESCAPE_MASK_DEFAULT)"
+   },
+   {
+    "name": "INITIAL_HEADER_BUFFER_LEN",
+    "start_line": 2911,
+    "end_line": 2911,
+    "code": "#define INITIAL_HEADER_BUFFER_LEN  512"
+   },
+   {
+    "name": "MAX_REPLY_LEN",
+    "start_line": 2910,
+    "end_line": 2910,
+    "code": "#define MAX_REPLY_LEN   1460"
+   },
+   {
+    "name": "QUERY_MODIFIER_MASK",
+    "start_line": 1046,
+    "end_line": 1047,
+    "code": "#define QUERY_MODIFIER_MASK (WINHTTP_QUERY_FLAG_REQUEST_HEADERS | WINHTTP_QUERY_FLAG_SYSTEMTIME | WINHTTP_QUERY_FLAG_NUMBER \\\n                             | WINHTTP_QUERY_FLAG_NUMBER64)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "add_cookie_headers",
+    "file": "dlls/winhttp/cookie.c",
+    "start_line": 324
+   },
+   {
+    "name": "addref_object",
+    "file": "dlls/winhttp/handle.c",
+    "start_line": 48
+   },
+   {
+    "name": "grab_object",
+    "file": "dlls/winhttp/handle.c",
+    "start_line": 55
+   },
+   {
+    "name": "netconn_create",
+    "file": "dlls/winhttp/net.c",
+    "start_line": 210
+   },
+   {
+    "name": "netconn_get_certificate",
+    "file": "dlls/winhttp/net.c",
+    "start_line": 850
+   },
+   {
+    "name": "netconn_is_alive",
+    "file": "dlls/winhttp/net.c",
+    "start_line": 695
+   },
+   {
+    "name": "netconn_recv",
+    "file": "dlls/winhttp/net.c",
+    "start_line": 615
+   },
+   {
+    "name": "netconn_release",
+    "file": "dlls/winhttp/net.c",
+    "start_line": 291
+   },
+   {
+    "name": "netconn_resolve",
+    "file": "dlls/winhttp/net.c",
+    "start_line": 819
+   },
+   {
+    "name": "netconn_secure_connect",
+    "file": "dlls/winhttp/net.c",
+    "start_line": 312
+   },
+   {
+    "name": "netconn_send",
+    "file": "dlls/winhttp/net.c",
+    "start_line": 476
+   },
+   {
+    "name": "netconn_set_timeout",
+    "file": "dlls/winhttp/net.c",
+    "start_line": 678
+   },
+   {
+    "name": "release_object",
+    "file": "dlls/winhttp/handle.c",
+    "start_line": 71
+   },
+   {
+    "name": "send_callback",
+    "file": "dlls/winhttp/session.c",
+    "start_line": 48
+   },
+   {
+    "name": "set_cookies",
+    "file": "dlls/winhttp/cookie.c",
+    "start_line": 267
+   },
+   {
+    "name": "set_server_for_hostname",
+    "file": "dlls/winhttp/session.c",
+    "start_line": 616
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "WinHttpCrackUrl",
+    "impl": [
+     "dlls/winhttp/url.c:173"
+    ]
+   },
+   {
+    "name": "WinHttpTimeToSystemTime",
+    "impl": [
+     "dlls/winhttp/session.c:2821"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "AcquireCredentialsHandleW",
+    "module": "schannel",
+    "impl": [
+     "dlls/secur32/wrapper.c:74"
+    ]
+   },
+   {
+    "name": "AcquireSRWLockExclusive",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:514"
+    ]
+   },
+   {
+    "name": "CertFreeCertificateContext",
+    "module": "crypt32",
+    "impl": [
+     "dlls/crypt32/cert.c:381"
+    ]
+   },
+   {
+    "name": "DeleteSecurityContext",
+    "module": "schannel",
+    "impl": [
+     "dlls/secur32/wrapper.c:331"
+    ]
+   },
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "FreeContextBuffer",
+    "module": "schannel",
+    "impl": [
+     "dlls/secur32/secur32.c:644"
+    ]
+   },
+   {
+    "name": "FreeCredentialsHandle",
+    "module": "schannel",
+    "impl": [
+     "dlls/secur32/wrapper.c:112"
+    ]
+   },
+   {
+    "name": "FreeLibrary",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/loader.c:232"
+    ]
+   },
+   {
+    "name": "FreeLibraryWhenCallbackReturns",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/threadpool.c:2800"
+    ]
+   },
+   {
+    "name": "GetModuleHandleExW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/loader.c:386"
+    ]
+   },
+   {
+    "name": "GetTickCount64",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/sync.c:191"
+    ]
+   },
+   {
+    "name": "InitializeSecurityContextW",
+    "module": "schannel",
+    "impl": [
+     "dlls/secur32/wrapper.c:228"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "MultiByteToWideChar",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7070"
+    ]
+   },
+   {
+    "name": "QuerySecurityPackageInfoW",
+    "module": "schannel",
+    "impl": [
+     "dlls/secur32/wrapper.c:606"
+    ]
+   },
+   {
+    "name": "ReleaseSRWLockExclusive",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:591"
+    ]
+   },
+   {
+    "name": "Sleep",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/sync.c:361"
+    ]
+   },
+   {
+    "name": "SystemFunction036",
+    "module": "advapi32",
+    "impl": [
+     "dlls/cryptbase/cryptbase_main.c:61"
+    ]
+   },
+   {
+    "name": "TrySubmitThreadpoolCallback",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/thread.c:1383"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   },
+   {
+    "name": "_assert",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/exit.c:319"
+    ]
+   },
+   {
+    "name": "calloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "inet_ntop",
+    "module": "ws2_32",
+    "impl": [
+     "dlls/ws2_32/protocol.c:1553"
+    ]
+   },
+   {
+    "name": "isdigit",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:819"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memchr",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:73"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "memmove",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:126"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   },
+   {
+    "name": "realloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:459"
+    ]
+   },
+   {
+    "name": "strchr",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:359"
+    ]
+   },
+   {
+    "name": "strlen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:423"
+    ]
+   },
+   {
+    "name": "wcschr",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:256"
+    ]
+   },
+   {
+    "name": "wcscmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:266"
+    ]
+   },
+   {
+    "name": "wcscpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:184"
+    ]
+   },
+   {
+    "name": "wcslen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:215"
+    ]
+   },
+   {
+    "name": "wcsrchr",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:429"
+    ]
+   },
+   {
+    "name": "wcstoul",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:716"
+    ]
+   },
+   {
+    "name": "wcstoull",
+    "module": "ucrtbase",
+    "impl": [
+     "dlls/msvcrt/wcs.c:2873"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetLastError",
+   "SetLastError",
+   "_InterlockedDecrement",
+   "_InterlockedIncrement",
+   "debugstr_a",
+   "debugstr_an",
+   "debugstr_w",
+   "debugstr_wn",
+   "list_add_head",
+   "list_add_tail",
+   "list_empty",
+   "list_head",
+   "list_init",
+   "list_remove",
+   "lstrcatW",
+   "lstrcpyW",
+   "lstrlenW",
+   "swprintf",
+   "wcsdup",
+   "wcsicmp",
+   "wcsnicmp",
+   "wine_dbg_log"
+  ],
+  "system": [
+   "inflateInit2_"
+  ],
+  "unresolved": [
+   "strdupAW",
+   "strdupWA"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "request->data_stream->vtbl->drain_data",
+    "in_function": "drain_data_stream",
+    "at": "dlls/winhttp/request.c:88",
+    "candidates": []
+   },
+   {
+    "expr": "request->data_stream->vtbl->fill_buffer",
+    "in_function": "query_data_stream",
+    "at": "dlls/winhttp/request.c:54",
+    "candidates": []
+   },
+   {
+    "expr": "task->callback",
+    "in_function": "task_callback",
+    "at": "dlls/winhttp/request.c:616",
+    "candidates": [
+     "callback @ dlls/winhttp/session.c:2709",
+     "task @ dlls/winhttp/request.c:631"
+    ]
+   },
+   {
+    "expr": "stream->vtbl->destroy",
+    "in_function": "destroy_data_stream",
+    "at": "dlls/winhttp/request.c:93",
+    "candidates": []
+   }
+  ]
+ },
+ "winebench": {
+  "id": "winhttp.WinHttpReceiveResponse",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "WinHTTP",
+   "header": "winhttp.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 25,
+   "body": 24,
+   "code": 14
+  },
+  "cyclomatic": 3,
+  "return_type": "BOOL",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 27,
+   "n_tests": 27,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/winhttp/tests/winhttp.c::do_request",
+    "dlls/winhttp/tests/winhttp.c::status_callback",
+    "dlls/winhttp/tests/winhttp.c::test_WinHttpSendRequest",
+    "dlls/winhttp/tests/winhttp.c::test_bad_header",
+    "dlls/winhttp/tests/winhttp.c::test_basic_authentication",
+    "dlls/winhttp/tests/winhttp.c::test_basic_request",
+    "dlls/winhttp/tests/winhttp.c::test_chunked_read",
+    "dlls/winhttp/tests/winhttp.c::test_chunked_request",
+    "dlls/winhttp/tests/winhttp.c::test_client_cert_authentication",
+    "dlls/winhttp/tests/winhttp.c::test_connection_cache",
+    "dlls/winhttp/tests/winhttp.c::test_connection_info",
+    "dlls/winhttp/tests/winhttp.c::test_cookies",
+    "dlls/winhttp/tests/winhttp.c::test_decompression",
+    "dlls/winhttp/tests/winhttp.c::test_head_request",
+    "dlls/winhttp/tests/winhttp.c::test_large_data_authentication",
+    "dlls/winhttp/tests/winhttp.c::test_max_http_automatic_redirects",
+    "dlls/winhttp/tests/winhttp.c::test_multi_authentication",
+    "dlls/winhttp/tests/winhttp.c::test_multiple_reads",
+    "dlls/winhttp/tests/winhttp.c::test_no_content",
+    "dlls/winhttp/tests/winhttp.c::test_no_headers",
+    "dlls/winhttp/tests/winhttp.c::test_not_modified",
+    "dlls/winhttp/tests/winhttp.c::test_passport_auth",
+    "dlls/winhttp/tests/winhttp.c::test_redirect",
+    "dlls/winhttp/tests/winhttp.c::test_request_parameter_defaults",
+    "dlls/winhttp/tests/winhttp.c::test_resolve_timeout",
+    "dlls/winhttp/tests/winhttp.c::test_secure_connection",
+    "dlls/winhttp/tests/winhttp.c::test_websocket"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winhttp/nf-winhttp-winhttpreceiveresponse",
+   "source": "win32",
+   "description": "The WinHttpReceiveResponse function waits to receive the response to an HTTP request initiated by WinHttpSendRequest.",
+   "min_windows": "Windows XP, Windows 2000 Professional with SP3 [desktop apps only]",
+   "documented_dll": "Winhttp.dll"
+  },
+  "exports": [
+   "winhttp.WinHttpReceiveResponse"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

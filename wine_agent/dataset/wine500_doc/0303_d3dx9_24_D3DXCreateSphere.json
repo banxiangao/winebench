@@ -1,0 +1,269 @@
+{
+ "id": "0303",
+ "function": {
+  "name": "D3DXCreateSphere",
+  "export_name": "D3DXCreateSphere",
+  "module": "d3dx9_24",
+  "source_module": "d3dx9_36",
+  "exported_by": [
+   "d3dx9_24",
+   "d3dx9_25",
+   "d3dx9_26",
+   "d3dx9_27",
+   "d3dx9_28",
+   "d3dx9_29",
+   "d3dx9_30",
+   "d3dx9_31",
+   "d3dx9_32",
+   "d3dx9_33",
+   "d3dx9_34",
+   "d3dx9_35",
+   "d3dx9_36",
+   "d3dx9_37",
+   "d3dx9_38",
+   "d3dx9_39",
+   "d3dx9_40",
+   "d3dx9_41",
+   "d3dx9_42",
+   "d3dx9_43"
+  ],
+  "side": "PE",
+  "file": "dlls/d3dx9_36/mesh.c",
+  "start_line": 4733,
+  "end_line": 4911,
+  "body_lines": 176,
+  "signature": "HRESULT WINAPI D3DXCreateSphere(struct IDirect3DDevice9 *device, float radius, UINT slices, UINT stacks, struct ID3DXMesh **mesh, struct ID3DXBuffer **adjacency)",
+  "header_comment": null,
+  "code": "HRESULT WINAPI D3DXCreateSphere(struct IDirect3DDevice9 *device, float radius, UINT slices,\n        UINT stacks, struct ID3DXMesh **mesh, struct ID3DXBuffer **adjacency)\n{\n    DWORD number_of_vertices, number_of_faces;\n    HRESULT hr;\n    ID3DXMesh *sphere;\n    struct vertex *vertices;\n    face *faces;\n    float phi_step, phi_start;\n    struct sincos_table phi;\n    float theta_step, theta, sin_theta, cos_theta;\n    DWORD vertex, face, stack, slice;\n\n    TRACE(\"(%p, %f, %u, %u, %p, %p)\\n\", device, radius, slices, stacks, mesh, adjacency);\n\n    if (!device || radius < 0.0f || slices < 2 || stacks < 2 || !mesh)\n    {\n        return D3DERR_INVALIDCALL;\n    }\n\n    number_of_vertices = 2 + slices * (stacks-1);\n    number_of_faces = 2 * slices + (stacks - 2) * (2 * slices);\n\n    hr = D3DXCreateMeshFVF(number_of_faces, number_of_vertices, D3DXMESH_MANAGED,\n                           D3DFVF_XYZ | D3DFVF_NORMAL, device, &sphere);\n    if (FAILED(hr))\n    {\n        return hr;\n    }\n\n    if (FAILED(hr = sphere->lpVtbl->LockVertexBuffer(sphere, 0, (void **)&vertices)))\n    {\n        sphere->lpVtbl->Release(sphere);\n        return hr;\n    }\n\n    if (FAILED(hr = sphere->lpVtbl->LockIndexBuffer(sphere, 0, (void **)&faces)))\n    {\n        sphere->lpVtbl->UnlockVertexBuffer(sphere);\n        sphere->lpVtbl->Release(sphere);\n        return hr;\n    }\n\n    /* phi = angle on xz plane wrt z axis */\n    phi_step = -2.0f * D3DX_PI / slices;\n    phi_start = D3DX_PI / 2.0f;\n\n    if (!compute_sincos_table(&phi, phi_start, phi_step, slices))\n    {\n        sphere->lpVtbl->UnlockIndexBuffer(sphere);\n        sphere->lpVtbl->UnlockVertexBuffer(sphere);\n        sphere->lpVtbl->Release(sphere);\n        return E_OUTOFMEMORY;\n    }\n\n    /* theta = angle on xy plane wrt x axis */\n    theta_step = D3DX_PI / stacks;\n    theta = theta_step;\n\n    vertex = 0;\n    face = 0;\n\n    vertices[vertex].normal.x = 0.0f;\n    vertices[vertex].normal.y = 0.0f;\n    vertices[vertex].normal.z = 1.0f;\n    vertices[vertex].position.x = 0.0f;\n    vertices[vertex].position.y = 0.0f;\n    vertices[vertex].position.z = radius;\n    vertex++;\n\n    for (stack = 0; stack < stacks - 1; stack++)\n    {\n        sin_theta = sinf(theta);\n        cos_theta = cosf(theta);\n\n        for (slice = 0; slice < slices; slice++)\n        {\n            vertices[vertex].normal.x = sin_theta * phi.cos[slice];\n            vertices[vertex].normal.y = sin_theta * phi.sin[slice];\n            vertices[vertex].normal.z = cos_theta;\n            vertices[vertex].position.x = radius * sin_theta * phi.cos[slice];\n            vertices[vertex].position.y = radius * sin_theta * phi.sin[slice];\n            vertices[vertex].position.z = radius * cos_theta;\n            vertex++;\n\n            if (slice > 0)\n            {\n                if (stack == 0)\n                {\n                    /* top stack is triangle fan */\n                    faces[face][0] = 0;\n                    faces[face][1] = slice + 1;\n                    faces[face][2] = slice;\n                    face++;\n                }\n                else\n                {\n                    /* stacks in between top and bottom are quad strips */\n                    faces[face][0] = vertex_index(slices, slice-1, stack-1);\n                    faces[face][1] = vertex_index(slices, slice, stack-1);\n                    faces[face][2] = vertex_index(slices, slice-1, stack);\n                    face++;\n\n                    faces[face][0] = vertex_index(slices, slice, stack-1);\n                    faces[face][1] = vertex_index(slices, slice, stack);\n                    faces[face][2] = vertex_index(slices, slice-1, stack);\n                    face++;\n                }\n            }\n        }\n\n        theta += theta_step;\n\n        if (stack == 0)\n        {\n            faces[face][0] = 0;\n            faces[face][1] = 1;\n            faces[face][2] = slice;\n            face++;\n        }\n        else\n        {\n            faces[face][0] = vertex_index(slices, slice-1, stack-1);\n            faces[face][1] = vertex_index(slices, 0, stack-1);\n            faces[face][2] = vertex_index(slices, slice-1, stack);\n            face++;\n\n            faces[face][0] = vertex_index(slices, 0, stack-1);\n            faces[face][1] = vertex_index(slices, 0, stack);\n            faces[face][2] = vertex_index(slices, slice-1, stack);\n            face++;\n        }\n    }\n\n    vertices[vertex].position.x = 0.0f;\n    vertices[vertex].position.y = 0.0f;\n    vertices[vertex].position.z = -radius;\n    vertices[vertex].normal.x = 0.0f;\n    vertices[vertex].normal.y = 0.0f;\n    vertices[vertex].normal.z = -1.0f;\n\n    /* bottom stack is triangle fan */\n    for (slice = 1; slice < slices; slice++)\n    {\n        faces[face][0] = vertex_index(slices, slice-1, stack-1);\n        faces[face][1] = vertex_index(slices, slice, stack-1);\n        faces[face][2] = vertex;\n        face++;\n    }\n\n    faces[face][0] = vertex_index(slices, slice-1, stack-1);\n    faces[face][1] = vertex_index(slices, 0, stack-1);\n    faces[face][2] = vertex;\n\n    free_sincos_table(&phi);\n    sphere->lpVtbl->UnlockIndexBuffer(sphere);\n    sphere->lpVtbl->UnlockVertexBuffer(sphere);\n\n\n    if (adjacency)\n    {\n        if (FAILED(hr = D3DXCreateBuffer(number_of_faces * sizeof(DWORD) * 3, adjacency)))\n        {\n            sphere->lpVtbl->Release(sphere);\n            return hr;\n        }\n\n        if (FAILED(hr = sphere->lpVtbl->GenerateAdjacency(sphere, 0.0f, (*adjacency)->lpVtbl->GetBufferPointer(*adjacency))))\n        {\n            (*adjacency)->lpVtbl->Release(*adjacency);\n            sphere->lpVtbl->Release(sphere);\n            return hr;\n        }\n    }\n\n    *mesh = sphere;\n\n    return D3D_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <float.h>",
+   "#include \"d3dx9_private.h\"",
+   "#include \"dxfile.h\"",
+   "#include \"rmxfguid.h\"",
+   "#include \"rmxftmpl.h\"",
+   "#include \"wine/list.h\""
+  ],
+  "resolution": [
+   "d3dx9_24!D3DXCreateSphere [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/d3dx9_36/tests/mesh.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "direct3d9",
+   "path": "desktop-src/direct3d9/d3dxcreatesphere.md",
+   "url": "https://learn.microsoft.com/windows/win32/direct3d9/d3dxcreatesphere",
+   "documented_name": "d3dxcreatesphere",
+   "file": "docs/0303_win32_d3dxcreatesphere.md",
+   "text": "---\ndescription: Uses a left-handed coordinate system to create a mesh containing a sphere.\nms.assetid: d3198805-9435-4849-892d-ec98dc2221d2\ntitle: D3DXCreateSphere function (D3dx9shape.h)\nms.topic: reference\nms.date: 05/31/2018\ntopic_type:\n- APIRef\n- kbSyntax\napi_name:\n- D3DXCreateSphere\napi_type:\n- LibDef\napi_location:\n- d3dx9.lib\n- d3dx9.dll\n---\n\n# D3DXCreateSphere function\n\nUses a left-handed coordinate system to create a mesh containing a sphere.\n\n## Syntax\n\n\n```C++\nHRESULT D3DXCreateSphere(\n  _In_  LPDIRECT3DDEVICE9 pDevice,\n  _In_  FLOAT             Radius,\n  _In_  UINT              Slices,\n  _In_  UINT              Stacks,\n  _Out_ LPD3DXMESH        *ppMesh,\n  _Out_ LPD3DXBUFFER      *ppAdjacency\n);\n```\n\n\n\n## Parameters\n\n<dl> <dt>\n\n*pDevice* \\[in\\]\n</dt> <dd>\n\nType: **[**LPDIRECT3DDEVICE9**](/windows/win32/api/d3d9helper/nn-d3d9helper-idirect3ddevice9)**\n\nPointer to an [**IDirect3DDevice9**](/windows/win32/api/d3d9helper/nn-d3d9helper-idirect3ddevice9) interface, representing the device associated with the created sphere mesh.\n\n</dd> <dt>\n\n*Radius* \\[in\\]\n</dt> <dd>\n\nType: **[**FLOAT**](../winprog/windows-data-types.md)**\n\nRadius of the sphere. This value should be greater than or equal to 0.0f.\n\n</dd> <dt>\n\n*Slices* \\[in\\]\n</dt> <dd>\n\nType: **[**UINT**](../winprog/windows-data-types.md)**\n\nNumber of slices about the main axis.\n\n</dd> <dt>\n\n*Stacks* \\[in\\]\n</dt> <dd>\n\nType: **[**UINT**](../winprog/windows-data-types.md)**\n\nNumber of stacks along the main axis.\n\n</dd> <dt>\n\n*ppMesh* \\[out\\]\n</dt> <dd>\n\nType: **[**LPD3DXMESH**](id3dxmesh.md)\\***\n\nAddress of a pointer to the output shape, an [**ID3DXMesh**](id3dxmesh.md) interface.\n\n</dd> <dt>\n\n*ppAdjacency* \\[out\\]\n</dt> <dd>\n\nType: **[**LPD3DXBUFFER**](id3dxbuffer.md)\\***\n\nAddress of a pointer to an [**ID3DXBuffer**](id3dxbuffer.md) interface. When the method returns, this parameter is filled with an array of three DWORDs per face that specify the three neighbors for each face in the mesh. **NULL** can be specified.\n\n</dd> </dl>\n\n## Return value\n\nType: **[**HRESULT**](https://msdn.microsoft.com/library/Bb401631(v=MSDN.10).aspx)**\n\nIf the function succeeds, the return value is D3D\\_OK. If the function fails, the return value can be one of the following: D3DERR\\_INVALIDCALL, D3DXERR\\_INVALIDDATA, E\\_OUTOFMEMORY.\n\n## Remarks\n\nThe created sphere is centered at the origin, and its axis is aligned with the z-axis.\n\nThis function creates a mesh with the D3DXMESH\\_MANAGED creation option and [D3DFVF\\_XYZ \\| D3DFVF\\_NORMAL](d3dfvf.md) flexible vertex format (FVF).\n\n## Requirements\n\n\n\n| Requirement | Value |\n|--------------------|-----------------------------------------------------------------------------------------|\n| Header<br/>  | <dl> <dt>D3dx9shape.h</dt> </dl> |\n| Library<br/> | <dl> <dt>D3dx9.lib</dt> </dl>    |\n\n\n\n## See also\n\n<dl> <dt>\n\n[Shape Drawing Functions](dx9-graphics-reference-d3dx-functions-shape.md)\n</dt> </dl>\n\n \n\n \n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "compute_sincos_table",
+   "file": "dlls/d3dx9_36/mesh.c",
+   "start_line": 4700,
+   "end_line": 4726,
+   "static": true,
+   "called_from": [
+    "D3DXCreateSphere"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/d3dx9_36/mesh.c:4961"
+   ],
+   "signature": "static BOOL compute_sincos_table(struct sincos_table *sincos_table, float angle_start, float angle_step, int n)",
+   "code": "static BOOL compute_sincos_table(struct sincos_table *sincos_table, float angle_start, float angle_step, int n)\n{\n    float angle;\n    int i;\n\n    sincos_table->sin = malloc(n * sizeof(*sincos_table->sin));\n    if (!sincos_table->sin)\n    {\n        return FALSE;\n    }\n    sincos_table->cos = malloc(n * sizeof(*sincos_table->cos));\n    if (!sincos_table->cos)\n    {\n        free(sincos_table->sin);\n        return FALSE;\n    }\n\n    angle = angle_start;\n    for (i = 0; i < n; i++)\n    {\n        sincos_table->sin[i] = sinf(angle);\n        sincos_table->cos[i] = cosf(angle);\n        angle += angle_step;\n    }\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "vertex_index",
+   "file": "dlls/d3dx9_36/mesh.c",
+   "start_line": 4728,
+   "end_line": 4731,
+   "static": true,
+   "called_from": [
+    "D3DXCreateSphere"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/d3dx9_36/mesh.c:1201",
+    "dlls/d3dx9_36/mesh.c:1261",
+    "dlls/d3dx9_36/mesh.c:1273",
+    "dlls/d3dx9_36/mesh.c:1334",
+    "dlls/d3dx9_36/mesh.c:1575"
+   ],
+   "signature": "static WORD vertex_index(UINT slices, int slice, int stack)",
+   "code": "static WORD vertex_index(UINT slices, int slice, int stack)\n{\n    return stack*slices+slice+1;\n}"
+  },
+  {
+   "name": "free_sincos_table",
+   "file": "dlls/d3dx9_36/mesh.c",
+   "start_line": 4693,
+   "end_line": 4697,
+   "static": true,
+   "called_from": [
+    "D3DXCreateSphere"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/d3dx9_36/mesh.c:5082"
+   ],
+   "signature": "static void free_sincos_table(struct sincos_table *sincos_table)",
+   "code": "static void free_sincos_table(struct sincos_table *sincos_table)\n{\n    free(sincos_table->cos);\n    free(sincos_table->sin);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "face",
+    "kind": "typedef_decl",
+    "start_line": 4685,
+    "end_line": 4685,
+    "code": "typedef WORD face[3];"
+   },
+   {
+    "name": "sincos_table",
+    "kind": "struct_decl",
+    "start_line": 4687,
+    "end_line": 4691,
+    "code": "struct sincos_table\n{\n    float *sin;\n    float *cos;\n};"
+   },
+   {
+    "name": "vertex",
+    "kind": "struct_decl",
+    "start_line": 4495,
+    "end_line": 4499,
+    "code": "struct vertex\n{\n    D3DXVECTOR3 position;\n    D3DXVECTOR3 normal;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 38,
+    "end_line": 38,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(d3dx);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "D3DXCreateBuffer",
+    "impl": [
+     "dlls/d3dx9_36/core.c:127"
+    ]
+   },
+   {
+    "name": "D3DXCreateMeshFVF",
+    "impl": [
+     "dlls/d3dx9_36/mesh.c:2401"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "cosf",
+    "module": "msvcr80",
+    "impl": [
+     "dlls/msvcrt/mathf.c:51"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "sinf",
+    "module": "msvcr80",
+    "impl": [
+     "dlls/msvcrt/mathf.c:50"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "sphere->lpVtbl->LockVertexBuffer",
+    "in_function": "D3DXCreateSphere",
+    "at": "dlls/d3dx9_36/mesh.c:4763",
+    "candidates": []
+   },
+   {
+    "expr": "sphere->lpVtbl->Release",
+    "in_function": "D3DXCreateSphere",
+    "at": "dlls/d3dx9_36/mesh.c:4765",
+    "candidates": []
+   },
+   {
+    "expr": "sphere->lpVtbl->LockIndexBuffer",
+    "in_function": "D3DXCreateSphere",
+    "at": "dlls/d3dx9_36/mesh.c:4769",
+    "candidates": []
+   },
+   {
+    "expr": "sphere->lpVtbl->UnlockVertexBuffer",
+    "in_function": "D3DXCreateSphere",
+    "at": "dlls/d3dx9_36/mesh.c:4771",
+    "candidates": []
+   },
+   {
+    "expr": "sphere->lpVtbl->UnlockIndexBuffer",
+    "in_function": "D3DXCreateSphere",
+    "at": "dlls/d3dx9_36/mesh.c:4782",
+    "candidates": []
+   },
+   {
+    "expr": "sphere->lpVtbl->GenerateAdjacency",
+    "in_function": "D3DXCreateSphere",
+    "at": "dlls/d3dx9_36/mesh.c:4900",
+    "candidates": []
+   },
+   {
+    "expr": "(*adjacency)->lpVtbl->GetBufferPointer",
+    "in_function": "D3DXCreateSphere",
+    "at": "dlls/d3dx9_36/mesh.c:4900",
+    "candidates": []
+   },
+   {
+    "expr": "(*adjacency)->lpVtbl->Release",
+    "in_function": "D3DXCreateSphere",
+    "at": "dlls/d3dx9_36/mesh.c:4902",
+    "candidates": []
+   }
+  ]
+ }
+}

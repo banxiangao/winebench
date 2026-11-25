@@ -1,0 +1,300 @@
+{
+ "id": "0160",
+ "function": {
+  "name": "MsiGetPropertyA",
+  "export_name": "MsiGetPropertyA",
+  "module": "msi",
+  "source_module": "msi",
+  "exported_by": [
+   "msi"
+  ],
+  "side": "PE",
+  "file": "dlls/msi/package.c",
+  "start_line": 2264,
+  "end_line": 2334,
+  "body_lines": 68,
+  "signature": "UINT WINAPI MsiGetPropertyA(MSIHANDLE hinst, const char *name, char *buf, DWORD *sz)",
+  "header_comment": null,
+  "code": "UINT WINAPI MsiGetPropertyA(MSIHANDLE hinst, const char *name, char *buf, DWORD *sz)\n{\n    const WCHAR *value = L\"\";\n    MSIPACKAGE *package;\n    MSIRECORD *row;\n    WCHAR *nameW;\n    int len = 0;\n    UINT r;\n\n    if (!name)\n        return ERROR_INVALID_PARAMETER;\n\n    if (!(nameW = strdupAtoW(name)))\n        return ERROR_OUTOFMEMORY;\n\n    package = msihandle2msiinfo(hinst, MSIHANDLETYPE_PACKAGE);\n    if (!package)\n    {\n        WCHAR *value = NULL, *tmp;\n        MSIHANDLE remote;\n        DWORD len;\n\n        if (!(remote = msi_get_remote(hinst)))\n        {\n            free(nameW);\n            return ERROR_INVALID_HANDLE;\n        }\n\n        __TRY\n        {\n            r = remote_GetProperty(remote, nameW, &value, &len);\n        }\n        __EXCEPT(rpc_filter)\n        {\n            r = GetExceptionCode();\n        }\n        __ENDTRY\n\n        free(nameW);\n\n        if (!r)\n        {\n            /* String might contain embedded nulls.\n             * Native returns the correct size but truncates the string. */\n            tmp = calloc(1, (len + 1) * sizeof(WCHAR));\n            if (!tmp)\n            {\n                midl_user_free(value);\n                return ERROR_OUTOFMEMORY;\n            }\n            lstrcpyW(tmp, value);\n\n            r = msi_strncpyWtoA(tmp, len, buf, sz, TRUE);\n\n            free(tmp);\n        }\n        midl_user_free(value);\n        return r;\n    }\n\n    row = get_property_row(package->db, nameW);\n    if (row)\n        value = msi_record_get_string(row, 1, &len);\n\n    r = msi_strncpyWtoA(value, len, buf, sz, FALSE);\n\n    free(nameW);\n    if (row) msiobj_release(&row->hdr);\n    msiobj_release(&package->hdr);\n    return r;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"msi.h\"",
+   "#include \"msiquery.h\"",
+   "#include \"objidl.h\"",
+   "#include \"wincrypt.h\"",
+   "#include \"winuser.h\"",
+   "#include \"wininet.h\"",
+   "#include \"winver.h\"",
+   "#include \"urlmon.h\"",
+   "#include \"shlobj.h\"",
+   "#include \"objbase.h\"",
+   "#include \"msidefs.h\"",
+   "#include \"sddl.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"msipriv.h\"",
+   "#include \"winemsi.h\"",
+   "#include \"resource.h\""
+  ],
+  "resolution": [
+   "msi!MsiGetPropertyA [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/msi/tests/custom.c",
+   "dlls/msi/tests/db.c",
+   "dlls/msi/tests/msi.c",
+   "dlls/msi/tests/package.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 26
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 1,
+  "parse_error_samples": [
+   "dlls/msi/package.c:343: use of undeclared identifier 's_IWineMsiRemote_v0_0_s_ifspec'"
+  ]
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "msiquery",
+   "path": "sdk-api-src/content/msiquery/nf-msiquery-msigetpropertya.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/msiquery/nf-msiquery-msigetpropertya",
+   "documented_name": "msigetpropertya",
+   "file": "docs/0160_sdk-api_nf-msiquery-msigetpropertya.md",
+   "text": "---\nUID: NF:msiquery.MsiGetPropertyA\ntitle: MsiGetPropertyA function (msiquery.h)\ndescription: The MsiGetProperty function gets the value for an installer property. (ANSI)\nhelpviewer_keywords: [\"MsiGetPropertyA\", \"msiquery/MsiGetPropertyA\"]\nold-location: setup\\msigetproperty.htm\ntech.root: setup\nms.assetid: f2844673-3440-4b43-a9d0-31b9e8086f6f\nms.date: 12/05/2018\nms.keywords: MsiGetProperty, MsiGetProperty function, MsiGetPropertyA, MsiGetPropertyW, _msi_msigetproperty, msiquery/MsiGetProperty, msiquery/MsiGetPropertyA, msiquery/MsiGetPropertyW, setup.msigetproperty\nreq.header: msiquery.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Installer 5.0 on Windows Server 2012, Windows 8, Windows Server 2008 R2 or Windows 7. Windows Installer 4.0 or Windows Installer 4.5 on   Windows Server 2008 or Windows Vista. Windows Installer on Windows Server 2003 or Windows XP\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: MsiGetPropertyW (Unicode) and MsiGetPropertyA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Msi.lib\nreq.dll: Msi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - MsiGetPropertyA\n - msiquery/MsiGetPropertyA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-msi-misc-l1-1-0.dll\n - Msi.dll\napi_name:\n - MsiGetProperty\n - MsiGetPropertyA\n - MsiGetPropertyW\n---\n\n# MsiGetPropertyA function\n\n\n## -description\n\nThe \n<b>MsiGetProperty</b> function gets the value for an installer property.\n\n## -parameters\n\n### -param hInstall [in]\n\nHandle to the installation provided to a DLL custom action or obtained through <a href=\"/windows/desktop/api/msi/nf-msi-msiopenpackagea\">MsiOpenPackage</a>, <a href=\"/windows/desktop/api/msi/nf-msi-msiopenpackageexa\">MsiOpenPackageEx</a>, or <a href=\"/windows/desktop/api/msi/nf-msi-msiopenproducta\">MsiOpenProduct</a>.\n\n### -param szName [in]\n\nA null-terminated string that specifies the name of the property.\n\n### -param szValueBuf [out]\n\nPointer to the buffer that receives the null terminated string containing the value of the property. Do not attempt to determine the size of the buffer by passing in a null (value=0) for <i>szValueBuf</i>. You can get the size of the buffer by passing in an empty string (for example \"\"). The function will then return ERROR_MORE_DATA and <i>pchValueBuf </i> will contain the required buffer size in TCHARs, not including the terminating null character. On return of ERROR_SUCCESS, <i>pcchValueBuf </i> contains the number of TCHARs written to the buffer, not including the terminating null character.\n\n### -param pcchValueBuf [in, out]\n\nPointer to the variable that specifies the size, in TCHARs, of the buffer pointed to by the variable <i>szValueBuf</i>. When the function returns ERROR_SUCCESS, this variable contains the size of the data copied to <i>szValueBuf</i>, not including the terminating null character. If <i>szValueBuf </i> is not large enough, the function returns ERROR_MORE_DATA and stores the required size, not including the terminating null character, in the variable pointed to by <i>pchValueBuf</i>.\n\n## -returns\n\nThis function returns UINT.\n\n## -remarks\n\nIf the value for the property retrieved by the \n<b>MsiGetProperty</b> function is not defined, it is equivalent to a 0-length value. It is not an error.\n\nIf ERROR_MORE_DATA is returned, the parameter which is a pointer gives the size of the buffer required to hold the string. If ERROR_SUCCESS is returned, it gives the number of characters written to the string buffer. Therefore you can get the size of the buffer by passing in an empty string (for example \"\") for the parameter that specifies the buffer. Do not attempt to determine the size of the buffer by passing in a Null (value=0).\n\nThe following example shows how a DLL custom action could access the value of a property by dynamically determining the size of the value buffer.\n\n\n```cpp\nUINT __stdcall MyCustomAction(MSIHANDLE hInstall)\n{\n    TCHAR* szValueBuf = NULL;\n    DWORD cchValueBuf = 0;\n    UINT uiStat =  MsiGetProperty(hInstall, TEXT(\"MyProperty\"), TEXT(\"\"), &cchValueBuf);\n    //cchValueBuf now contains the size of the property's string, without null termination\n    if (ERROR_MORE_DATA == uiStat)\n    {\n        ++cchValueBuf; // add 1 for null termination\n        szValueBuf = new TCHAR[cchValueBuf];\n        if (szValueBuf)\n        {\n            uiStat = MsiGetProperty(hInstall, TEXT(\"MyProperty\"), szValueBuf, &cchValueBuf);\n        }\n    }\n    if (ERROR_SUCCESS != uiStat)\n    {\n        if (szValueBuf != NULL) \n           delete[] szValueBuf;\n        return ERROR_INSTALL_FAILURE;\n    }\n\n    // custom action uses MyProperty\n    // ...\n\n    delete[] szValueBuf;\n\n    return ERROR_SUCCESS;\n}\n\n```\n\n\n\n\n\n\n> [!NOTE]\n> The msiquery.h header defines MsiGetProperty as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/Msi/database-functions\">Installer State Access Functions</a>\n\n\n\n<a href=\"/windows/desktop/Msi/passing-null-as-the-argument-of-windows-installer-functions\">Passing Null as the Argument of Windows Installer Functions</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_property_row",
+   "file": "dlls/msi/package.c",
+   "start_line": 2134,
+   "end_line": 2198,
+   "static": true,
+   "called_from": [
+    "MsiGetPropertyA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msi/package.c:2209",
+    "dlls/msi/package.c:2387"
+   ],
+   "signature": "static MSIRECORD *get_property_row( MSIDATABASE *db, const WCHAR *name )",
+   "code": "static MSIRECORD *get_property_row( MSIDATABASE *db, const WCHAR *name )\n{\n    MSIRECORD *rec, *row = NULL;\n    MSIQUERY *view;\n    UINT r;\n    WCHAR *buffer;\n    int length;\n\n    if (!name || !*name)\n        return NULL;\n\n    if (!wcscmp(name, L\"Date\"))\n    {\n        length = GetDateFormatW(LOCALE_USER_DEFAULT, DATE_SHORTDATE, NULL, NULL, NULL, 0);\n        if (!length)\n            return NULL;\n        buffer = malloc(length * sizeof(WCHAR));\n        GetDateFormatW(LOCALE_USER_DEFAULT, DATE_SHORTDATE, NULL, NULL, buffer, length);\n\n        row = MSI_CreateRecord(1);\n        if (!row)\n        {\n            free(buffer);\n            return NULL;\n        }\n        MSI_RecordSetStringW(row, 1, buffer);\n        free(buffer);\n        return row;\n    }\n    else if (!wcscmp(name, L\"Time\"))\n    {\n        length = GetTimeFormatW(LOCALE_USER_DEFAULT, TIME_NOTIMEMARKER, NULL, NULL, NULL, 0);\n        if (!length)\n            return NULL;\n        buffer = malloc(length * sizeof(WCHAR));\n        GetTimeFormatW(LOCALE_USER_DEFAULT, TIME_NOTIMEMARKER, NULL, NULL, buffer, length);\n\n        row = MSI_CreateRecord(1);\n        if (!row)\n        {\n            free(buffer);\n            return NULL;\n        }\n        MSI_RecordSetStringW(row, 1, buffer);\n        free(buffer);\n        return row;\n    }\n\n    rec = MSI_CreateRecord(1);\n    if (!rec)\n        return NULL;\n\n    MSI_RecordSetStringW(rec, 1, name);\n\n    r = MSI_DatabaseOpenViewW(db, L\"SELECT `Value` FROM `_Property` WHERE `_Property`=?\", &view);\n    if (r == ERROR_SUCCESS)\n    {\n        MSI_ViewExecute(view, rec);\n        MSI_ViewFetch(view, &row);\n        MSI_ViewClose(view);\n        msiobj_release(&view->hdr);\n    }\n    msiobj_release(&rec->hdr);\n    return row;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "MIDL_user_free",
+    "file": "dlls/msi/custom.c",
+    "start_line": 72
+   },
+   {
+    "name": "MSI_CreateRecord",
+    "file": "dlls/msi/record.c",
+    "start_line": 76
+   },
+   {
+    "name": "MSI_DatabaseOpenViewW",
+    "file": "dlls/msi/msiquery.c",
+    "start_line": 110
+   },
+   {
+    "name": "MSI_RecordSetStringW",
+    "file": "dlls/msi/record.c",
+    "start_line": 597
+   },
+   {
+    "name": "MSI_ViewClose",
+    "file": "dlls/msi/msiquery.c",
+    "start_line": 450
+   },
+   {
+    "name": "MSI_ViewExecute",
+    "file": "dlls/msi/msiquery.c",
+    "start_line": 498
+   },
+   {
+    "name": "MSI_ViewFetch",
+    "file": "dlls/msi/msiquery.c",
+    "start_line": 373
+   },
+   {
+    "name": "msi_get_remote",
+    "file": "dlls/msi/handle.c",
+    "start_line": 183
+   },
+   {
+    "name": "msi_record_get_string",
+    "file": "dlls/msi/record.c",
+    "start_line": 420
+   },
+   {
+    "name": "msi_strncpyWtoA",
+    "file": "dlls/msi/install.c",
+    "start_line": 190
+   },
+   {
+    "name": "msihandle2msiinfo",
+    "file": "dlls/msi/handle.c",
+    "start_line": 158
+   },
+   {
+    "name": "msiobj_release",
+    "file": "dlls/msi/handle.c",
+    "start_line": 241
+   },
+   {
+    "name": "rpc_filter",
+    "file": "dlls/msi/custom.c",
+    "start_line": 77
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "GetDateFormatW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:8331"
+    ]
+   },
+   {
+    "name": "GetTimeFormatW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:8399"
+    ]
+   },
+   {
+    "name": "calloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "wcscmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:266"
+    ]
+   }
+  ],
+  "header_inline": [
+   "__wine_pop_frame",
+   "__wine_push_frame",
+   "lstrcpyW"
+  ],
+  "system": [],
+  "unresolved": [
+   "__wine_exception_handler",
+   "__wine_setjmpex",
+   "remote_GetProperty",
+   "strdupAtoW"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "msi.MsiGetPropertyA",
+  "category": {
+   "l1": "Application installation and servicing",
+   "l2": "Windows Installer",
+   "header": "msiquery.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 71,
+   "body": 70,
+   "code": 42
+  },
+  "cyclomatic": 9,
+  "return_type": "UINT",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 26,
+   "n_tests": 26,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/msi/tests/custom.c::check_prop",
+    "dlls/msi/tests/custom.c::da_deferred",
+    "dlls/msi/tests/custom.c::da_immediate",
+    "dlls/msi/tests/custom.c::test_props",
+    "dlls/msi/tests/custom.c::test_retval",
+    "dlls/msi/tests/db.c::test_dbtopackage",
+    "dlls/msi/tests/db.c::test_try_transform",
+    "dlls/msi/tests/msi.c::test_MsiOpenProduct",
+    "dlls/msi/tests/package.c::check_prop",
+    "dlls/msi/tests/package.c::test_MsiDatabaseCommit",
+    "dlls/msi/tests/package.c::test_MsiGetSourcePath",
+    "dlls/msi/tests/package.c::test_MsiSetProperty",
+    "dlls/msi/tests/package.c::test_appsearch",
+    "dlls/msi/tests/package.c::test_appsearch_complocator",
+    "dlls/msi/tests/package.c::test_appsearch_drlocator",
+    "dlls/msi/tests/package.c::test_appsearch_inilocator",
+    "dlls/msi/tests/package.c::test_appsearch_reglocator",
+    "dlls/msi/tests/package.c::test_ccpsearch",
+    "dlls/msi/tests/package.c::test_complocator",
+    "dlls/msi/tests/package.c::test_formatrecord_tables",
+    "dlls/msi/tests/package.c::test_installprops",
+    "dlls/msi/tests/package.c::test_property_table",
+    "dlls/msi/tests/package.c::test_props",
+    "dlls/msi/tests/package.c::test_settargetpath",
+    "dlls/msi/tests/package.c::test_sourcedir",
+    "dlls/msi/tests/package.c::test_states"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/msiquery/nf-msiquery-msigetpropertya",
+   "source": "win32",
+   "description": "The MsiGetProperty function gets the value for an installer property. (ANSI)",
+   "min_windows": "Windows Installer 5.0 on Windows Server 2012, Windows 8, Windows Server 2008 R2 or Windows 7. Windows Installer 4.0 or Windows Installer 4.5 on   Windows Server 2008 or Windows Vista. Windows Installer on Windows Server 2003 or Windows XP",
+   "documented_dll": "Msi.dll"
+  },
+  "exports": [
+   "msi.MsiGetPropertyA"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

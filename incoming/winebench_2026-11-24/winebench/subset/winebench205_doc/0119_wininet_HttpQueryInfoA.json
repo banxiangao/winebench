@@ -1,0 +1,209 @@
+{
+ "id": "0119",
+ "function": {
+  "name": "HttpQueryInfoA",
+  "export_name": "HttpQueryInfoA",
+  "module": "wininet",
+  "source_module": "wininet",
+  "exported_by": [
+   "wininet"
+  ],
+  "side": "PE",
+  "file": "dlls/wininet/http.c",
+  "start_line": 4126,
+  "end_line": 4182,
+  "body_lines": 54,
+  "signature": "BOOL WINAPI HttpQueryInfoA(HINTERNET hHttpRequest, DWORD dwInfoLevel, LPVOID lpBuffer, LPDWORD lpdwBufferLength, LPDWORD lpdwIndex)",
+  "header_comment": "/***********************************************************************\n *           HttpQueryInfoA (WININET.@)\n *\n * Queries for information about an HTTP request\n *\n * RETURNS\n *    TRUE  on success\n *    FALSE on failure\n *\n */",
+  "code": "BOOL WINAPI HttpQueryInfoA(HINTERNET hHttpRequest, DWORD dwInfoLevel,\n\tLPVOID lpBuffer, LPDWORD lpdwBufferLength, LPDWORD lpdwIndex)\n{\n    BOOL result;\n    DWORD len;\n    WCHAR* bufferW;\n\n    TRACE(\"%p %lx\\n\", hHttpRequest, dwInfoLevel);\n\n    if((dwInfoLevel & HTTP_QUERY_FLAG_NUMBER) ||\n       (dwInfoLevel & HTTP_QUERY_FLAG_SYSTEMTIME))\n    {\n        return HttpQueryInfoW( hHttpRequest, dwInfoLevel, lpBuffer,\n                               lpdwBufferLength, lpdwIndex );\n    }\n\n    if (lpBuffer)\n    {\n        DWORD alloclen;\n        len = (*lpdwBufferLength)*sizeof(WCHAR);\n        if ((dwInfoLevel & HTTP_QUERY_HEADER_MASK) == HTTP_QUERY_CUSTOM)\n        {\n            alloclen = MultiByteToWideChar( CP_ACP, 0, lpBuffer, -1, NULL, 0 ) * sizeof(WCHAR);\n            if (alloclen < len)\n                alloclen = len;\n        }\n        else\n            alloclen = len;\n        bufferW = malloc( alloclen );\n        /* buffer is in/out because of HTTP_QUERY_CUSTOM */\n        if ((dwInfoLevel & HTTP_QUERY_HEADER_MASK) == HTTP_QUERY_CUSTOM)\n            MultiByteToWideChar( CP_ACP, 0, lpBuffer, -1, bufferW, alloclen / sizeof(WCHAR) );\n    } else\n    {\n        bufferW = NULL;\n        len = 0;\n    }\n\n    result = HttpQueryInfoW( hHttpRequest, dwInfoLevel, bufferW,\n                           &len, lpdwIndex );\n    if( result )\n    {\n        len = WideCharToMultiByte( CP_ACP,0, bufferW, len / sizeof(WCHAR) + 1,\n                                     lpBuffer, *lpdwBufferLength, NULL, NULL );\n        *lpdwBufferLength = len - 1;\n\n        TRACE(\"lpBuffer: %s\\n\", debugstr_a(lpBuffer));\n    }\n    else\n        /* since the strings being returned from HttpQueryInfoW should be\n         * only ASCII characters, it is reasonable to assume that all of\n         * the Unicode characters can be reduced to a single byte */\n        *lpdwBufferLength = len / sizeof(WCHAR);\n\n    free( bufferW );\n    return result;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdlib.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <time.h>",
+   "#include <assert.h>",
+   "#include <errno.h>",
+   "#include <limits.h>",
+   "#include <zlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wininet.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winsock2.h\"",
+   "#include \"ws2ipdef.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"sspi.h\"",
+   "#include \"wincrypt.h\"",
+   "#include \"winuser.h\"",
+   "#include \"internet.h\"",
+   "#include \"resource.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\""
+  ],
+  "resolution": [
+   "wininet!HttpQueryInfoA [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/wininet/tests/http.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 30
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wininet",
+   "path": "sdk-api-src/content/wininet/nf-wininet-httpqueryinfoa.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wininet/nf-wininet-httpqueryinfoa",
+   "documented_name": "httpqueryinfoa",
+   "file": "docs/0119_sdk-api_nf-wininet-httpqueryinfoa.md",
+   "text": "---\nUID: NF:wininet.HttpQueryInfoA\ntitle: HttpQueryInfoA function (wininet.h)\ndescription: Retrieves header information associated with an HTTP request. (ANSI)\nhelpviewer_keywords: [\"HttpQueryInfoA\", \"wininet/HttpQueryInfoA\"]\nold-location: wininet\\httpqueryinfo.htm\ntech.root: wininet\nms.assetid: 5747ce19-5004-4eea-abe9-dd00abac1b3b\nms.date: 12/05/2018\nms.keywords: HttpQueryInfo, HttpQueryInfo function [WinINet], HttpQueryInfoA, HttpQueryInfoW, _inet_httpqueryinfo_function, wininet.httpqueryinfo, wininet/HttpQueryInfo, wininet/HttpQueryInfoA, wininet/HttpQueryInfoW\nreq.header: wininet.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: HttpQueryInfoW (Unicode) and HttpQueryInfoA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Wininet.lib\nreq.dll: Wininet.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - HttpQueryInfoA\n - wininet/HttpQueryInfoA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Wininet.dll\napi_name:\n - HttpQueryInfo\n - HttpQueryInfoA\n - HttpQueryInfoW\n---\n\n# HttpQueryInfoA function\n\n\n## -description\n\nRetrieves header information associated with an HTTP request.\n\n## -parameters\n\n### -param hRequest [in]\n\nA handle returned by \na call to the <a href=\"/windows/desktop/api/wininet/nf-wininet-httpopenrequesta\">HttpOpenRequest</a> or \n<a href=\"/windows/desktop/api/wininet/nf-wininet-internetopenurla\">InternetOpenUrl</a> function.\n\n### -param dwInfoLevel [in]\n\nA combination of an attribute to be retrieved and flags that modify the request. For a list of possible attribute and modifier values, see \n<a href=\"/windows/desktop/WinInet/query-info-flags\">Query Info Flags</a>.\n\n### -param lpBuffer [in, out]\n\nA pointer to a buffer to receive the requested information. This parameter must not be <b>NULL</b>.\n\n### -param lpdwBufferLength [in, out]\n\nA pointer to a variable that contains, on entry, the size in bytes of the buffer pointed to by <i>lpvBuffer</i>. \n\nWhen the function returns successfully, this variable contains the number of bytes of information written to the buffer. In the case of a string, the byte count does not include the string's terminating <b>null</b> character.\n\nWhen the function  \n\t\t\t\t\tfails with an extended error code of <b>ERROR_INSUFFICIENT_BUFFER</b>, the variable pointed to by <i>lpdwBufferLength</i> contains on exit the size, in bytes, of a buffer large enough to receive the requested information. The calling application can then allocate a buffer of this size or larger, and call the function again.\n\n### -param lpdwIndex [in, out]\n\nA pointer to a zero-based header index used to enumerate multiple headers with the same name. When calling the function, this parameter is the index of the specified header to return. When the function returns, this parameter is the index of the next header. If the next index cannot be found, <b>ERROR_HTTP_HEADER_NOT_FOUND</b> is returned.\n\n## -returns\n\nReturns <b>TRUE</b> if successful, or <b>FALSE</b> otherwise. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nYou can retrieve the following types of data from \n<b>HttpQueryInfo</b>:<ul>\n<li>Strings (default)</li>\n<li>\n<a href=\"/windows/desktop/api/minwinbase/ns-minwinbase-systemtime\">SYSTEMTIME</a> (for dates)</li>\n<li><b>DWORD</b> (for <b>STATUS_CODE</b>, <b>CONTENT_LENGTH</b>, and so on, if <b>HTTP_QUERY_FLAG_NUMBER</b> has been used)</li>\n</ul>\n\n\nIf your application requires that the data be returned as a data type other than a string, you must include the appropriate modifier with the attribute passed to \n<i>dwInfoLevel</i>.\n\nThe <b>HttpQueryInfo</b> function is available in Microsoft Internet Explorer 3.0 for ISO-8859-1 characters (<b>HttpQueryInfoA</b> function) and in Internet Explorer 4.0 or later for ISO-8859-1 characters (<b>HttpQueryInfoA</b> function)  and for ISO-8859-1  characters converted to UTF-16LE  characters.(the <b>HttpQueryInfoW</b> function). \n\n<div class=\"alert\"><b>Note</b>  The <b>HttpQueryInfoA</b> function represents headers as ISO-8859-1 characters not ANSI characters. The <b>HttpQueryInfoW</b> function represents headers as ISO-8859-1 characters converted to UTF-16LE  characters.   As a result, it is never safe to use the <b>HttpQueryInfoW</b> function when the headers can contain non-ASCII characters.\nInstead, an application can use the <a href=\"/windows/desktop/api/stringapiset/nf-stringapiset-multibytetowidechar\">MultiByteToWideChar</a> and <a href=\"/windows/desktop/api/stringapiset/nf-stringapiset-widechartomultibyte\">WideCharToMultiByte</a> functions with a <i>Codepage</i> parameter set to 28591 to map between ANSI characters and  UTF-16LE characters.\n</div>\n<div> </div>\nSee <a href=\"/windows/desktop/WinInet/retrieving-http-headers\">Retrieving HTTP Headers</a> for an example code calling the <b>HttpQueryInfo</b> function.\n\nLike all other aspects of the WinINet API, this function cannot be safely called from within DllMain or the constructors and destructors of global objects.\n\n<div class=\"alert\"><b>Note</b>  WinINet does not support server implementations. In addition, it should not be used from a service.  For server implementations or services use <a href=\"/windows/desktop/WinHttp/winhttp-start-page\">Microsoft Windows HTTP Services (WinHTTP)</a>.</div>\n<div> </div>\n\n\n\n\n> [!NOTE]\n> The wininet.h header defines HttpQueryInfo as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/WinInet/http-sessions\">HTTP Sessions</a>\n\n\n\n<a href=\"/windows/desktop/WinInet/retrieving-http-headers\">Retrieving HTTP Headers</a>\n\n\n\n<a href=\"/windows/desktop/WinInet/wininet-functions\">WinINet Functions</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 59,
+    "end_line": 59,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(wininet);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "HttpQueryInfoW",
+    "impl": [
+     "dlls/wininet/http.c:3978"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "MultiByteToWideChar",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7070"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_a",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "wininet.HttpQueryInfoA",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "WinINet",
+   "header": "wininet.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 57,
+   "body": 55,
+   "code": 34
+  },
+  "cyclomatic": 8,
+  "return_type": "BOOL",
+  "n_params": 5,
+  "tests": {
+   "n_tests_own": 30,
+   "n_tests": 30,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/wininet/tests/http.c::HttpHeaders_test",
+    "dlls/wininet/tests/http.c::InternetReadFile_chunked_test",
+    "dlls/wininet/tests/http.c::InternetReadFile_test",
+    "dlls/wininet/tests/http.c::_test_status_code",
+    "dlls/wininet/tests/http.c::check_notification",
+    "dlls/wininet/tests/http.c::header_cb",
+    "dlls/wininet/tests/http.c::test_HttpQueryInfo",
+    "dlls/wininet/tests/http.c::test_async_HttpSendRequestEx",
+    "dlls/wininet/tests/http.c::test_basic_auth_credentials_cached_manual",
+    "dlls/wininet/tests/http.c::test_basic_auth_credentials_different",
+    "dlls/wininet/tests/http.c::test_basic_auth_credentials_end_session",
+    "dlls/wininet/tests/http.c::test_basic_auth_credentials_manual",
+    "dlls/wininet/tests/http.c::test_basic_auth_credentials_reuse",
+    "dlls/wininet/tests/http.c::test_bogus_accept_types_array",
+    "dlls/wininet/tests/http.c::test_cache_read_gzipped",
+    "dlls/wininet/tests/http.c::test_cookie_header",
+    "dlls/wininet/tests/http.c::test_default_service_port",
+    "dlls/wininet/tests/http.c::test_head_request",
+    "dlls/wininet/tests/http.c::test_header_handling_order",
+    "dlls/wininet/tests/http.c::test_header_override",
+    "dlls/wininet/tests/http.c::test_http_status",
+    "dlls/wininet/tests/http.c::test_invalid_response_headers",
+    "dlls/wininet/tests/http.c::test_large_content",
+    "dlls/wininet/tests/http.c::test_large_header",
+    "dlls/wininet/tests/http.c::test_open_url_async",
+    "dlls/wininet/tests/http.c::test_proxy_direct",
+    "dlls/wininet/tests/http.c::test_proxy_indirect",
+    "dlls/wininet/tests/http.c::test_response_without_headers",
+    "dlls/wininet/tests/http.c::test_security_flags",
+    "dlls/wininet/tests/http.c::test_user_agent_header"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/wininet/nf-wininet-httpqueryinfoa",
+   "source": "win32",
+   "description": "Retrieves header information associated with an HTTP request. (ANSI)",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Wininet.dll"
+  },
+  "exports": [
+   "wininet.HttpQueryInfoA"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

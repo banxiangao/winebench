@@ -1,0 +1,128 @@
+{
+ "id": "0439",
+ "function": {
+  "name": "RtlTimeFieldsToTime",
+  "export_name": "RtlTimeFieldsToTime",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll",
+   "ntoskrnl.exe"
+  ],
+  "side": "PE",
+  "file": "dlls/ntdll/time.c",
+  "start_line": 154,
+  "end_line": 201,
+  "body_lines": 45,
+  "signature": "BOOLEAN WINAPI RtlTimeFieldsToTime( PTIME_FIELDS tfTimeFields, PLARGE_INTEGER Time)",
+  "header_comment": "/******************************************************************************\n *       RtlTimeFieldsToTime [NTDLL.@]\n *\n * Convert a TIME_FIELDS structure into a time.\n *\n * PARAMS\n *   ftTimeFields [I] TIME_FIELDS structure to convert.\n *   Time         [O] Destination for the converted time.\n *\n * RETURNS\n *   Success: TRUE.\n *   Failure: FALSE.\n */",
+  "code": "BOOLEAN WINAPI RtlTimeFieldsToTime(\n\tPTIME_FIELDS tfTimeFields,\n\tPLARGE_INTEGER Time)\n{\n        int month, year, cleaps, day;\n\n\t/* FIXME: normalize the TIME_FIELDS structure here */\n        /* No, native just returns 0 (error) if the fields are not */\n        if( tfTimeFields->Milliseconds< 0 || tfTimeFields->Milliseconds > 999 ||\n                tfTimeFields->Second < 0 || tfTimeFields->Second > 59 ||\n                tfTimeFields->Minute < 0 || tfTimeFields->Minute > 59 ||\n                tfTimeFields->Hour < 0 || tfTimeFields->Hour > 23 ||\n                tfTimeFields->Month < 1 || tfTimeFields->Month > 12 ||\n                tfTimeFields->Day < 1 ||\n                tfTimeFields->Day > MonthLengths\n                    [ tfTimeFields->Month ==2 || IsLeapYear(tfTimeFields->Year)]\n                    [ tfTimeFields->Month - 1] ||\n                tfTimeFields->Year < 1601 )\n            return FALSE;\n\n        /* now calculate a day count from the date\n         * First start counting years from March. This way the leap days\n         * are added at the end of the year, not somewhere in the middle.\n         * Formula's become so much less complicate that way.\n         * To convert: add 12 to the month numbers of Jan and Feb, and \n         * take 1 from the year */\n        if(tfTimeFields->Month < 3) {\n            month = tfTimeFields->Month + 13;\n            year = tfTimeFields->Year - 1;\n        } else {\n            month = tfTimeFields->Month + 1;\n            year = tfTimeFields->Year;\n        }\n        cleaps = (3 * (year / 100) + 3) / 4;   /* nr of \"century leap years\"*/\n        day =  (36525 * year) / 100 - cleaps + /* year * dayperyr, corrected */\n                 (1959 * month) / 64 +         /* months * daypermonth */\n                 tfTimeFields->Day -          /* day of the month */\n                 584817 ;                      /* zero that on 1601-01-01 */\n        /* done */\n        \n        Time->QuadPart = (((((LONGLONG) day * HOURSPERDAY +\n            tfTimeFields->Hour) * MINSPERHOUR +\n            tfTimeFields->Minute) * SECSPERMIN +\n            tfTimeFields->Second ) * 1000 +\n            tfTimeFields->Milliseconds ) * TICKSPERMSEC;\n\n        return TRUE;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <errno.h>",
+   "#include <string.h>",
+   "#include <limits.h>",
+   "#include <time.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ddk/wdm.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"ntdll_misc.h\""
+  ],
+  "resolution": [
+   "ntdll!RtlTimeFieldsToTime [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntdll/tests/time.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "wdm",
+   "path": "wdk-ddi-src/content/wdm/nf-wdm-rtltimefieldstotime.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-rtltimefieldstotime",
+   "documented_name": "rtltimefieldstotime",
+   "file": "docs/0439_windows-driver-docs-ddi_nf-wdm-rtltimefieldstotime.md",
+   "text": "---\nUID: NF:wdm.RtlTimeFieldsToTime\ntitle: RtlTimeFieldsToTime function (wdm.h)\ndescription: The RtlTimeFieldsToTime routine converts TIME_FIELDS information to a system time value.\nold-location: kernel\\rtltimefieldstotime.htm\ntech.root: kernel\nms.date: 04/30/2018\nkeywords: [\"RtlTimeFieldsToTime function\"]\nms.keywords: RtlTimeFieldsToTime, RtlTimeFieldsToTime routine [Kernel-Mode Driver Architecture], k109_9b5d67de-92c3-4fb7-bcd7-4e045ae9ada4.xml, kernel.rtltimefieldstotime, wdm/RtlTimeFieldsToTime\nreq.header: wdm.h\nreq.include-header: Wdm.h, Ntddk.h, Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt: Available starting with Windows 2000.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: Any level (see Remarks section)\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - RtlTimeFieldsToTime\n - wdm/RtlTimeFieldsToTime\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - RtlTimeFieldsToTime\n---\n\n# RtlTimeFieldsToTime function\n\n## -description\n\nThe <b>RtlTimeFieldsToTime</b> routine converts <b>TIME_FIELDS</b> information to a system time value.\n\n## -parameters\n\n### -param TimeFields [in]\n\nPointer to a structure of type [**TIME_FIELDS**](./ns-wdm-time_fields.md) that contains the time information to be converted.\n\n### -param Time [out]\n\nPointer to a buffer, which is to contain the converted system time value as a large integer.\n\n## -returns\n\n<b>RtlTimeFieldsToTime</b> returns <b>TRUE</b> if the input <i>TimeFields</i> data was successfully converted.\n\n## -remarks\n\n<b>RtlTimeFieldsToTime</b> ignores the <b>Weekday</b> value in <i>TimeFields</i>.\n\nCallers of <b>RtlTimeFieldsToTime</b> can be running at any IRQL if both input buffers are resident.\n\n## -see-also\n\n<a href=\"/windows-hardware/drivers/ddi/wdm/nf-wdm-exlocaltimetosystemtime\">ExLocalTimeToSystemTime</a>\n\n<a href=\"/windows-hardware/drivers/ddi/wdm/nf-wdm-exsystemtimetolocaltime\">ExSystemTimeToLocalTime</a>\n\n<a href=\"/windows-hardware/drivers/ddi/wdm/nf-wdm-kequerysystemtime\">KeQuerySystemTime</a>\n\n<a href=\"/windows-hardware/drivers/ddi/wdm/nf-wdm-rtltimetotimefields\">RtlTimeToTimeFields</a>\n\n[**TIME_FIELDS** structure](./ns-wdm-time_fields.md)\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "IsLeapYear",
+   "file": "dlls/ntdll/time.c",
+   "start_line": 70,
+   "end_line": 73,
+   "static": true,
+   "called_from": [
+    "RtlTimeFieldsToTime"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static inline BOOL IsLeapYear(int Year)",
+   "code": "static inline BOOL IsLeapYear(int Year)\n{\n    return Year % 4 == 0 && (Year % 100 != 0 || Year % 400 == 0);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "MonthLengths",
+    "type": "const int[2][12]",
+    "static": true,
+    "start_line": 64,
+    "end_line": 68,
+    "code": "static const int MonthLengths[2][MONSPERYEAR] =\n{\n\t{ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 },\n\t{ 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }\n};"
+   }
+  ],
+  "macros": [
+   {
+    "name": "HOURSPERDAY",
+    "start_line": 49,
+    "end_line": 49,
+    "code": "#define HOURSPERDAY        24"
+   },
+   {
+    "name": "MINSPERHOUR",
+    "start_line": 48,
+    "end_line": 48,
+    "code": "#define MINSPERHOUR        60"
+   },
+   {
+    "name": "SECSPERMIN",
+    "start_line": 47,
+    "end_line": 47,
+    "code": "#define SECSPERMIN         60"
+   },
+   {
+    "name": "TICKSPERMSEC",
+    "start_line": 44,
+    "end_line": 44,
+    "code": "#define TICKSPERMSEC       10000"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

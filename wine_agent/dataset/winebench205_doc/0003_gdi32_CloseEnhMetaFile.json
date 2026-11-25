@@ -1,0 +1,325 @@
+{
+ "id": "0003",
+ "function": {
+  "name": "CloseEnhMetaFile",
+  "export_name": "CloseEnhMetaFile",
+  "module": "gdi32",
+  "source_module": "gdi32",
+  "exported_by": [
+   "gdi32"
+  ],
+  "side": "PE",
+  "file": "dlls/gdi32/emfdc.c",
+  "start_line": 2807,
+  "end_line": 2851,
+  "body_lines": 42,
+  "signature": "HENHMETAFILE WINAPI CloseEnhMetaFile( HDC hdc )",
+  "header_comment": "/******************************************************************\n *           CloseEnhMetaFile (GDI32.@)\n */",
+  "code": "HENHMETAFILE WINAPI CloseEnhMetaFile( HDC hdc )\n{\n    HENHMETAFILE hmf;\n    struct emf *emf;\n    DC_ATTR *dc_attr;\n    HANDLE mapping = 0;\n\n    TRACE(\"(%p)\\n\", hdc );\n\n    if (!(dc_attr = get_dc_attr( hdc )) || !get_dc_emf( dc_attr )) return 0;\n    emf = get_dc_emf( dc_attr );\n\n    if (dc_attr->save_level)\n        RestoreDC( hdc, 1 );\n\n    if (emf->dc_brush) DeleteObject( emf->dc_brush );\n    emf->dc_brush = 0;\n    if (emf->dc_pen) DeleteObject( emf->dc_pen );\n    emf->dc_pen = 0;\n\n    if (!emf_eof( dc_attr )) return 0;\n\n    if (emf->file)  /* disk based metafile */\n    {\n        if (!WriteFile( emf->file, emf->emh, emf->emh->nBytes, NULL, NULL ))\n        {\n            CloseHandle( emf->file );\n            emf->file = 0;\n            return 0;\n        }\n        HeapFree( GetProcessHeap(), 0, emf->emh );\n        mapping = CreateFileMappingA( emf->file, NULL, PAGE_READONLY, 0, 0, NULL );\n        TRACE( \"mapping = %p\\n\", mapping );\n        emf->emh = MapViewOfFile( mapping, FILE_MAP_READ, 0, 0, 0 );\n        TRACE( \"view = %p\\n\", emf->emh );\n        CloseHandle( mapping );\n        CloseHandle( emf->file );\n    }\n\n    hmf = EMF_Create_HENHMETAFILE( emf->emh, emf->emh->nBytes, emf->file != 0 );\n    emf->file = 0;\n    emf->emh = NULL;  /* So it won't be deleted */\n    DeleteDC( hdc );\n    return hmf;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdlib.h>",
+   "#include \"gdi_private.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "gdi32!CloseEnhMetaFile [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdi32/tests/dc.c",
+   "dlls/gdi32/tests/gdiobj.c",
+   "dlls/gdi32/tests/metafile.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 31
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-closeenhmetafile.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-closeenhmetafile",
+   "documented_name": "closeenhmetafile",
+   "file": "docs/0003_sdk-api_nf-wingdi-closeenhmetafile.md",
+   "text": "---\nUID: NF:wingdi.CloseEnhMetaFile\ntitle: CloseEnhMetaFile function (wingdi.h)\ndescription: The CloseEnhMetaFile function closes an enhanced-metafile device context and returns a handle that identifies an enhanced-format metafile.\nhelpviewer_keywords: [\"CloseEnhMetaFile\",\"CloseEnhMetaFile function [Windows GDI]\",\"_win32_CloseEnhMetaFile\",\"gdi.closeenhmetafile\",\"wingdi/CloseEnhMetaFile\"]\nold-location: gdi\\closeenhmetafile.htm\ntech.root: gdi\nms.assetid: 3c4a0d8b-75a5-4729-8c64-476c36d01a90\nms.date: 12/05/2018\nms.keywords: CloseEnhMetaFile, CloseEnhMetaFile function [Windows GDI], _win32_CloseEnhMetaFile, gdi.closeenhmetafile, wingdi/CloseEnhMetaFile\nreq.header: wingdi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CloseEnhMetaFile\n - wingdi/CloseEnhMetaFile\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - gdi32.dll\n - ext-ms-win-gdi-metafile-l1-1-2.dll\n - GDI32Full.dll\napi_name:\n - CloseEnhMetaFile\n---\n\n# CloseEnhMetaFile function\n\n\n## -description\n\nThe <b>CloseEnhMetaFile</b> function closes an enhanced-metafile device context and returns a handle that identifies an enhanced-format metafile.\n\n## -parameters\n\n### -param hdc [in]\n\nHandle to an enhanced-metafile device context.\n\n## -returns\n\nIf the function succeeds, the return value is a handle to an enhanced metafile.\n\nIf the function fails, the return value is <b>NULL</b>.\n\n## -remarks\n\nAn application can use the enhanced-metafile handle returned by the <b>CloseEnhMetaFile</b> function to perform the following tasks:\n\n<ul>\n<li>Display a picture stored in an enhanced metafile</li>\n<li>Create copies of the enhanced metafile</li>\n<li>Enumerate, edit, or copy individual records in the enhanced metafile</li>\n<li>Retrieve an optional description of the metafile contents from the enhanced-metafile header</li>\n<li>Retrieve a copy of the enhanced-metafile header</li>\n<li>Retrieve a binary copy of the enhanced metafile</li>\n<li>Enumerate the colors in the optional palette</li>\n<li>Convert an enhanced-format metafile into a Windows-format metafile</li>\n</ul>\nWhen the application no longer needs the enhanced metafile handle, it should release the handle by calling the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-deleteenhmetafile\">DeleteEnhMetaFile</a> function.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-copyenhmetafilea\">CopyEnhMetaFile</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-createenhmetafilea\">CreateEnhMetaFile</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-deleteenhmetafile\">DeleteEnhMetaFile</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-enumenhmetafile\">EnumEnhMetaFile</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-getenhmetafilebits\">GetEnhMetaFileBits</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-getwinmetafilebits\">GetWinMetaFileBits</a>\n\n\n\n<a href=\"/windows/desktop/gdi/metafile-functions\">Metafile Functions</a>\n\n\n\n<a href=\"/windows/desktop/gdi/metafiles\">Metafiles Overview</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-playenhmetafile\">PlayEnhMetaFile</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_dc_emf",
+   "file": "dlls/gdi32/emfdc.c",
+   "start_line": 86,
+   "end_line": 89,
+   "static": true,
+   "called_from": [
+    "CloseEnhMetaFile",
+    "emf_eof"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/emfdc.c:422",
+    "dlls/gdi32/emfdc.c:563",
+    "dlls/gdi32/emfdc.c:630",
+    "dlls/gdi32/emfdc.c:734",
+    "dlls/gdi32/emfdc.c:795"
+   ],
+   "signature": "static struct emf *get_dc_emf( DC_ATTR *dc_attr )",
+   "code": "static struct emf *get_dc_emf( DC_ATTR *dc_attr )\n{\n    return (struct emf *)(UINT_PTR)dc_attr->emf;\n}"
+  },
+  {
+   "name": "emf_eof",
+   "file": "dlls/gdi32/emfdc.c",
+   "start_line": 2765,
+   "end_line": 2802,
+   "static": true,
+   "called_from": [
+    "CloseEnhMetaFile"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/emfdc.c:2963"
+   ],
+   "signature": "static BOOL emf_eof( DC_ATTR *dc_attr )",
+   "code": "static BOOL emf_eof( DC_ATTR *dc_attr )\n{\n    struct emf *emf = get_dc_emf( dc_attr );\n    UINT size, palette_size;\n    EMREOF *emr;\n    BOOL ret;\n\n    palette_size = emf->palette_used * sizeof(*emf->palette);\n    size = sizeof(*emr) + palette_size;\n    if (!(emr = HeapAlloc( GetProcessHeap(), 0, size ))) return FALSE;\n\n    emr->emr.iType = EMR_EOF;\n    emr->emr.nSize = size;\n    emr->nPalEntries = emf->palette_used;\n    emr->offPalEntries = FIELD_OFFSET(EMREOF, nSizeLast);\n    memcpy( (BYTE *)emr + emr->offPalEntries, emf->palette, palette_size );\n    /* Set nSizeLast */\n    ((DWORD *)((BYTE *)emr + size))[-1] = size;\n    ret = emfdc_record( emf, &emr->emr );\n    HeapFree( GetProcessHeap(), 0, emr );\n    if (!ret) return FALSE;\n\n    emf->emh->rclBounds = dc_attr->emf_bounds;\n\n    /* Update rclFrame if not initialized in CreateEnhMetaFile */\n    if (emf->emh->rclFrame.left > emf->emh->rclFrame.right)\n    {\n        emf->emh->rclFrame.left = emf->emh->rclBounds.left *\n            emf->emh->szlMillimeters.cx * 100 / emf->emh->szlDevice.cx;\n        emf->emh->rclFrame.top = emf->emh->rclBounds.top *\n            emf->emh->szlMillimeters.cy * 100 / emf->emh->szlDevice.cy;\n        emf->emh->rclFrame.right = emf->emh->rclBounds.right *\n            emf->emh->szlMillimeters.cx * 100 / emf->emh->szlDevice.cx;\n        emf->emh->rclFrame.bottom = emf->emh->rclBounds.bottom *\n            emf->emh->szlMillimeters.cy * 100 / emf->emh->szlDevice.cy;\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "emfdc_record",
+   "file": "dlls/gdi32/emfdc.c",
+   "start_line": 96,
+   "end_line": 119,
+   "static": true,
+   "called_from": [
+    "emf_eof"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/emfdc.c:432",
+    "dlls/gdi32/emfdc.c:492",
+    "dlls/gdi32/emfdc.c:548",
+    "dlls/gdi32/emfdc.c:591",
+    "dlls/gdi32/emfdc.c:625"
+   ],
+   "signature": "static BOOL emfdc_record( struct emf *emf, EMR *emr )",
+   "code": "static BOOL emfdc_record( struct emf *emf, EMR *emr )\n{\n    DWORD len, size;\n    ENHMETAHEADER *emh;\n\n    TRACE( \"record %ld, size %ld\\n\", emr->iType, emr->nSize );\n\n    assert( !(emr->nSize & 3) );\n\n    emf->emh->nBytes += emr->nSize;\n    emf->emh->nRecords++;\n\n    size = HeapSize( GetProcessHeap(), 0, emf->emh );\n    len = emf->emh->nBytes;\n    if (len > size)\n    {\n        size += (size / 2) + emr->nSize;\n        emh = HeapReAlloc( GetProcessHeap(), 0, emf->emh, size );\n        if (!emh) return FALSE;\n        emf->emh = emh;\n    }\n    memcpy( (char *)emf->emh + emf->emh->nBytes - emr->nSize, emr, emr->nSize );\n    return TRUE;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "emf",
+    "kind": "struct_decl",
+    "start_line": 43,
+    "end_line": 56,
+    "code": "struct emf\n{\n    ENHMETAHEADER  *emh;\n    DC_ATTR *dc_attr;\n    UINT     handles_size, cur_handles;\n    HGDIOBJ *handles;\n    HANDLE   file;\n    HBRUSH   dc_brush;\n    HPEN     dc_pen;\n    BOOL     path;\n    DWORD    palette_size;\n    DWORD    palette_used;\n    PALETTEENTRY *palette;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 31,
+    "end_line": 31,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(enhmetafile);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "EMF_Create_HENHMETAFILE",
+    "file": "dlls/gdi32/enhmetafile.c",
+    "start_line": 259
+   },
+   {
+    "name": "get_dc_attr",
+    "file": "dlls/gdi32/dc.c",
+    "start_line": 121
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "DeleteDC",
+    "impl": [
+     "dlls/gdi32/dc.c:532"
+    ]
+   },
+   {
+    "name": "DeleteObject",
+    "impl": [
+     "dlls/gdi32/objects.c:194"
+    ]
+   },
+   {
+    "name": "RestoreDC",
+    "impl": [
+     "dlls/gdi32/dc.c:608"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CloseHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "CreateFileMappingA",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernel32/sync.c:430"
+    ]
+   },
+   {
+    "name": "HeapAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "HeapReAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2229"
+    ]
+   },
+   {
+    "name": "HeapSize",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2349"
+    ]
+   },
+   {
+    "name": "MapViewOfFile",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:279"
+    ]
+   },
+   {
+    "name": "WriteFile",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:4027"
+    ]
+   },
+   {
+    "name": "_assert",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/exit.c:319"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "gdi32.CloseEnhMetaFile",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI",
+   "header": "wingdi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 45,
+   "body": 44,
+   "code": 31
+  },
+  "cyclomatic": 9,
+  "return_type": "HENHMETAFILE",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 31,
+   "n_tests": 38,
+   "n_tests_other": 7,
+   "own_test_functions": [
+    "dlls/gdi32/tests/dc.c::test_CreateCompatibleDC",
+    "dlls/gdi32/tests/dc.c::test_clip_box",
+    "dlls/gdi32/tests/dc.c::test_printer_dc",
+    "dlls/gdi32/tests/gdiobj.c::test_shared_handle_table",
+    "dlls/gdi32/tests/metafile.c::getwinmetafilebits",
+    "dlls/gdi32/tests/metafile.c::test_ExtTextOut",
+    "dlls/gdi32/tests/metafile.c::test_ExtTextOutScale",
+    "dlls/gdi32/tests/metafile.c::test_SaveDC",
+    "dlls/gdi32/tests/metafile.c::test_emf_AlphaBlend",
+    "dlls/gdi32/tests/metafile.c::test_emf_BitBlt",
+    "dlls/gdi32/tests/metafile.c::test_emf_DCBrush",
+    "dlls/gdi32/tests/metafile.c::test_emf_ExtTextOut_on_path",
+    "dlls/gdi32/tests/metafile.c::test_emf_GradientFill",
+    "dlls/gdi32/tests/metafile.c::test_emf_PolyPolyline",
+    "dlls/gdi32/tests/metafile.c::test_emf_SetDIBitsToDevice",
+    "dlls/gdi32/tests/metafile.c::test_emf_SetPixel",
+    "dlls/gdi32/tests/metafile.c::test_emf_StretchDIBits",
+    "dlls/gdi32/tests/metafile.c::test_emf_WorldTransform",
+    "dlls/gdi32/tests/metafile.c::test_emf_attrs",
+    "dlls/gdi32/tests/metafile.c::test_emf_blit",
+    "dlls/gdi32/tests/metafile.c::test_emf_clipping",
+    "dlls/gdi32/tests/metafile.c::test_emf_extpen",
+    "dlls/gdi32/tests/metafile.c::test_emf_mask_blit",
+    "dlls/gdi32/tests/metafile.c::test_emf_palette",
+    "dlls/gdi32/tests/metafile.c::test_emf_paths",
+    "dlls/gdi32/tests/metafile.c::test_emf_pattern_brush",
+    "dlls/gdi32/tests/metafile.c::test_emf_polybezier",
+    "dlls/gdi32/tests/metafile.c::test_emf_select",
+    "dlls/gdi32/tests/metafile.c::test_emf_text_extents",
+    "dlls/gdi32/tests/metafile.c::test_enhmetafile_file",
+    "dlls/gdi32/tests/metafile.c::test_gdiis"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-closeenhmetafile",
+   "source": "win32",
+   "description": "The CloseEnhMetaFile function closes an enhanced-metafile device context and returns a handle that identifies an enhanced-format metafile.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Gdi32.dll"
+  },
+  "exports": [
+   "gdi32.CloseEnhMetaFile"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

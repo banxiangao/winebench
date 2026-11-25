@@ -1,0 +1,269 @@
+{
+ "id": "0156",
+ "function": {
+  "name": "NtUserEmptyClipboard",
+  "export_name": "EmptyClipboard",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "user.exe16",
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/clipboard.c",
+  "start_line": 229,
+  "end_line": 257,
+  "body_lines": 26,
+  "signature": "BOOL WINAPI NtUserEmptyClipboard(void)",
+  "header_comment": "/**************************************************************************\n *           NtUserEmptyClipboard    (win32u.@)\n */",
+  "code": "BOOL WINAPI NtUserEmptyClipboard(void)\n{\n    BOOL ret;\n    HWND owner = NtUserGetClipboardOwner();\n    struct list free_list = LIST_INIT( free_list );\n\n    TRACE( \"owner %p\\n\", owner );\n\n    if (owner)\n        send_message_timeout( owner, WM_DESTROYCLIPBOARD, 0, 0, SMTO_ABORTIFHUNG, 5000, FALSE );\n\n    pthread_mutex_lock( &clipboard_mutex );\n\n    SERVER_START_REQ( empty_clipboard )\n    {\n        ret = !wine_server_call_err( req );\n    }\n    SERVER_END_REQ;\n\n    if (ret)\n    {\n        list_move_tail( &free_list, &formats_to_free );\n        list_move_tail( &free_list, &cached_formats );\n    }\n\n    pthread_mutex_unlock( &clipboard_mutex );\n    free_cached_formats( &free_list );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <pthread.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"win32u_private.h\"",
+   "#include \"ntgdi_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "user32!EmptyClipboard [stdcall] -> NtUserEmptyClipboard implicitly imported from win32u",
+   "win32u!NtUserEmptyClipboard [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/clipboard.c",
+   "dlls/user32/tests/edit.c",
+   "dlls/user32/tests/msg.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 15
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "user.exe16",
+   "source_module": "user.exe16",
+   "exported_by": [
+    "user.exe16"
+   ],
+   "file": "dlls/user.exe16/user.c",
+   "start_line": 875,
+   "resolution": [
+    "user.exe16!EmptyClipboard [pascal -ret16] -> internal symbol EmptyClipboard16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 880,
+   "signature": "BOOL16 WINAPI EmptyClipboard16(void)",
+   "code": "BOOL16 WINAPI EmptyClipboard16(void)\n{\n    BOOL ret = EmptyClipboard();\n    if (ret) free_clipboard_formats();\n    return ret;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-emptyclipboard.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-emptyclipboard",
+   "documented_name": "emptyclipboard",
+   "file": "docs/0156_sdk-api_nf-winuser-emptyclipboard.md",
+   "text": "---\nUID: NF:winuser.EmptyClipboard\ntitle: EmptyClipboard function (winuser.h)\ndescription: Empties the clipboard and frees handles to data in the clipboard. The function then assigns ownership of the clipboard to the window that currently has the clipboard open.\nhelpviewer_keywords: [\"EmptyClipboard\",\"EmptyClipboard function [Data Exchange]\",\"_win32_EmptyClipboard\",\"_win32_emptyclipboard_cpp\",\"dataxchg.emptyclipboard\",\"winui._win32_emptyclipboard\",\"winuser/EmptyClipboard\"]\nold-location: dataxchg\\emptyclipboard.htm\ntech.root: dataxchg\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\dataexchange\\clipboard\\clipboardreference\\clipboardfunctions\\emptyclipboard.htm\nms.date: 12/05/2018\nms.keywords: EmptyClipboard, EmptyClipboard function [Data Exchange], _win32_EmptyClipboard, _win32_emptyclipboard_cpp, dataxchg.emptyclipboard, winui._win32_emptyclipboard, winuser/EmptyClipboard\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - EmptyClipboard\n - winuser/EmptyClipboard\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-rtcore-ntuser-misc-l1-1-0.dll\n - ext-ms-win-ntuser-misc-l1-7-0.dll\n - ext-ms-win-ntuser-misc-l1-6-0.dll\n - User32.dll\n - API-MS-Win-RTCore-NTUser-clipboard-l1-1-0.dll\n - minuser.dll\n - Ext-MS-Win-NTUser-Misc-l1-2-0.dll\n - Ext-MS-Win-NTUser-Misc-l1-3-0.dll\n - api-ms-win-ntuser-ie-clipboard-l1-1-0.dll\n - ie_stubs.dll\n - ext-ms-win-ntuser-misc-l1-3-1.dll\n - Ext-MS-Win-NTUser-Misc-L1-4-0.dll\n - Ext-Ms-Win-NTUser-Misc-L1-5-0.dll\n - Ext-MS-Win-NTUser-Misc-L1-5-1.dll\napi_name:\n - EmptyClipboard\nreq.apiset: ext-ms-win-ntuser-misc-l1-2-0 (introduced in Windows 8.1)\n---\n\n# EmptyClipboard function\n\n\n## -description\n\nEmpties the clipboard and frees handles to data in the clipboard. The function then assigns ownership of the clipboard to the window that currently has the clipboard open.\n\n\n\n## -returns\n\nType: <b>BOOL</b>\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero. To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nBefore calling <b>EmptyClipboard</b>, an application must open the clipboard by using the <a href=\"/windows/desktop/api/winuser/nf-winuser-openclipboard\">OpenClipboard</a> function. If the application specifies a <b>NULL</b> window handle when opening the clipboard, <b>EmptyClipboard</b> succeeds but sets the clipboard owner to <b>NULL</b>. Note that this causes <a href=\"/windows/desktop/api/winuser/nf-winuser-setclipboarddata\">SetClipboardData</a> to fail. \n\n\n#### Examples\n\nFor an example, see <a href=\"/windows/desktop/dataxchg/using-the-clipboard\">Copying Information to the Clipboard</a>.\n\n<div class=\"code\"></div>\n\n## -see-also\n\n<a href=\"/windows/desktop/dataxchg/clipboard\">Clipboard</a>\n\n\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-openclipboard\">OpenClipboard</a>\n\n\n\n<b>Reference</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-setclipboarddata\">SetClipboardData</a>\n\n\n\n<a href=\"/windows/desktop/dataxchg/wm-destroyclipboard\">WM_DESTROYCLIPBOARD</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "free_cached_formats",
+   "file": "dlls/win32u/clipboard.c",
+   "start_line": 135,
+   "end_line": 144,
+   "static": true,
+   "called_from": [
+    "NtUserEmptyClipboard"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/clipboard.c:197"
+   ],
+   "signature": "static void free_cached_formats( struct list *list )",
+   "code": "static void free_cached_formats( struct list *list )\n{\n    struct list *ptr;\n\n    while ((ptr = list_head( list )))\n    {\n        list_remove( ptr );\n        free_cached_data( LIST_ENTRY( ptr, struct cached_format, entry ));\n    }\n}"
+  },
+  {
+   "name": "free_cached_data",
+   "file": "dlls/win32u/clipboard.c",
+   "start_line": 109,
+   "end_line": 132,
+   "static": true,
+   "called_from": [
+    "free_cached_formats"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/clipboard.c:620"
+   ],
+   "signature": "static void free_cached_data( struct cached_format *cache )",
+   "code": "static void free_cached_data( struct cached_format *cache )\n{\n    struct free_cached_data_params params;\n    void *ret_ptr;\n    ULONG ret_len;\n\n    switch (cache->format)\n    {\n    case CF_BITMAP:\n    case CF_PALETTE:\n        make_gdi_object_system( cache->handle, FALSE );\n    case CF_DSPBITMAP:\n        NtGdiDeleteObjectApp( cache->handle );\n        break;\n\n    default:\n        params.format = cache->format;\n        params.handle = cache->handle;\n        KeUserModeCallback( NtUserFreeCachedClipboardData, &params, sizeof(params),\n                            &ret_ptr, &ret_len );\n        break;\n    }\n    free( cache );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "cached_format",
+    "kind": "struct_decl",
+    "start_line": 45,
+    "end_line": 51,
+    "code": "struct cached_format\n{\n    struct list entry;       /* entry in cache list */\n    UINT        format;      /* format id */\n    UINT        seqno;       /* sequence number when the data was set */\n    HANDLE      handle;      /* original data handle */\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 38,
+    "end_line": 38,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(clipboard);"
+   },
+   {
+    "name": "cached_formats",
+    "type": "struct list",
+    "static": true,
+    "start_line": 53,
+    "end_line": 53,
+    "code": "static struct list cached_formats = LIST_INIT( cached_formats );"
+   },
+   {
+    "name": "clipboard_mutex",
+    "type": "pthread_mutex_t",
+    "static": true,
+    "start_line": 43,
+    "end_line": 43,
+    "code": "static pthread_mutex_t clipboard_mutex = PTHREAD_MUTEX_INITIALIZER;"
+   },
+   {
+    "name": "formats_to_free",
+    "type": "struct list",
+    "static": true,
+    "start_line": 54,
+    "end_line": 54,
+    "code": "static struct list formats_to_free = LIST_INIT( formats_to_free );"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "make_gdi_object_system",
+    "file": "dlls/win32u/gdiobj.c",
+    "start_line": 452
+   },
+   {
+    "name": "send_message_timeout",
+    "file": "dlls/win32u/message.c",
+    "start_line": 4602
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "NtGdiDeleteObjectApp",
+    "impl": [
+     "dlls/win32u/gdiobj.c:857"
+    ]
+   },
+   {
+    "name": "NtUserGetClipboardOwner",
+    "impl": [
+     "dlls/win32u/clipboard.c:359"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "list_head",
+   "list_move_tail",
+   "list_remove",
+   "wine_dbg_log",
+   "wine_server_call_err"
+  ],
+  "system": [
+   "free",
+   "memset",
+   "pthread_mutex_lock",
+   "pthread_mutex_unlock"
+  ],
+  "unresolved": [
+   "KeUserModeCallback"
+  ],
+  "server_requests": [
+   {
+    "request": "empty_clipboard",
+    "handler": "server/clipboard.c:525"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "win32u.NtUserEmptyClipboard",
+  "category": {
+   "l1": "Data access and storage",
+   "l2": "Data exchange (DDE, clipboard)",
+   "header": "winuser.h",
+   "textbook": "Communications",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 29,
+   "body": 28,
+   "code": 16
+  },
+  "cyclomatic": 3,
+  "return_type": "BOOL",
+  "n_params": 0,
+  "tests": {
+   "n_tests_own": 15,
+   "n_tests": 19,
+   "n_tests_other": 4,
+   "own_test_functions": [
+    "dlls/user32/tests/clipboard.c::clipboard_thread",
+    "dlls/user32/tests/clipboard.c::empty_clipboard_thread",
+    "dlls/user32/tests/clipboard.c::grab_clipboard_process",
+    "dlls/user32/tests/clipboard.c::open_and_empty_clipboard_thread",
+    "dlls/user32/tests/clipboard.c::open_and_empty_clipboard_win_thread",
+    "dlls/user32/tests/clipboard.c::test_ClipboardOwner",
+    "dlls/user32/tests/clipboard.c::test_GetUpdatedClipboardFormats",
+    "dlls/user32/tests/clipboard.c::test_RegisterClipboardFormatA",
+    "dlls/user32/tests/clipboard.c::test_data_handles",
+    "dlls/user32/tests/clipboard.c::test_handles",
+    "dlls/user32/tests/clipboard.c::test_string_data",
+    "dlls/user32/tests/clipboard.c::test_synthesized",
+    "dlls/user32/tests/edit.c::test_espassword",
+    "dlls/user32/tests/edit.c::test_paste",
+    "dlls/user32/tests/msg.c::clear_clipboard_"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-emptyclipboard",
+   "source": "win32",
+   "description": "Empties the clipboard and frees handles to data in the clipboard. The function then assigns ownership of the clipboard to the window that currently has the clipboard open.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "User32.dll"
+  },
+  "exports": [
+   "user32.EmptyClipboard",
+   "win32u.NtUserEmptyClipboard"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

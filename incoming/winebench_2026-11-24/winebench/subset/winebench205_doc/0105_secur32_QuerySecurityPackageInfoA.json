@@ -1,0 +1,185 @@
+{
+ "id": "0105",
+ "function": {
+  "name": "QuerySecurityPackageInfoA",
+  "export_name": "QuerySecurityPackageInfoA",
+  "module": "secur32",
+  "source_module": "secur32",
+  "exported_by": [
+   "schannel",
+   "secur32",
+   "security",
+   "sspicli"
+  ],
+  "side": "PE",
+  "file": "dlls/secur32/wrapper.c",
+  "start_line": 539,
+  "end_line": 601,
+  "body_lines": 60,
+  "signature": "SECURITY_STATUS WINAPI QuerySecurityPackageInfoA(SEC_CHAR *pszPackageName, PSecPkgInfoA *ppPackageInfo)",
+  "header_comment": "/***********************************************************************\n *\t\tQuerySecurityPackageInfoA (SECUR32.@)\n */",
+  "code": "SECURITY_STATUS WINAPI QuerySecurityPackageInfoA(SEC_CHAR *pszPackageName,\n PSecPkgInfoA *ppPackageInfo)\n{\n    SECURITY_STATUS ret;\n\n    TRACE(\"%s %p\\n\", debugstr_a(pszPackageName), ppPackageInfo);\n    if (pszPackageName)\n    {\n        SecurePackage *package = SECUR32_findPackageA(pszPackageName);\n\n        if (package)\n        {\n            size_t bytesNeeded = sizeof(SecPkgInfoA);\n            int nameLen = 0, commentLen = 0;\n\n            if (package->infoW.Name)\n            {\n                nameLen = WideCharToMultiByte(CP_ACP, 0,\n                 package->infoW.Name, -1, NULL, 0, NULL, NULL);\n                bytesNeeded += nameLen;\n            }\n            if (package->infoW.Comment)\n            {\n                commentLen = WideCharToMultiByte(CP_ACP, 0,\n                 package->infoW.Comment, -1, NULL, 0, NULL, NULL);\n                bytesNeeded += commentLen;\n            }\n            /* freed with FreeContextBuffer */\n            if ((*ppPackageInfo = RtlAllocateHeap(GetProcessHeap(), 0, bytesNeeded)))\n            {\n                PSTR nextString = (PSTR)((PBYTE)*ppPackageInfo +\n                 sizeof(SecPkgInfoA));\n\n                memcpy(*ppPackageInfo, &package->infoW, sizeof(package->infoW));\n                if (package->infoW.Name)\n                {\n                    (*ppPackageInfo)->Name = nextString;\n                    nextString += WideCharToMultiByte(CP_ACP, 0,\n                     package->infoW.Name, -1, nextString, nameLen, NULL, NULL);\n                }\n                else\n                    (*ppPackageInfo)->Name = NULL;\n                if (package->infoW.Comment)\n                {\n                    (*ppPackageInfo)->Comment = nextString;\n                    nextString += WideCharToMultiByte(CP_ACP, 0,\n                     package->infoW.Comment, -1, nextString, commentLen, NULL,\n                     NULL);\n                }\n                else\n                    (*ppPackageInfo)->Comment = NULL;\n                ret = SEC_E_OK;\n            }\n            else\n                ret = SEC_E_INSUFFICIENT_MEMORY;\n        }\n        else\n            ret = SEC_E_SECPKG_NOT_FOUND;\n    }\n    else\n        ret = SEC_E_SECPKG_NOT_FOUND;\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"sspi.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"secur32_priv.h\""
+  ],
+  "resolution": [
+   "secur32!QuerySecurityPackageInfoA [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/secur32/tests/main.c",
+   "dlls/secur32/tests/negotiate.c",
+   "dlls/secur32/tests/ntlm.c",
+   "dlls/secur32/tests/secur32.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 18
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "sspi",
+   "path": "sdk-api-src/content/sspi/nf-sspi-querysecuritypackageinfoa.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/sspi/nf-sspi-querysecuritypackageinfoa",
+   "documented_name": "querysecuritypackageinfoa",
+   "file": "docs/0105_sdk-api_nf-sspi-querysecuritypackageinfoa.md",
+   "text": "---\nUID: NF:sspi.QuerySecurityPackageInfoA\ntitle: QuerySecurityPackageInfoA function (sspi.h)\ndescription: Retrieves information about a specified security package. This information includes the bounds on sizes of authentication information, credentials, and contexts. (ANSI)\nhelpviewer_keywords: [\"QuerySecurityPackageInfoA\", \"sspi/QuerySecurityPackageInfoA\"]\nold-location: security\\querysecuritypackageinfo.htm\ntech.root: security\nms.assetid: 130ef0fe-bb13-4a65-b476-cd25ed234da1\nms.date: 12/05/2018\nms.keywords: QuerySecurityPackageInfo, QuerySecurityPackageInfo function [Security], QuerySecurityPackageInfoA, QuerySecurityPackageInfoW, _ssp_querysecuritypackageinfo, security.querysecuritypackageinfo, sspi/QuerySecurityPackageInfo, sspi/QuerySecurityPackageInfoA, sspi/QuerySecurityPackageInfoW\nreq.header: sspi.h\nreq.include-header: Security.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: QuerySecurityPackageInfoW (Unicode) and QuerySecurityPackageInfoA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Secur32.lib\nreq.dll: Secur32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - QuerySecurityPackageInfoA\n - sspi/QuerySecurityPackageInfoA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Secur32.dll\napi_name:\n - QuerySecurityPackageInfo\n - QuerySecurityPackageInfoA\n - QuerySecurityPackageInfoW\n---\n\n# QuerySecurityPackageInfoA function\n\n\n## -description\n\nRetrieves information about a specified <a href=\"/windows/desktop/SecGloss/s-gly\">security package</a>. This information includes the bounds on sizes of authentication information, <a href=\"/windows/desktop/SecGloss/c-gly\">credentials</a>, and contexts.\n\n## -parameters\n\n### -param pszPackageName [in]\n\nPointer to a null-terminated string that specifies the name of the security package.\n\n### -param ppPackageInfo [out]\n\nPointer to a variable that receives a pointer to a \n<a href=\"/windows/desktop/api/sspi/ns-sspi-secpkginfoa\">SecPkgInfo</a> structure containing information about the specified security package.\n\n## -returns\n\nIf the function succeeds, the return value is SEC_E_OK.\n\nIf the function fails, the return value is a nonzero error code.\n\n## -remarks\n\nThe caller must call the \n<a href=\"/windows/desktop/api/sspi/nf-sspi-freecontextbuffer\">FreeContextBuffer</a> function to free the buffer returned in <i>ppPackageInfo</i>.\n\n\n\n\n\n> [!NOTE]\n> The sspi.h header defines QuerySecurityPackageInfo as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/api/sspi/nf-sspi-freecontextbuffer\">FreeContextBuffer</a>\n\n\n\n<a href=\"/windows/desktop/SecAuthN/authentication-functions\">SSPI Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/sspi/ns-sspi-secpkginfoa\">SecPkgInfo</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 31,
+    "end_line": 31,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(secur32);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "SECUR32_findPackageA",
+    "file": "dlls/secur32/secur32.c",
+    "start_line": 584
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "RtlAllocateHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "debugstr_a",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "secur32.QuerySecurityPackageInfoA",
+  "category": {
+   "l1": "Security and identity",
+   "l2": "Authentication",
+   "header": "sspi.h",
+   "textbook": "Protection",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 63,
+   "body": 61,
+   "code": 40
+  },
+  "cyclomatic": 8,
+  "return_type": "SECURITY_STATUS",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 18,
+   "n_tests": 18,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/secur32/tests/main.c::setupPackageA",
+    "dlls/secur32/tests/main.c::testQuerySecurityPackageInfo",
+    "dlls/secur32/tests/negotiate.c::START_TEST(negotiate)",
+    "dlls/secur32/tests/negotiate.c::setup_client",
+    "dlls/secur32/tests/negotiate.c::setup_server",
+    "dlls/secur32/tests/ntlm.c::setupClient",
+    "dlls/secur32/tests/ntlm.c::setupFakeServer",
+    "dlls/secur32/tests/ntlm.c::setupServer",
+    "dlls/secur32/tests/ntlm.c::testAcquireCredentialsHandle",
+    "dlls/secur32/tests/ntlm.c::testAcquireCredentialsHandleW",
+    "dlls/secur32/tests/ntlm.c::testAuth",
+    "dlls/secur32/tests/ntlm.c::testInitializeSecurityContextFlags",
+    "dlls/secur32/tests/ntlm.c::testQueryCredentialsAttributes",
+    "dlls/secur32/tests/ntlm.c::test_Encrypt",
+    "dlls/secur32/tests/ntlm.c::test_Signature",
+    "dlls/secur32/tests/ntlm.c::test_cred_multiple_use",
+    "dlls/secur32/tests/ntlm.c::test_null_auth_data",
+    "dlls/secur32/tests/secur32.c::test_kerberos"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/sspi/nf-sspi-querysecuritypackageinfoa",
+   "source": "win32",
+   "description": "Retrieves information about a specified security package. This information includes the bounds on sizes of authentication information, credentials, and contexts. (ANSI)",
+   "min_windows": "Windows XP [desktop apps only]",
+   "documented_dll": "Secur32.dll"
+  },
+  "exports": [
+   "schannel.QuerySecurityPackageInfoA",
+   "secur32.QuerySecurityPackageInfoA",
+   "security.QuerySecurityPackageInfoA",
+   "sspicli.QuerySecurityPackageInfoA"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

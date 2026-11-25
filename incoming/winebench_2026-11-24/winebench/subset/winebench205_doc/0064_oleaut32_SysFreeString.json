@@ -1,0 +1,376 @@
+{
+ "id": "0064",
+ "function": {
+  "name": "SysFreeString",
+  "export_name": "SysFreeString",
+  "module": "oleaut32",
+  "source_module": "oleaut32",
+  "exported_by": [
+   "ole2disp.dll16",
+   "oleaut32"
+  ],
+  "side": "PE",
+  "file": "dlls/oleaut32/oleaut.c",
+  "start_line": 273,
+  "end_line": 323,
+  "body_lines": 48,
+  "signature": "void WINAPI DECLSPEC_HOTPATCH SysFreeString(BSTR str)",
+  "header_comment": "/******************************************************************************\n *\t\tSysFreeString\t[OLEAUT32.6]\n *\n * Free a BSTR.\n *\n * PARAMS\n *  str [I] BSTR to free.\n *\n * RETURNS\n *  Nothing.\n *\n * NOTES\n *  See BSTR.\n *  str may be NULL, in which case this function does nothing.\n */",
+  "code": "void WINAPI DECLSPEC_HOTPATCH SysFreeString(BSTR str)\n{\n    bstr_cache_entry_t *cache_entry;\n    bstr_t *bstr;\n    IMalloc *malloc = get_malloc();\n    SIZE_T alloc_size;\n\n    if(!str)\n        return;\n\n    bstr = bstr_from_str(str);\n\n    alloc_size = IMalloc_GetSize(malloc, bstr);\n    if (alloc_size == ~0UL)\n        return;\n\n    cache_entry = get_cache_entry_from_alloc_size(alloc_size);\n    if(cache_entry) {\n        unsigned i;\n\n        EnterCriticalSection(&cs_bstr_cache);\n\n        /* According to tests, freeing a string that's already in cache doesn't corrupt anything.\n         * For that to work we need to search the cache. */\n        for(i=0; i < cache_entry->cnt; i++) {\n            if(cache_entry->buf[(cache_entry->head+i) % BUCKET_BUFFER_SIZE] == bstr) {\n                WARN_(heap)(\"String already is in cache!\\n\");\n                LeaveCriticalSection(&cs_bstr_cache);\n                return;\n            }\n        }\n\n        if(cache_entry->cnt < ARRAY_SIZE(cache_entry->buf)) {\n            cache_entry->buf[(cache_entry->head+cache_entry->cnt) % BUCKET_BUFFER_SIZE] = bstr;\n            cache_entry->cnt++;\n\n            if(WARN_ON(heap)) {\n                unsigned n = (alloc_size-FIELD_OFFSET(bstr_t, u.ptr))/sizeof(DWORD);\n                for(i=0; i<n; i++)\n                    bstr->u.dwptr[i] = ARENA_FREE_FILLER;\n            }\n\n            LeaveCriticalSection(&cs_bstr_cache);\n            return;\n        }\n\n        LeaveCriticalSection(&cs_bstr_cache);\n    }\n\n    CoTaskMemFree(bstr);\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <string.h>",
+   "#include <limits.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winerror.h\"",
+   "#include \"ole2.h\"",
+   "#include \"olectl.h\"",
+   "#include \"oleauto.h\"",
+   "#include \"rpcproxy.h\"",
+   "#include \"initguid.h\"",
+   "#include \"typelib.h\"",
+   "#include \"oleaut32_oaidl.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "oleaut32!SysFreeString [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/oleaut32/tests/olefont.c",
+   "dlls/oleaut32/tests/safearray.c",
+   "dlls/oleaut32/tests/tmarshal.c",
+   "dlls/oleaut32/tests/typelib.c",
+   "dlls/oleaut32/tests/usrmarshal.c",
+   "dlls/oleaut32/tests/varformat.c",
+   "dlls/oleaut32/tests/vartest.c",
+   "dlls/oleaut32/tests/vartype.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 50
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "ole2disp.dll16",
+   "source_module": "ole2disp.dll16",
+   "exported_by": [
+    "ole2disp.dll16"
+   ],
+   "file": "dlls/ole2disp.dll16/ole2disp.c",
+   "start_line": 443,
+   "resolution": [
+    "ole2disp.dll16!SysFreeString [pascal] -> internal symbol SysFreeString16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 446,
+   "signature": "void WINAPI SysFreeString16(BSTR16 str)",
+   "code": "void WINAPI SysFreeString16(BSTR16 str)\n{\n\tBSTR_Free(str);\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "oleauto",
+   "path": "sdk-api-src/content/oleauto/nf-oleauto-sysfreestring.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/oleauto/nf-oleauto-sysfreestring",
+   "documented_name": "sysfreestring",
+   "file": "docs/0064_sdk-api_nf-oleauto-sysfreestring.md",
+   "text": "---\nUID: NF:oleauto.SysFreeString\ntitle: SysFreeString function (oleauto.h)\ndescription: Deallocates a string allocated previously by SysAllocString, SysAllocStringByteLen, SysReAllocString, SysAllocStringLen, or SysReAllocStringLen.\nhelpviewer_keywords: [\"SysFreeString\",\"SysFreeString function [Automation]\",\"_oa96_SysFreeString\",\"automat.sysfreestring\",\"oleauto/SysFreeString\"]\nold-location: automat\\sysfreestring.htm\ntech.root: automat\nms.assetid: 8f230ee3-5f6e-4cb9-a910-9c90b754dcd3\nms.date: 12/05/2018\nms.keywords: SysFreeString, SysFreeString function [Automation], _oa96_SysFreeString, automat.sysfreestring, oleauto/SysFreeString\nreq.header: oleauto.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: OleAut32.lib\nreq.dll: OleAut32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SysFreeString\n - oleauto/SysFreeString\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - OleAut32.dll\napi_name:\n - SysFreeString\n---\n\n# SysFreeString function\n\n\n## -description\n\nDeallocates a string allocated previously by <a href=\"/previous-versions/windows/desktop/api/oleauto/nf-oleauto-sysallocstring\">SysAllocString</a>, <a href=\"/previous-versions/windows/desktop/api/oleauto/nf-oleauto-sysallocstringbytelen\">SysAllocStringByteLen</a>, <a href=\"/windows/desktop/api/oleauto/nf-oleauto-sysreallocstring\">SysReAllocString</a>, <a href=\"/previous-versions/windows/desktop/api/oleauto/nf-oleauto-sysallocstringlen\">SysAllocStringLen</a>, or <a href=\"/previous-versions/windows/desktop/api/oleauto/nf-oleauto-sysreallocstringlen\">SysReAllocStringLen</a>.\n\n## -parameters\n\n### -param bstrString [in, optional]\n\nThe previously allocated string. If this parameter is <b>NULL</b>, the function simply returns."
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_malloc",
+   "file": "dlls/oleaut32/oleaut.c",
+   "start_line": 248,
+   "end_line": 256,
+   "static": true,
+   "called_from": [
+    "SysFreeString"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static inline IMalloc *get_malloc(void)",
+   "code": "static inline IMalloc *get_malloc(void)\n{\n    static IMalloc *malloc;\n\n    if (!malloc)\n        CoGetMalloc(1, &malloc);\n\n    return malloc;\n}"
+  },
+  {
+   "name": "bstr_from_str",
+   "file": "dlls/oleaut32/oleaut.c",
+   "start_line": 118,
+   "end_line": 121,
+   "static": true,
+   "called_from": [
+    "SysFreeString"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/oleaut32/oleaut.c:200",
+    "dlls/oleaut32/oleaut.c:219",
+    "dlls/oleaut32/oleaut.c:393"
+   ],
+   "signature": "static inline bstr_t *bstr_from_str(BSTR str)",
+   "code": "static inline bstr_t *bstr_from_str(BSTR str)\n{\n    return CONTAINING_RECORD(str, bstr_t, u.str);\n}"
+  },
+  {
+   "name": "get_cache_entry_from_alloc_size",
+   "file": "dlls/oleaut32/oleaut.c",
+   "start_line": 134,
+   "end_line": 140,
+   "static": true,
+   "called_from": [
+    "SysFreeString"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static inline bstr_cache_entry_t *get_cache_entry_from_alloc_size(SIZE_T alloc_size)",
+   "code": "static inline bstr_cache_entry_t *get_cache_entry_from_alloc_size(SIZE_T alloc_size)\n{\n    unsigned cache_idx;\n    if (alloc_size < BUCKET_SIZE) return NULL;\n    cache_idx = (alloc_size - BUCKET_SIZE) / BUCKET_SIZE;\n    return get_cache_entry_from_idx(cache_idx);\n}"
+  },
+  {
+   "name": "get_cache_entry_from_idx",
+   "file": "dlls/oleaut32/oleaut.c",
+   "start_line": 123,
+   "end_line": 126,
+   "static": true,
+   "called_from": [
+    "get_cache_entry_from_alloc_size"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/oleaut32/oleaut.c:131"
+   ],
+   "signature": "static inline bstr_cache_entry_t *get_cache_entry_from_idx(unsigned cache_idx)",
+   "code": "static inline bstr_cache_entry_t *get_cache_entry_from_idx(unsigned cache_idx)\n{\n    return bstr_cache_enabled && cache_idx < ARRAY_SIZE(bstr_cache) ? bstr_cache + cache_idx : NULL;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "bstr_cache_entry_t",
+    "kind": "typedef_decl",
+    "start_line": 101,
+    "end_line": 105,
+    "code": "typedef struct {\n    unsigned short head;\n    unsigned short cnt;\n    bstr_t *buf[BUCKET_BUFFER_SIZE];\n} bstr_cache_entry_t;"
+   },
+   {
+    "name": "bstr_t",
+    "kind": "typedef_decl",
+    "start_line": 86,
+    "end_line": 96,
+    "code": "typedef struct {\n#ifdef _WIN64\n    DWORD pad;\n#endif\n    DWORD size;\n    union {\n        char ptr[1];\n        WCHAR str[1];\n        DWORD dwptr[1];\n    } u;\n} bstr_t;"
+   },
+   {
+    "name": "union (unnamed at /home/claude/wine_src/dlls/oleaut32/oleaut.c:91:5)",
+    "kind": "union_decl",
+    "start_line": 91,
+    "end_line": 95,
+    "code": "    union {\n        char ptr[1];\n        WCHAR str[1];\n        DWORD dwptr[1];\n    } u;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch_heap",
+    "type": "struct __wine_debug_channel",
+    "static": true,
+    "start_line": 46,
+    "end_line": 46,
+    "code": "WINE_DECLARE_DEBUG_CHANNEL(heap);"
+   },
+   {
+    "name": "bstr_cache",
+    "type": "bstr_cache_entry_t[4096]",
+    "static": true,
+    "start_line": 111,
+    "end_line": 111,
+    "code": "static bstr_cache_entry_t bstr_cache[0x10000/BUCKET_SIZE];"
+   },
+   {
+    "name": "bstr_cache_enabled",
+    "type": "BOOL",
+    "static": true,
+    "start_line": 75,
+    "end_line": 75,
+    "code": "static BOOL bstr_cache_enabled;"
+   },
+   {
+    "name": "cs_bstr_cache",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 84,
+    "end_line": 84,
+    "code": "static CRITICAL_SECTION cs_bstr_cache = { &cs_bstr_cache_dbg, -1, 0, 0, 0, 0 };"
+   }
+  ],
+  "macros": [
+   {
+    "name": "ARENA_FREE_FILLER",
+    "start_line": 109,
+    "end_line": 109,
+    "code": "#define ARENA_FREE_FILLER      0xfeeefeee"
+   },
+   {
+    "name": "BUCKET_BUFFER_SIZE",
+    "start_line": 99,
+    "end_line": 99,
+    "code": "#define BUCKET_BUFFER_SIZE 6"
+   },
+   {
+    "name": "BUCKET_SIZE",
+    "start_line": 98,
+    "end_line": 98,
+    "code": "#define BUCKET_SIZE 16"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "CoGetMalloc",
+    "module": "ole32",
+    "impl": [
+     "dlls/combase/malloc.c:365"
+    ]
+   },
+   {
+    "name": "CoTaskMemFree",
+    "module": "ole32",
+    "impl": [
+     "dlls/combase/malloc.c:389"
+    ]
+   },
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "__wine_dbg_get_channel_flags",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/thread.c:93"
+    ]
+   }
+  ],
+  "header_inline": [
+   "IMalloc_GetSize",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "oleaut32.SysFreeString",
+  "category": {
+   "l1": "System services",
+   "l2": "COM (Automation)",
+   "header": "oleauto.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 51,
+   "body": 50,
+   "code": 30
+  },
+  "cyclomatic": 9,
+  "return_type": "void",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 50,
+   "n_tests": 746,
+   "n_tests_other": 696,
+   "own_test_functions": [
+    "dlls/oleaut32/tests/olefont.c::test_font_events_disp",
+    "dlls/oleaut32/tests/olefont.c::test_realization",
+    "dlls/oleaut32/tests/olefont.c::test_type_info",
+    "dlls/oleaut32/tests/safearray.c::test_SafeArrayGetPutElement_BSTR",
+    "dlls/oleaut32/tests/tmarshal.c::test_DispCallFunc",
+    "dlls/oleaut32/tests/tmarshal.c::test_marshal_bstr",
+    "dlls/oleaut32/tests/tmarshal.c::test_typelibmarshal",
+    "dlls/oleaut32/tests/typelib.c::test_CreateDispTypeInfo",
+    "dlls/oleaut32/tests/typelib.c::test_LoadRegTypeLib",
+    "dlls/oleaut32/tests/typelib.c::test_QueryPathOfRegTypeLib",
+    "dlls/oleaut32/tests/typelib.c::test_SetDocString",
+    "dlls/oleaut32/tests/typelib.c::test_TypeInfo",
+    "dlls/oleaut32/tests/typelib.c::test_dump_typelib",
+    "dlls/oleaut32/tests/usrmarshal.c::test_marshal_BSTR",
+    "dlls/oleaut32/tests/usrmarshal.c::test_marshal_LPSAFEARRAY",
+    "dlls/oleaut32/tests/usrmarshal.c::test_marshal_VARIANT",
+    "dlls/oleaut32/tests/varformat.c::test_VarFormat",
+    "dlls/oleaut32/tests/varformat.c::test_VarFormatCurrency",
+    "dlls/oleaut32/tests/varformat.c::test_VarFormatFromTokens",
+    "dlls/oleaut32/tests/varformat.c::test_VarFormatNumber",
+    "dlls/oleaut32/tests/varformat.c::test_VarFormatPercent",
+    "dlls/oleaut32/tests/varformat.c::test_VarWeekdayName",
+    "dlls/oleaut32/tests/vartest.c::init",
+    "dlls/oleaut32/tests/vartest.c::test_VarAbs",
+    "dlls/oleaut32/tests/vartest.c::test_VarAdd",
+    "dlls/oleaut32/tests/vartest.c::test_VarAnd",
+    "dlls/oleaut32/tests/vartest.c::test_VarCmp",
+    "dlls/oleaut32/tests/vartest.c::test_VarDiv",
+    "dlls/oleaut32/tests/vartest.c::test_VarIdiv",
+    "dlls/oleaut32/tests/vartest.c::test_VarImp",
+    "dlls/oleaut32/tests/vartest.c::test_VarMod",
+    "dlls/oleaut32/tests/vartest.c::test_VarMul",
+    "dlls/oleaut32/tests/vartest.c::test_VarOr",
+    "dlls/oleaut32/tests/vartest.c::test_VarPow",
+    "dlls/oleaut32/tests/vartest.c::test_VarSub",
+    "dlls/oleaut32/tests/vartest.c::test_VarXor",
+    "dlls/oleaut32/tests/vartype.c::_BSTR_CY",
+    "dlls/oleaut32/tests/vartype.c::_BSTR_DATE",
+    "dlls/oleaut32/tests/vartype.c::_BSTR_DEC",
+    "dlls/oleaut32/tests/vartype.c::test_ChangeType_keep_dst",
+    "dlls/oleaut32/tests/vartype.c::test_SysAllocString",
+    "dlls/oleaut32/tests/vartype.c::test_SysAllocStringByteLen",
+    "dlls/oleaut32/tests/vartype.c::test_SysAllocStringLen",
+    "dlls/oleaut32/tests/vartype.c::test_SysReAllocString",
+    "dlls/oleaut32/tests/vartype.c::test_SysReAllocStringLen",
+    "dlls/oleaut32/tests/vartype.c::test_VarBstrCmp",
+    "dlls/oleaut32/tests/vartype.c::test_VarBstrFromI4",
+    "dlls/oleaut32/tests/vartype.c::test_VarBstrFromR4",
+    "dlls/oleaut32/tests/vartype.c::test_VarBstrFromR8",
+    "dlls/oleaut32/tests/vartype.c::test_bstr_cache"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/oleauto/nf-oleauto-sysfreestring",
+   "source": "win32",
+   "description": "Deallocates a string allocated previously by SysAllocString, SysAllocStringByteLen, SysReAllocString, SysAllocStringLen, or SysReAllocStringLen.",
+   "min_windows": "",
+   "documented_dll": "OleAut32.dll"
+  },
+  "exports": [
+   "oleaut32.SysFreeString"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

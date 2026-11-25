@@ -1,0 +1,252 @@
+{
+ "id": "0443",
+ "function": {
+  "name": "NetUserGetInfo",
+  "export_name": "NetUserGetInfo",
+  "module": "netapi32",
+  "source_module": "netapi32",
+  "exported_by": [
+   "netapi32"
+  ],
+  "side": "PE",
+  "file": "dlls/netapi32/netapi32.c",
+  "start_line": 1223,
+  "end_line": 1389,
+  "body_lines": 164,
+  "signature": "NetUserGetInfo(LPCWSTR servername, LPCWSTR username, DWORD level, LPBYTE* bufptr)",
+  "header_comment": null,
+  "code": "NetUserGetInfo(LPCWSTR servername, LPCWSTR username, DWORD level,\n               LPBYTE* bufptr)\n{\n    NET_API_STATUS status;\n    TRACE(\"(%s, %s, %ld, %p)\\n\", debugstr_w(servername), debugstr_w(username),\n          level, bufptr);\n    status = NETAPI_ValidateServername(servername);\n    if (status != NERR_Success)\n        return status;\n\n    if(!NETAPI_IsLocalComputer(servername))\n    {\n        FIXME(\"Only implemented for local computer, but remote server\"\n              \"%s was requested.\\n\", debugstr_w(servername));\n        return NERR_InvalidComputer;\n    }\n\n    if(!NETAPI_FindUser(username) && !NETAPI_IsCurrentUser(username))\n    {\n        TRACE(\"User %s is unknown.\\n\", debugstr_w(username));\n        return NERR_UserNotFound;\n    }\n\n    switch (level)\n    {\n    case 0:\n    {\n        PUSER_INFO_0 ui;\n        int name_sz;\n\n        name_sz = lstrlenW(username) + 1;\n\n        /* set up buffer */\n        NetApiBufferAllocate(sizeof(USER_INFO_0) + name_sz * sizeof(WCHAR),\n                             (LPVOID *) bufptr);\n\n        ui = (PUSER_INFO_0) *bufptr;\n        ui->usri0_name = (LPWSTR) (*bufptr + sizeof(USER_INFO_0));\n\n        /* get data */\n        lstrcpyW(ui->usri0_name, username);\n        break;\n    }\n\n    case 10:\n    {\n        PUSER_INFO_10 ui;\n        PUSER_INFO_0 ui0;\n        /* sizes of the field buffers in WCHARS */\n        int name_sz, comment_sz, usr_comment_sz, full_name_sz;\n\n        comment_sz = 1;\n        usr_comment_sz = 1;\n        full_name_sz = 1;\n\n        /* get data */\n        status = NetUserGetInfo(servername, username, 0, (LPBYTE *) &ui0);\n        if (status != NERR_Success)\n        {\n            NetApiBufferFree(ui0);\n            return status;\n        }\n        name_sz = lstrlenW(ui0->usri0_name) + 1;\n\n        /* set up buffer */\n        NetApiBufferAllocate(sizeof(USER_INFO_10) +\n                             (name_sz + comment_sz + usr_comment_sz +\n                              full_name_sz) * sizeof(WCHAR),\n                             (LPVOID *) bufptr);\n        ui = (PUSER_INFO_10) *bufptr;\n        ui->usri10_name = (LPWSTR) (*bufptr + sizeof(USER_INFO_10));\n        ui->usri10_comment = (LPWSTR) (\n            ((PBYTE) ui->usri10_name) + name_sz * sizeof(WCHAR));\n        ui->usri10_usr_comment = (LPWSTR) (\n            ((PBYTE) ui->usri10_comment) + comment_sz * sizeof(WCHAR));\n        ui->usri10_full_name = (LPWSTR) (\n            ((PBYTE) ui->usri10_usr_comment) + usr_comment_sz * sizeof(WCHAR));\n\n        /* set data */\n        lstrcpyW(ui->usri10_name, ui0->usri0_name);\n        NetApiBufferFree(ui0);\n        ui->usri10_comment[0] = 0;\n        ui->usri10_usr_comment[0] = 0;\n        ui->usri10_full_name[0] = 0;\n        break;\n    }\n\n    case 1:\n      {\n        PUSER_INFO_1 ui;\n        PUSER_INFO_0 ui0;\n        /* sizes of the field buffers in WCHARS */\n        int name_sz, password_sz, home_dir_sz, comment_sz, script_path_sz;\n\n        password_sz = 1; /* not filled out for security reasons for NetUserGetInfo*/\n        comment_sz = 1;\n        script_path_sz = 1;\n\n       /* get data */\n        status = NetUserGetInfo(servername, username, 0, (LPBYTE *) &ui0);\n        if (status != NERR_Success)\n        {\n            NetApiBufferFree(ui0);\n            return status;\n        }\n        name_sz = lstrlenW(ui0->usri0_name) + 1;\n        home_dir_sz = GetEnvironmentVariableW(L\"HOME\", NULL,0);\n        /* set up buffer */\n        NetApiBufferAllocate(sizeof(USER_INFO_1) +\n                             (name_sz + password_sz + home_dir_sz +\n                              comment_sz + script_path_sz) * sizeof(WCHAR),\n                             (LPVOID *) bufptr);\n\n        ui = (PUSER_INFO_1) *bufptr;\n        ui->usri1_name = (LPWSTR) (ui + 1);\n        ui->usri1_password = ui->usri1_name + name_sz;\n        ui->usri1_home_dir = ui->usri1_password + password_sz;\n        ui->usri1_comment = ui->usri1_home_dir + home_dir_sz;\n        ui->usri1_script_path = ui->usri1_comment + comment_sz;\n        /* set data */\n        lstrcpyW(ui->usri1_name, ui0->usri0_name);\n        NetApiBufferFree(ui0);\n        ui->usri1_password[0] = 0;\n        ui->usri1_password_age = 0;\n        ui->usri1_priv = 0;\n        GetEnvironmentVariableW(L\"HOME\", ui->usri1_home_dir,home_dir_sz);\n        ui->usri1_comment[0] = 0;\n        ui->usri1_flags = 0;\n        ui->usri1_script_path[0] = 0;\n        break;\n      }\n    case 2:\n    case 3:\n    case 4:\n    case 11:\n    case 20:\n    case 23:\n    case 1003:\n    case 1005:\n    case 1006:\n    case 1007:\n    case 1008:\n    case 1009:\n    case 1010:\n    case 1011:\n    case 1012:\n    case 1013:\n    case 1014:\n    case 1017:\n    case 1018:\n    case 1020:\n    case 1023:\n    case 1024:\n    case 1025:\n    case 1051:\n    case 1052:\n    case 1053:\n    {\n        FIXME(\"Level %ld is not implemented\\n\", level);\n        return NERR_InternalError;\n    }\n    default:\n        TRACE(\"Invalid level %ld is specified\\n\", level);\n        return ERROR_INVALID_LEVEL;\n    }\n    return NERR_Success;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winsock2.h\"",
+   "#include \"ws2ipdef.h\"",
+   "#include \"windns.h\"",
+   "#include \"lm.h\"",
+   "#include \"lmaccess.h\"",
+   "#include \"atsvc.h\"",
+   "#include \"lmapibuf.h\"",
+   "#include \"lmbrowsr.h\"",
+   "#include \"lmremutl.h\"",
+   "#include \"lmshare.h\"",
+   "#include \"lmwksta.h\"",
+   "#include \"netbios.h\"",
+   "#include \"ifmib.h\"",
+   "#include \"iphlpapi.h\"",
+   "#include \"ntsecapi.h\"",
+   "#include \"dsrole.h\"",
+   "#include \"dsgetdc.h\"",
+   "#include \"davclnt.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"initguid.h\"",
+   "#include \"unixlib.h\""
+  ],
+  "resolution": [
+   "netapi32!NetUserGetInfo [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/netapi32/tests/access.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "lmaccess",
+   "path": "sdk-api-src/content/lmaccess/nf-lmaccess-netusergetinfo.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/lmaccess/nf-lmaccess-netusergetinfo",
+   "documented_name": "netusergetinfo",
+   "file": "docs/0443_sdk-api_nf-lmaccess-netusergetinfo.md",
+   "text": "---\nUID: NF:lmaccess.NetUserGetInfo\ntitle: NetUserGetInfo function (lmaccess.h)\ndescription: The NetUserGetInfo function retrieves information about a particular user account on a server.\nhelpviewer_keywords: [\"0\",\"1\",\"10\",\"11\",\"2\",\"20\",\"23\",\"24\",\"3\",\"4\",\"NetUserGetInfo\",\"NetUserGetInfo function [Network Management]\",\"_win32_netusergetinfo\",\"lmaccess/NetUserGetInfo\",\"netmgmt.netusergetinfo\"]\nold-location: netmgmt\\netusergetinfo.htm\ntech.root: NetMgmt\nms.assetid: 5bd13bed-938a-4273-840e-99fca99f7139\nms.date: 12/05/2018\nms.keywords: 0, 1, 10, 11, 2, 20, 23, 24, 3, 4, NetUserGetInfo, NetUserGetInfo function [Network Management], _win32_netusergetinfo, lmaccess/NetUserGetInfo, netmgmt.netusergetinfo\nreq.header: lmaccess.h\nreq.include-header: Lm.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Netapi32.lib\nreq.dll: Netapi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - NetUserGetInfo\n - lmaccess/NetUserGetInfo\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Netapi32.dll\napi_name:\n - NetUserGetInfo\n---\n\n# NetUserGetInfo function\n\n\n## -description\n\nThe\n\t\t\t\t<b>NetUserGetInfo</b> function retrieves information about a particular user account on a server.\n\n## -parameters\n\n### -param servername [in]\n\nA pointer to a constant string that specifies the DNS or NetBIOS name of the remote server on which the function is to execute. If this parameter is <b>NULL</b>, the local computer is used.\n\n### -param username [in]\n\nA pointer to a constant string that specifies the name of the user account for which to return information. For more information, see the following Remarks section.\n\n### -param level [in]\n\nThe information level of the data. This parameter can be one of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"0\"></a><dl>\n<dt><b>0</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturn the user account name. The <i>bufptr</i> parameter points to a \n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_0\">USER_INFO_0</a> structure.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"1\"></a><dl>\n<dt><b>1</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturn detailed information about the user account. The <i>bufptr</i> parameter points to a \n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_1\">USER_INFO_1</a> structure.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"2\"></a><dl>\n<dt><b>2</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturn detailed information and additional attributes about the user account. The <i>bufptr</i> parameter points to a \n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_2\">USER_INFO_2</a> structure.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"3\"></a><dl>\n<dt><b>3</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturn detailed information and additional attributes about the user account. This level is valid only on servers. The <i>bufptr</i> parameter points to a \n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_3\">USER_INFO_3</a> structure. Note that  it is recommended that you use \n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_4\">USER_INFO_4</a> instead.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"4\"></a><dl>\n<dt><b>4</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturn detailed information and additional attributes about the user account. This level is valid only on servers. The <i>bufptr</i> parameter points to a \n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_4\">USER_INFO_4</a> structure.\n\n<div class=\"alert\"><b>Note</b>  This level is supported on  Windows XP and later.</div>\n<div> </div>\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"10\"></a><dl>\n<dt><b>10</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturn user and account names and comments. The <i>bufptr</i>  parameter points to a \n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_10\">USER_INFO_10</a> structure.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"11\"></a><dl>\n<dt><b>11</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturn detailed information about the user account. The <i>bufptr</i> parameter points to a \n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_11\">USER_INFO_11</a> structure.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"20\"></a><dl>\n<dt><b>20</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturn the user's name and identifier and various account attributes. The <i>bufptr</i> parameter points to a \n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_20\">USER_INFO_20</a> structure. Note that on Windows XP and later, it is recommended that you use \n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_23\">USER_INFO_23</a> instead.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"23\"></a><dl>\n<dt><b>23</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturn the user's name and identifier and various account attributes. The <i>bufptr</i> parameter points to a \n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_23\">USER_INFO_23</a> structure.\n\n<div class=\"alert\"><b>Note</b>  This level is supported on  Windows XP and later.</div>\n<div> </div>\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"24\"></a><dl>\n<dt><b>24</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturn user account information for accounts  which are connected to an Internet identity. The <i>bufptr</i> parameter points to a \n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_24\">USER_INFO_24</a> structure.\n\n<div class=\"alert\"><b>Note</b>  The level is supported on Windows 8 and Windows Server 2012.</div>\n<div> </div>\n</td>\n</tr>\n</table>\n\n### -param bufptr [out]\n\nA pointer to the buffer that receives the data. The format of this data depends on the value of the <i>level</i> parameter. This buffer is allocated by the system and must be freed using the \n<a href=\"/windows/desktop/api/lmapibuf/nf-lmapibuf-netapibufferfree\">NetApiBufferFree</a> function. For more information, see \n<a href=\"/windows/desktop/NetMgmt/network-management-function-buffers\">Network Management Function Buffers</a> and \n<a href=\"/windows/desktop/NetMgmt/network-management-function-buffer-lengths\">Network Management Function Buffer Lengths</a>.\n\n## -returns\n\nIf the function succeeds, the return value is NERR_Success.\n\nIf the function fails, the return value can be one of the following error codes.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_ACCESS_DENIED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe user does not have access to the requested information.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_BAD_NETPATH</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe network path specified in the <i>servername</i> parameter was not found.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_LEVEL</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe value specified for the <i>level</i> parameter is invalid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>NERR_InvalidComputer</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe computer name is invalid. \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>NERR_UserNotFound</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe user name could not be found.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nIf you are programming for Active Directory, you may be able to call certain Active Directory Service Interface (ADSI) methods to achieve the same functionality you can achieve by calling the network management user functions. For more information, see \n<a href=\"/windows/desktop/api/iads/nn-iads-iadsuser\">IADsUser</a> and \n<a href=\"/windows/desktop/api/iads/nn-iads-iadscomputer\">IADsComputer</a>.\n\nIf you call this function on a domain controller that is running Active Directory, access is allowed or denied based on the access control list (ACL) for the <a href=\"/windows/desktop/SecAuthZ/securable-objects\">securable object</a>. The default ACL permits all authenticated users and members of the \"<a href=\"/windows/desktop/SecAuthZ/allowing-anonymous-access\">Pre-Windows 2000 compatible access</a>\" group to view the information. If you call this function on a member server or workstation, all authenticated users can view the information. For  information about anonymous access and restricting anonymous access on these platforms, see \n<a href=\"/windows/desktop/NetMgmt/security-requirements-for-the-network-management-functions\">Security Requirements for the Network Management Functions</a>. For more information on ACLs, ACEs, and access tokens, see \n<a href=\"/windows/desktop/SecAuthZ/access-control-model\">Access Control Model</a>.\n\nThe security descriptor of the User object is used to perform the access check for this function.\n\nUser account names are limited to 20 characters and group names are limited to 256 characters. In addition, account names cannot be terminated by a period and they cannot include commas or any of the following printable characters: \", /, \\, [, ], :, |, &lt;, &gt;, +, =, ;, ?, *. Names also cannot include characters in the range 1-31, which are nonprintable.\n\nIf the information level specified in the <i>level</i> parameter is set to 24, the <i>servername</i> parameter specified must resolve to the local computer. If the <i>servername</i> resolves to a remote computer or to a domain controller, the <b>NetUserGetInfo</b>  function will fail.\n\n\n#### Examples\n\nThe following code sample demonstrates how to retrieve information about a particular user account with a call to the \n<b>NetUserGetInfo</b> function. The sample calls \n<b>NetUserGetInfo</b>, specifying various information levels . If the call succeeds, the code prints information about the user account. Finally, the sample frees the memory allocated for the information buffer.\n\n\n```cpp\n#ifndef UNICODE\n#define UNICODE\n#endif\n#pragma comment(lib, \"advapi32.lib\")\n#pragma comment(lib, \"netapi32.lib\")\n\n#include <windows.h>\n#include <stdio.h>\n#include <assert.h>\n#include <lm.h>\n#include <sddl.h>               /* for ConvertSidToStringSid function */\n\nint wmain(int argc, wchar_t * argv[])\n{\n    DWORD dwLevel = 0;\n\n    LPUSER_INFO_0 pBuf = NULL;\n    LPUSER_INFO_1 pBuf1 = NULL;\n    LPUSER_INFO_2 pBuf2 = NULL;\n    LPUSER_INFO_3 pBuf3 = NULL;\n    LPUSER_INFO_4 pBuf4 = NULL;\n    LPUSER_INFO_10 pBuf10 = NULL;\n    LPUSER_INFO_11 pBuf11 = NULL;\n    LPUSER_INFO_20 pBuf20 = NULL;\n    LPUSER_INFO_23 pBuf23 = NULL;\n\n    NET_API_STATUS nStatus;\n\n    LPTSTR sStringSid = NULL;\n\n    int i = 0;\n    int j = 0;\n\n    if (argc != 3) \n    {\n        fwprintf(stderr, L\"Usage: %s \\\\\\\\ServerName UserName\\n\", argv[0]);\n        exit(1);\n    }\n\n    while (i < 24) \n    {\n\n        //\n        // Call the NetUserGetInfo function.\n        //\n        dwLevel = i;\n        wprintf\n            (L\"\\nCalling NetUserGetinfo with Servername=%s Username=%s Level=%d\\n\",\n             argv[1], argv[2], dwLevel);\n        nStatus = NetUserGetInfo(argv[1], argv[2], dwLevel, (LPBYTE *) & pBuf);\n        //\n        // If the call succeeds, print the user information.\n        //\n        if (nStatus == NERR_Success) \n        {\n            if (pBuf != NULL) \n            {\n\n                switch (i) \n                {\n                case 0:\n                    wprintf(L\"\\tUser account name: %s\\n\", pBuf->usri0_name);\n                    break;\n                case 1:\n                    pBuf1 = (LPUSER_INFO_1) pBuf;\n                    wprintf(L\"\\tUser account name: %s\\n\", pBuf1->usri1_name);\n                    wprintf(L\"\\tPassword: %s\\n\", pBuf1->usri1_password);\n                    wprintf(L\"\\tPassword age (seconds): %d\\n\",\n                            pBuf1->usri1_password_age);\n                    wprintf(L\"\\tPrivilege level: %d\\n\", pBuf1->usri1_priv);\n                    wprintf(L\"\\tHome directory: %s\\n\", pBuf1->usri1_home_dir);\n                    wprintf(L\"\\tUser comment: %s\\n\", pBuf1->usri1_comment);\n                    wprintf(L\"\\tFlags (in hex): %x\\n\", pBuf1->usri1_flags);\n                    wprintf(L\"\\tScript path: %s\\n\", pBuf1->usri1_script_path);\n                    break;\n                case 2:\n                    pBuf2 = (LPUSER_INFO_2) pBuf;\n                    wprintf(L\"\\tUser account name: %s\\n\", pBuf2->usri2_name);\n                    wprintf(L\"\\tPassword: %s\\n\", pBuf2->usri2_password);\n                    wprintf(L\"\\tPassword age (seconds): %d\\n\",\n                            pBuf2->usri2_password_age);\n                    wprintf(L\"\\tPrivilege level: %d\\n\", pBuf2->usri2_priv);\n                    wprintf(L\"\\tHome directory: %s\\n\", pBuf2->usri2_home_dir);\n                    wprintf(L\"\\tComment: %s\\n\", pBuf2->usri2_comment);\n                    wprintf(L\"\\tFlags (in hex): %x\\n\", pBuf2->usri2_flags);\n                    wprintf(L\"\\tScript path: %s\\n\", pBuf2->usri2_script_path);\n                    wprintf(L\"\\tAuth flags (in hex): %x\\n\",\n                            pBuf2->usri2_auth_flags);\n                    wprintf(L\"\\tFull name: %s\\n\", pBuf2->usri2_full_name);\n                    wprintf(L\"\\tUser comment: %s\\n\", pBuf2->usri2_usr_comment);\n                    wprintf(L\"\\tParameters: %s\\n\", pBuf2->usri2_parms);\n                    wprintf(L\"\\tWorkstations: %s\\n\", pBuf2->usri2_workstations);\n                    wprintf\n                        (L\"\\tLast logon (seconds since January 1, 1970 GMT): %d\\n\",\n                         pBuf2->usri2_last_logon);\n                    wprintf\n                        (L\"\\tLast logoff (seconds since January 1, 1970 GMT): %d\\n\",\n                         pBuf2->usri2_last_logoff);\n                    wprintf\n                        (L\"\\tAccount expires (seconds since January 1, 1970 GMT): %d\\n\",\n                         pBuf2->usri2_acct_expires);\n                    wprintf(L\"\\tMax storage: %d\\n\", pBuf2->usri2_max_storage);\n                    wprintf(L\"\\tUnits per week: %d\\n\",\n                            pBuf2->usri2_units_per_week);\n                    wprintf(L\"\\tLogon hours:\");\n                    for (j = 0; j < 21; j++) \n                    {\n                        printf(\" %x\", (BYTE) pBuf2->usri2_logon_hours[j]);\n                    }\n                    wprintf(L\"\\n\");\n                    wprintf(L\"\\tBad password count: %d\\n\",\n                            pBuf2->usri2_bad_pw_count);\n                    wprintf(L\"\\tNumber of logons: %d\\n\",\n                            pBuf2->usri2_num_logons);\n                    wprintf(L\"\\tLogon server: %s\\n\", pBuf2->usri2_logon_server);\n                    wprintf(L\"\\tCountry code: %d\\n\", pBuf2->usri2_country_code);\n                    wprintf(L\"\\tCode page: %d\\n\", pBuf2->usri2_code_page);\n                    break;\n                case 4:\n                    pBuf4 = (LPUSER_INFO_4) pBuf;\n                    wprintf(L\"\\tUser account name: %s\\n\", pBuf4->usri4_name);\n                    wprintf(L\"\\tPassword: %s\\n\", pBuf4->usri4_password);\n                    wprintf(L\"\\tPassword age (seconds): %d\\n\",\n                            pBuf4->usri4_password_age);\n                    wprintf(L\"\\tPrivilege level: %d\\n\", pBuf4->usri4_priv);\n                    wprintf(L\"\\tHome directory: %s\\n\", pBuf4->usri4_home_dir);\n                    wprintf(L\"\\tComment: %s\\n\", pBuf4->usri4_comment);\n                    wprintf(L\"\\tFlags (in hex): %x\\n\", pBuf4->usri4_flags);\n                    wprintf(L\"\\tScript path: %s\\n\", pBuf4->usri4_script_path);\n                    wprintf(L\"\\tAuth flags (in hex): %x\\n\",\n                            pBuf4->usri4_auth_flags);\n                    wprintf(L\"\\tFull name: %s\\n\", pBuf4->usri4_full_name);\n                    wprintf(L\"\\tUser comment: %s\\n\", pBuf4->usri4_usr_comment);\n                    wprintf(L\"\\tParameters: %s\\n\", pBuf4->usri4_parms);\n                    wprintf(L\"\\tWorkstations: %s\\n\", pBuf4->usri4_workstations);\n                    wprintf\n                        (L\"\\tLast logon (seconds since January 1, 1970 GMT): %d\\n\",\n                         pBuf4->usri4_last_logon);\n                    wprintf\n                        (L\"\\tLast logoff (seconds since January 1, 1970 GMT): %d\\n\",\n                         pBuf4->usri4_last_logoff);\n                    wprintf\n                        (L\"\\tAccount expires (seconds since January 1, 1970 GMT): %d\\n\",\n                         pBuf4->usri4_acct_expires);\n                    wprintf(L\"\\tMax storage: %d\\n\", pBuf4->usri4_max_storage);\n                    wprintf(L\"\\tUnits per week: %d\\n\",\n                            pBuf4->usri4_units_per_week);\n                    wprintf(L\"\\tLogon hours:\");\n                    for (j = 0; j < 21; j++) \n                    {\n                        printf(\" %x\", (BYTE) pBuf4->usri4_logon_hours[j]);\n                    }\n                    wprintf(L\"\\n\");\n                    wprintf(L\"\\tBad password count: %d\\n\",\n                            pBuf4->usri4_bad_pw_count);\n                    wprintf(L\"\\tNumber of logons: %d\\n\",\n                            pBuf4->usri4_num_logons);\n                    wprintf(L\"\\tLogon server: %s\\n\", pBuf4->usri4_logon_server);\n                    wprintf(L\"\\tCountry code: %d\\n\", pBuf4->usri4_country_code);\n                    wprintf(L\"\\tCode page: %d\\n\", pBuf4->usri4_code_page);\n                    if (ConvertSidToStringSid\n                        (pBuf4->usri4_user_sid, &sStringSid)) \n                    {\n                        wprintf(L\"\\tUser SID: %s\\n\", sStringSid);\n                        LocalFree(sStringSid);\n                    } \n                    else\n                        wprintf(L\"ConvertSidToSTringSid failed with error %d\\n\",\n                                GetLastError());\n                    wprintf(L\"\\tPrimary group ID: %d\\n\",\n                            pBuf4->usri4_primary_group_id);\n                    wprintf(L\"\\tProfile: %s\\n\", pBuf4->usri4_profile);\n                    wprintf(L\"\\tHome directory drive letter: %s\\n\",\n                            pBuf4->usri4_home_dir_drive);\n                    wprintf(L\"\\tPassword expired information: %d\\n\",\n                            pBuf4->usri4_password_expired);\n                    break;\n                case 10:\n                    pBuf10 = (LPUSER_INFO_10) pBuf;\n                    wprintf(L\"\\tUser account name: %s\\n\", pBuf10->usri10_name);\n                    wprintf(L\"\\tComment: %s\\n\", pBuf10->usri10_comment);\n                    wprintf(L\"\\tUser comment: %s\\n\",\n                            pBuf10->usri10_usr_comment);\n                    wprintf(L\"\\tFull name: %s\\n\", pBuf10->usri10_full_name);\n                    break;\n                case 11:\n                    pBuf11 = (LPUSER_INFO_11) pBuf;\n                    wprintf(L\"\\tUser account name: %s\\n\", pBuf11->usri11_name);\n                    wprintf(L\"\\tComment: %s\\n\", pBuf11->usri11_comment);\n                    wprintf(L\"\\tUser comment: %s\\n\",\n                            pBuf11->usri11_usr_comment);\n                    wprintf(L\"\\tFull name: %s\\n\", pBuf11->usri11_full_name);\n                    wprintf(L\"\\tPrivilege level: %d\\n\", pBuf11->usri11_priv);\n                    wprintf(L\"\\tAuth flags (in hex): %x\\n\",\n                            pBuf11->usri11_auth_flags);\n                    wprintf(L\"\\tPassword age (seconds): %d\\n\",\n                            pBuf11->usri11_password_age);\n                    wprintf(L\"\\tHome directory: %s\\n\", pBuf11->usri11_home_dir);\n                    wprintf(L\"\\tParameters: %s\\n\", pBuf11->usri11_parms);\n                    wprintf\n                        (L\"\\tLast logon (seconds since January 1, 1970 GMT): %d\\n\",\n                         pBuf11->usri11_last_logon);\n                    wprintf\n                        (L\"\\tLast logoff (seconds since January 1, 1970 GMT): %d\\n\",\n                         pBuf11->usri11_last_logoff);\n                    wprintf(L\"\\tBad password count: %d\\n\",\n                            pBuf11->usri11_bad_pw_count);\n                    wprintf(L\"\\tNumber of logons: %d\\n\",\n                            pBuf11->usri11_num_logons);\n                    wprintf(L\"\\tLogon server: %s\\n\",\n                            pBuf11->usri11_logon_server);\n                    wprintf(L\"\\tCountry code: %d\\n\",\n                            pBuf11->usri11_country_code);\n                    wprintf(L\"\\tWorkstations: %s\\n\",\n                            pBuf11->usri11_workstations);\n                    wprintf(L\"\\tMax storage: %d\\n\", pBuf11->usri11_max_storage);\n                    wprintf(L\"\\tUnits per week: %d\\n\",\n                            pBuf11->usri11_units_per_week);\n                    wprintf(L\"\\tLogon hours:\");\n                    for (j = 0; j < 21; j++) \n                    {\n                        printf(\" %x\", (BYTE) pBuf11->usri11_logon_hours[j]);\n                    }\n                    wprintf(L\"\\n\");\n                    wprintf(L\"\\tCode page: %d\\n\", pBuf11->usri11_code_page);\n                    break;\n                case 20:\n                    pBuf20 = (LPUSER_INFO_20) pBuf;\n                    wprintf(L\"\\tUser account name: %s\\n\", pBuf20->usri20_name);\n                    wprintf(L\"\\tFull name: %s\\n\", pBuf20->usri20_full_name);\n                    wprintf(L\"\\tComment: %s\\n\", pBuf20->usri20_comment);\n                    wprintf(L\"\\tFlags (in hex): %x\\n\", pBuf20->usri20_flags);\n                    wprintf(L\"\\tUser ID: %u\\n\", pBuf20->usri20_user_id);\n                    break;\n                case 23:\n                    pBuf23 = (LPUSER_INFO_23) pBuf;\n                    wprintf(L\"\\tUser account name: %s\\n\", pBuf23->usri23_name);\n                    wprintf(L\"\\tFull name: %s\\n\", pBuf23->usri23_full_name);\n                    wprintf(L\"\\tComment: %s\\n\", pBuf23->usri23_comment);\n                    wprintf(L\"\\tFlags (in hex): %x\\n\", pBuf23->usri23_flags);\n                    if (ConvertSidToStringSid\n                        (pBuf23->usri23_user_sid, &sStringSid)) \n                    {\n                        wprintf(L\"\\tUser SID: %s\\n\", sStringSid);\n                        LocalFree(sStringSid);\n                    } \n                    else\n                        wprintf(L\"ConvertSidToSTringSid failed with error %d\\n\",\n                                GetLastError());\n                    break;\n                default:\n                    break;\n                }\n            }\n        }\n        // Otherwise, print the system error.\n        //\n        else\n            fprintf(stderr, \"NetUserGetinfo failed with error: %d\\n\", nStatus);\n        //\n        // Free the allocated memory.\n        //\n        if (pBuf != NULL)\n            NetApiBufferFree(pBuf);\n\n        switch (i) \n        {\n        case 0:\n        case 1:\n        case 10:\n            i++;\n            break;\n        case 2:\n            i = 4;\n            break;\n        case 4:\n            i = 10;\n            break;\n        case 11:\n            i = 20;\n            break;\n        case 20:\n            i = 23;\n            break;\n        default:\n            i = 24;\n            break;\n        }\n    }\n    return 0;\n}\n\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/api/lmaccess/nf-lmaccess-netuserenum\">NetUserEnum</a>\n\n\n\n<a href=\"/windows/desktop/api/lmaccess/nf-lmaccess-netusergetgroups\">NetUserGetGroups</a>\n\n\n\n<a href=\"/windows/desktop/api/lmaccess/nf-lmaccess-netusersetinfo\">NetUserSetInfo</a>\n\n\n\n<a href=\"/windows/desktop/NetMgmt/network-management-functions\">Network\n\t\t  Management Functions</a>\n\n\n\n<a href=\"/windows/desktop/NetMgmt/network-management\">Network Management\n\t\t  Overview</a>\n\n\n\n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_0\">USER_INFO_0</a>\n\n\n\n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_1\">USER_INFO_1</a>\n\n\n\n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_10\">USER_INFO_10</a>\n\n\n\n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_11\">USER_INFO_11</a>\n\n\n\n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_2\">USER_INFO_2</a>\n\n\n\n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_23\">USER_INFO_23</a>\n\n\n\n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_24\">USER_INFO_24</a>\n\n\n\n<a href=\"/windows/desktop/api/lmaccess/ns-lmaccess-user_info_4\">USER_INFO_4</a>\n\n\n\n<a href=\"/windows/desktop/NetMgmt/user-functions\">User Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "NETAPI_ValidateServername",
+   "file": "dlls/netapi32/netapi32.c",
+   "start_line": 1053,
+   "end_line": 1070,
+   "static": true,
+   "called_from": [
+    "NetUserGetInfo"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/netapi32/netapi32.c:1130",
+    "dlls/netapi32/netapi32.c:1203",
+    "dlls/netapi32/netapi32.c:1409",
+    "dlls/netapi32/netapi32.c:1466"
+   ],
+   "signature": "static NET_API_STATUS NETAPI_ValidateServername(LPCWSTR ServerName)",
+   "code": "static NET_API_STATUS NETAPI_ValidateServername(LPCWSTR ServerName)\n{\n    if (ServerName)\n    {\n        if (ServerName[0] == 0)\n            return ERROR_BAD_NETPATH;\n        else if (\n            ((ServerName[0] == '\\\\') &&\n             (ServerName[1] != '\\\\'))\n            ||\n            ((ServerName[0] == '\\\\') &&\n             (ServerName[1] == '\\\\') &&\n             (ServerName[2] == 0))\n            )\n            return ERROR_INVALID_NAME;\n    }\n    return NERR_Success;\n}"
+  },
+  {
+   "name": "NETAPI_IsLocalComputer",
+   "file": "dlls/netapi32/netapi32.c",
+   "start_line": 78,
+   "end_line": 89,
+   "static": true,
+   "called_from": [
+    "NetUserGetInfo"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/netapi32/netapi32.c:178",
+    "dlls/netapi32/netapi32.c:402",
+    "dlls/netapi32/netapi32.c:426",
+    "dlls/netapi32/netapi32.c:457",
+    "dlls/netapi32/netapi32.c:671"
+   ],
+   "signature": "static BOOL NETAPI_IsLocalComputer( LMCSTR name )",
+   "code": "static BOOL NETAPI_IsLocalComputer( LMCSTR name )\n{\n    WCHAR buf[MAX_COMPUTERNAME_LENGTH + 1];\n    DWORD size = ARRAY_SIZE(buf);\n    BOOL ret;\n\n    if (!name || !name[0]) return TRUE;\n\n    ret = GetComputerNameW( buf,  &size );\n    if (ret && name[0] == '\\\\' && name[1] == '\\\\') name += 2;\n    return ret && !wcsicmp( name, buf );\n}"
+  },
+  {
+   "name": "NETAPI_FindUser",
+   "file": "dlls/netapi32/netapi32.c",
+   "start_line": 1079,
+   "end_line": 1089,
+   "static": true,
+   "called_from": [
+    "NetUserGetInfo"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/netapi32/netapi32.c:1206",
+    "dlls/netapi32/netapi32.c:1420",
+    "dlls/netapi32/netapi32.c:1992"
+   ],
+   "signature": "static struct sam_user* NETAPI_FindUser(LPCWSTR UserName)",
+   "code": "static struct sam_user* NETAPI_FindUser(LPCWSTR UserName)\n{\n    struct sam_user *user;\n\n    LIST_FOR_EACH_ENTRY(user, &user_list, struct sam_user, entry)\n    {\n        if(wcscmp(user->user_name, UserName) == 0)\n            return user;\n    }\n    return NULL;\n}"
+  },
+  {
+   "name": "NETAPI_IsCurrentUser",
+   "file": "dlls/netapi32/netapi32.c",
+   "start_line": 1091,
+   "end_line": 1117,
+   "static": true,
+   "called_from": [
+    "NetUserGetInfo"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL NETAPI_IsCurrentUser(LPCWSTR username)",
+   "code": "static BOOL NETAPI_IsCurrentUser(LPCWSTR username)\n{\n    LPWSTR curr_user = NULL;\n    DWORD dwSize;\n    BOOL ret = FALSE;\n\n    dwSize = LM20_UNLEN+1;\n    curr_user = HeapAlloc(GetProcessHeap(), 0, dwSize * sizeof(WCHAR));\n    if(!curr_user)\n    {\n        ERR(\"Failed to allocate memory for user name.\\n\");\n        goto end;\n    }\n    if(!GetUserNameW(curr_user, &dwSize))\n    {\n        ERR(\"Failed to get current user's user name.\\n\");\n        goto end;\n    }\n    if (!wcscmp(curr_user, username))\n    {\n        ret = TRUE;\n    }\n\nend:\n    HeapFree(GetProcessHeap(), 0, curr_user);\n    return ret;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "sam_user",
+    "kind": "struct_decl",
+    "start_line": 1033,
+    "end_line": 1044,
+    "code": "struct sam_user\n{\n    struct list entry;\n    WCHAR user_name[LM20_UNLEN+1];\n    WCHAR user_password[PWLEN + 1];\n    DWORD sec_since_passwd_change;\n    DWORD user_priv;\n    LPWSTR home_dir;\n    LPWSTR user_comment;\n    DWORD user_flags;\n    LPWSTR user_logon_script_path;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 54,
+    "end_line": 54,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(netapi32);"
+   },
+   {
+    "name": "user_list",
+    "type": "struct list",
+    "static": true,
+    "start_line": 1046,
+    "end_line": 1046,
+    "code": "static struct list user_list = LIST_INIT( user_list );"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "NetApiBufferAllocate",
+    "impl": [
+     "dlls/netutils/main.c:41"
+    ]
+   },
+   {
+    "name": "NetApiBufferFree",
+    "impl": [
+     "dlls/netutils/main.c:56"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "GetComputerNameW",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernel32/computername.c:41"
+    ]
+   },
+   {
+    "name": "GetEnvironmentVariableW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:1693"
+    ]
+   },
+   {
+    "name": "GetUserNameW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/advapi.c:60"
+    ]
+   },
+   {
+    "name": "HeapAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "wcscmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:266"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "debugstr_w",
+   "lstrcpyW",
+   "lstrlenW",
+   "wcsicmp",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

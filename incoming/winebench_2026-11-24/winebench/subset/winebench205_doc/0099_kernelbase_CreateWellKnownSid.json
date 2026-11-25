@@ -1,0 +1,243 @@
+{
+ "id": "0099",
+ "function": {
+  "name": "CreateWellKnownSid",
+  "export_name": "CreateWellKnownSid",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "advapi32",
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/security.c",
+  "start_line": 423,
+  "end_line": 492,
+  "body_lines": 67,
+  "signature": "BOOL WINAPI CreateWellKnownSid( WELL_KNOWN_SID_TYPE type, PSID domain, PSID sid, DWORD *size )",
+  "header_comment": "/******************************************************************************\n * CreateWellKnownSid   (kernelbase.@)\n */",
+  "code": "BOOL WINAPI CreateWellKnownSid( WELL_KNOWN_SID_TYPE type, PSID domain, PSID sid, DWORD *size )\n{\n    unsigned int i;\n\n    TRACE(\"(%d, %s, %p, %p)\\n\", type, debugstr_sid(domain), sid, size);\n\n    if (size == NULL || (domain && !IsValidSid(domain)))\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return FALSE;\n    }\n\n    for (i = 0; i < ARRAY_SIZE(WellKnownSids); i++)\n    {\n        if (WellKnownSids[i].Type == type)\n        {\n            DWORD length = GetSidLengthRequired(WellKnownSids[i].Sid.SubAuthorityCount);\n\n            if (*size < length)\n            {\n                *size = length;\n                SetLastError(ERROR_INSUFFICIENT_BUFFER);\n                return FALSE;\n            }\n            if (!sid)\n            {\n                SetLastError(ERROR_INVALID_PARAMETER);\n                return FALSE;\n            }\n            CopyMemory(sid, &WellKnownSids[i].Sid.Revision, length);\n            *size = length;\n            return TRUE;\n        }\n    }\n\n    if (domain == NULL || *GetSidSubAuthorityCount(domain) == SID_MAX_SUB_AUTHORITIES)\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return FALSE;\n    }\n\n    for (i = 0; i < ARRAY_SIZE(WellKnownRids); i++)\n    {\n        if (WellKnownRids[i].Type == type)\n        {\n            UCHAR domain_subauth = *GetSidSubAuthorityCount(domain);\n            DWORD domain_sid_length = GetSidLengthRequired(domain_subauth);\n            DWORD output_sid_length = GetSidLengthRequired(domain_subauth + 1);\n\n            if (*size < output_sid_length)\n            {\n                *size = output_sid_length;\n                SetLastError(ERROR_INSUFFICIENT_BUFFER);\n                return FALSE;\n            }\n            if (!sid)\n            {\n                SetLastError(ERROR_INVALID_PARAMETER);\n                return FALSE;\n            }\n            CopyMemory(sid, domain, domain_sid_length);\n            (*GetSidSubAuthorityCount(sid))++;\n            (*GetSidSubAuthority(sid, domain_subauth)) = WellKnownRids[i].Rid;\n            *size = output_sid_length;\n            return TRUE;\n        }\n    }\n    SetLastError(ERROR_INVALID_PARAMETER);\n    return FALSE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "advapi32!CreateWellKnownSid [stdcall -import] -> import from kernelbase",
+   "kernelbase!CreateWellKnownSid [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/advapi32/tests/eventlog.c",
+   "dlls/advapi32/tests/security.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 12
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "securitybaseapi",
+   "path": "sdk-api-src/content/securitybaseapi/nf-securitybaseapi-createwellknownsid.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-createwellknownsid",
+   "documented_name": "createwellknownsid",
+   "file": "docs/0099_sdk-api_nf-securitybaseapi-createwellknownsid.md",
+   "text": "---\nUID: NF:securitybaseapi.CreateWellKnownSid\ntitle: CreateWellKnownSid function (securitybaseapi.h)\ndescription: Creates a SID for predefined aliases.\nhelpviewer_keywords: [\"CreateWellKnownSid\",\"CreateWellKnownSid function [Security]\",\"_win32_createwellknownsid\",\"security.createwellknownsid\",\"securitybaseapi/CreateWellKnownSid\"]\nold-location: security\\createwellknownsid.htm\ntech.root: security\nms.assetid: 00e75bae-fbce-41a3-a0bc-c345c36f2c84\nms.date: 12/05/2018\nms.keywords: CreateWellKnownSid, CreateWellKnownSid function [Security], _win32_createwellknownsid, security.createwellknownsid, securitybaseapi/CreateWellKnownSid\nreq.header: securitybaseapi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Advapi32.lib\nreq.dll: Advapi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CreateWellKnownSid\n - securitybaseapi/CreateWellKnownSid\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-security-base-l1-2-2.dll\n - Advapi32.dll\n - API-MS-Win-DownLevel-AdvApi32-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-DownLevel-AdvApi32-l1-1-1.dll\n - API-MS-Win-Security-base-l1-1-0.dll\n - API-MS-Win-Security-base-l1-2-0.dll\n - MinKernelBase.dll\n - API-MS-Win-Security-Base-L1-2-1.dll\napi_name:\n - CreateWellKnownSid\n---\n\n# CreateWellKnownSid function\n\n\n## -description\n\nThe <b>CreateWellKnownSid</b> function creates a SID for predefined aliases.\n\n## -parameters\n\n### -param WellKnownSidType [in]\n\nMember of the <a href=\"/windows/desktop/api/winnt/ne-winnt-well_known_sid_type\">WELL_KNOWN_SID_TYPE</a> enumeration that specifies what the SID will identify.\n\n### -param DomainSid [in, optional]\n\nA pointer to a SID that identifies the domain to use when creating the SID. Pass <b>NULL</b> to use the local computer.\n\n### -param pSid [out, optional]\n\nA pointer to memory where <b>CreateWellKnownSid</b> will store the new SID.\n\n### -param cbSid [in, out]\n\nA pointer to a <b>DWORD</b> that contains the number of bytes available at <i>pSid</i>. The <b>CreateWellKnownSid</b> function stores the number of bytes actually used at this location.\n\n## -returns\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero. For extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/securitybaseapi/nf-securitybaseapi-equaldomainsid\">EqualDomainSid</a>\n\n\n\n<a href=\"/windows/desktop/api/securitybaseapi/nf-securitybaseapi-getwindowsaccountdomainsid\">GetWindowsAccountDomainSid</a>\n\n\n\n<a href=\"/windows/desktop/api/securitybaseapi/nf-securitybaseapi-iswellknownsid\">IsWellKnownSid</a>\n\n\n\n<a href=\"/windows/desktop/api/winnt/ne-winnt-well_known_sid_type\">WELL_KNOWN_SID_TYPE</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "debugstr_sid",
+   "file": "dlls/kernelbase/security.c",
+   "start_line": 157,
+   "end_line": 205,
+   "static": true,
+   "called_from": [
+    "CreateWellKnownSid"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/security.c:501",
+    "dlls/kernelbase/security.c:551",
+    "dlls/kernelbase/security.c:604"
+   ],
+   "signature": "static const char *debugstr_sid( PSID sid )",
+   "code": "static const char *debugstr_sid( PSID sid )\n{\n    int auth;\n    SID * psid = sid;\n\n    if (psid == NULL) return \"(null)\";\n\n    auth = psid->IdentifierAuthority.Value[5] +\n        (psid->IdentifierAuthority.Value[4] << 8) +\n        (psid->IdentifierAuthority.Value[3] << 16) +\n        (psid->IdentifierAuthority.Value[2] << 24);\n\n    switch (psid->SubAuthorityCount) {\n    case 0:\n        return wine_dbg_sprintf(\"S-%d-%d\", psid->Revision, auth);\n    case 1:\n        return wine_dbg_sprintf(\"S-%d-%d-%lu\", psid->Revision, auth,\n                                psid->SubAuthority[0]);\n    case 2:\n        return wine_dbg_sprintf(\"S-%d-%d-%lu-%lu\", psid->Revision, auth,\n                                psid->SubAuthority[0], psid->SubAuthority[1]);\n    case 3:\n        return wine_dbg_sprintf(\"S-%d-%d-%lu-%lu-%lu\", psid->Revision, auth,\n                                psid->SubAuthority[0], psid->SubAuthority[1], psid->SubAuthority[2]);\n    case 4:\n        return wine_dbg_sprintf(\"S-%d-%d-%lu-%lu-%lu-%lu\", psid->Revision, auth,\n                                psid->SubAuthority[0], psid->SubAuthority[1], psid->SubAuthority[2],\n                                psid->SubAuthority[3]);\n    case 5:\n        return wine_dbg_sprintf(\"S-%d-%d-%lu-%lu-%lu-%lu-%lu\", psid->Revision, auth,\n                                psid->SubAuthority[0], psid->SubAuthority[1], psid->SubAuthority[2],\n                                psid->SubAuthority[3], psid->SubAuthority[4]);\n    case 6:\n        return wine_dbg_sprintf(\"S-%d-%d-%lu-%lu-%lu-%lu-%lu-%lu\", psid->Revision, auth,\n                                psid->SubAuthority[3], psid->SubAuthority[1], psid->SubAuthority[2],\n                                psid->SubAuthority[0], psid->SubAuthority[4], psid->SubAuthority[5]);\n    case 7:\n        return wine_dbg_sprintf(\"S-%d-%d-%lu-%lu-%lu-%lu-%lu-%lu-%lu\", psid->Revision, auth,\n                                psid->SubAuthority[0], psid->SubAuthority[1], psid->SubAuthority[2],\n                                psid->SubAuthority[3], psid->SubAuthority[4], psid->SubAuthority[5],\n                                psid->SubAuthority[6]);\n    case 8:\n        return wine_dbg_sprintf(\"S-%d-%d-%lu-%lu-%lu-%lu-%lu-%lu-%lu-%lu\", psid->Revision, auth,\n                                psid->SubAuthority[0], psid->SubAuthority[1], psid->SubAuthority[2],\n                                psid->SubAuthority[3], psid->SubAuthority[4], psid->SubAuthority[5],\n                                psid->SubAuthority[6], psid->SubAuthority[7]);\n    }\n    return \"(too-big)\";\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "WELLKNOWNRID",
+    "kind": "struct_decl",
+    "start_line": 118,
+    "end_line": 122,
+    "code": "typedef struct WELLKNOWNRID\n{\n    WELL_KNOWN_SID_TYPE Type;\n    DWORD Rid;\n} WELLKNOWNRID;"
+   },
+   {
+    "name": "WELLKNOWNSID",
+    "kind": "struct_decl",
+    "start_line": 52,
+    "end_line": 56,
+    "code": "typedef struct WELLKNOWNSID\n{\n    WELL_KNOWN_SID_TYPE Type;\n    MAX_SID Sid;\n} WELLKNOWNSID;"
+   },
+   {
+    "name": "_MAX_SID",
+    "kind": "struct_decl",
+    "start_line": 43,
+    "end_line": 50,
+    "code": "typedef struct _MAX_SID\n{\n    /* same fields as struct _SID */\n    BYTE Revision;\n    BYTE SubAuthorityCount;\n    SID_IDENTIFIER_AUTHORITY IdentifierAuthority;\n    DWORD SubAuthority[SID_MAX_SUB_AUTHORITIES];\n} MAX_SID;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "WellKnownRids",
+    "type": "const WELLKNOWNRID[13]",
+    "static": true,
+    "start_line": 124,
+    "end_line": 139,
+    "code": "static const WELLKNOWNRID WellKnownRids[] =\n{\n    { WinAccountAdministratorSid,    DOMAIN_USER_RID_ADMIN },\n    { WinAccountGuestSid,            DOMAIN_USER_RID_GUEST },\n    { WinAccountKrbtgtSid,           DOMAIN_USER_RID_KRBTGT },\n    { WinAccountDomainAdminsSid,     DOMAIN_GROUP_RID_ADMINS },\n    { WinAccountDomainUsersSid,      DOMAIN_GROUP_RID_USERS },\n    { WinAccountDomainGuestsSid,     DOMAIN_GROUP_RID_GUESTS },\n    { WinAccountComputersSid,        DOMAIN_GROUP_RID_COMPUTERS },\n    { WinAccountControllersSid,      DOMAIN_GROUP_RID_CONTROLLERS },\n    { WinAccountCertAdminsSid,       DOMAIN_GROUP_RID_CERT_ADMINS },\n    { WinAccountSchemaAdminsSid,     DOMAIN_GROUP_RID_SCHEMA_ADMINS },\n    { WinAccountEnterpriseAdminsSid, DOMAIN_GROUP_RID_ENTERPRISE_ADMINS },\n    { WinAccountPolicyAdminsSid,     DOMAIN_GROUP_RID_POLICY_ADMINS },\n    { WinAccountRasAndIasServersSid, DOMAIN_ALIAS_RID_RAS_SERVERS },\n};"
+   },
+   {
+    "name": "WellKnownSids",
+    "type": "const WELLKNOWNSID[55]",
+    "static": true,
+    "start_line": 58,
+    "end_line": 115,
+    "code": "static const WELLKNOWNSID WellKnownSids[] =\n{\n    { WinNullSid, { SID_REVISION, 1, { SECURITY_NULL_SID_AUTHORITY }, { SECURITY_NULL_RID } } },\n    { WinWorldSid, { SID_REVISION, 1, { SECURITY_WORLD_SID_AUTHORITY }, { SECURITY_WORLD_RID } } },\n    { WinLocalSid, { SID_REVISION, 1, { SECURITY_LOCAL_SID_AUTHORITY }, { SECURITY_LOCAL_RID } } },\n    { WinCreatorOwnerSid, { SID_REVISION, 1, { SECURITY_CREATOR_SID_AUTHORITY }, { SECURITY_CREATOR_OWNER_RID } } },\n    { WinCreatorGroupSid, { SID_REVISION, 1, { SECURITY_CREATOR_SID_AUTHORITY }, { SECURITY_CREATOR_GROUP_RID } } },\n    { WinCreatorOwnerRightsSid, { SID_REVISION, 1, { SECURITY_CREATOR_SID_AUTHORITY }, { SECURITY_CREATOR_OWNER_RIGHTS_RID } } },\n    { WinCreatorOwnerServerSid, { SID_REVISION, 1, { SECURITY_CREATOR_SID_AUTHORITY }, { SECURITY_CREATOR_OWNER_SERVER_RID } } },\n    { WinCreatorGroupServerSid, { SID_REVISION, 1, { SECURITY_CREATOR_SID_AUTHORITY }, { SECURITY_CREATOR_GROUP_SERVER_RID } } },\n    { WinNtAuthoritySid, { SID_REVISION, 0, { SECURITY_NT_AUTHORITY }, { SECURITY_NULL_RID } } },\n    { WinDialupSid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_DIALUP_RID } } },\n    { WinNetworkSid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_NETWORK_RID } } },\n    { WinBatchSid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_BATCH_RID } } },\n    { WinInteractiveSid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_INTERACTIVE_RID } } },\n    { WinServiceSid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_SERVICE_RID } } },\n    { WinAnonymousSid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_ANONYMOUS_LOGON_RID } } },\n    { WinProxySid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_PROXY_RID } } },\n    { WinEnterpriseControllersSid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_ENTERPRISE_CONTROLLERS_RID } } },\n    { WinSelfSid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_PRINCIPAL_SELF_RID } } },\n    { WinAuthenticatedUserSid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_AUTHENTICATED_USER_RID } } },\n    { WinRestrictedCodeSid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_RESTRICTED_CODE_RID } } },\n    { WinTerminalServerSid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_TERMINAL_SERVER_RID } } },\n    { WinRemoteLogonIdSid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_REMOTE_LOGON_RID } } },\n    { WinLogonIdsSid, { SID_REVISION, SECURITY_LOGON_IDS_RID_COUNT, { SECURITY_NT_AUTHORITY }, { SECURITY_LOGON_IDS_RID } } },\n    { WinLocalSystemSid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_LOCAL_SYSTEM_RID } } },\n    { WinLocalServiceSid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_LOCAL_SERVICE_RID } } },\n    { WinNetworkServiceSid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_NETWORK_SERVICE_RID } } },\n    { WinBuiltinDomainSid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID } } },\n    { WinBuiltinAdministratorsSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS } } },\n    { WinBuiltinUsersSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_USERS } } },\n    { WinBuiltinGuestsSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_GUESTS } } },\n    { WinBuiltinPowerUsersSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_POWER_USERS } } },\n    { WinBuiltinAccountOperatorsSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ACCOUNT_OPS } } },\n    { WinBuiltinSystemOperatorsSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_SYSTEM_OPS } } },\n    { WinBuiltinPrintOperatorsSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_PRINT_OPS } } },\n    { WinBuiltinBackupOperatorsSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_BACKUP_OPS } } },\n    { WinBuiltinReplicatorSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_REPLICATOR } } },\n    { WinBuiltinPreWindows2000CompatibleAccessSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_PREW2KCOMPACCESS } } },\n    { WinBuiltinRemoteDesktopUsersSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_REMOTE_DESKTOP_USERS } } },\n    { WinBuiltinNetworkConfigurationOperatorsSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_NETWORK_CONFIGURATION_OPS } } },\n    { WinNTLMAuthenticationSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_PACKAGE_BASE_RID, SECURITY_PACKAGE_NTLM_RID } } },\n    { WinDigestAuthenticationSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_PACKAGE_BASE_RID, SECURITY_PACKAGE_DIGEST_RID } } },\n    { WinSChannelAuthenticationSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_PACKAGE_BASE_RID, SECURITY_PACKAGE_SCHANNEL_RID } } },\n    { WinThisOrganizationSid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_THIS_ORGANIZATION_RID } } },\n    { WinOtherOrganizationSid, { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_OTHER_ORGANIZATION_RID } } },\n    { WinBuiltinIncomingForestTrustBuildersSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_INCOMING_FOREST_TRUST_BUILDERS  } } },\n    { WinBuiltinPerfMonitoringUsersSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_MONITORING_USERS } } },\n    { WinBuiltinPerfLoggingUsersSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_LOGGING_USERS } } },\n    { WinBuiltinAuthorizationAccessSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_AUTHORIZATIONACCESS } } },\n    { WinBuiltinTerminalServerLicenseServersSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_TS_LICENSE_SERVERS } } },\n    { WinBuiltinDCOMUsersSid, { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_DCOM_USERS } } },\n    { WinLowLabelSid, { SID_REVISION, 1, { SECURITY_MANDATORY_LABEL_AUTHORITY}, { SECURITY_MANDATORY_LOW_RID} } },\n    { WinMediumLabelSid, { SID_REVISION, 1, { SECURITY_MANDATORY_LABEL_AUTHORITY}, { SECURITY_MANDATORY_MEDIUM_RID } } },\n    { WinHighLabelSid, { SID_REVISION, 1, { SECURITY_MANDATORY_LABEL_AUTHORITY}, { SECURITY_MANDATORY_HIGH_RID } } },\n    { WinSystemLabelSid, { SID_REVISION, 1, { SECURITY_MANDATORY_LABEL_AUTHORITY}, { SECURITY_MANDATORY_SYSTEM_RID } } },\n    { WinBuiltinAnyPackageSid, { SID_REVISION, 2, { SECURITY_APP_PACKAGE_AUTHORITY }, { SECURITY_APP_PACKAGE_BASE_RID, SECURITY_BUILTIN_PACKAGE_ANY_PACKAGE } } },\n};"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(security);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetSidLengthRequired",
+    "impl": [
+     "dlls/kernelbase/security.c:336"
+    ]
+   },
+   {
+    "name": "GetSidSubAuthority",
+    "impl": [
+     "dlls/kernelbase/security.c:344"
+    ]
+   },
+   {
+    "name": "GetSidSubAuthorityCount",
+    "impl": [
+     "dlls/kernelbase/security.c:353"
+    ]
+   },
+   {
+    "name": "IsValidSid",
+    "impl": [
+     "dlls/kernelbase/security.c:415"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log",
+   "wine_dbg_sprintf"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "kernelbase.CreateWellKnownSid",
+  "category": {
+   "l1": "Security and identity",
+   "l2": "Authorization",
+   "header": "securitybaseapi.h",
+   "textbook": "Protection",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 70,
+   "body": 69,
+   "code": 40
+  },
+  "cyclomatic": 14,
+  "return_type": "BOOL",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 12,
+   "n_tests": 14,
+   "n_tests_other": 2,
+   "own_test_functions": [
+    "dlls/advapi32/tests/eventlog.c::test_readwrite",
+    "dlls/advapi32/tests/security.c::check_wellknown_name",
+    "dlls/advapi32/tests/security.c::test_ConvertSecurityDescriptorToString",
+    "dlls/advapi32/tests/security.c::test_CreateDirectoryA",
+    "dlls/advapi32/tests/security.c::test_CreateWellKnownSid",
+    "dlls/advapi32/tests/security.c::test_EqualDomainSid",
+    "dlls/advapi32/tests/security.c::test_GetNamedSecurityInfoA",
+    "dlls/advapi32/tests/security.c::test_GetSecurityInfo",
+    "dlls/advapi32/tests/security.c::test_LookupAccountSid",
+    "dlls/advapi32/tests/security.c::test_create_process_token",
+    "dlls/advapi32/tests/security.c::test_duplicate_handle_access",
+    "dlls/advapi32/tests/security.c::test_group_as_file_owner"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-createwellknownsid",
+   "source": "win32",
+   "description": "Creates a SID for predefined aliases.",
+   "min_windows": "Windows XP [desktop apps \\| UWP apps]",
+   "documented_dll": "Advapi32.dll"
+  },
+  "exports": [
+   "advapi32.CreateWellKnownSid",
+   "kernelbase.CreateWellKnownSid"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

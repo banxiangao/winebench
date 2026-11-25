@@ -1,0 +1,567 @@
+{
+ "id": "0151",
+ "function": {
+  "name": "NtReadFile",
+  "export_name": "NtReadFile",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll",
+   "ntoskrnl.exe"
+  ],
+  "side": "unix",
+  "file": "dlls/ntdll/unix/file.c",
+  "start_line": 6085,
+  "end_line": 6282,
+  "body_lines": 195,
+  "signature": "NTSTATUS WINAPI NtReadFile( HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc, void *apc_user, IO_STATUS_BLOCK *io, void *buffer, ULONG length, LARGE_INTEGER *offset, ULONG *key )",
+  "header_comment": "/******************************************************************************\n *              NtReadFile   (NTDLL.@)\n */",
+  "code": "NTSTATUS WINAPI NtReadFile( HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc, void *apc_user,\n                            IO_STATUS_BLOCK *io, void *buffer, ULONG length,\n                            LARGE_INTEGER *offset, ULONG *key )\n{\n    int result, unix_handle, needs_close;\n    unsigned int options;\n    struct io_timeouts timeouts;\n    unsigned int status, ret_status;\n    UINT total = 0;\n    client_ptr_t iosb_ptr = iosb_client_ptr(io);\n    enum server_fd_type type;\n    ULONG_PTR cvalue = apc ? 0 : (ULONG_PTR)apc_user;\n    BOOL send_completion = FALSE, async_read, timeout_init_done = FALSE;\n\n    TRACE( \"(%p,%p,%p,%p,%p,%p,0x%08x,%p,%p)\\n\",\n           handle, event, apc, apc_user, io, buffer, length, offset, key );\n\n    if (!io) return STATUS_ACCESS_VIOLATION;\n\n    status = server_get_unix_fd( handle, FILE_READ_DATA, &unix_handle, &needs_close, &type, &options );\n    if (status && status != STATUS_BAD_DEVICE_TYPE) return status;\n\n    if (!virtual_check_buffer_for_write( buffer, length )) return STATUS_ACCESS_VIOLATION;\n\n    if (status == STATUS_BAD_DEVICE_TYPE)\n        return server_read_file( handle, event, apc, apc_user, io, buffer, length, offset, key );\n\n    async_read = !(options & (FILE_SYNCHRONOUS_IO_ALERT | FILE_SYNCHRONOUS_IO_NONALERT));\n\n    if (type == FD_TYPE_FILE)\n    {\n        if (async_read && (!offset || offset->QuadPart < 0))\n        {\n            status = STATUS_INVALID_PARAMETER;\n            goto done;\n        }\n\n        if (offset && offset->QuadPart != FILE_USE_FILE_POINTER_POSITION)\n        {\n            /* async I/O doesn't make sense on regular files */\n            while ((result = virtual_locked_pread( unix_handle, buffer, length, offset->QuadPart )) == -1)\n            {\n                if (errno != EINTR)\n                {\n                    status = errno_to_status( errno );\n                    goto done;\n                }\n            }\n            if (!async_read) /* update file pointer position */\n                lseek( unix_handle, offset->QuadPart + result, SEEK_SET );\n\n            total = result;\n            status = (total || !length) ? STATUS_SUCCESS : STATUS_END_OF_FILE;\n            goto done;\n        }\n    }\n    else if (type == FD_TYPE_SERIAL || type == FD_TYPE_DEVICE)\n    {\n        if (async_read && (!offset || offset->QuadPart < 0))\n        {\n            status = STATUS_INVALID_PARAMETER;\n            goto done;\n        }\n    }\n    else if (type == FD_TYPE_SOCKET)\n    {\n        status = sock_read( handle, unix_handle, event, apc, apc_user, io, buffer, length );\n        if (needs_close) close( unix_handle );\n        return status;\n    }\n\n    if (type == FD_TYPE_SERIAL && async_read && length)\n    {\n        /* an asynchronous serial port read with a read interval timeout needs to\n           skip the synchronous read to make sure that the server starts the read\n           interval timer after the first read */\n        if ((status = get_io_timeouts( handle, type, length, TRUE, &timeouts ))) goto err;\n        if (timeouts.interval > 0)\n        {\n            status = register_async_file_read( handle, event, apc, apc_user, iosb_ptr,\n                                               buffer, total, length, FALSE );\n            goto err;\n        }\n    }\n\n    for (;;)\n    {\n        if ((result = virtual_locked_read( unix_handle, (char *)buffer + total, length - total )) >= 0)\n        {\n            total += result;\n            if (!result || total == length)\n            {\n                if (total)\n                {\n                    status = STATUS_SUCCESS;\n                    goto done;\n                }\n                switch (type)\n                {\n                case FD_TYPE_FILE:\n                case FD_TYPE_CHAR:\n                case FD_TYPE_DEVICE:\n                    status = length ? STATUS_END_OF_FILE : STATUS_SUCCESS;\n                    goto done;\n                case FD_TYPE_SERIAL:\n                    if (!length)\n                    {\n                        status = STATUS_SUCCESS;\n                        goto done;\n                    }\n                    break;\n                default:\n                    status = STATUS_PIPE_BROKEN;\n                    goto err;\n                }\n            }\n            else if (type == FD_TYPE_FILE) continue;  /* no async I/O on regular files */\n        }\n        else if (errno != EAGAIN)\n        {\n            if (errno == EINTR) continue;\n            if (!total) status = errno_to_status( errno );\n            goto err;\n        }\n\n        if (async_read)\n        {\n            BOOL avail_mode;\n\n            if ((status = get_io_avail_mode( handle, type, &avail_mode ))) goto err;\n            if (total && avail_mode)\n            {\n                status = STATUS_SUCCESS;\n                goto done;\n            }\n            status = register_async_file_read( handle, event, apc, apc_user, iosb_ptr,\n                                               buffer, total, length, avail_mode );\n            goto err;\n        }\n        else  /* synchronous read, wait for the fd to become ready */\n        {\n            struct pollfd pfd;\n            int ret, timeout;\n\n            if (!timeout_init_done)\n            {\n                timeout_init_done = TRUE;\n                if ((status = get_io_timeouts( handle, type, length, TRUE, &timeouts ))) goto err;\n                if (event) NtResetEvent( event, NULL );\n            }\n            timeout = get_next_io_timeout( &timeouts, total );\n\n            pfd.fd = unix_handle;\n            pfd.events = POLLIN;\n\n            if (!timeout || !(ret = poll( &pfd, 1, timeout )))\n            {\n                if (total)  /* return with what we got so far */\n                    status = STATUS_SUCCESS;\n                else\n                    status = STATUS_TIMEOUT;\n                goto done;\n            }\n            if (ret == -1 && errno != EINTR)\n            {\n                status = errno_to_status( errno );\n                goto done;\n            }\n            /* will now restart the read */\n        }\n    }\n\ndone:\n    send_completion = cvalue != 0;\n\nerr:\n    if (needs_close) close( unix_handle );\n    if (status == STATUS_SUCCESS || (status == STATUS_END_OF_FILE && (!async_read || type == FD_TYPE_FILE)))\n    {\n        set_sync_iosb( io, status, total, options );\n        TRACE(\"= SUCCESS (%u)\\n\", total);\n        if (event) NtSetEvent( event, NULL );\n        if (apc && (!status || async_read)) NtQueueApcThread( GetCurrentThread(), (PNTAPCFUNC)apc,\n                                                              (ULONG_PTR)apc_user, iosb_ptr, 0 );\n    }\n    else\n    {\n        TRACE(\"= 0x%08x\\n\", status);\n        if (status != STATUS_PENDING && event) NtResetEvent( event, NULL );\n    }\n\n    ret_status = async_read && type == FD_TYPE_FILE && (status == STATUS_SUCCESS || status == STATUS_END_OF_FILE)\n            ? STATUS_PENDING : status;\n\n    if (send_completion && async_read)\n        add_completion( handle, cvalue, status, total, ret_status == STATUS_PENDING );\n    return ret_status;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"config.h\"",
+   "#include <assert.h>",
+   "#include <sys/types.h>",
+   "#include <dirent.h>",
+   "#include <errno.h>",
+   "#include <fcntl.h>",
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include <stdlib.h>",
+   "#include <stdint.h>",
+   "#include <stdio.h>",
+   "#include <limits.h>",
+   "#include <unistd.h>",
+   "#include <mntent.h>",
+   "#include <poll.h>",
+   "#include <sys/stat.h>",
+   "# include <sys/statvfs.h>",
+   "# include <sys/syscall.h>",
+   "#include <sys/socket.h>",
+   "#include <sys/time.h>",
+   "#include <sys/ioctl.h>",
+   "#include <sys/attr.h>",
+   "# include <sys/mkdev.h>",
+   "# include <sys/sysmacros.h>",
+   "#include <sys/vnode.h>",
+   "#include <linux/ioctl.h>",
+   "# include <linux/major.h>",
+   "#include <sys/param.h>",
+   "#include <sys/conf.h>",
+   "#include <sys/mount.h>",
+   "#include <sys/statfs.h>",
+   "#include <sys/xattr.h>",
+   "#include <sys/extattr.h>",
+   "#include <CoreFoundation/CoreFoundation.h>",
+   "#include <time.h>",
+   "#include <unistd.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winnt.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"ddk/ntddser.h\"",
+   "#include \"ddk/ntifs.h\"",
+   "#include \"ddk/wdm.h\"",
+   "#include \"ddk/mountmgr.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"unix_private.h\"",
+   "#include <sys/vfstab.h>",
+   "#include <fstab.h>",
+   "#include <sys/mnttab.h>",
+   "# include <sys/dkio.h>",
+   "# include <sys/vtoc.h>"
+  ],
+  "resolution": [
+   "ntdll!NtReadFile [stdcall -syscall=0x0006]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntdll/tests/file.c",
+   "dlls/ntdll/tests/pipe.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 11
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "ntifs",
+   "path": "wdk-ddi-src/content/ntifs/nf-ntifs-ntreadfile.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntreadfile",
+   "documented_name": "ntreadfile",
+   "file": "docs/0151_windows-driver-docs-ddi_nf-ntifs-ntreadfile.md",
+   "text": "---\nUID: NF:ntifs.NtReadFile\ntitle: NtReadFile function (ntifs.h)\ndescription: Learn more about the NtReadFile routine.\ntech.root: kernel\nms.date: 07/06/2023\nkeywords: [\"NtReadFile function\"]\nms.keywords: NtReadFile, ZwReadFile, ZwReadFile routine [Kernel-Mode Driver Architecture], k111_5cf3ebe2-7c2f-4998-b441-7d2aa2eb091f.xml, kernel.zwreadfile, wdm/NtReadFile, wdm/ZwReadFile\nreq.header: ntifs.h\nreq.include-header: Wdm.h, Ntddk.h, Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt: Windows 2000\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: PowerIrpDDis, BufAfterReqCompletedIntIoctlA, BufAfterReqCompletedIoctlA, BufAfterReqCompletedReadA, BufAfterReqCompletedWriteA, HwStorPortProhibitedDDIs\nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: PASSIVE_LEVEL (see Remarks section)\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - NtReadFile\n - ntifs/NtReadFile\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - NtReadFile\n---\n\n# NtReadFile function\n\n## -description\n\nThe **NtReadFile** routine reads data from an open file.\n\n## -parameters\n\n### -param FileHandle [in]\n\nHandle to the file object. This handle is created by a successful call to [**NtCreateFile**](nf-ntifs-ntcreatefile.md) or [**NtOpenFile**](nf-ntifs-ntopenfile.md).\n\n### -param Event [in, optional]\n\nOptionally, a handle to an event object to set to the signaled state after the read operation completes. Device and intermediate drivers should set this parameter to NULL.\n\n### -param ApcRoutine [in, optional]\n\nThis parameter is reserved. Device and intermediate drivers should set this pointer to NULL.\n\n### -param ApcContext [in, optional]\n\nThis parameter is reserved. Device and intermediate drivers should set this pointer to NULL.\n\n### -param IoStatusBlock [out]\n\nPointer to an [IO_STATUS_BLOCK](../wdm/ns-wdm-_io_status_block.md) structure that receives the final completion status and information about the requested read operation. The **Information** member receives the number of bytes actually read from the file.\n\n### -param Buffer [out]\n\nPointer to a caller-allocated buffer that receives the data read from the file.\n\n### -param Length [in]\n\nThe size, in bytes, of the buffer pointed to by **Buffer**.\n\n### -param ByteOffset [in, optional]\n\nPointer to a variable that specifies the starting byte offset in the file where the read operation will begin. If an attempt is made to read beyond the end of the file, **NtReadFile** returns an error.\n\nIf the call to [**NtCreateFile**](nf-ntifs-ntcreatefile.md) set either of the **CreateOptions** flags FILE_SYNCHRONOUS_IO_ALERT or FILE_SYNCHRONOUS_IO_NONALERT, the I/O Manager maintains the current file position. If so, the caller of **NtReadFile** can specify that the current file position offset be used instead of an explicit **ByteOffset** value. This specification can be made by using one of the following methods:\n\n* Specify a pointer to a LARGE_INTEGER value with the **HighPart** member set to -1 and the **LowPart** member set to the system-defined value FILE_USE_FILE_POINTER_POSITION.\n* Pass a NULL pointer for **ByteOffset**.\n\n**NtReadFile** updates the current file position by adding the number of bytes read when it completes the read operation, if it is using the current file position maintained by the I/O Manager.\n\nEven when the I/O Manager is maintaining the current file position, the caller can reset this position by passing an explicit **ByteOffset** value to **NtReadFile**. Doing this automatically changes the current file position to that **ByteOffset** value, performs the read operation, and then updates the position according to the number of bytes actually read. This technique gives the caller atomic seek-and-read service.\n\n### -param Key [in, optional]\n\nDevice and intermediate drivers should set this pointer to NULL.\n\n## -returns\n\n**NtReadFile** returns either STATUS_SUCCESS or the appropriate NTSTATUS error code.\n\n## -remarks\n\nCallers of **NtReadFile** must have already called [**NtCreateFile**](nf-ntifs-ntcreatefile.md) with the FILE_READ_DATA or GENERIC_READ value set in the **DesiredAccess** parameter.\n\nIf the preceding call to [**NtCreateFile**](nf-ntifs-ntcreatefile.md) set the FILE_NO_INTERMEDIATE_BUFFERING flag in the **CreateOptions** parameter to **NtCreateFile**, the **Length** and **ByteOffset** parameters to **NtReadFile** must be multiples of the sector size.\n\n**NtReadFile** begins reading from the given **ByteOffset** or the current file position into the given **Buffer**. It terminates the read operation under one of the following conditions:\n\n* The buffer is full because the number of bytes specified by the **Length** parameter has been read. Therefore, no more data can be placed into the buffer without an overflow.\n* The end of file is reached during the read operation, so there is no more data in the file to be transferred into the buffer.\n\nIf the caller opened the file with the SYNCHRONIZE flag set in **DesiredAccess**, the calling thread can synchronize to the completion of the read operation by waiting on the file handle, **FileHandle**. The handle is signaled each time that an I/O operation that was issued on the handle completes. However, the caller must not wait on a handle that was opened for synchronous file access (FILE_SYNCHRONOUS_IO_NONALERT or FILE_SYNCHRONOUS_IO_ALERT). In this case, **NtReadFile** waits on behalf of the caller and does not return until the read operation is complete. The caller can safely wait on the file handle only if all three of the following conditions are met:\n\n* The handle was opened for asynchronous access (that is, neither FILE_SYNCHRONOUS_IO_**XXX** flag was specified).\n* The handle is being used for only one I/O operation at a time.\n* **NtReadFile** returned STATUS_PENDING.\n\nA driver should call **NtReadFile** in the context of the system process if any of the following conditions exist:\n\n* The driver created the file handle that it passes to **NtReadFile**.\n* **NtReadFile** will notify the driver of I/O completion by means of an event that the driver created.\n* **NtReadFile** will notify the driver of I/O completion by means of an APC callback routine that the driver passes to **NtReadFile**.\n\nFile and event handles are valid only in the process context where the handles are created. Therefore, to avoid security holes, the driver should create any file or event handle that it passes to **NtReadFile** in the context of the system process rather than the context of the process that the driver is in.\n\nLikewise, **NtReadFile** should be called in the context of the system process if it notifies the driver of I/O completion by means of an APC, because APCs are always fired in the context of the thread that issues the I/O request. If the driver calls **NtReadFile** in the context of a process other than the system one, the APC could be delayed indefinitely, or it might not fire at all.\n\nFor more information about working with files, see [Using Files in a Driver](/windows-hardware/drivers/kernel/using-files-in-a-driver).\n\nCallers of **NtReadFile** must be running at IRQL = PASSIVE_LEVEL and [with special kernel APCs enabled](/windows-hardware/drivers/kernel/disabling-apcs).\n\nIf the call to this function occurs in user mode, you should use the name \"[**NtReadFile**](nf-ntifs-ntreadfile.md)\" instead of \"**ZwReadFile**\".\n\nFor calls from kernel-mode drivers, the **Nt*Xxx*** and **Zw*Xxx*** versions of a Windows Native System Services routine can behave differently in the way that they handle and interpret input parameters. For more information about the relationship between the **Nt*Xxx*** and **Zw*Xxx*** versions of a routine, see [Using Nt and Zw Versions of the Native System Services Routines](/windows-hardware/drivers/kernel/using-nt-and-zw-versions-of-the-native-system-services-routines).\n\n## -see-also\n\n[**KeInitializeEvent**](../wdm/nf-wdm-keinitializeevent.md)\n\n[**ZwCreateFile**](nf-ntifs-ntcreatefile.md)\n\n[**NtQueryInformationFile**](nf-ntifs-ntqueryinformationfile.md)\n\n[**NtSetInformationFile**](nf-ntifs-ntsetinformationfile.md)\n\n[**NtWriteFile**](nf-ntifs-ntwritefile.md)\n"
+  },
+  {
+   "repo": "win32",
+   "header": "",
+   "path": "desktop-src/DevNotes/ntreadfile.md",
+   "url": "https://learn.microsoft.com/windows/win32/devnotes/ntreadfile",
+   "documented_name": "ntreadfile",
+   "file": "docs/0151_win32_ntreadfile.md",
+   "text": "---\ndescription: Reads data from an open file.\nms.assetid: 7EA2FE38-20DA-43E1-A764-66A81725D1EA\ntitle: NtReadFile function (Wdm.h)\nms.topic: reference\nms.date: 05/31/2018\ntopic_type: \n- APIRef\n- kbSyntax\napi_name: \n- NtReadFile\napi_type: \n- DllExport\napi_location: \n- Ntdll.dll\n---\n\n# NtReadFile function\n\nReads data from an open file.\n\nThis function is the user-mode equivalent to the [**ZwReadFile**](/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntreadfile) function documented in the Windows Driver Kit (WDK).\n\n## Syntax\n\n\n```C++\nNTSTATUS NtReadFile(\n  _In_     HANDLE           FileHandle,\n  _In_opt_ HANDLE           Event,\n  _In_opt_ PIO_APC_ROUTINE  ApcRoutine,\n  _In_opt_ PVOID            ApcContext,\n  _Out_    PIO_STATUS_BLOCK IoStatusBlock,\n  _Out_    PVOID            Buffer,\n  _In_     ULONG            Length,\n  _In_opt_ PLARGE_INTEGER   ByteOffset,\n  _In_opt_ PULONG           Key\n);\n```\n\n\n\n## Parameters\n\n<dl> <dt>\n\n*FileHandle* \\[in\\]\n</dt> <dd>\n\nHandle to the file object. This handle is created by a successful call to [**NtCreateFile**](/windows/desktop/api/Winternl/nf-winternl-ntcreatefile) or [**NtOpenFile**](/windows/desktop/api/Winternl/nf-winternl-ntopenfile).\n\n</dd> <dt>\n\n*Event* \\[in, optional\\]\n</dt> <dd>\n\nOptionally, a handle to an event object to set to the signaled state after the read operation completes. Device and intermediate drivers should set this parameter to **NULL**.\n\n</dd> <dt>\n\n*ApcRoutine* \\[in, optional\\]\n</dt> <dd>\n\nThis parameter is reserved. Device and intermediate drivers should set this pointer to **NULL**.\n\n</dd> <dt>\n\n*ApcContext* \\[in, optional\\]\n</dt> <dd>\n\nThis parameter is reserved. Device and intermediate drivers should set this pointer to **NULL**.\n\n</dd> <dt>\n\n*IoStatusBlock* \\[out\\]\n</dt> <dd>\n\nPointer to an [**IO\\_STATUS\\_BLOCK**](/windows-hardware/drivers/ddi/wdm/ns-wdm-_io_status_block) structure that receives the final completion status and information about the requested read operation. The **Information** member receives the number of bytes actually read from the file.\n\n</dd> <dt>\n\n*Buffer* \\[out\\]\n</dt> <dd>\n\nPointer to a caller-allocated buffer that receives the data read from the file.\n\n</dd> <dt>\n\n*Length* \\[in\\]\n</dt> <dd>\n\nThe size, in bytes, of the buffer pointed to by *Buffer*.\n\n</dd> <dt>\n\n*ByteOffset* \\[in, optional\\]\n</dt> <dd>\n\nPointer to a variable that specifies the starting byte offset in the file where the read operation will begin. If an attempt is made to read beyond the end of the file, **NtReadFile** returns an error.\n\nIf the call to [**NtCreateFile**](/windows/desktop/api/Winternl/nf-winternl-ntcreatefile) set either of the *CreateOptions* flags FILE\\_SYNCHRONOUS\\_IO\\_ALERT or FILE\\_SYNCHRONOUS\\_IO\\_NONALERT, the I/O Manager maintains the current file position. If so, the caller of **NtReadFile** can specify that the current file position offset be used instead of an explicit *ByteOffset* value. This specification can be made by using one of the following methods:\n\n-   Specify a pointer to a **LARGE\\_INTEGER** value with the **HighPart** member set to -1 and the **LowPart** member set to the system-defined value FILE\\_USE\\_FILE\\_POINTER\\_POSITION.\n\n-   Pass a **NULL** pointer for *ByteOffset*.\n\n**NtReadFile** updates the current file position by adding the number of bytes read when it completes the read operation, if it is using the current file position maintained by the I/O Manager.\n\nEven when the I/O Manager is maintaining the current file position, the caller can reset this position by passing an explicit *ByteOffset* value to **NtReadFile**. Doing this automatically changes the current file position to that *ByteOffset* value, performs the read operation, and then updates the position according to the number of bytes actually read. This technique gives the caller atomic seek-and-read service.\n\n</dd> <dt>\n\n*Key* \\[in, optional\\]\n</dt> <dd>\n\nDevice and intermediate drivers should set this pointer to **NULL**.\n\n</dd> </dl>\n\n## Return value\n\n**NtReadFile** returns either STATUS\\_SUCCESS or the appropriate NTSTATUS error code.\n\n## Remarks\n\nCallers of **NtReadFile** must have already called [**NtCreateFile**](/windows/desktop/api/Winternl/nf-winternl-ntcreatefile) with the FILE\\_READ\\_DATA or GENERIC\\_READ value set in the *DesiredAccess* parameter.\n\nIf the preceding call to [**NtCreateFile**](/windows/desktop/api/Winternl/nf-winternl-ntcreatefile) set the FILE\\_NO\\_INTERMEDIATE\\_BUFFERING flag in the *CreateOptions* parameter to **NtCreateFile**, the *Length* and *ByteOffset* parameters to **NtReadFile** must be multiples of the sector size. For more information, see **NtCreateFile**.\n\n**NtReadFile** begins reading from the given *ByteOffset* or the current file position into the given *Buffer*. It terminates the read operation under one of the following conditions:\n\n-   The buffer is full because the number of bytes specified by the *Length* parameter has been read. Therefore, no more data can be placed into the buffer without an overflow.\n\n-   The end of file is reached during the read operation, so there is no more data in the file to be transferred into the buffer.\n\nIf the caller opened the file with the SYNCHRONIZE flag set in *DesiredAccess*, the calling thread can synchronize to the completion of the read operation by waiting on the file handle, *FileHandle*. The handle is signaled each time that an I/O operation that was issued on the handle completes. However, the caller must not wait on a handle that was opened for synchronous file access (FILE\\_SYNCHRONOUS\\_IO\\_NONALERT or FILE\\_SYNCHRONOUS\\_IO\\_ALERT). In this case, **NtReadFile** waits on behalf of the caller and does not return until the read operation is complete. The caller can safely wait on the file handle only if all three of the following conditions are met:\n\n-   The handle was opened for asynchronous access (that is, neither FILE\\_SYNCHRONOUS\\_IO\\_*XXX* flag was specified).\n\n-   The handle is being used for only one I/O operation at a time.\n\n-   **NtReadFile** returned STATUS\\_PENDING.\n\nA driver should call **NtReadFile** in the context of the system process if any of the following conditions exist:\n\n-   The driver created the file handle that it passes to **NtReadFile**.\n\n-   **NtReadFile** will notify the driver of I/O completion by means of an event that the driver created.\n\n-   **NtReadFile** will notify the driver of I/O completion by means of an APC callback routine that the driver passes to **NtReadFile**.\n\nFile and event handles are valid only in the process context where the handles are created. Therefore, to avoid security holes, the driver should create any file or event handle that it passes to **NtReadFile** in the context of the system process rather than the context of the process that the driver is in.\n\nLikewise, **NtReadFile** should be called in the context of the system process if it notifies the driver of I/O completion by means of an APC, because APCs are always fired in the context of the thread that issues the I/O request. If the driver calls **NtReadFile** in the context of a process other than the system one, the APC could be delayed indefinitely, or it might not fire at all.\n\nFor more information about working with files, see [Using Files in a Driver](/windows-hardware/drivers/kernel/using-files-in-a-driver).\n\nCallers of **NtReadFile** must be running at IRQL = PASSIVE\\_LEVEL and [with special kernel APCs enabled](/windows-hardware/drivers/kernel/disabling-apcs).\n\n## Requirements\n\n\n\n| Requirement | Value |\n|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|\n| Minimum supported client<br/> | Windows 2000 Professional \\[desktop apps only\\]<br/>                                                                              |\n| Minimum supported server<br/> | Windows 2000 Server \\[desktop apps only\\]<br/>                                                                                    |\n| Target platform<br/>          | <dl> <dt>[Universal](https://msdn.microsoft.com/Library/Windows/Hardware/EB2264A4-BAE8-446B-B9A5-19893936DDCA)</dt> </dl> |\n| Header<br/>                   | <dl> <dt>Wdm.h (include Wdm.h, Ntddk.h, or Ntifs.h)</dt> </dl>                   |\n| Library<br/>                  | <dl> <dt>Ntdll.lib</dt> </dl>                                                    |\n| DLL<br/>                      | <dl> <dt>Ntdll.dll (user mode)</dt> </dl>                                        |\n\n\n\n## See also\n\n<dl> <dt>\n\n[**KeInitializeEvent**](/windows-hardware/drivers/ddi/wdm/nf-wdm-keinitializeevent)\n</dt> <dt>\n\n[**NtCreateFile**](/windows/desktop/api/Winternl/nf-winternl-ntcreatefile)\n</dt> <dt>\n\n[**NtQueryInformationFile**](/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntqueryinformationfile)\n</dt> <dt>\n\n[**NtSetInformationFile**](/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntsetinformationfile)\n</dt> <dt>\n\n[**NtWriteFile**](/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntwritefile)\n</dt> </dl>\n\n \n\n \n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "server_read_file",
+   "file": "dlls/ntdll/unix/file.c",
+   "start_line": 5758,
+   "end_line": 5790,
+   "static": true,
+   "called_from": [
+    "NtReadFile"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static unsigned int server_read_file( HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc, void *apc_context, IO_STATUS_BLOCK *io, void *buffer, ULONG size, LARGE_INTEGER *offset, ULONG *key )",
+   "code": "static unsigned int server_read_file( HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc, void *apc_context,\n                                      IO_STATUS_BLOCK *io, void *buffer, ULONG size,\n                                      LARGE_INTEGER *offset, ULONG *key )\n{\n    struct async_irp *async;\n    unsigned int status;\n    HANDLE wait_handle;\n    ULONG options;\n\n    if (!(async = (struct async_irp *)alloc_fileio( sizeof(*async), irp_completion )))\n        return STATUS_NO_MEMORY;\n\n    async->buffer  = buffer;\n    async->size    = size;\n\n    SERVER_START_REQ( read )\n    {\n        req->async = server_async( handle, &async->io, event, apc, apc_context, iosb_client_ptr(io) );\n        req->pos   = offset ? offset->QuadPart : 0;\n        wine_server_set_reply( req, buffer, size );\n        status = virtual_locked_server_call( req );\n        wait_handle = wine_server_ptr_handle( reply->wait );\n        options     = reply->options;\n        if (wait_handle && status != STATUS_PENDING)\n            set_sync_iosb( io, status, wine_server_reply_size( reply ), options );\n    }\n    SERVER_END_REQ;\n\n    if (status != STATUS_PENDING) free( async );\n\n    if (wait_handle) status = wait_async( wait_handle, (options & FILE_SYNCHRONOUS_IO_ALERT) );\n    return status;\n}"
+  },
+  {
+   "name": "errno_to_status",
+   "file": "dlls/ntdll/unix/file.c",
+   "start_line": 350,
+   "end_line": 390,
+   "static": false,
+   "called_from": [
+    "NtReadFile",
+    "async_read_proc"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/serial.c:132",
+    "dlls/ntdll/unix/serial.c:144",
+    "dlls/ntdll/unix/serial.c:224",
+    "dlls/ntdll/unix/serial.c:232",
+    "dlls/ntdll/unix/serial.c:286"
+   ],
+   "signature": "NTSTATUS errno_to_status( int err )",
+   "code": "NTSTATUS errno_to_status( int err )\n{\n    TRACE( \"errno = %d\\n\", err );\n    switch (err)\n    {\n    case EAGAIN:    return STATUS_SHARING_VIOLATION;\n    case EBADF:     return STATUS_INVALID_HANDLE;\n    case EBUSY:     return STATUS_DEVICE_BUSY;\n    case ENOSPC:    return STATUS_DISK_FULL;\n    case EPERM:\n    case EROFS:\n    case EACCES:    return STATUS_ACCESS_DENIED;\n    case ENOTDIR:   return STATUS_OBJECT_PATH_NOT_FOUND;\n    case ENOENT:    return STATUS_OBJECT_NAME_NOT_FOUND;\n    case EISDIR:    return STATUS_INVALID_DEVICE_REQUEST;\n    case EMFILE:\n    case ENFILE:    return STATUS_TOO_MANY_OPENED_FILES;\n    case EINVAL:    return STATUS_INVALID_PARAMETER;\n    case ENOTEMPTY: return STATUS_DIRECTORY_NOT_EMPTY;\n    case EPIPE:     return STATUS_PIPE_DISCONNECTED;\n    case EIO:       return STATUS_DEVICE_NOT_READY;\n#ifdef ENOMEDIUM\n    case ENOMEDIUM: return STATUS_NO_MEDIA_IN_DEVICE;\n#endif\n    case ENXIO:     return STATUS_NO_SUCH_DEVICE;\n    case ENOTTY:\n    case EOPNOTSUPP:return STATUS_NOT_SUPPORTED;\n    case ECONNRESET:return STATUS_PIPE_DISCONNECTED;\n    case EFAULT:    return STATUS_ACCESS_VIOLATION;\n    case ESPIPE:    return STATUS_ILLEGAL_FUNCTION;\n    case ELOOP:     return STATUS_REPARSE_POINT_NOT_RESOLVED;\n#ifdef ETIME /* Missing on FreeBSD */\n    case ETIME:     return STATUS_IO_TIMEOUT;\n#endif\n    case ENOEXEC:   /* ?? */\n    case EEXIST:    /* ?? */\n    default:\n        FIXME( \"Converting errno %d to STATUS_UNSUCCESSFUL\\n\", err );\n        return STATUS_UNSUCCESSFUL;\n    }\n}"
+  },
+  {
+   "name": "get_io_timeouts",
+   "file": "dlls/ntdll/unix/file.c",
+   "start_line": 5878,
+   "end_line": 5927,
+   "static": true,
+   "called_from": [
+    "NtReadFile"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/file.c:6535"
+   ],
+   "signature": "static unsigned int get_io_timeouts( HANDLE handle, enum server_fd_type type, ULONG count, BOOL is_read, struct io_timeouts *timeouts )",
+   "code": "static unsigned int get_io_timeouts( HANDLE handle, enum server_fd_type type, ULONG count, BOOL is_read,\n                                     struct io_timeouts *timeouts )\n{\n    timeouts->interval = timeouts->total = -1;\n\n    switch(type)\n    {\n    case FD_TYPE_SERIAL:\n    {\n        /* GetCommTimeouts */\n        SERIAL_TIMEOUTS st;\n\n        if (sync_ioctl( handle, IOCTL_SERIAL_GET_TIMEOUTS, NULL, 0, &st, sizeof(st) ))\n            break;\n\n        if (is_read)\n        {\n            if (st.ReadIntervalTimeout)\n                timeouts->interval = st.ReadIntervalTimeout;\n\n            if (st.ReadTotalTimeoutMultiplier || st.ReadTotalTimeoutConstant)\n            {\n                timeouts->total = st.ReadTotalTimeoutConstant;\n                if (st.ReadTotalTimeoutMultiplier != MAXDWORD)\n                    timeouts->total += count * st.ReadTotalTimeoutMultiplier;\n            }\n            else if (st.ReadIntervalTimeout == MAXDWORD)\n                timeouts->interval = timeouts->total = 0;\n        }\n        else  /* write */\n        {\n            if (st.WriteTotalTimeoutMultiplier || st.WriteTotalTimeoutConstant)\n            {\n                timeouts->total = st.WriteTotalTimeoutConstant;\n                if (st.WriteTotalTimeoutMultiplier != MAXDWORD)\n                    timeouts->total += count * st.WriteTotalTimeoutMultiplier;\n            }\n        }\n        break;\n    }\n    case FD_TYPE_SOCKET:\n    case FD_TYPE_CHAR:\n        if (is_read) timeouts->interval = 0;  /* return as soon as we got something */\n        break;\n    default:\n        break;\n    }\n    if (timeouts->total != -1) timeouts->end_time = NtGetTickCount() + timeouts->total;\n    return STATUS_SUCCESS;\n}"
+  },
+  {
+   "name": "register_async_file_read",
+   "file": "dlls/ntdll/unix/file.c",
+   "start_line": 5980,
+   "end_line": 6008,
+   "static": true,
+   "called_from": [
+    "NtReadFile"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static unsigned int register_async_file_read( HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc, void *apc_user, client_ptr_t iosb, void *buffer, ULONG already, ULONG length, BOOL avail_mode )",
+   "code": "static unsigned int register_async_file_read( HANDLE handle, HANDLE event,\n                                              PIO_APC_ROUTINE apc, void *apc_user,\n                                              client_ptr_t iosb, void *buffer,\n                                              ULONG already, ULONG length, BOOL avail_mode )\n{\n    struct async_fileio_read *fileio;\n    unsigned int status;\n\n    if (!(fileio = (struct async_fileio_read *)alloc_fileio( sizeof(*fileio), async_read_proc )))\n        return STATUS_NO_MEMORY;\n\n    fileio->handle = handle;\n    fileio->already = already;\n    fileio->count = length;\n    fileio->buffer = buffer;\n    fileio->avail_mode = avail_mode;\n\n    SERVER_START_REQ( register_async )\n    {\n        req->type   = ASYNC_TYPE_READ;\n        req->count  = length;\n        req->async  = server_async( handle, &fileio->io, event, apc, apc_user, iosb );\n        status = wine_server_call( req );\n    }\n    SERVER_END_REQ;\n\n    if (status != STATUS_PENDING) free( fileio );\n    return status;\n}"
+  },
+  {
+   "name": "get_io_avail_mode",
+   "file": "dlls/ntdll/unix/file.c",
+   "start_line": 5949,
+   "end_line": 5977,
+   "static": true,
+   "called_from": [
+    "NtReadFile"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static NTSTATUS get_io_avail_mode( HANDLE handle, enum server_fd_type type, BOOL *avail_mode )",
+   "code": "static NTSTATUS get_io_avail_mode( HANDLE handle, enum server_fd_type type, BOOL *avail_mode )\n{\n    NTSTATUS status = STATUS_SUCCESS;\n\n    switch(type)\n    {\n    case FD_TYPE_SERIAL:\n    {\n        /* GetCommTimeouts */\n        SERIAL_TIMEOUTS st;\n\n        if (!(status = sync_ioctl( handle, IOCTL_SERIAL_GET_TIMEOUTS, NULL, 0, &st, sizeof(st) )))\n        {\n            *avail_mode = (!st.ReadTotalTimeoutMultiplier &&\n                           !st.ReadTotalTimeoutConstant &&\n                           st.ReadIntervalTimeout == MAXDWORD);\n        }\n        break;\n    }\n    case FD_TYPE_SOCKET:\n    case FD_TYPE_CHAR:\n        *avail_mode = TRUE;\n        break;\n    default:\n        *avail_mode = FALSE;\n        break;\n    }\n    return status;\n}"
+  },
+  {
+   "name": "get_next_io_timeout",
+   "file": "dlls/ntdll/unix/file.c",
+   "start_line": 5931,
+   "end_line": 5945,
+   "static": true,
+   "called_from": [
+    "NtReadFile"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/file.c:6539"
+   ],
+   "signature": "static inline int get_next_io_timeout( const struct io_timeouts *timeouts, ULONG already )",
+   "code": "static inline int get_next_io_timeout( const struct io_timeouts *timeouts, ULONG already )\n{\n    int ret = -1;\n\n    if (timeouts->total != -1)\n    {\n        ret = timeouts->end_time - NtGetTickCount();\n        if (ret < 0) ret = 0;\n    }\n    if (already && timeouts->interval != -1)\n    {\n        if (ret == -1 || ret > timeouts->interval) ret = timeouts->interval;\n    }\n    return ret;\n}"
+  },
+  {
+   "name": "set_sync_iosb",
+   "file": "dlls/ntdll/unix/file.c",
+   "start_line": 5708,
+   "end_line": 5722,
+   "static": true,
+   "called_from": [
+    "NtReadFile",
+    "server_read_file"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/file.c:5817",
+    "dlls/ntdll/unix/file.c:5855",
+    "dlls/ntdll/unix/file.c:6034",
+    "dlls/ntdll/unix/file.c:6058",
+    "dlls/ntdll/unix/file.c:6345"
+   ],
+   "signature": "static void set_sync_iosb( IO_STATUS_BLOCK *io, NTSTATUS status, ULONG_PTR info, unsigned int options )",
+   "code": "static void set_sync_iosb( IO_STATUS_BLOCK *io, NTSTATUS status, ULONG_PTR info, unsigned int options )\n{\n    if (in_wow64_call() && !(options & (FILE_SYNCHRONOUS_IO_ALERT | FILE_SYNCHRONOUS_IO_NONALERT)))\n    {\n        IO_STATUS_BLOCK32 *io32 = io->Pointer;\n\n        io32->Status = status;\n        io32->Information = info;\n    }\n    else\n    {\n        io->Status = status;\n        io->Information = info;\n    }\n}"
+  },
+  {
+   "name": "add_completion",
+   "file": "dlls/ntdll/unix/file.c",
+   "start_line": 6010,
+   "end_line": 6022,
+   "static": true,
+   "called_from": [
+    "NtReadFile"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/file.c:6063",
+    "dlls/ntdll/unix/file.c:6349",
+    "dlls/ntdll/unix/file.c:6583"
+   ],
+   "signature": "static void add_completion( HANDLE handle, ULONG_PTR value, NTSTATUS status, ULONG info, BOOL async )",
+   "code": "static void add_completion( HANDLE handle, ULONG_PTR value, NTSTATUS status, ULONG info, BOOL async )\n{\n    SERVER_START_REQ( add_fd_completion )\n    {\n        req->handle      = wine_server_obj_handle( handle );\n        req->cvalue      = value;\n        req->status      = status;\n        req->information = info;\n        req->async       = async;\n        wine_server_call( req );\n    }\n    SERVER_END_REQ;\n}"
+  },
+  {
+   "name": "alloc_fileio",
+   "file": "dlls/ntdll/unix/file.c",
+   "start_line": 5580,
+   "end_line": 5595,
+   "static": false,
+   "called_from": [
+    "register_async_file_read",
+    "server_read_file"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/serial.c:1133",
+    "dlls/ntdll/unix/file.c:5732",
+    "dlls/ntdll/unix/file.c:5802",
+    "dlls/ntdll/unix/file.c:5839",
+    "dlls/ntdll/unix/file.c:6504"
+   ],
+   "signature": "struct async_fileio *alloc_fileio( DWORD size, async_callback_t callback )",
+   "code": "struct async_fileio *alloc_fileio( DWORD size, async_callback_t callback )\n{\n    /* first free remaining previous fileinfos */\n    struct async_fileio *io = InterlockedExchangePointer( (void **)&fileio_freelist, NULL );\n\n    while (io)\n    {\n        struct async_fileio *next = io->next;\n        free( io );\n        io = next;\n    }\n\n    if ((io = malloc( size )))\n        io->callback = callback;\n    return io;\n}"
+  },
+  {
+   "name": "irp_completion",
+   "file": "dlls/ntdll/unix/file.c",
+   "start_line": 5598,
+   "end_line": 5614,
+   "static": true,
+   "called_from": [
+    "server_read_file"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/file.c:5732",
+    "dlls/ntdll/unix/file.c:5802",
+    "dlls/ntdll/unix/file.c:5839",
+    "dlls/ntdll/unix/file.c:6900",
+    "dlls/ntdll/unix/file.c:7440"
+   ],
+   "signature": "static BOOL irp_completion( void *user, ULONG_PTR *info, unsigned int *status )",
+   "code": "static BOOL irp_completion( void *user, ULONG_PTR *info, unsigned int *status )\n{\n    struct async_irp *async = user;\n\n    if (*status == STATUS_ALERTED)\n    {\n        SERVER_START_REQ( get_async_result )\n        {\n            req->user_arg = wine_server_client_ptr( async );\n            wine_server_set_reply( req, async->buffer, async->size );\n            *status = virtual_locked_server_call( req );\n        }\n        SERVER_END_REQ;\n    }\n    release_fileio( &async->io );\n    return TRUE;\n}"
+  },
+  {
+   "name": "sync_ioctl",
+   "file": "dlls/ntdll/unix/file.c",
+   "start_line": 6717,
+   "end_line": 6725,
+   "static": false,
+   "called_from": [
+    "get_io_avail_mode",
+    "get_io_timeouts"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/process.c:395",
+    "dlls/ntdll/unix/file.c:2432",
+    "dlls/ntdll/unix/unix_private.h:368",
+    "dlls/ntdll/unix/env.c:2127",
+    "dlls/hid/hidd.c (other module)"
+   ],
+   "signature": "NTSTATUS sync_ioctl( HANDLE file, ULONG code, void *in_buffer, ULONG in_size, void *out_buffer, ULONG out_size )",
+   "code": "NTSTATUS sync_ioctl( HANDLE file, ULONG code, void *in_buffer, ULONG in_size, void *out_buffer, ULONG out_size )\n{\n    IO_STATUS_BLOCK32 io32;\n    IO_STATUS_BLOCK io;\n\n    /* the 32-bit iosb is filled for overlapped file handles */\n    io.Pointer = &io32;\n    return NtDeviceIoControlFile( file, NULL, NULL, NULL, &io, code, in_buffer, in_size, out_buffer, out_size );\n}"
+  },
+  {
+   "name": "async_read_proc",
+   "file": "dlls/ntdll/unix/file.c",
+   "start_line": 5616,
+   "end_line": 5664,
+   "static": true,
+   "called_from": [
+    "register_async_file_read"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL async_read_proc( void *user, ULONG_PTR *info, unsigned int *status )",
+   "code": "static BOOL async_read_proc( void *user, ULONG_PTR *info, unsigned int *status )\n{\n    struct async_fileio_read *fileio = user;\n    int fd, needs_close, result;\n\n    switch (*status)\n    {\n    case STATUS_ALERTED: /* got some new data */\n        /* check to see if the data is ready (non-blocking) */\n        if ((*status = server_get_unix_fd( fileio->handle, FILE_READ_DATA, &fd,\n                                          &needs_close, NULL, NULL )))\n            break;\n\n        result = virtual_locked_read(fd, &fileio->buffer[fileio->already], fileio->count-fileio->already);\n        if (needs_close) close( fd );\n\n        if (result < 0)\n        {\n            if (errno == EAGAIN || errno == EINTR)\n                return FALSE;\n\n            /* check to see if the transfer is complete */\n            *status = errno_to_status( errno );\n        }\n        else if (result == 0)\n        {\n            *status = fileio->already ? STATUS_SUCCESS : STATUS_PIPE_BROKEN;\n        }\n        else\n        {\n            fileio->already += result;\n\n            if (fileio->already < fileio->count && !fileio->avail_mode)\n                return FALSE;\n\n            *status = STATUS_SUCCESS;\n        }\n        break;\n\n    case STATUS_TIMEOUT:\n    case STATUS_IO_TIMEOUT:\n        if (fileio->already) *status = STATUS_SUCCESS;\n        break;\n    }\n\n    *info = fileio->already;\n    release_fileio( &fileio->io );\n    return TRUE;\n}"
+  },
+  {
+   "name": "release_fileio",
+   "file": "dlls/ntdll/unix/file.c",
+   "start_line": 5570,
+   "end_line": 5578,
+   "static": false,
+   "called_from": [
+    "async_read_proc",
+    "irp_completion"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/serial.c:1075",
+    "dlls/ntdll/unix/serial.c:1121",
+    "dlls/ntdll/unix/serial.c:1218",
+    "dlls/ntdll/unix/file.c:5704",
+    "dlls/ntdll/unix/file.c:7163"
+   ],
+   "signature": "void release_fileio( struct async_fileio *io )",
+   "code": "void release_fileio( struct async_fileio *io )\n{\n    for (;;)\n    {\n        struct async_fileio *next = fileio_freelist;\n        io->next = next;\n        if (InterlockedCompareExchangePointer( (void **)&fileio_freelist, io, next ) == next) return;\n    }\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "async_fileio_read",
+    "kind": "struct_decl",
+    "start_line": 5532,
+    "end_line": 5540,
+    "code": "struct async_fileio_read\n{\n    struct async_fileio io;\n    HANDLE              handle;\n    char               *buffer;\n    unsigned int        already;\n    unsigned int        count;\n    BOOL                avail_mode;\n};"
+   },
+   {
+    "name": "async_irp",
+    "kind": "struct_decl",
+    "start_line": 5561,
+    "end_line": 5566,
+    "code": "struct async_irp\n{\n    struct async_fileio io;\n    void               *buffer;   /* buffer for output */\n    ULONG               size;     /* size of buffer */\n};"
+   },
+   {
+    "name": "io_timeouts",
+    "kind": "struct_decl",
+    "start_line": 5870,
+    "end_line": 5875,
+    "code": "struct io_timeouts\n{\n    int interval;   /* max interval between two bytes */\n    int total;      /* total timeout for the whole operation */\n    int end_time;   /* absolute time of end of operation */\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 128,
+    "end_line": 128,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(file);"
+   },
+   {
+    "name": "fileio_freelist",
+    "type": "struct async_fileio *",
+    "static": true,
+    "start_line": 5568,
+    "end_line": 5568,
+    "code": "static struct async_fileio *fileio_freelist;"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "server_get_unix_fd",
+    "file": "dlls/ntdll/unix/server.c",
+    "start_line": 1156
+   },
+   {
+    "name": "sock_read",
+    "file": "dlls/ntdll/unix/socket.c",
+    "start_line": 1022
+   },
+   {
+    "name": "virtual_check_buffer_for_write",
+    "file": "dlls/ntdll/unix/virtual.c",
+    "start_line": 4988
+   },
+   {
+    "name": "virtual_locked_pread",
+    "file": "dlls/ntdll/unix/virtual.c",
+    "start_line": 4879
+   },
+   {
+    "name": "virtual_locked_read",
+    "file": "dlls/ntdll/unix/virtual.c",
+    "start_line": 4854
+   },
+   {
+    "name": "virtual_locked_server_call",
+    "file": "dlls/ntdll/unix/virtual.c",
+    "start_line": 4828
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "NtDeviceIoControlFile",
+    "impl": [
+     "dlls/ntdll/unix/file.c:6669"
+    ]
+   },
+   {
+    "name": "NtGetTickCount",
+    "impl": [
+     "dlls/ntdll/time.c:401"
+    ]
+   },
+   {
+    "name": "NtQueueApcThread",
+    "impl": [
+     "dlls/ntdll/unix/thread.c:1867"
+    ]
+   },
+   {
+    "name": "NtResetEvent",
+    "impl": [
+     "dlls/ntdll/unix/sync.c:1187"
+    ]
+   },
+   {
+    "name": "NtSetEvent",
+    "impl": [
+     "dlls/ntdll/unix/sync.c:1154"
+    ]
+   },
+   {
+    "name": "memset",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   },
+   {
+    "name": "wine_server_call",
+    "impl": [
+     "dlls/ntdll/loader.c:3436"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "_InterlockedCompareExchangePointer",
+   "_InterlockedExchangePointer",
+   "wine_dbg_log",
+   "wine_server_client_ptr",
+   "wine_server_obj_handle",
+   "wine_server_ptr_handle",
+   "wine_server_reply_size",
+   "wine_server_set_reply"
+  ],
+  "system": [
+   "__errno_location",
+   "close",
+   "free",
+   "lseek",
+   "malloc",
+   "poll"
+  ],
+  "unresolved": [
+   "in_wow64_call",
+   "iosb_client_ptr",
+   "server_async",
+   "wait_async"
+  ],
+  "server_requests": [
+   {
+    "request": "add_fd_completion",
+    "handler": "server/fd.c:3173"
+   },
+   {
+    "request": "get_async_result",
+    "handler": "server/async.c:914"
+   },
+   {
+    "request": "read",
+    "handler": "server/fd.c:3065"
+   },
+   {
+    "request": "register_async",
+    "handler": "server/fd.c:3123"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ntdll.NtReadFile",
+  "category": {
+   "l1": "Data access and storage",
+   "l2": "Files and I/O",
+   "header": "ntifs.h",
+   "textbook": "File management",
+   "basis": "name_rule"
+  },
+  "loc": {
+   "total": 198,
+   "body": 195,
+   "code": 118
+  },
+  "cyclomatic": 74,
+  "return_type": "NTSTATUS",
+  "n_params": 9,
+  "tests": {
+   "n_tests_own": 11,
+   "n_tests": 15,
+   "n_tests_other": 4,
+   "own_test_functions": [
+    "dlls/ntdll/tests/file.c::append_file_test",
+    "dlls/ntdll/tests/file.c::create_file_test",
+    "dlls/ntdll/tests/file.c::read_file_test",
+    "dlls/ntdll/tests/file.c::test_file_io_completion",
+    "dlls/ntdll/tests/file.c::test_read_write",
+    "dlls/ntdll/tests/pipe.c::read_pipe_test",
+    "dlls/ntdll/tests/pipe.c::test_async_cancel_on_handle_close",
+    "dlls/ntdll/tests/pipe.c::test_blocking",
+    "dlls/ntdll/tests/pipe.c::test_completion",
+    "dlls/ntdll/tests/pipe.c::test_pipe_state",
+    "dlls/ntdll/tests/pipe.c::test_pipe_with_data_state"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntreadfile",
+   "source": "ddi",
+   "description": "Learn more about the NtReadFile routine.",
+   "min_windows": "Windows 2000",
+   "documented_dll": "NtosKrnl.exe"
+  },
+  "exports": [
+   "ntdll.NtReadFile",
+   "ntdll.ZwReadFile",
+   "ntoskrnl.exe.NtReadFile",
+   "ntoskrnl.exe.ZwReadFile"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

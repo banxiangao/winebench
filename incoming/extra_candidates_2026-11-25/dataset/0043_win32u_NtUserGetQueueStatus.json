@@ -1,0 +1,189 @@
+{
+ "id": "0043",
+ "function": {
+  "name": "NtUserGetQueueStatus",
+  "export_name": "GetQueueStatus",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "user.exe16",
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/input.c",
+  "start_line": 955,
+  "end_line": 977,
+  "body_lines": 20,
+  "signature": "DWORD WINAPI NtUserGetQueueStatus( UINT flags )",
+  "header_comment": "/***********************************************************************\n *           NtUserGetQueueStatus (win32u.@)\n */",
+  "code": "DWORD WINAPI NtUserGetQueueStatus( UINT flags )\n{\n    UINT ret, wake_bits, changed_bits;\n\n    if (flags & ~(QS_ALLINPUT | QS_ALLPOSTMESSAGE | QS_SMRESULT))\n    {\n        RtlSetLastWin32Error( ERROR_INVALID_FLAGS );\n        return 0;\n    }\n\n    check_for_events( flags );\n\n    if (get_shared_queue_bits( &wake_bits, &changed_bits ) && !(changed_bits & flags))\n        ret = MAKELONG( changed_bits & flags, wake_bits & flags );\n    else SERVER_START_REQ( get_queue_status )\n    {\n        req->clear_bits = flags;\n        wine_server_call( req );\n        ret = MAKELONG( reply->changed_bits & flags, reply->wake_bits & flags );\n    }\n    SERVER_END_REQ;\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"win32u_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"kbd.h\""
+  ],
+  "resolution": [
+   "user32!GetQueueStatus [stdcall] -> NtUserGetQueueStatus implicitly imported from win32u",
+   "win32u!NtUserGetQueueStatus [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/msg.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 6
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "user.exe16",
+   "source_module": "user.exe16",
+   "exported_by": [
+    "user.exe16"
+   ],
+   "file": "dlls/user.exe16/message.c",
+   "start_line": 1890,
+   "resolution": [
+    "user.exe16!GetQueueStatus [pascal] -> internal symbol GetQueueStatus16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 1893,
+   "signature": "DWORD WINAPI GetQueueStatus16( UINT16 flags )",
+   "code": "DWORD WINAPI GetQueueStatus16( UINT16 flags )\n{\n    return GetQueueStatus( flags );\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-getqueuestatus.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getqueuestatus",
+   "documented_name": "getqueuestatus",
+   "file": "docs/0043_sdk-api_nf-winuser-getqueuestatus.md",
+   "text": "---\nUID: NF:winuser.GetQueueStatus\ntitle: GetQueueStatus function (winuser.h)\ndescription: Retrieves the type of messages found in the calling thread's message queue.\nhelpviewer_keywords: [\"GetQueueStatus\",\"GetQueueStatus function [Windows and Messages]\",\"QS_ALLEVENTS\",\"QS_ALLINPUT\",\"QS_ALLPOSTMESSAGE\",\"QS_HOTKEY\",\"QS_INPUT\",\"QS_KEY\",\"QS_MOUSE\",\"QS_MOUSEBUTTON\",\"QS_MOUSEMOVE\",\"QS_PAINT\",\"QS_POSTMESSAGE\",\"QS_RAWINPUT\",\"QS_SENDMESSAGE\",\"QS_TIMER\",\"_win32_GetQueueStatus\",\"_win32_getqueuestatus_cpp\",\"winmsg.getqueuestatus\",\"winui._win32_getqueuestatus\",\"winuser/GetQueueStatus\"]\nold-location: winmsg\\getqueuestatus.htm\ntech.root: winmsg\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\windowing\\messagesandmessagequeues\\messagesandmessagequeuesreference\\messagesandmessagequeuesfunctions\\getqueuestatus.htm\nms.date: 12/05/2018\nms.keywords: GetQueueStatus, GetQueueStatus function [Windows and Messages], QS_ALLEVENTS, QS_ALLINPUT, QS_ALLPOSTMESSAGE, QS_HOTKEY, QS_INPUT, QS_KEY, QS_MOUSE, QS_MOUSEBUTTON, QS_MOUSEMOVE, QS_PAINT, QS_POSTMESSAGE, QS_RAWINPUT, QS_SENDMESSAGE, QS_TIMER, _win32_GetQueueStatus, _win32_getqueuestatus_cpp, winmsg.getqueuestatus, winui._win32_getqueuestatus, winuser/GetQueueStatus\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetQueueStatus\n - winuser/GetQueueStatus\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-rtcore-ntuser-window-ext-l1-1-1.dll\n - User32.dll\n - API-MS-Win-NTUser-IE-message-l1-1-0.dll\n - ie_shims.dll\n - API-MS-Win-RTCore-NTUser-Window-l1-1-0.dll\n - minuser.dll\n - Ext-MS-Win-NTUser-message-l1-1-0.dll\n - Ext-MS-Win-NTUser-message-l1-1-1.dll\n - Ext-MS-Win-RTCore-NTUser-Window-Ext-l1-1-0.dll\n - Ext-MS-Win-NTUser-Message-l1-1-2.dll\n - Ext-MS-Win-NTUser-Message-L1-1-3.dll\napi_name:\n - GetQueueStatus\nreq.apiset: ext-ms-win-ntuser-message-l1-1-0 (introduced in Windows 8)\n---\n\n# GetQueueStatus function\n\n\n## -description\n\nRetrieves the type of messages found in the calling thread's message queue.\n\n## -parameters\n\n### -param flags [in]\n\nType: <b>UINT</b>\n\nThe types of messages for which to check. This parameter can be one or more of the following values.\n\n| Value | Meaning |\n|-------|---------|\n| **QS\\_KEY**<br>0x0001 | A [WM\\_KEYUP](/windows/desktop/inputdev/wm-keyup), [WM\\_KEYDOWN](/windows/desktop/inputdev/wm-keydown), [WM\\_SYSKEYUP](/windows/desktop/inputdev/wm-syskeyup), or [WM\\_SYSKEYDOWN](/windows/desktop/inputdev/wm-syskeydown) message is in the queue. |\n| **QS\\_MOUSEMOVE**<br>0x0002 | A [WM\\_MOUSEMOVE](/windows/desktop/inputdev/wm-mousemove) message is in the queue. |\n| **QS\\_MOUSEBUTTON**<br>0x0004 | A mouse-button message ([WM\\_LBUTTONUP](/windows/desktop/inputdev/wm-lbuttonup), [WM\\_RBUTTONDOWN](/windows/desktop/inputdev/wm-rbuttondown), and so on). |\n| **QS\\_POSTMESSAGE**<br>0x0008 | A posted message (other than those listed here) is in the queue. For more information, see [PostMessage](/windows/win32/api/winuser/nf-winuser-postmessagew).<br>This value is cleared when you call [GetMessage](/windows/win32/api/winuser/nf-winuser-getmessage) or [PeekMessage](/windows/win32/api/winuser/nf-winuser-peekmessagew), whether or not you are filtering messages. |\n| **QS\\_TIMER**<br>0x0010 | A [WM\\_TIMER](/windows/desktop/winmsg/wm-timer) message is in the queue. |\n| **QS\\_PAINT**<br>0x0020 | A [WM\\_PAINT](/windows/desktop/gdi/wm-paint) message is in the queue. |\n| **QS\\_SENDMESSAGE**<br>0x0040 | A message sent by another thread or application is in the queue. For more information, see [SendMessage](/windows/win32/api/winuser/nf-winuser-sendmessagew). |\n| **QS\\_HOTKEY**<br>0x0080 | A [WM\\_HOTKEY](/windows/desktop/inputdev/wm-hotkey) message is in the queue. |\n| **QS\\_ALLPOSTMESSAGE**<br>0x0100 | A posted message (other than those listed here) is in the queue. For more information, see [PostMessage](/windows/win32/api/winuser/nf-winuser-postmessagew).<br>This value is cleared when you call GetMessage or PeekMessage without filtering messages. | \n| **QS\\_RAWINPUT**<br>0x0400 | Windows XP and newer: A raw input message is in the queue. For more information, see [Raw Input](/windows/desktop/inputdev/raw-input). |\n| **QS\\_TOUCH**<br>0x0800 | Windows 8 and newer: A touch input message is in the queue. For more information, see [Touch Input](/windows/win32/wintouch/windows-touch-portal). |\n| **QS\\_POINTER**<br>0x1000 | Windows 8 and newer: A pointer input message is in the queue. For more information, see [Pointer Input](/windows/win32/inputmsg/messages-and-notifications-portal). |\n| **QS\\_MOUSE**<br>(QS\\_MOUSEMOVE \\| QS\\_MOUSEBUTTON) | A [WM\\_MOUSEMOVE](/windows/desktop/inputdev/wm-mousemove) message or mouse-button message ([WM\\_LBUTTONUP](/windows/desktop/inputdev/wm-lbuttonup), [WM\\_RBUTTONDOWN](/windows/desktop/inputdev/wm-rbuttondown), and so on). |\n| **QS\\_INPUT**<br>(QS\\_MOUSE \\| QS\\_KEY \\| QS\\_RAWINPUT \\| QS\\_TOUCH \\| QS\\_POINTER) | An input message is in the queue. |\n| **QS\\_ALLEVENTS**<br>(QS\\_INPUT \\| QS\\_POSTMESSAGE \\| QS\\_TIMER \\| QS\\_PAINT \\| QS\\_HOTKEY) | An input, [WM\\_TIMER](/windows/desktop/winmsg/wm-timer), [WM\\_PAINT](/windows/desktop/gdi/wm-paint), [WM\\_HOTKEY](/windows/desktop/inputdev/wm-hotkey), or posted message is in the queue. |\n| **QS\\_ALLINPUT**<br>(QS\\_INPUT \\| QS\\_POSTMESSAGE \\| QS\\_TIMER \\| QS\\_PAINT \\| QS\\_HOTKEY \\| QS\\_SENDMESSAGE) | Any message is in the queue. |\n\n\n## -returns\n\nType: <b>DWORD</b>\n\nThe high-order word of the return value indicates the types of messages currently in the queue. The low-order word indicates the types of messages that have been added to the queue and that are still in the queue since the last call to the <b>GetQueueStatus</b>, <a href=\"/windows/desktop/api/winuser/nf-winuser-getmessage\">GetMessage</a>, or <a href=\"/windows/desktop/api/winuser/nf-winuser-peekmessagea\">PeekMessage</a> function.\n\n## -remarks\n\nThe presence of a QS_ flag in the return value does not guarantee that a subsequent call to the <a href=\"/windows/desktop/api/winuser/nf-winuser-getmessage\">GetMessage</a> or <a href=\"/windows/desktop/api/winuser/nf-winuser-peekmessagea\">PeekMessage</a> function will return a message. <b>GetMessage</b> and <b>PeekMessage</b> perform some internal filtering that may cause the message to be processed internally. For this reason, the return value from <b>GetQueueStatus</b> should be considered only a hint as to whether <b>GetMessage</b> or <b>PeekMessage</b> should be called. \n\nThe <b>QS_ALLPOSTMESSAGE</b> and <b>QS_POSTMESSAGE</b> flags differ in when they are cleared. <b>QS_POSTMESSAGE</b> is cleared when you call <a href=\"/windows/desktop/api/winuser/nf-winuser-getmessage\">GetMessage</a> or <a href=\"/windows/desktop/api/winuser/nf-winuser-peekmessagea\">PeekMessage</a>, whether or not you are filtering messages. <b>QS_ALLPOSTMESSAGE</b> is cleared when you call <b>GetMessage</b> or <b>PeekMessage</b> without filtering messages (<i>wMsgFilterMin</i> and <i>wMsgFilterMax</i> are 0). This can be useful when you call <b>PeekMessage</b> multiple times to get messages in different ranges.\n\n## -see-also\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-getinputstate\">GetInputState</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-getmessage\">GetMessage</a>\n\n\n\n<a href=\"/windows/desktop/winmsg/messages-and-message-queues\">Messages and Message Queues</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-peekmessagea\">PeekMessage</a>\n\n\n\n<b>Reference</b>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_shared_queue_bits",
+   "file": "dlls/win32u/input.c",
+   "start_line": 935,
+   "end_line": 950,
+   "static": true,
+   "called_from": [
+    "NtUserGetQueueStatus"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/input.c:1059"
+   ],
+   "signature": "static BOOL get_shared_queue_bits( UINT *wake_bits, UINT *changed_bits )",
+   "code": "static BOOL get_shared_queue_bits( UINT *wake_bits, UINT *changed_bits )\n{\n    struct object_lock lock = OBJECT_LOCK_INIT;\n    const queue_shm_t *queue_shm;\n    UINT status;\n\n    *wake_bits = *changed_bits = 0;\n    while ((status = get_shared_queue( &lock, &queue_shm )) == STATUS_PENDING)\n    {\n        *wake_bits = queue_shm->wake_bits;\n        *changed_bits = queue_shm->changed_bits;\n    }\n\n    if (status) return FALSE;\n    return TRUE;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "check_for_events",
+    "file": "dlls/win32u/message.c",
+    "start_line": 3373
+   },
+   {
+    "name": "get_shared_queue",
+    "file": "dlls/win32u/winstation.c",
+    "start_line": 236
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "RtlSetLastWin32Error",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   },
+   {
+    "name": "wine_server_call",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/loader.c:3436"
+    ]
+   }
+  ],
+  "header_inline": [],
+  "system": [
+   "memset"
+  ],
+  "unresolved": [],
+  "server_requests": [
+   {
+    "request": "get_queue_status",
+    "handler": "server/queue.c:3117"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "win32u.NtUserGetQueueStatus",
+  "category": {
+   "l1": "User input and messaging",
+   "l2": "Windows and messages",
+   "header": "winuser.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 23,
+   "body": 22,
+   "code": 13
+  },
+  "cyclomatic": 4,
+  "return_type": "DWORD",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 6,
+   "n_tests": 6,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/user32/tests/msg.c::HotkeyMsgCheckProcA",
+    "dlls/user32/tests/msg.c::test_PeekMessage",
+    "dlls/user32/tests/msg.c::test_SendMessage_other_thread",
+    "dlls/user32/tests/msg.c::test_hotkey",
+    "dlls/user32/tests/msg.c::test_nullCallback",
+    "dlls/user32/tests/msg.c::test_setparent_status"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getqueuestatus",
+   "source": "win32",
+   "description": "Retrieves the type of messages found in the calling thread's message queue.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "User32.dll"
+  },
+  "exports": [
+   "user32.GetQueueStatus",
+   "win32u.NtUserGetQueueStatus"
+  ],
+  "subset": {
+   "selected_by": "extra candidate 2026-11-25: loc.total > 10, 5 < n_tests_own <= 50, category with few samples"
+  }
+ }
+}

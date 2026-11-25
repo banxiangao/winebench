@@ -1,0 +1,246 @@
+{
+ "id": "0085",
+ "function": {
+  "name": "EndDialog",
+  "export_name": "EndDialog",
+  "module": "user32",
+  "source_module": "user32",
+  "exported_by": [
+   "user.exe16",
+   "user32"
+  ],
+  "side": "PE",
+  "file": "dlls/user32/dialog.c",
+  "start_line": 909,
+  "end_line": 951,
+  "body_lines": 40,
+  "signature": "BOOL WINAPI EndDialog( HWND hwnd, INT_PTR retval )",
+  "header_comment": "/***********************************************************************\n *\t\tEndDialog (USER32.@)\n */",
+  "code": "BOOL WINAPI EndDialog( HWND hwnd, INT_PTR retval )\n{\n    DIALOGINFO * dlgInfo;\n    HWND owner;\n\n    TRACE(\"%p %Id\\n\", hwnd, retval );\n\n    if (!(dlgInfo = DIALOG_get_info( hwnd, FALSE )))\n    {\n        ERR(\"got invalid window handle (%p); buggy app !?\\n\", hwnd);\n        return FALSE;\n    }\n    dlgInfo->idResult = retval;\n    dlgInfo->flags |= DF_END;\n\n    owner = (HWND)GetWindowLongPtrA( hwnd, GWLP_HWNDPARENT );\n    if (owner)\n        NtUserEnableWindow( owner, TRUE );\n\n    /* Windows sets the focus to the dialog itself in EndDialog */\n\n    if (IsChild(hwnd, GetFocus()))\n       NtUserSetFocus( hwnd );\n\n    /* Don't have to send a ShowWindow(SW_HIDE), just do\n       SetWindowPos with SWP_HIDEWINDOW as done in Windows */\n\n    NtUserSetWindowPos( hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE\n                        | SWP_NOZORDER | SWP_NOACTIVATE | SWP_HIDEWINDOW );\n\n    if (hwnd == GetActiveWindow())\n    {\n        /* If this dialog was given an owner then set the focus to that owner. */\n        if (owner)\n            NtUserSetForegroundWindow( owner );\n        else\n            NtUserActivateOtherWindow( hwnd );\n    }\n\n    /* unblock dialog loop */\n    PostMessageA(hwnd, WM_NULL, 0, 0);\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdlib.h>",
+   "#include <limits.h>",
+   "#include <errno.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"user_private.h\"",
+   "#include \"controls.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "user32!EndDialog [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/dialog.c",
+   "dlls/user32/tests/edit.c",
+   "dlls/user32/tests/msg.c",
+   "dlls/user32/tests/win.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 30
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "user.exe16",
+   "source_module": "user.exe16",
+   "exported_by": [
+    "user.exe16"
+   ],
+   "file": "dlls/user.exe16/dialog.c",
+   "start_line": 523,
+   "resolution": [
+    "user.exe16!EndDialog [pascal -ret16] -> internal symbol EndDialog16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 526,
+   "signature": "BOOL16 WINAPI EndDialog16( HWND16 hwnd, INT16 retval )",
+   "code": "BOOL16 WINAPI EndDialog16( HWND16 hwnd, INT16 retval )\n{\n    return EndDialog( WIN_Handle32(hwnd), retval );\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-enddialog.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-enddialog",
+   "documented_name": "enddialog",
+   "file": "docs/0085_sdk-api_nf-winuser-enddialog.md",
+   "text": "---\nUID: NF:winuser.EndDialog\ntitle: EndDialog function (winuser.h)\ndescription: Destroys a modal dialog box, causing the system to end any processing for the dialog box.\nhelpviewer_keywords: [\"EndDialog\",\"EndDialog function [Dialog Boxes]\",\"_win32_EndDialog\",\"_win32_enddialog_cpp\",\"dlgbox.enddialog\",\"winui._win32_enddialog\",\"winuser/EndDialog\"]\nold-location: dlgbox\\enddialog.htm\ntech.root: dlgbox\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\windowing\\dialogboxes\\dialogboxreference\\dialogboxfunctions\\enddialog.htm\nms.date: 12/05/2018\nms.keywords: EndDialog, EndDialog function [Dialog Boxes], _win32_EndDialog, _win32_enddialog_cpp, dlgbox.enddialog, winui._win32_enddialog, winuser/EndDialog\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - EndDialog\n - winuser/EndDialog\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - User32.dll\n - Ext-MS-Win-NTUser-DialogBox-l1-1-0.dll\n - Ext-MS-Win-NTUser-DialogBox-l1-1-1.dll\n - ext-ms-win-ntuser-dialogbox-l1-1-2.dll\napi_name:\n - EndDialog\nreq.apiset: ext-ms-win-ntuser-dialogbox-l1-1-0 (introduced in Windows 8)\n---\n\n# EndDialog function\n\n\n## -description\n\nDestroys a modal dialog box, causing the system to end any processing for the dialog box.\n\n## -parameters\n\n### -param hDlg [in]\n\nType: <b>HWND</b>\n\nA handle to the dialog box to be destroyed.\n\n### -param nResult [in]\n\nType: <b>INT_PTR</b>\n\nThe value to be returned to the application from the function that created the dialog box.\n\n## -returns\n\nType: <b>BOOL</b>\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero. To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nDialog boxes created by the <a href=\"/windows/desktop/api/winuser/nf-winuser-dialogboxa\">DialogBox</a>, <a href=\"/windows/desktop/api/winuser/nf-winuser-dialogboxparama\">DialogBoxParam</a>, <a href=\"/windows/desktop/api/winuser/nf-winuser-dialogboxindirecta\">DialogBoxIndirect</a>, and <a href=\"/windows/desktop/api/winuser/nf-winuser-dialogboxindirectparama\">DialogBoxIndirectParam</a> functions must be destroyed using the <b>EndDialog</b> function. An application calls <b>EndDialog</b> from within the dialog box procedure; the function must not be used for any other purpose. \n\nA dialog box procedure can call <b>EndDialog</b> at any time, even during the processing of the <a href=\"/windows/desktop/dlgbox/wm-initdialog\">WM_INITDIALOG</a> message. If your application calls the function while <b>WM_INITDIALOG</b> is being processed, the dialog box is destroyed before it is shown and before the input focus is set. \n\n<b>EndDialog</b> does not destroy the dialog box immediately. Instead, it sets a flag and allows the dialog box procedure to return control to the system. The system checks the flag before attempting to retrieve the next message from the application queue. If the flag is set, the system ends the message loop, destroys the dialog box, and uses the value in <i>nResult</i> as the return value from the function that created the dialog box.\n\n## -see-also\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/dlgbox/dialog-boxes\">Dialog Boxes</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-dialogboxa\">DialogBox</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-dialogboxindirecta\">DialogBoxIndirect</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-dialogboxindirectparama\">DialogBoxIndirectParam</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-dialogboxparama\">DialogBoxParam</a>\n\n\n\n<b>Reference</b>\n\n\n\n<a href=\"/windows/desktop/dlgbox/wm-initdialog\">WM_INITDIALOG</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 30,
+    "end_line": 30,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(dialog);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "DIALOG_get_info",
+    "file": "dlls/user32/defdlg.c",
+    "start_line": 291
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "GetActiveWindow",
+    "impl": [
+     "dlls/user32/input.c:832"
+    ]
+   },
+   {
+    "name": "GetFocus",
+    "impl": [
+     "dlls/user32/input.c:841"
+    ]
+   },
+   {
+    "name": "GetWindowLongA",
+    "impl": [
+     "dlls/user32/win.c:878"
+    ]
+   },
+   {
+    "name": "IsChild",
+    "impl": [
+     "dlls/user32/win.c:1209"
+    ]
+   },
+   {
+    "name": "PostMessageA",
+    "impl": [
+     "dlls/user32/message.c:681"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtUserEnableWindow",
+    "module": "win32u",
+    "impl": [
+     "dlls/win32u/window.c:1127"
+    ]
+   },
+   {
+    "name": "NtUserSetFocus",
+    "module": "win32u",
+    "impl": [
+     "dlls/win32u/input.c:2266"
+    ]
+   },
+   {
+    "name": "NtUserSetForegroundWindow",
+    "module": "win32u",
+    "impl": [
+     "dlls/win32u/input.c:2326"
+    ]
+   },
+   {
+    "name": "NtUserSetWindowPos",
+    "module": "win32u",
+    "impl": [
+     "dlls/win32u/window.c:4244"
+    ]
+   }
+  ],
+  "header_inline": [
+   "NtUserActivateOtherWindow",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "user32.EndDialog",
+  "category": {
+   "l1": "User interface",
+   "l2": "Dialog boxes",
+   "header": "winuser.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 43,
+   "body": 42,
+   "code": 22
+  },
+  "cyclomatic": 6,
+  "return_type": "BOOL",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 30,
+   "n_tests": 36,
+   "n_tests_other": 6,
+   "own_test_functions": [
+    "dlls/user32/tests/dialog.c::TestControlStyleDlgProc",
+    "dlls/user32/tests/dialog.c::TestDefButtonDlgProc",
+    "dlls/user32/tests/dialog.c::TestInitDialogHandleProc",
+    "dlls/user32/tests/dialog.c::TestReturnKeyDlgProc",
+    "dlls/user32/tests/dialog.c::capture_release_proc",
+    "dlls/user32/tests/dialog.c::custom_test_dialog_proc",
+    "dlls/user32/tests/dialog.c::delayFocusDlgWinProc",
+    "dlls/user32/tests/dialog.c::disabled_test_proc",
+    "dlls/user32/tests/dialog.c::getdlgitem_test_dialog_proc",
+    "dlls/user32/tests/dialog.c::test_aw_conversion_dlgproc",
+    "dlls/user32/tests/dialog.c::test_aw_conversion_dlgproc2",
+    "dlls/user32/tests/dialog.c::test_aw_conversion_dlgproc3",
+    "dlls/user32/tests/dialog.c::timer_message_dlg_proc",
+    "dlls/user32/tests/edit.c::edit_dialog_proc",
+    "dlls/user32/tests/edit.c::edit_singleline_dialog_proc",
+    "dlls/user32/tests/edit.c::edit_wantreturn_dialog_proc",
+    "dlls/user32/tests/edit.c::multi_edit_dialog_proc",
+    "dlls/user32/tests/msg.c::TestModalDlgProc2",
+    "dlls/user32/tests/msg.c::TestModalDlgProcA",
+    "dlls/user32/tests/msg.c::test_EndDialog",
+    "dlls/user32/tests/msg.c::test_dialog_messages",
+    "dlls/user32/tests/msg.c::test_enddialog_seq",
+    "dlls/user32/tests/msg.c::test_enddialog_seq2",
+    "dlls/user32/tests/msg.c::test_messages",
+    "dlls/user32/tests/msg.c::wm_quit_dlg_proc",
+    "dlls/user32/tests/win.c::empty_dlg_proc2",
+    "dlls/user32/tests/win.c::empty_dlg_proc3",
+    "dlls/user32/tests/win.c::parent_dlg_proc",
+    "dlls/user32/tests/win.c::reparent_dialog_owner_proc",
+    "dlls/user32/tests/win.c::test_dialog_parent"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-enddialog",
+   "source": "win32",
+   "description": "Destroys a modal dialog box, causing the system to end any processing for the dialog box.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "User32.dll"
+  },
+  "exports": [
+   "shlwapi.EndDialogWrap",
+   "user32.EndDialog"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

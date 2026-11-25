@@ -1,0 +1,107 @@
+{
+ "id": "0341",
+ "function": {
+  "name": "SetupEnumInfSectionsA",
+  "export_name": "SetupEnumInfSectionsA",
+  "module": "setupapi",
+  "source_module": "setupapi",
+  "exported_by": [
+   "setupapi"
+  ],
+  "side": "PE",
+  "file": "dlls/setupapi/parser.c",
+  "start_line": 1225,
+  "end_line": 1254,
+  "body_lines": 27,
+  "signature": "BOOL WINAPI SetupEnumInfSectionsA( HINF hinf, UINT index, PSTR buffer, DWORD size, DWORD *need )",
+  "header_comment": "/***********************************************************************\n *            SetupEnumInfSectionsA   (SETUPAPI.@)\n */",
+  "code": "BOOL WINAPI SetupEnumInfSectionsA( HINF hinf, UINT index, PSTR buffer, DWORD size, DWORD *need )\n{\n    struct inf_file *file = hinf;\n\n    for (file = hinf; file; file = file->next)\n    {\n        if (index < file->nb_sections)\n        {\n            DWORD len = WideCharToMultiByte( CP_ACP, 0, file->sections[index]->name, -1,\n                                             NULL, 0, NULL, NULL );\n            if (need) *need = len;\n            if (!buffer)\n            {\n                if (!size) return TRUE;\n                SetLastError( ERROR_INVALID_USER_BUFFER );\n                return FALSE;\n            }\n            if (len > size)\n            {\n                SetLastError( ERROR_INSUFFICIENT_BUFFER );\n                return FALSE;\n            }\n            WideCharToMultiByte( CP_ACP, 0, file->sections[index]->name, -1, buffer, size, NULL, NULL );\n            return TRUE;\n        }\n        index -= file->nb_sections;\n    }\n    SetLastError( ERROR_NO_MORE_ITEMS );\n    return FALSE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <limits.h>",
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winerror.h\"",
+   "#include \"setupapi.h\"",
+   "#include \"setupapi_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "setupapi!SetupEnumInfSectionsA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/setupapi/tests/parser.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "setupapi",
+   "path": "sdk-api-src/content/setupapi/nf-setupapi-setupenuminfsectionsa.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/setupapi/nf-setupapi-setupenuminfsectionsa",
+   "documented_name": "setupenuminfsectionsa",
+   "file": "docs/0341_sdk-api_nf-setupapi-setupenuminfsectionsa.md",
+   "text": "---\nUID: NF:setupapi.SetupEnumInfSectionsA\ntitle: SetupEnumInfSectionsA function (setupapi.h)\ndescription: The SetupEnumInfSections function retrieves section names from an INF file. (ANSI)\nhelpviewer_keywords: [\"SetupEnumInfSectionsA\", \"setupapi/SetupEnumInfSectionsA\"]\nold-location: setup\\setupenuminfsections.htm\ntech.root: setup\nms.assetid: 9b19ced6-728a-48e7-9e87-03fc53f7fb72\nms.date: 12/05/2018\nms.keywords: SetupEnumInfSections, SetupEnumInfSections function [Setup API], SetupEnumInfSectionsA, SetupEnumInfSectionsW, setup.setupenuminfsections, setupapi/SetupEnumInfSections, setupapi/SetupEnumInfSectionsA, setupapi/SetupEnumInfSectionsW\nreq.header: setupapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: SetupEnumInfSectionsW (Unicode) and SetupEnumInfSectionsA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Setupapi.lib\nreq.dll: Setupapi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SetupEnumInfSectionsA\n - setupapi/SetupEnumInfSectionsA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Setupapi.dll\n - Ext-MS-Win-SetupAPI-Inf-L1-1-1.dll\napi_name:\n - SetupEnumInfSections\n - SetupEnumInfSectionsA\n - SetupEnumInfSectionsW\nreq.apiset: ext-ms-win-setupapi-inf-l1-1-1 (introduced in Windows 10, version 10.0.14393)\n---\n\n# SetupEnumInfSectionsA function\n\n\n## -description\n\n<p class=\"CCE_Message\">[This function is available for use in the operating systems indicated in the Requirements section. It may be altered or unavailable in subsequent versions.   SetupAPI should no longer be used for installing applications. Instead, use the Windows Installer for developing application installers. SetupAPI continues to be used for installing device drivers.]\n\nThe <b>SetupEnumInfSections</b> function retrieves section names from an INF file.\n\n## -parameters\n\n### -param InfHandle [in]\n\nHandle to the INF file that is to be queried.\n\n### -param Index [in]\n\nThe zero-based index of the section name to retrieve. This index may not correspond to the order of sections as they appear in the INF file.\n\n### -param Buffer [out, optional]\n\nPointer to a buffer that receives the section name. You can call the function once to get the required buffer size, allocate the necessary memory, and then call the function a second time to retrieve the name. Using this technique, you can avoid errors caused by an insufficient buffer size. This parameter is optional. For more information, see the Remarks section.\n\n### -param Size [in]\n\nSize of the buffer pointed to by <i>ReturnBuffer</i> in characters. This number includes the terminating <b>NULL</b> character.\n\n### -param SizeNeeded [out, optional]\n\nPointer to a location that receives the required size of the buffer pointed to by <i>ReturnBuffer</i>. The size is specified as the number of characters required to store the section name, including the terminating <b>NULL</b> character.\n\n## -returns\n\nIf the function succeeds, the return value is <b>TRUE</b>.\n\nIf the function fails, the return value is <b>FALSE</b>. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n\n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> returns <b>ERROR_NO_MORE_ITEMS</b> if the value of <b>EnumerationIndex</b> is greater than or equal to the number of sections names in the INF file.\n\n## -remarks\n\nThis function can enumerate all unique section names in the INF file. If a section name appears more than once in an INF file, the function returns the name only once using a single enumeration index. To return all section names in the INF file, call the function beginning with an enumeration index of zero and then make repeated calls to the function while incrementing the index until the function returns  <b>FALSE</b> and <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> returns <b>ERROR_NO_MORE_ITEMS</b>.  Your application should not rely on the section names being returned in any order based on the enumeration index.\n\n\n\n\n> [!NOTE]\n> The setupapi.h header defines SetupEnumInfSections as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "inf_file",
+    "kind": "struct_decl",
+    "start_line": 70,
+    "end_line": 83,
+    "code": "struct inf_file\n{\n    struct inf_file *next;            /* next appended file */\n    WCHAR           *strings;         /* buffer for string data (section names and field values) */\n    WCHAR           *string_pos;      /* position of next available string in buffer */\n    unsigned int     nb_sections;     /* number of used sections */\n    unsigned int     alloc_sections;  /* total number of allocated section pointers */\n    struct section **sections;        /* section pointers array */\n    unsigned int     nb_fields;\n    unsigned int     alloc_fields;\n    struct field    *fields;\n    int              strings_section; /* index of [Strings] section or -1 if none */\n    WCHAR           *filename;        /* filename of the INF */\n};"
+   },
+   {
+    "name": "section",
+    "kind": "struct_decl",
+    "start_line": 62,
+    "end_line": 68,
+    "code": "struct section\n{\n    const WCHAR *name;         /* section name */\n    unsigned int nb_lines;     /* number of used lines */\n    unsigned int alloc_lines;  /* total number of allocated lines in array below */\n    struct line  lines[16];    /* lines information (grown dynamically, 16 is initial size) */\n};"
+   }
+  ],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

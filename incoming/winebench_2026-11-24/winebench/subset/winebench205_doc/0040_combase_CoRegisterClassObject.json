@@ -1,0 +1,258 @@
+{
+ "id": "0040",
+ "function": {
+  "name": "CoRegisterClassObject",
+  "export_name": "CoRegisterClassObject",
+  "module": "combase",
+  "source_module": "combase",
+  "exported_by": [
+   "combase",
+   "compobj.dll16",
+   "ole32"
+  ],
+  "side": "PE",
+  "file": "dlls/combase/combase.c",
+  "start_line": 3142,
+  "end_line": 3232,
+  "body_lines": 88,
+  "signature": "HRESULT WINAPI CoRegisterClassObject(REFCLSID rclsid, IUnknown *object, DWORD clscontext, DWORD flags, DWORD *cookie)",
+  "header_comment": "/******************************************************************************\n *        CoRegisterClassObject    (combase.@)\n * BUGS\n *  MSDN claims that multiple interface registrations are legal, but we\n *  can't do that with our current implementation.\n */",
+  "code": "HRESULT WINAPI CoRegisterClassObject(REFCLSID rclsid, IUnknown *object, DWORD clscontext,\n        DWORD flags, DWORD *cookie)\n{\n    static LONG next_cookie;\n\n    struct registered_class *newclass;\n    IUnknown *found_object;\n    struct apartment *apt;\n    HRESULT hr = S_OK;\n\n    TRACE(\"%s, %p, %#lx, %#lx, %p\\n\", debugstr_guid(rclsid), object, clscontext, flags, cookie);\n\n    if (!cookie || !object)\n        return E_INVALIDARG;\n\n    if (!(apt = apartment_get_current_or_mta()))\n    {\n        ERR(\"COM was not initialized\\n\");\n        return CO_E_NOTINITIALIZED;\n    }\n\n    *cookie = 0;\n\n    /* REGCLS_MULTIPLEUSE implies registering as inproc server. This is what\n     * differentiates the flag from REGCLS_MULTI_SEPARATE. */\n    if (flags & REGCLS_MULTIPLEUSE)\n        clscontext |= CLSCTX_INPROC_SERVER;\n\n    /*\n     * First, check if the class is already registered.\n     * If it is, this should cause an error.\n     */\n    if ((found_object = com_get_registered_class_object(apt, rclsid, clscontext)))\n    {\n        if (flags & REGCLS_MULTIPLEUSE)\n        {\n            if (clscontext & CLSCTX_LOCAL_SERVER)\n                hr = CoLockObjectExternal(found_object, TRUE, FALSE);\n            IUnknown_Release(found_object);\n            apartment_release(apt);\n            return hr;\n        }\n\n        IUnknown_Release(found_object);\n        ERR(\"object already registered for class %s\\n\", debugstr_guid(rclsid));\n        apartment_release(apt);\n        return CO_E_OBJISREG;\n    }\n\n    newclass = calloc(1, sizeof(*newclass));\n    if (!newclass)\n    {\n        apartment_release(apt);\n        return E_OUTOFMEMORY;\n    }\n\n    newclass->clsid = *rclsid;\n    newclass->apartment_id = apt->oxid;\n    newclass->clscontext = clscontext;\n    newclass->flags = flags;\n\n    if (!(newclass->cookie = InterlockedIncrement(&next_cookie)))\n        newclass->cookie = InterlockedIncrement(&next_cookie);\n\n    newclass->object = object;\n    IUnknown_AddRef(newclass->object);\n\n    EnterCriticalSection(&registered_classes_cs);\n    list_add_tail(&registered_classes, &newclass->entry);\n    LeaveCriticalSection(&registered_classes_cs);\n\n    *cookie = newclass->cookie;\n\n    if (clscontext & CLSCTX_LOCAL_SERVER)\n    {\n        IStream *marshal_stream;\n\n        hr = apartment_get_local_server_stream(apt, &marshal_stream);\n        if(FAILED(hr))\n        {\n            apartment_release(apt);\n            return hr;\n        }\n\n        hr = rpc_register_local_server(&newclass->clsid, marshal_stream, flags, &newclass->rpcss_cookie);\n        IStream_Release(marshal_stream);\n    }\n\n    apartment_release(apt);\n    return S_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"objbase.h\"",
+   "#include \"comsvcs.h\"",
+   "#include \"ctxtcall.h\"",
+   "#include \"oleauto.h\"",
+   "#include \"dde.h\"",
+   "#include \"winternl.h\"",
+   "#include \"dcom.h\"",
+   "#include \"combase_private.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\""
+  ],
+  "resolution": [
+   "ole32!CoRegisterClassObject [stdcall] -> forward combase.CoRegisterClassObject",
+   "combase!CoRegisterClassObject [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ole32/tests/compobj.c",
+   "dlls/ole32/tests/defaulthandler.c",
+   "dlls/ole32/tests/marshal.c",
+   "dlls/ole32/tests/moniker.c",
+   "dlls/ole32/tests/ole2.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 16
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "combaseapi",
+   "path": "sdk-api-src/content/combaseapi/nf-combaseapi-coregisterclassobject.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/combaseapi/nf-combaseapi-coregisterclassobject",
+   "documented_name": "coregisterclassobject",
+   "file": "docs/0040_sdk-api_nf-combaseapi-coregisterclassobject.md",
+   "text": "---\nUID: NF:combaseapi.CoRegisterClassObject\ntitle: CoRegisterClassObject function (combaseapi.h)\ndescription: Registers an EXE class object with OLE so other applications can connect to it.\nhelpviewer_keywords: [\"CoRegisterClassObject\",\"CoRegisterClassObject function [COM]\",\"_com_CoRegisterClassObject\",\"com.coregisterclassobject\",\"combaseapi/CoRegisterClassObject\"]\nold-location: com\\coregisterclassobject.htm\ntech.root: com\nms.assetid: d27bfa6c-194a-41f1-8fcf-76c4dff14a8a\nms.date: 12/05/2018\nms.keywords: CoRegisterClassObject, CoRegisterClassObject function [COM], _com_CoRegisterClassObject, com.coregisterclassobject, combaseapi/CoRegisterClassObject\nreq.header: combaseapi.h\nreq.include-header: Objbase.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ole32.lib\nreq.dll: Ole32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CoRegisterClassObject\n - combaseapi/CoRegisterClassObject\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-com-l1-1-3.dll\n - api-ms-win-core-com-l1-1-2.dll\n - Ole32.dll\n - API-MS-Win-Core-Com-l1-1-0.dll\n - ComBase.dll\n - API-MS-Win-Core-Com-l1-1-1.dll\n - API-MS-Win-DownLevel-Ole32-l1-1-0.dll\n - API-MS-Win-DownLevel-Ole32-l1-1-1.dll\napi_name:\n - CoRegisterClassObject\n---\n\n# CoRegisterClassObject function\n\n\n## -description\n\nRegisters an EXE class object with OLE so other applications can connect to it.\n\n## -parameters\n\n### -param rclsid [in]\n\nThe CLSID to be registered.\n\n### -param pUnk [in]\n\nA pointer to the <a href=\"/windows/desktop/api/unknwn/nn-unknwn-iunknown\">IUnknown</a> interface on the class object whose availability is being published.\n\n### -param dwClsContext [in]\n\nThe context in which the executable code is to be run. For information on these context values, see the <a href=\"/windows/desktop/api/wtypesbase/ne-wtypesbase-clsctx\">CLSCTX</a> enumeration.\n\n### -param flags [in]\n\nIndicates how connections are made to the class object. For information on these flags, see the <a href=\"/windows/desktop/api/combaseapi/ne-combaseapi-regcls\">REGCLS</a> enumeration.\n\n### -param lpdwRegister [out]\n\nA pointer to a value that identifies the class object registered; later used by the <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-corevokeclassobject\">CoRevokeClassObject</a> function to revoke the registration.\n\n## -returns\n\nThis function can return the standard return values E_INVALIDARG, E_OUTOFMEMORY, and E_UNEXPECTED, as well as the following values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>S_OK</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe class object was registered successfully.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nEXE object applications should call <b>CoRegisterClassObject</b> on startup. It can also be used to register internal objects for use by the same EXE or other code (such as DLLs) that the EXE uses.\nOnly EXE object applications call <b>CoRegisterClassObject</b>. Object handlers or DLL object applications do not call this function — instead, they must implement and export the <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-dllgetclassobject\">DllGetClassObject</a> function.\n\nAt startup, a multiple-use EXE object application must create a class object (with the <a href=\"/windows/desktop/api/unknwnbase/nn-unknwnbase-iclassfactory\">IClassFactory</a> interface on it), and call <b>CoRegisterClassObject</b> to register the class object. Object applications that support several different classes (such as multiple types of embeddable objects) must allocate and register a different class object for each.\n\nMultiple registrations of the same class object are independent and do not produce an error. Each subsequent registration yields a unique key in <i>lpdwRegister</i>.\n\nMultiple document interface (MDI) applications must register their class objects. Single document interface (SDI) applications must register their class objects only if they can be started by means of the <b>/Embedding</b> switch.\n\nThe server for a class object should call <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-corevokeclassobject\">CoRevokeClassObject</a> to revoke the class object (remove its registration) when all of the following are true:\n\n<ul>\n<li>\nThere are no existing instances of the object definition.\n\n</li>\n<li>\nThere are no locks on the class object.\n\n</li>\n<li>\nThe application providing services to the class object is not under user control (not visible to the user on the display).\n\n</li>\n</ul>\nAfter the class object is revoked, when its reference count reaches zero, the class object can be released, allowing the application to exit. Note that <b>CoRegisterClassObject</b> calls <a href=\"/windows/desktop/api/unknwn/nf-unknwn-iunknown-addref\">IUnknown::AddRef</a> and <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-corevokeclassobject\">CoRevokeClassObject</a> calls <a href=\"/windows/desktop/api/unknwn/nf-unknwn-iunknown-release\">IUnknown::Release</a>, so the two functions form an <b>AddRef</b>/<b>Release</b> pair.\n\n\n\nAs of Windows Server 2003, if a COM object application is registered as a service, COM verifies the registration. COM makes sure the process ID of the service, in the service control manager (SCM), matches the process ID of the registering process. If not, COM fails the registration. If the COM object application runs in the system account with no registry key, COM treats the objects application identity as <a href=\"/windows/desktop/com/launching-user\">Launching User</a>.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/wtypesbase/ne-wtypesbase-clsctx\">CLSCTX</a>\n\n\n\n<a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-cogetclassobject\">CoGetClassObject</a>\n\n\n\n<a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-corevokeclassobject\">CoRevokeClassObject</a>\n\n\n\n<a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-dllgetclassobject\">DllGetClassObject</a>\n\n\n\n<a href=\"/windows/desktop/api/combaseapi/ne-combaseapi-regcls\">REGCLS</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "com_get_registered_class_object",
+   "file": "dlls/combase/combase.c",
+   "start_line": 142,
+   "end_line": 164,
+   "static": false,
+   "called_from": [
+    "CoRegisterClassObject"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/apartment.c:298",
+    "dlls/combase/combase.c:1789",
+    "dlls/combase/combase_private.h:171"
+   ],
+   "signature": "IUnknown * com_get_registered_class_object(const struct apartment *apt, REFCLSID rclsid, DWORD clscontext)",
+   "code": "IUnknown * com_get_registered_class_object(const struct apartment *apt, REFCLSID rclsid, DWORD clscontext)\n{\n    struct registered_class *cur;\n    IUnknown *object = NULL;\n\n    EnterCriticalSection(&registered_classes_cs);\n\n    LIST_FOR_EACH_ENTRY(cur, &registered_classes, struct registered_class, entry)\n    {\n        if ((apt->oxid == cur->apartment_id) &&\n            (clscontext & cur->clscontext) &&\n            IsEqualGUID(&cur->clsid, rclsid))\n        {\n            object = cur->object;\n            IUnknown_AddRef(cur->object);\n            break;\n        }\n    }\n\n    LeaveCriticalSection(&registered_classes_cs);\n\n    return object;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "registered_class",
+    "kind": "struct_decl",
+    "start_line": 119,
+    "end_line": 129,
+    "code": "struct registered_class\n{\n    struct list entry;\n    CLSID clsid;\n    OXID apartment_id;\n    IUnknown *object;\n    DWORD clscontext;\n    DWORD flags;\n    unsigned int cookie;\n    unsigned int rpcss_cookie;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ole);"
+   },
+   {
+    "name": "registered_classes",
+    "type": "struct list",
+    "static": true,
+    "start_line": 131,
+    "end_line": 131,
+    "code": "static struct list registered_classes = LIST_INIT(registered_classes);"
+   },
+   {
+    "name": "registered_classes_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 140,
+    "end_line": 140,
+    "code": "static CRITICAL_SECTION registered_classes_cs = { &registered_classes_cs_debug, -1, 0, 0, 0, 0 };"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "apartment_get_current_or_mta",
+    "file": "dlls/combase/apartment.c",
+    "start_line": 623
+   },
+   {
+    "name": "apartment_get_local_server_stream",
+    "file": "dlls/combase/apartment.c",
+    "start_line": 315
+   },
+   {
+    "name": "apartment_release",
+    "file": "dlls/combase/apartment.c",
+    "start_line": 444
+   },
+   {
+    "name": "rpc_register_local_server",
+    "file": "dlls/combase/rpc.c",
+    "start_line": 697
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "CoLockObjectExternal",
+    "impl": [
+     "dlls/combase/combase.c:3409"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "calloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   }
+  ],
+  "header_inline": [
+   "IStream_Release",
+   "_InterlockedIncrement",
+   "debugstr_guid",
+   "list_add_tail",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "combase.CoRegisterClassObject",
+  "category": {
+   "l1": "System services",
+   "l2": "COM",
+   "header": "combaseapi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 91,
+   "body": 89,
+   "code": 51
+  },
+  "cyclomatic": 12,
+  "return_type": "HRESULT",
+  "n_params": 5,
+  "tests": {
+   "n_tests_own": 16,
+   "n_tests": 33,
+   "n_tests_other": 17,
+   "own_test_functions": [
+    "dlls/ole32/tests/compobj.c::implicit_mta_proc",
+    "dlls/ole32/tests/compobj.c::register_class_object_thread",
+    "dlls/ole32/tests/compobj.c::test_CoCreateInstanceEx",
+    "dlls/ole32/tests/compobj.c::test_CoCreateInstanceFromApp",
+    "dlls/ole32/tests/compobj.c::test_CoGetInstanceFromFile",
+    "dlls/ole32/tests/compobj.c::test_CoRegisterClassObject",
+    "dlls/ole32/tests/compobj.c::test_CoRegisterPSClsid",
+    "dlls/ole32/tests/compobj.c::test_registered_object_thread_affinity",
+    "dlls/ole32/tests/defaulthandler.c::test_default_handler_run",
+    "dlls/ole32/tests/marshal.c::host_object_proc",
+    "dlls/ole32/tests/marshal.c::test_local_server",
+    "dlls/ole32/tests/marshal.c::test_marshal_channel_buffer",
+    "dlls/ole32/tests/marshal.c::test_register_local_server",
+    "dlls/ole32/tests/moniker.c::test_MkParseDisplayName",
+    "dlls/ole32/tests/ole2.c::START_TEST(ole2)",
+    "dlls/ole32/tests/ole2.c::test_default_handler"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/combaseapi/nf-combaseapi-coregisterclassobject",
+   "source": "win32",
+   "description": "Registers an EXE class object with OLE so other applications can connect to it.",
+   "min_windows": "Windows 2000 Professional [desktop apps \\| UWP apps]",
+   "documented_dll": "Ole32.dll"
+  },
+  "exports": [
+   "combase.CoRegisterClassObject",
+   "ole32.CoRegisterClassObject"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

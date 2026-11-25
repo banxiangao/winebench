@@ -1,0 +1,2001 @@
+{
+ "id": "0426",
+ "function": {
+  "name": "HttpSendRequestW",
+  "export_name": "HttpSendRequestW",
+  "module": "wininet",
+  "source_module": "wininet",
+  "exported_by": [
+   "wininet"
+  ],
+  "side": "PE",
+  "file": "dlls/wininet/http.c",
+  "start_line": 5727,
+  "end_line": 5797,
+  "body_lines": 68,
+  "signature": "BOOL WINAPI HttpSendRequestW(HINTERNET hHttpRequest, LPCWSTR lpszHeaders, DWORD dwHeaderLength, LPVOID lpOptional ,DWORD dwOptionalLength)",
+  "header_comment": "/***********************************************************************\n *           HttpSendRequestW (WININET.@)\n *\n * Sends the specified request to the HTTP server\n *\n * RETURNS\n *    TRUE  on success\n *    FALSE on failure\n *\n */",
+  "code": "BOOL WINAPI HttpSendRequestW(HINTERNET hHttpRequest, LPCWSTR lpszHeaders,\n\tDWORD dwHeaderLength, LPVOID lpOptional ,DWORD dwOptionalLength)\n{\n    http_request_t *request;\n    http_session_t *session = NULL;\n    appinfo_t *hIC = NULL;\n    DWORD res = ERROR_SUCCESS;\n\n    TRACE(\"%p, %s, %li, %p, %li)\\n\", hHttpRequest,\n            debugstr_wn(lpszHeaders, dwHeaderLength), dwHeaderLength, lpOptional, dwOptionalLength);\n\n    request = (http_request_t*) get_handle_object( hHttpRequest );\n    if (NULL == request || request->hdr.htype != WH_HHTTPREQ)\n    {\n        res = ERROR_INTERNET_INCORRECT_HANDLE_TYPE;\n        goto lend;\n    }\n\n    session = request->session;\n    if (NULL == session ||  session->hdr.htype != WH_HHTTPSESSION)\n    {\n        res = ERROR_INTERNET_INCORRECT_HANDLE_TYPE;\n        goto lend;\n    }\n\n    hIC = session->appInfo;\n    if (NULL == hIC ||  hIC->hdr.htype != WH_HINIT)\n    {\n        res = ERROR_INTERNET_INCORRECT_HANDLE_TYPE;\n        goto lend;\n    }\n\n    if (hIC->hdr.dwFlags & INTERNET_FLAG_ASYNC)\n    {\n        send_request_task_t *task;\n\n        task = alloc_async_task(&request->hdr, AsyncHttpSendRequestProc, sizeof(*task));\n        if (lpszHeaders)\n        {\n            DWORD size;\n\n            if (dwHeaderLength == ~0u) size = (lstrlenW(lpszHeaders) + 1) * sizeof(WCHAR);\n            else size = dwHeaderLength * sizeof(WCHAR);\n\n            task->headers = malloc(size);\n            memcpy(task->headers, lpszHeaders, size);\n        }\n        else\n            task->headers = NULL;\n        task->headers_len = dwHeaderLength;\n        task->optional = lpOptional;\n        task->optional_len = dwOptionalLength;\n        task->content_len = dwOptionalLength;\n        task->end_request = TRUE;\n\n        INTERNET_AsyncCall(&task->hdr);\n        res = ERROR_IO_PENDING;\n    }\n    else\n    {\n\tres = HTTP_HttpSendRequestW(request, lpszHeaders,\n\t\tdwHeaderLength, lpOptional, dwOptionalLength,\n\t\tdwOptionalLength, TRUE);\n    }\nlend:\n    if( request )\n        WININET_Release( &request->hdr );\n\n    SetLastError(res);\n    return res == ERROR_SUCCESS;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdlib.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <time.h>",
+   "#include <assert.h>",
+   "#include <errno.h>",
+   "#include <limits.h>",
+   "#include <zlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wininet.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winsock2.h\"",
+   "#include \"ws2ipdef.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"sspi.h\"",
+   "#include \"wincrypt.h\"",
+   "#include \"winuser.h\"",
+   "#include \"internet.h\"",
+   "#include \"resource.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\""
+  ],
+  "resolution": [
+   "wininet!HttpSendRequestW [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/wininet/tests/http.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wininet",
+   "path": "sdk-api-src/content/wininet/nf-wininet-httpsendrequestw.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wininet/nf-wininet-httpsendrequestw",
+   "documented_name": "httpsendrequestw",
+   "file": "docs/0426_sdk-api_nf-wininet-httpsendrequestw.md",
+   "text": "---\nUID: NF:wininet.HttpSendRequestW\ntitle: HttpSendRequestW function (wininet.h)\ndescription: Sends the specified request to the HTTP server, allowing callers to send extra data beyond what is normally passed to HttpSendRequestEx. (Unicode)\nhelpviewer_keywords: [\"HttpSendRequest\", \"HttpSendRequest function [WinINet]\", \"HttpSendRequestW\", \"_inet_httpsendrequest_function\", \"wininet.httpsendrequest\", \"wininet/HttpSendRequest\", \"wininet/HttpSendRequestW\"]\nold-location: wininet\\httpsendrequest.htm\ntech.root: wininet\nms.assetid: f53d9ff7-43b1-452f-a6cb-754d0229ab9a\nms.date: 12/05/2018\nms.keywords: HttpSendRequest, HttpSendRequest function [WinINet], HttpSendRequestA, HttpSendRequestW, _inet_httpsendrequest_function, wininet.httpsendrequest, wininet/HttpSendRequest, wininet/HttpSendRequestA, wininet/HttpSendRequestW\nreq.header: wininet.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: HttpSendRequestW (Unicode) and HttpSendRequestA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Wininet.lib\nreq.dll: Wininet.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - HttpSendRequestW\n - wininet/HttpSendRequestW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Wininet.dll\napi_name:\n - HttpSendRequest\n - HttpSendRequestA\n - HttpSendRequestW\n---\n\n# HttpSendRequestW function\n\n\n## -description\n\nSends the specified request to the HTTP server, allowing callers to send extra data beyond what is normally passed to <a href=\"/windows/desktop/api/wininet/nf-wininet-httpsendrequestexa\">HttpSendRequestEx</a>.\n\n## -parameters\n\n### -param hRequest [in]\n\nA handle returned by \na call to the <a href=\"/windows/desktop/api/wininet/nf-wininet-httpopenrequesta\">HttpOpenRequest</a> function.\n\n### -param lpszHeaders [in]\n\nA pointer to a <b>null</b>-terminated string  that contains the additional headers to be appended to the request. This parameter can be <b>NULL</b> if there are no additional headers to be appended.\n\n### -param dwHeadersLength [in]\n\nThe size of the additional headers, in <b>TCHARs</b>. If this parameter is -1L and \n<i>lpszHeaders</i> is not <b>NULL</b>, the function assumes that \n<i>lpszHeaders</i> is zero-terminated (ASCIIZ), and the length is calculated. See Remarks for specifics.\n\n### -param lpOptional [in]\n\nA pointer to a buffer containing any optional data to be sent immediately after the request headers. This parameter is generally used for POST and PUT operations. The optional data can be the resource or information being posted to the server. This parameter can be <b>NULL</b> if there is no optional data to send.\n\n### -param dwOptionalLength [in]\n\nThe size of the optional data, in bytes. This parameter can be zero if there is no optional data to send.\n\n## -returns\n\nReturns <b>TRUE</b> if successful, or <b>FALSE</b> otherwise. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\n<b>HttpSendRequest</b> sends the specified request to the HTTP server and allows the client to specify additional headers to send along with the request.\n\nThe function also lets the client specify optional data to send to the HTTP server immediately following the request headers. This feature is generally used for \"write\" operations such as PUT and POST.\n\nAfter the request is sent, the status code and response headers from the HTTP server are read. These headers are maintained internally and are available to client applications through the \n<a href=\"/windows/desktop/api/wininet/nf-wininet-httpqueryinfoa\">HttpQueryInfo</a> function.\n\nAn application can use the same HTTP request handle in multiple calls to \n<b>HttpSendRequest</b>, but the application must read all data returned from the previous call before calling the function again.\n\nIn offline mode, \n<b>HttpSendRequest</b> returns <b>ERROR_FILE_NOT_FOUND</b> if the resource is not found in the Internet cache.\n\nThere are two versions of \n<b>HttpSendRequest</b>—<b>HttpSendRequestA</b> (used with ANSI builds) and <b>HttpSendRequestW</b> (used with Unicode builds).  If \n<b>dwHeadersLength</b> is -1L and \n<i>lpszHeaders</i> is not <b>NULL</b>, the following will happen:  If <b>HttpSendRequestA</b> is called, the function assumes that \n<i>lpszHeaders</i> is zero-terminated (ASCIIZ), and the length is calculated.  If <b>HttpSendRequestW</b> is called, the function fails with <b>ERROR_INVALID_PARAMETER</b>.\n\n<div class=\"alert\"><b>Note</b>  The <b>HttpSendRequestA</b> function  represents headers as ISO-8859-1 characters not ANSI characters. The <b>HttpSendRequestW</b> function represents headers as ISO-8859-1 characters converted to UTF-16LE  characters.   As a result, it is never safe to use the <b>HttpSendRequestW</b> function when the headers to be added can contain non-ASCII characters.\nInstead, an application can use the <a href=\"/windows/desktop/api/stringapiset/nf-stringapiset-multibytetowidechar\">MultiByteToWideChar</a> and <a href=\"/windows/desktop/api/stringapiset/nf-stringapiset-widechartomultibyte\">WideCharToMultiByte</a> functions with a <i>Codepage</i> parameter set to 28591 to map between ANSI characters and  UTF-16LE characters.\n</div>\n<div> </div>\nLike all other aspects of the WinINet API, this function cannot be safely called from within DllMain or the constructors and destructors of global objects.\n\n<div class=\"alert\"><b>Note</b>  WinINet does not support server implementations. In addition, it should not be used from a service.  For server implementations or services use <a href=\"/windows/desktop/WinHttp/winhttp-start-page\">Microsoft Windows HTTP Services (WinHTTP)</a>.</div>\n<div> </div>\n\n\n\n\n> [!NOTE]\n> The wininet.h header defines HttpSendRequest as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/WinInet/http-sessions\">HTTP Sessions</a>\n\n\n\n<a href=\"/windows/desktop/WinInet/wininet-functions\">WinINet Functions</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "AsyncHttpSendRequestProc",
+   "file": "dlls/wininet/http.c",
+   "start_line": 5379,
+   "end_line": 5390,
+   "static": true,
+   "called_from": [
+    "HttpSendRequestW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:5662"
+   ],
+   "signature": "static void AsyncHttpSendRequestProc(task_header_t *hdr)",
+   "code": "static void AsyncHttpSendRequestProc(task_header_t *hdr)\n{\n    send_request_task_t *task = (send_request_task_t*)hdr;\n    http_request_t *request = (http_request_t*)task->hdr.hdr;\n\n    TRACE(\"%p\\n\", request);\n\n    HTTP_HttpSendRequestW(request, task->headers, task->headers_len, task->optional,\n            task->optional_len, task->content_len, task->end_request);\n\n    free(task->headers);\n}"
+  },
+  {
+   "name": "HTTP_HttpSendRequestW",
+   "file": "dlls/wininet/http.c",
+   "start_line": 5282,
+   "end_line": 5362,
+   "static": true,
+   "called_from": [
+    "AsyncHttpSendRequestProc",
+    "HttpSendRequestW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:5449",
+    "dlls/wininet/http.c:5701",
+    "dlls/wininet/http.c:5705"
+   ],
+   "signature": "static DWORD HTTP_HttpSendRequestW(http_request_t *request, LPCWSTR lpszHeaders, DWORD dwHeaderLength, LPVOID lpOptional, DWORD dwOptionalLength, DWORD dwContentLength, BOOL bEndRequest)",
+   "code": "static DWORD HTTP_HttpSendRequestW(http_request_t *request, LPCWSTR lpszHeaders,\n\tDWORD dwHeaderLength, LPVOID lpOptional, DWORD dwOptionalLength,\n\tDWORD dwContentLength, BOOL bEndRequest)\n{\n    DWORD res;\n    const WCHAR *appinfo_agent;\n\n    TRACE(\"--> %p\\n\", request);\n\n    assert(request->hdr.htype == WH_HHTTPREQ);\n\n    /* if the verb is NULL default to GET */\n    if (!request->verb)\n        request->verb = wcsdup(L\"GET\");\n\n    HTTP_ProcessHeader(request, L\"Host\", request->server->canon_host_port,\n                       HTTP_ADDREQ_FLAG_ADD_IF_NEW | HTTP_ADDHDR_FLAG_REQ);\n\n    if (dwContentLength || wcscmp(request->verb, L\"GET\"))\n    {\n        set_content_length_header(request, dwContentLength, HTTP_ADDREQ_FLAG_ADD_IF_NEW);\n        request->bytesToWrite = dwContentLength;\n    }\n\n    appinfo_agent = request->session->appInfo->agent;\n\n    if (appinfo_agent && *appinfo_agent)\n    {\n        WCHAR *agent_header;\n        int len;\n\n        len = lstrlenW(appinfo_agent) + lstrlenW(L\"User-Agent: %s\\r\\n\");\n        agent_header = malloc(len * sizeof(WCHAR));\n        swprintf(agent_header, len, L\"User-Agent: %s\\r\\n\", appinfo_agent);\n\n        HTTP_HttpAddRequestHeadersW(request, agent_header, lstrlenW(agent_header), HTTP_ADDREQ_FLAG_ADD_IF_NEW);\n        free(agent_header);\n    }\n    if (request->hdr.dwFlags & INTERNET_FLAG_PRAGMA_NOCACHE)\n    {\n        HTTP_HttpAddRequestHeadersW(request, L\"Pragma: no-cache\\r\\n\",\n                                    lstrlenW(L\"Pragma: no-cache\\r\\n\"), HTTP_ADDREQ_FLAG_ADD_IF_NEW);\n    }\n    if ((request->hdr.dwFlags & INTERNET_FLAG_NO_CACHE_WRITE) && wcscmp(request->verb, L\"GET\"))\n    {\n        HTTP_HttpAddRequestHeadersW(request, L\"Cache-Control: no-cache\\r\\n\",\n                                    lstrlenW(L\"Cache-Control: no-cache\\r\\n\"), HTTP_ADDREQ_FLAG_ADD_IF_NEW);\n    }\n\n    /* add the headers the caller supplied */\n    if (lpszHeaders)\n    {\n        if (dwHeaderLength == 0)\n            dwHeaderLength = lstrlenW(lpszHeaders);\n\n        HTTP_HttpAddRequestHeadersW(request, lpszHeaders, dwHeaderLength, HTTP_ADDREQ_FLAG_ADD | HTTP_ADDREQ_FLAG_REPLACE);\n    }\n\n    res = create_request(request, lpOptional, dwOptionalLength, dwContentLength, bEndRequest);\n\n    /* TODO: send notification for P3P header */\n\n    if(res == ERROR_SUCCESS)\n        create_cache_entry(request);\n\n    if (request->session->appInfo->hdr.dwFlags & INTERNET_FLAG_ASYNC)\n    {\n        if (res == ERROR_SUCCESS) {\n            if(bEndRequest && request->contentLength && request->bytesWritten == request->bytesToWrite)\n                HTTP_ReceiveRequestData(request);\n            else\n                send_request_complete(request,\n                        request->session->hdr.dwInternalFlags & INET_OPENURL ? (DWORD_PTR)request->hdr.hInternet : 1, 0);\n        }else {\n                send_request_complete(request, 0, res);\n        }\n    }\n\n    TRACE(\"<--\\n\");\n    return res;\n}"
+  },
+  {
+   "name": "HTTP_ProcessHeader",
+   "file": "dlls/wininet/http.c",
+   "start_line": 6208,
+   "end_line": 6334,
+   "static": true,
+   "called_from": [
+    "HTTP_GetResponseHeaders",
+    "HTTP_HandleRedirect",
+    "HTTP_HttpAddRequestHeadersW",
+    "HTTP_HttpSendRequestW",
+    "HTTP_InsertAuthorization",
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:3539",
+    "dlls/wininet/http.c:3547"
+   ],
+   "signature": "static DWORD HTTP_ProcessHeader(http_request_t *request, LPCWSTR field, LPCWSTR value, DWORD dwModifier)",
+   "code": "static DWORD HTTP_ProcessHeader(http_request_t *request, LPCWSTR field, LPCWSTR value, DWORD dwModifier)\n{\n    LPHTTPHEADERW lphttpHdr = NULL;\n    INT index;\n    BOOL request_only = !!(dwModifier & HTTP_ADDHDR_FLAG_REQ);\n    DWORD res = ERROR_HTTP_INVALID_HEADER;\n\n    TRACE(\"--> %s: %s - 0x%08lx\\n\", debugstr_w(field), debugstr_w(value), dwModifier);\n\n    EnterCriticalSection( &request->headers_section );\n\n    /* REPLACE wins out over ADD */\n    if (dwModifier & HTTP_ADDREQ_FLAG_REPLACE)\n        dwModifier &= ~HTTP_ADDREQ_FLAG_ADD;\n\n    if (dwModifier & HTTP_ADDREQ_FLAG_ADD)\n        index = -1;\n    else\n        index = HTTP_GetCustomHeaderIndex(request, field, 0, request_only);\n\n    if (index >= 0)\n    {\n        if (dwModifier & HTTP_ADDREQ_FLAG_ADD_IF_NEW)\n        {\n            LeaveCriticalSection( &request->headers_section );\n            return ERROR_HTTP_INVALID_HEADER;\n        }\n        lphttpHdr = &request->custHeaders[index];\n    }\n    else if (value)\n    {\n        HTTPHEADERW hdr;\n\n        hdr.lpszField = (LPWSTR)field;\n        hdr.lpszValue = (LPWSTR)value;\n        hdr.wFlags = hdr.wCount = 0;\n\n        if (dwModifier & HTTP_ADDHDR_FLAG_REQ)\n            hdr.wFlags |= HDR_ISREQUEST;\n\n        res = HTTP_InsertCustomHeader(request, &hdr);\n        LeaveCriticalSection( &request->headers_section );\n        return res;\n    }\n    /* no value to delete */\n    else\n    {\n        LeaveCriticalSection( &request->headers_section );\n        return ERROR_SUCCESS;\n    }\n\n    if (dwModifier & HTTP_ADDHDR_FLAG_REQ)\n\t    lphttpHdr->wFlags |= HDR_ISREQUEST;\n    else\n        lphttpHdr->wFlags &= ~HDR_ISREQUEST;\n\n    if (dwModifier & HTTP_ADDREQ_FLAG_REPLACE)\n    {\n        HTTP_DeleteCustomHeader( request, index );\n\n        if (value && value[0])\n        {\n            HTTPHEADERW hdr;\n\n            hdr.lpszField = (LPWSTR)field;\n            hdr.lpszValue = (LPWSTR)value;\n            hdr.wFlags = hdr.wCount = 0;\n\n            if (dwModifier & HTTP_ADDHDR_FLAG_REQ)\n                hdr.wFlags |= HDR_ISREQUEST;\n\n            res = HTTP_InsertCustomHeader(request, &hdr);\n            LeaveCriticalSection( &request->headers_section );\n            return res;\n        }\n\n        LeaveCriticalSection( &request->headers_section );\n        return ERROR_SUCCESS;\n    }\n    else if (dwModifier & COALESCEFLAGS)\n    {\n        LPWSTR lpsztmp;\n        WCHAR ch = 0;\n        INT len = 0;\n        INT origlen = lstrlenW(lphttpHdr->lpszValue);\n        INT valuelen = lstrlenW(value);\n\n        if (dwModifier & HTTP_ADDREQ_FLAG_COALESCE_WITH_COMMA)\n        {\n            ch = ',';\n            lphttpHdr->wFlags |= HDR_COMMADELIMITED;\n        }\n        else if (dwModifier & HTTP_ADDREQ_FLAG_COALESCE_WITH_SEMICOLON)\n        {\n            ch = ';';\n            lphttpHdr->wFlags |= HDR_COMMADELIMITED;\n        }\n\n        len = origlen + valuelen + ((ch > 0) ? 2 : 0);\n\n        lpsztmp = realloc(lphttpHdr->lpszValue, (len + 1) * sizeof(WCHAR));\n        if (lpsztmp)\n        {\n            lphttpHdr->lpszValue = lpsztmp;\n    /* FIXME: Increment lphttpHdr->wCount. Perhaps lpszValue should be an array */\n            if (ch > 0)\n            {\n                lphttpHdr->lpszValue[origlen] = ch;\n                origlen++;\n                lphttpHdr->lpszValue[origlen] = ' ';\n                origlen++;\n            }\n\n            memcpy(&lphttpHdr->lpszValue[origlen], value, valuelen*sizeof(WCHAR));\n            lphttpHdr->lpszValue[len] = '\\0';\n            res = ERROR_SUCCESS;\n        }\n        else\n        {\n            WARN(\"realloc (%d bytes) failed\\n\",len+1);\n            res = ERROR_OUTOFMEMORY;\n        }\n    }\n    TRACE(\"<-- %ld\\n\", res);\n    LeaveCriticalSection( &request->headers_section );\n    return res;\n}"
+  },
+  {
+   "name": "set_content_length_header",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4991,
+   "end_line": 4997,
+   "static": true,
+   "called_from": [
+    "HTTP_HttpSendRequestW",
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void set_content_length_header( http_request_t *request, DWORD len, DWORD flags )",
+   "code": "static void set_content_length_header( http_request_t *request, DWORD len, DWORD flags )\n{\n    WCHAR buf[ARRAY_SIZE(L\"Content-Length: %u\\r\\n\") + 10];\n\n    swprintf( buf, ARRAY_SIZE(buf), L\"Content-Length: %u\\r\\n\", len );\n    HTTP_HttpAddRequestHeadersW( request, buf, ~0u, flags );\n}"
+  },
+  {
+   "name": "HTTP_HttpAddRequestHeadersW",
+   "file": "dlls/wininet/http.c",
+   "start_line": 1191,
+   "end_line": 1252,
+   "static": true,
+   "called_from": [
+    "HTTP_HttpSendRequestW",
+    "HTTP_InsertCookies",
+    "set_content_length_header"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:1283"
+   ],
+   "signature": "static DWORD HTTP_HttpAddRequestHeadersW(http_request_t *request, LPCWSTR lpszHeader, DWORD dwHeaderLength, DWORD dwModifier)",
+   "code": "static DWORD HTTP_HttpAddRequestHeadersW(http_request_t *request,\n\tLPCWSTR lpszHeader, DWORD dwHeaderLength, DWORD dwModifier)\n{\n    LPWSTR lpszStart;\n    LPWSTR lpszEnd;\n    LPWSTR buffer;\n    DWORD len, res = ERROR_HTTP_INVALID_HEADER;\n\n    TRACE(\"copying header: %s\\n\", debugstr_wn(lpszHeader, dwHeaderLength));\n\n    if( dwHeaderLength == ~0U )\n        len = lstrlenW(lpszHeader);\n    else\n        len = dwHeaderLength;\n    buffer = malloc(sizeof(WCHAR) * (len + 1));\n    lstrcpynW( buffer, lpszHeader, len + 1);\n\n    lpszStart = buffer;\n\n    do\n    {\n        LPWSTR * pFieldAndValue;\n\n        lpszEnd = lpszStart;\n\n        while (*lpszEnd != '\\0')\n        {\n            if (*lpszEnd == '\\r' || *lpszEnd == '\\n')\n                 break;\n            lpszEnd++;\n        }\n\n        if (*lpszStart == '\\0')\n\t    break;\n\n        if (*lpszEnd == '\\r' || *lpszEnd == '\\n')\n        {\n            *lpszEnd = '\\0';\n            lpszEnd++; /* Jump over newline */\n        }\n        TRACE(\"interpreting header %s\\n\", debugstr_w(lpszStart));\n        if (*lpszStart == '\\0')\n        {\n            /* Skip 0-length headers */\n            lpszStart = lpszEnd;\n            res = ERROR_SUCCESS;\n            continue;\n        }\n        pFieldAndValue = HTTP_InterpretHttpHeader(lpszStart);\n        if (pFieldAndValue)\n        {\n            res = HTTP_ProcessHeader(request, pFieldAndValue[0],\n                pFieldAndValue[1], dwModifier | HTTP_ADDHDR_FLAG_REQ);\n            HTTP_FreeTokens(pFieldAndValue);\n        }\n\n        lpszStart = lpszEnd;\n    } while (res == ERROR_SUCCESS);\n\n    free(buffer);\n    return res;\n}"
+  },
+  {
+   "name": "create_request",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4999,
+   "end_line": 5270,
+   "static": true,
+   "called_from": [
+    "HTTP_HttpSendRequestW"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD create_request(http_request_t *request, void *optional, DWORD optlen, DWORD content_length, BOOL end_request)",
+   "code": "static DWORD create_request(http_request_t *request, void *optional, DWORD optlen, DWORD content_length,\n                            BOOL end_request)\n{\n    BOOL redirected = FALSE, secure_proxy_connect = FALSE, loop_next;\n    WCHAR *request_header = NULL;\n    INT responseLen, cnt;\n    DWORD res;\n\n    do\n    {\n        DWORD len, data_len = optlen;\n        BOOL reusing_connection;\n        char *ascii_req;\n\n        loop_next = FALSE;\n\n        if(redirected) {\n            request->contentLength = ~0;\n            request->bytesToWrite = 0;\n        }\n\n        if (TRACE_ON(wininet))\n        {\n            HTTPHEADERW *host;\n\n            EnterCriticalSection( &request->headers_section );\n            host = HTTP_GetHeader(request, L\"Host\");\n            TRACE(\"Going to url %s %s\\n\", debugstr_w(host->lpszValue), debugstr_w(request->path));\n            LeaveCriticalSection( &request->headers_section );\n        }\n\n        HTTP_FixURL(request);\n        if (request->hdr.dwFlags & INTERNET_FLAG_KEEP_CONNECTION)\n        {\n            HTTP_ProcessHeader(request, L\"Connection\", L\"Keep-Alive\",\n                               HTTP_ADDHDR_FLAG_REQ | HTTP_ADDREQ_FLAG_REPLACE | HTTP_ADDREQ_FLAG_ADD);\n        }\n        HTTP_InsertAuthorization(request, request->authInfo, L\"Authorization\");\n        HTTP_InsertAuthorization(request, request->proxyAuthInfo, L\"Proxy-Authorization\");\n\n        if (!(request->hdr.dwFlags & INTERNET_FLAG_NO_COOKIES))\n            HTTP_InsertCookies(request);\n\n        res = open_http_connection(request, &reusing_connection);\n        if (res != ERROR_SUCCESS)\n            break;\n\n        if (!reusing_connection && (request->hdr.dwFlags & INTERNET_FLAG_SECURE))\n        {\n            if (request->proxy) secure_proxy_connect = TRUE;\n            else\n            {\n                res = NETCON_secure_connect(request->netconn, request->server);\n                if (res != ERROR_SUCCESS)\n                {\n                    WARN(\"failed to upgrade to secure connection\\n\");\n                    http_release_netconn(request, FALSE);\n                    break;\n                }\n            }\n        }\n        if (secure_proxy_connect)\n        {\n            const WCHAR *target = request->server->host_port;\n\n            if (HTTP_GetCustomHeaderIndex(request, L\"Content-Length\", 0, TRUE) >= 0)\n                set_content_length_header(request, 0, HTTP_ADDREQ_FLAG_REPLACE);\n\n            request_header = build_request_header(request, L\"CONNECT\", target, L\"HTTP/1.1\", TRUE);\n        }\n        else if (request->proxy && !(request->hdr.dwFlags & INTERNET_FLAG_SECURE))\n        {\n            WCHAR *url = build_proxy_path_url(request);\n            request_header = build_request_header(request, request->verb, url, request->version, TRUE);\n            free(url);\n        }\n        else\n        {\n            if (request->proxy && HTTP_GetCustomHeaderIndex(request, L\"Content-Length\", 0, TRUE) >= 0)\n                set_content_length_header(request, content_length, HTTP_ADDREQ_FLAG_REPLACE);\n\n            request_header = build_request_header(request, request->verb, request->path, request->version, TRUE);\n        }\n\n        TRACE(\"Request header -> %s\\n\", debugstr_w(request_header) );\n\n        /* send the request as ASCII, tack on the optional data */\n        if (!optional || redirected || secure_proxy_connect)\n            data_len = 0;\n\n        ascii_req = build_ascii_request(request_header, optional, data_len, &len);\n        free(request_header);\n        TRACE(\"full request -> %s\\n\", debugstr_a(ascii_req) );\n\n        INTERNET_SendCallback(&request->hdr, request->hdr.dwContext,\n                              INTERNET_STATUS_SENDING_REQUEST, NULL, 0);\n\n        NETCON_set_timeout( request->netconn, TRUE, request->hdr.send_timeout );\n        res = NETCON_send(request->netconn, ascii_req, len, 0, &cnt);\n        free(ascii_req);\n        if(res != ERROR_SUCCESS) {\n            TRACE(\"send failed: %lu\\n\", res);\n            if(!reusing_connection)\n                break;\n            http_release_netconn(request, FALSE);\n            loop_next = TRUE;\n            continue;\n        }\n\n        request->bytesWritten = data_len;\n\n        INTERNET_SendCallback(&request->hdr, request->hdr.dwContext,\n                              INTERNET_STATUS_REQUEST_SENT,\n                              &len, sizeof(DWORD));\n\n        if (end_request)\n        {\n            DWORD dwBufferSize;\n\n            INTERNET_SendCallback(&request->hdr, request->hdr.dwContext,\n                                INTERNET_STATUS_RECEIVING_RESPONSE, NULL, 0);\n\n            if (HTTP_GetResponseHeaders(request, &responseLen))\n            {\n                http_release_netconn(request, FALSE);\n                res = ERROR_INTERNET_CONNECTION_ABORTED;\n                goto lend;\n            }\n            /* FIXME: We should know that connection is closed before sending\n             * headers. Otherwise wrong callbacks are executed */\n            if(!responseLen && reusing_connection) {\n                TRACE(\"Connection closed by server, reconnecting\\n\");\n                http_release_netconn(request, FALSE);\n                loop_next = TRUE;\n                continue;\n            }\n\n            INTERNET_SendCallback(&request->hdr, request->hdr.dwContext,\n                                INTERNET_STATUS_RESPONSE_RECEIVED, &responseLen,\n                                sizeof(DWORD));\n\n            http_process_keep_alive(request);\n            HTTP_ProcessCookies(request);\n            HTTP_ProcessExpires(request);\n            HTTP_ProcessLastModified(request);\n\n            res = set_content_length(request);\n            if(res != ERROR_SUCCESS)\n                goto lend;\n            if(!request->contentLength && !secure_proxy_connect)\n                http_release_netconn(request, TRUE);\n\n            if (!(request->hdr.dwFlags & INTERNET_FLAG_NO_AUTO_REDIRECT) && responseLen)\n            {\n                WCHAR *new_url;\n\n                switch(request->status_code) {\n                case HTTP_STATUS_REDIRECT:\n                case HTTP_STATUS_MOVED:\n                case HTTP_STATUS_REDIRECT_KEEP_VERB:\n                case HTTP_STATUS_REDIRECT_METHOD:\n                case HTTP_STATUS_PERMANENT_REDIRECT:\n                    new_url = get_redirect_url(request);\n                    if(!new_url)\n                        break;\n\n                    if (wcscmp(request->verb, L\"GET\") && wcscmp(request->verb, L\"HEAD\") &&\n                        request->status_code != HTTP_STATUS_REDIRECT_KEEP_VERB &&\n                        request->status_code != HTTP_STATUS_PERMANENT_REDIRECT)\n                    {\n                        free(request->verb);\n                        request->verb = wcsdup(L\"GET\");\n                    }\n                    http_release_netconn(request, drain_content(request, FALSE) == ERROR_SUCCESS);\n                    res = HTTP_HandleRedirect(request, new_url);\n                    free(new_url);\n                    if (res == ERROR_SUCCESS)\n                        loop_next = TRUE;\n                    redirected = TRUE;\n                }\n            }\n            if (!(request->hdr.dwFlags & INTERNET_FLAG_NO_AUTH) && res == ERROR_SUCCESS)\n            {\n                WCHAR szAuthValue[2048];\n                dwBufferSize=2048;\n                if (request->status_code == HTTP_STATUS_DENIED)\n                {\n                    WCHAR *host = wcsdup(request->server->canon_host_port);\n                    DWORD dwIndex = 0;\n                    while (HTTP_HttpQueryInfoW(request,HTTP_QUERY_WWW_AUTHENTICATE,szAuthValue,&dwBufferSize,&dwIndex) == ERROR_SUCCESS)\n                    {\n                        if (HTTP_DoAuthorization(request, szAuthValue,\n                                                 &request->authInfo,\n                                                 request->session->userName,\n                                                 request->session->password, host))\n                        {\n                            if (drain_content(request, TRUE) != ERROR_SUCCESS)\n                            {\n                                FIXME(\"Could not drain content\\n\");\n                                http_release_netconn(request, FALSE);\n                            }\n                            loop_next = TRUE;\n                            break;\n                        }\n\n                        dwBufferSize = 2048;\n                    }\n                    free(host);\n\n                    if(!loop_next) {\n                        TRACE(\"Cleaning wrong authorization data\\n\");\n                        destroy_authinfo(request->authInfo);\n                        request->authInfo = NULL;\n                    }\n                }\n                if (request->status_code == HTTP_STATUS_PROXY_AUTH_REQ)\n                {\n                    DWORD dwIndex = 0;\n                    while (HTTP_HttpQueryInfoW(request,HTTP_QUERY_PROXY_AUTHENTICATE,szAuthValue,&dwBufferSize,&dwIndex) == ERROR_SUCCESS)\n                    {\n                        if (HTTP_DoAuthorization(request, szAuthValue,\n                                                 &request->proxyAuthInfo,\n                                                 request->session->appInfo->proxyUsername,\n                                                 request->session->appInfo->proxyPassword,\n                                                 NULL))\n                        {\n                            if (drain_content(request, TRUE) != ERROR_SUCCESS)\n                            {\n                                FIXME(\"Could not drain content\\n\");\n                                http_release_netconn(request, FALSE);\n                            }\n                            loop_next = TRUE;\n                            break;\n                        }\n\n                        dwBufferSize = 2048;\n                    }\n\n                    if(!loop_next) {\n                        TRACE(\"Cleaning wrong proxy authorization data\\n\");\n                        destroy_authinfo(request->proxyAuthInfo);\n                        request->proxyAuthInfo = NULL;\n                    }\n                }\n            }\n            if (secure_proxy_connect && request->status_code == HTTP_STATUS_OK)\n            {\n                res = NETCON_secure_connect(request->netconn, request->server);\n                if (res != ERROR_SUCCESS)\n                {\n                    WARN(\"failed to upgrade to secure proxy connection\\n\");\n                    http_release_netconn( request, FALSE );\n                    break;\n                }\n                remove_header(request, L\"Proxy-Authorization\", TRUE);\n                destroy_authinfo(request->proxyAuthInfo);\n                request->proxyAuthInfo = NULL;\n                request->contentLength = 0;\n                request->netconn_stream.content_length = 0;\n\n                secure_proxy_connect = FALSE;\n                loop_next = TRUE;\n            }\n        }\n        else\n            res = ERROR_SUCCESS;\n    }\n    while (loop_next);\n\nlend:\n    return res;\n}"
+  },
+  {
+   "name": "create_cache_entry",
+   "file": "dlls/wininet/http.c",
+   "start_line": 2450,
+   "end_line": 2536,
+   "static": true,
+   "called_from": [
+    "HTTP_HttpSendRequestW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:5455"
+   ],
+   "signature": "static void create_cache_entry(http_request_t *req)",
+   "code": "static void create_cache_entry(http_request_t *req)\n{\n    WCHAR file_name[MAX_PATH+1];\n    WCHAR *url;\n    BOOL b = TRUE;\n\n    /* FIXME: We should free previous cache file earlier */\n    if(req->req_file) {\n        req_file_release(req->req_file);\n        req->req_file = NULL;\n    }\n    if(req->hCacheFile) {\n        CloseHandle(req->hCacheFile);\n        req->hCacheFile = NULL;\n    }\n\n    if(req->hdr.dwFlags & INTERNET_FLAG_NO_CACHE_WRITE)\n        b = FALSE;\n\n    if(b) {\n        int header_idx;\n\n        EnterCriticalSection( &req->headers_section );\n\n        header_idx = HTTP_GetCustomHeaderIndex(req, L\"Cache-Control\", 0, FALSE);\n        if(header_idx != -1) {\n            WCHAR *ptr;\n\n            for(ptr=req->custHeaders[header_idx].lpszValue; *ptr; ) {\n                WCHAR *end;\n\n                while(*ptr==' ' || *ptr=='\\t')\n                    ptr++;\n\n                end = wcschr(ptr, ',');\n                if(!end)\n                    end = ptr + lstrlenW(ptr);\n\n                if(!wcsnicmp(ptr, L\"no-cache\", ARRAY_SIZE(L\"no-cache\")-1)\n                        || !wcsnicmp(ptr, L\"no-store\", ARRAY_SIZE(L\"no-store\")-1)) {\n                    b = FALSE;\n                    break;\n                }\n\n                ptr = end;\n                if(*ptr == ',')\n                    ptr++;\n            }\n        }\n\n        LeaveCriticalSection( &req->headers_section );\n    }\n\n    if(!b) {\n        if(!(req->hdr.dwFlags & INTERNET_FLAG_NEED_FILE))\n            return;\n\n        FIXME(\"INTERNET_FLAG_NEED_FILE is not supported correctly\\n\");\n    }\n\n    url = compose_request_url(req);\n    if(!url) {\n        WARN(\"Could not get URL\\n\");\n        return;\n    }\n\n    b = CreateUrlCacheEntryW(url, req->contentLength == ~0 ? 0 : req->contentLength, NULL, file_name, 0);\n    if(!b) {\n        WARN(\"Could not create cache entry: %08lx\\n\", GetLastError());\n        return;\n    }\n\n    create_req_file(file_name, &req->req_file);\n    req->req_file->url = url;\n    req->content_pos = 0;\n    req->cache_size = 0;\n\n    req->hCacheFile = CreateFileW(file_name, GENERIC_WRITE, FILE_SHARE_READ|FILE_SHARE_WRITE,\n              NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);\n    if(req->hCacheFile == INVALID_HANDLE_VALUE) {\n        WARN(\"Could not create file: %lu\\n\", GetLastError());\n        req->hCacheFile = NULL;\n        return;\n    }\n\n    write_cache_file(req, req->read_buf+req->read_pos, req->read_size);\n}"
+  },
+  {
+   "name": "HTTP_ReceiveRequestData",
+   "file": "dlls/wininet/http.c",
+   "start_line": 3012,
+   "end_line": 3037,
+   "static": true,
+   "called_from": [
+    "HTTP_HttpSendRequestW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:5458"
+   ],
+   "signature": "static void HTTP_ReceiveRequestData(http_request_t *req)",
+   "code": "static void HTTP_ReceiveRequestData(http_request_t *req)\n{\n    DWORD res, read = 0;\n\n    TRACE(\"%p\\n\", req);\n\n    EnterCriticalSection( &req->read_section );\n\n    res = refill_read_buffer(req, FALSE, &read);\n    if(res == ERROR_SUCCESS)\n        read += req->read_size;\n\n    LeaveCriticalSection( &req->read_section );\n\n    if(res != WSAEWOULDBLOCK && (res != ERROR_SUCCESS || !read)) {\n        WARN(\"res %lu read %lu, closing connection\\n\", res, read);\n        http_release_netconn(req, FALSE);\n    }\n\n    if(res != ERROR_SUCCESS && res != WSAEWOULDBLOCK) {\n        send_request_complete(req, 0, res);\n        return;\n    }\n\n    send_request_complete(req, req->session->hdr.dwInternalFlags & INET_OPENURL ? (DWORD_PTR)req->hdr.hInternet : 1, 0);\n}"
+  },
+  {
+   "name": "send_request_complete",
+   "file": "dlls/wininet/http.c",
+   "start_line": 3001,
+   "end_line": 3010,
+   "static": true,
+   "called_from": [
+    "HTTP_HttpSendRequestW",
+    "HTTP_ReceiveRequestData"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:3163",
+    "dlls/wininet/http.c:3200",
+    "dlls/wininet/http.c:5400",
+    "dlls/wininet/http.c:5460"
+   ],
+   "signature": "static void send_request_complete(http_request_t *req, DWORD_PTR result, DWORD error)",
+   "code": "static void send_request_complete(http_request_t *req, DWORD_PTR result, DWORD error)\n{\n    INTERNET_ASYNC_RESULT iar;\n\n    iar.dwResult = result;\n    iar.dwError = error;\n\n    INTERNET_SendCallback(&req->hdr, req->hdr.dwContext, INTERNET_STATUS_REQUEST_COMPLETE, &iar,\n            sizeof(INTERNET_ASYNC_RESULT));\n}"
+  },
+  {
+   "name": "HTTP_GetCustomHeaderIndex",
+   "file": "dlls/wininet/http.c",
+   "start_line": 6342,
+   "end_line": 6370,
+   "static": true,
+   "called_from": [
+    "HTTP_GetHeader",
+    "HTTP_HttpQueryInfoW",
+    "HTTP_ProcessCookies",
+    "HTTP_ProcessExpires",
+    "HTTP_ProcessHeader",
+    "HTTP_ProcessLastModified",
+    "create_cache_entry",
+    "create_request",
+    "http_process_keep_alive",
+    "remove_header",
+    "set_content_length"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static INT HTTP_GetCustomHeaderIndex(http_request_t *request, LPCWSTR lpszField, int requested_index, BOOL request_only)",
+   "code": "static INT HTTP_GetCustomHeaderIndex(http_request_t *request, LPCWSTR lpszField,\n                                     int requested_index, BOOL request_only)\n{\n    DWORD index;\n\n    TRACE(\"%s, %d, %d\\n\", debugstr_w(lpszField), requested_index, request_only);\n\n    for (index = 0; index < request->nCustHeaders; index++)\n    {\n        if (wcsicmp(request->custHeaders[index].lpszField, lpszField))\n            continue;\n\n        if (request_only && !(request->custHeaders[index].wFlags & HDR_ISREQUEST))\n            continue;\n\n        if (!request_only && (request->custHeaders[index].wFlags & HDR_ISREQUEST))\n            continue;\n\n        if (requested_index == 0)\n            break;\n        requested_index --;\n    }\n\n    if (index >= request->nCustHeaders)\n\tindex = -1;\n\n    TRACE(\"Return: %ld\\n\", index);\n    return index;\n}"
+  },
+  {
+   "name": "HTTP_InsertCustomHeader",
+   "file": "dlls/wininet/http.c",
+   "start_line": 6379,
+   "end_line": 6399,
+   "static": true,
+   "called_from": [
+    "HTTP_ProcessHeader"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD HTTP_InsertCustomHeader(http_request_t *request, LPHTTPHEADERW lpHdr)",
+   "code": "static DWORD HTTP_InsertCustomHeader(http_request_t *request, LPHTTPHEADERW lpHdr)\n{\n    INT count;\n    LPHTTPHEADERW lph = NULL;\n\n    TRACE(\"--> %s: %s\\n\", debugstr_w(lpHdr->lpszField), debugstr_w(lpHdr->lpszValue));\n    count = request->nCustHeaders + 1;\n    lph = realloc(request->custHeaders, sizeof(HTTPHEADERW) * count);\n\n    if (!lph)\n        return ERROR_OUTOFMEMORY;\n\n    request->custHeaders = lph;\n    request->custHeaders[count-1].lpszField = wcsdup(lpHdr->lpszField);\n    request->custHeaders[count-1].lpszValue = wcsdup(lpHdr->lpszValue);\n    request->custHeaders[count-1].wFlags = lpHdr->wFlags;\n    request->custHeaders[count-1].wCount= lpHdr->wCount;\n    request->nCustHeaders++;\n\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "HTTP_DeleteCustomHeader",
+   "file": "dlls/wininet/http.c",
+   "start_line": 6409,
+   "end_line": 6425,
+   "static": true,
+   "called_from": [
+    "HTTP_ProcessHeader",
+    "HTTP_clear_response_headers",
+    "remove_header",
+    "set_content_length"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL HTTP_DeleteCustomHeader(http_request_t *request, DWORD index)",
+   "code": "static BOOL HTTP_DeleteCustomHeader(http_request_t *request, DWORD index)\n{\n    if( request->nCustHeaders <= 0 )\n        return FALSE;\n    if( index >= request->nCustHeaders )\n        return FALSE;\n    request->nCustHeaders--;\n\n    free(request->custHeaders[index].lpszField);\n    free(request->custHeaders[index].lpszValue);\n\n    memmove( &request->custHeaders[index], &request->custHeaders[index+1],\n             (request->nCustHeaders - index)* sizeof(HTTPHEADERW) );\n    memset( &request->custHeaders[request->nCustHeaders], 0, sizeof(HTTPHEADERW) );\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "HTTP_InterpretHttpHeader",
+   "file": "dlls/wininet/http.c",
+   "start_line": 6154,
+   "end_line": 6197,
+   "static": true,
+   "called_from": [
+    "HTTP_GetResponseHeaders",
+    "HTTP_HttpAddRequestHeadersW"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static LPWSTR * HTTP_InterpretHttpHeader(LPCWSTR buffer)",
+   "code": "static LPWSTR * HTTP_InterpretHttpHeader(LPCWSTR buffer)\n{\n    LPWSTR * pTokenPair;\n    LPWSTR pszColon;\n    INT len;\n\n    pTokenPair = calloc(3, sizeof(*pTokenPair));\n\n    pszColon = wcschr(buffer, ':');\n    /* must have two tokens */\n    if (!pszColon)\n    {\n        HTTP_FreeTokens(pTokenPair);\n        if (buffer[0])\n            TRACE(\"No ':' in line: %s\\n\", debugstr_w(buffer));\n        return NULL;\n    }\n\n    pTokenPair[0] = malloc((pszColon - buffer + 1) * sizeof(WCHAR));\n    if (!pTokenPair[0])\n    {\n        HTTP_FreeTokens(pTokenPair);\n        return NULL;\n    }\n    memcpy(pTokenPair[0], buffer, (pszColon - buffer) * sizeof(WCHAR));\n    pTokenPair[0][pszColon - buffer] = '\\0';\n\n    /* skip colon */\n    pszColon++;\n    len = lstrlenW(pszColon);\n    pTokenPair[1] = malloc((len + 1) * sizeof(WCHAR));\n    if (!pTokenPair[1])\n    {\n        HTTP_FreeTokens(pTokenPair);\n        return NULL;\n    }\n    memcpy(pTokenPair[1], pszColon, (len + 1) * sizeof(WCHAR));\n\n    strip_spaces(pTokenPair[0]);\n    strip_spaces(pTokenPair[1]);\n\n    TRACE(\"field(%s) Value(%s)\\n\", debugstr_w(pTokenPair[0]), debugstr_w(pTokenPair[1]));\n    return pTokenPair;\n}"
+  },
+  {
+   "name": "HTTP_FreeTokens",
+   "file": "dlls/wininet/http.c",
+   "start_line": 498,
+   "end_line": 503,
+   "static": true,
+   "called_from": [
+    "HTTP_GetResponseHeaders",
+    "HTTP_HttpAddRequestHeadersW",
+    "HTTP_InterpretHttpHeader"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void HTTP_FreeTokens(LPWSTR * token_array)",
+   "code": "static void HTTP_FreeTokens(LPWSTR * token_array)\n{\n    int i;\n    for (i = 0; token_array[i]; i++) free(token_array[i]);\n    free(token_array);\n}"
+  },
+  {
+   "name": "HTTP_GetHeader",
+   "file": "dlls/wininet/http.c",
+   "start_line": 275,
+   "end_line": 283,
+   "static": true,
+   "called_from": [
+    "create_request",
+    "get_host_header"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static LPHTTPHEADERW HTTP_GetHeader(http_request_t *req, LPCWSTR head)",
+   "code": "static LPHTTPHEADERW HTTP_GetHeader(http_request_t *req, LPCWSTR head)\n{\n    int HeaderIndex = 0;\n    HeaderIndex = HTTP_GetCustomHeaderIndex(req, head, 0, TRUE);\n    if (HeaderIndex == -1)\n        return NULL;\n    else\n        return &req->custHeaders[HeaderIndex];\n}"
+  },
+  {
+   "name": "HTTP_FixURL",
+   "file": "dlls/wininet/http.c",
+   "start_line": 505,
+   "end_line": 535,
+   "static": true,
+   "called_from": [
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void HTTP_FixURL(http_request_t *request)",
+   "code": "static void HTTP_FixURL(http_request_t *request)\n{\n    /* If we don't have a path we set it to root */\n    if (NULL == request->path)\n        request->path = wcsdup(L\"/\");\n    else /* remove \\r and \\n*/\n    {\n        int nLen = lstrlenW(request->path);\n        while ((nLen >0 ) && ((request->path[nLen-1] == '\\r')||(request->path[nLen-1] == '\\n')))\n        {\n            nLen--;\n            request->path[nLen]='\\0';\n        }\n        /* Replace '\\' with '/' */\n        while (nLen>0) {\n            nLen--;\n            if (request->path[nLen] == '\\\\') request->path[nLen]='/';\n        }\n    }\n\n    if(CSTR_EQUAL != CompareStringW( LOCALE_INVARIANT, NORM_IGNORECASE,\n                       request->path, lstrlenW(request->path), L\"http://\", lstrlenW(L\"http://\") )\n       && request->path[0] != '/') /* not an absolute path ?? --> fix it !! */\n    {\n        WCHAR *fixurl = malloc((wcslen(request->path) + 2) * sizeof(WCHAR));\n        *fixurl = '/';\n        lstrcpyW(fixurl + 1, request->path);\n        free(request->path);\n        request->path = fixurl;\n    }\n}"
+  },
+  {
+   "name": "HTTP_InsertAuthorization",
+   "file": "dlls/wininet/http.c",
+   "start_line": 1567,
+   "end_line": 1628,
+   "static": true,
+   "called_from": [
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL HTTP_InsertAuthorization( http_request_t *request, struct HttpAuthInfo *pAuthInfo, LPCWSTR header )",
+   "code": "static BOOL HTTP_InsertAuthorization( http_request_t *request, struct HttpAuthInfo *pAuthInfo, LPCWSTR header )\n{\n    WCHAR *host, *authorization = NULL;\n\n    if (pAuthInfo)\n    {\n        if (pAuthInfo->auth_data_len)\n        {\n            if (!(authorization = encode_auth_data(pAuthInfo->scheme, pAuthInfo->auth_data, pAuthInfo->auth_data_len)))\n                return FALSE;\n\n            /* clear the data as it isn't valid now that it has been sent to the\n             * server, unless it's Basic authentication which doesn't do\n             * connection tracking */\n            if (wcsicmp(pAuthInfo->scheme, L\"Basic\"))\n            {\n                free(pAuthInfo->auth_data);\n                pAuthInfo->auth_data = NULL;\n                pAuthInfo->auth_data_len = 0;\n            }\n        }\n\n        TRACE(\"Inserting authorization: %s\\n\", debugstr_w(authorization));\n\n        HTTP_ProcessHeader(request, header, authorization,\n                           HTTP_ADDHDR_FLAG_REQ | HTTP_ADDREQ_FLAG_REPLACE | HTTP_ADDREQ_FLAG_ADD);\n        free(authorization);\n    }\n    else\n    {\n        UINT data_len;\n        char *data;\n\n        /* Don't use cached credentials when a username or Authorization was specified */\n        if ((request->session->userName && request->session->userName[0]) || wcscmp(header, L\"Authorization\"))\n            return TRUE;\n\n        if (!(host = get_host_header(request)))\n            return TRUE;\n\n        if ((data_len = retrieve_cached_basic_authorization(request, host, NULL, &data)))\n        {\n            TRACE(\"Found cached basic authorization for %s\\n\", debugstr_w(host));\n\n            if (!(authorization = encode_auth_data(L\"Basic\", data, data_len)))\n            {\n                free(data);\n                free(host);\n                return FALSE;\n            }\n\n            TRACE(\"Inserting authorization: %s\\n\", debugstr_w(authorization));\n\n            HTTP_ProcessHeader(request, header, authorization,\n                               HTTP_ADDHDR_FLAG_REQ | HTTP_ADDREQ_FLAG_REPLACE | HTTP_ADDREQ_FLAG_ADD);\n            free(data);\n            free(authorization);\n        }\n        free(host);\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "HTTP_InsertCookies",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4385,
+   "end_line": 4397,
+   "static": true,
+   "called_from": [
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void HTTP_InsertCookies(http_request_t *request)",
+   "code": "static void HTTP_InsertCookies(http_request_t *request)\n{\n    WCHAR *cookies;\n    DWORD res;\n\n    res = get_cookie_header(request->server->name, request->path, &cookies);\n    if(res != ERROR_SUCCESS || !cookies)\n        return;\n\n    HTTP_HttpAddRequestHeadersW(request, cookies, lstrlenW(cookies),\n                                HTTP_ADDREQ_FLAG_REPLACE | HTTP_ADDREQ_FLAG_ADD);\n    free(cookies);\n}"
+  },
+  {
+   "name": "open_http_connection",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4911,
+   "end_line": 4976,
+   "static": true,
+   "called_from": [
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD open_http_connection(http_request_t *request, BOOL *reusing)",
+   "code": "static DWORD open_http_connection(http_request_t *request, BOOL *reusing)\n{\n    server_t *server;\n    netconn_t *netconn = NULL;\n    DWORD res;\n\n    if (request->netconn)\n    {\n        if (NETCON_is_alive(request->netconn) && drain_content(request, TRUE) == ERROR_SUCCESS)\n        {\n            reset_data_stream(request);\n            *reusing = TRUE;\n            return ERROR_SUCCESS;\n        }\n\n        TRACE(\"freeing netconn\\n\");\n        free_netconn(request->netconn);\n        request->netconn = NULL;\n    }\n\n    reset_data_stream(request);\n\n    res = HTTP_ResolveName(request);\n    if(res != ERROR_SUCCESS)\n        return res;\n\n    EnterCriticalSection(&connection_pool_cs);\n\n    while(!list_empty(&request->server->conn_pool)) {\n        netconn = LIST_ENTRY(list_head(&request->server->conn_pool), netconn_t, pool_entry);\n        list_remove(&netconn->pool_entry);\n\n        if(is_valid_netconn(netconn) && NETCON_is_alive(netconn))\n            break;\n\n        TRACE(\"connection %p closed during idle\\n\", netconn);\n        free_netconn(netconn);\n        netconn = NULL;\n    }\n\n    LeaveCriticalSection(&connection_pool_cs);\n\n    if(netconn) {\n        TRACE(\"<-- reusing %p netconn\\n\", netconn);\n        request->netconn = netconn;\n        *reusing = TRUE;\n        return ERROR_SUCCESS;\n    }\n\n    TRACE(\"connecting to %s, proxy %s\\n\", debugstr_w(request->server->name),\n          request->proxy ? debugstr_w(request->proxy->name) : \"(null)\");\n    server = request->proxy ? request->proxy : request->server;\n    assert(server->addr);\n    res = create_netconn(server, &request->hdr, request->security_flags,\n                         (request->hdr.ErrorMask & INTERNET_ERROR_MASK_COMBINED_SEC_CERT) != 0,\n                         request->hdr.connect_timeout, &netconn);\n    if(res != ERROR_SUCCESS) {\n        ERR(\"create_netconn failed: %lu\\n\", res);\n        return res;\n    }\n\n    request->netconn = netconn;\n    *reusing = FALSE;\n    TRACE(\"Created connection to %s: %p\\n\", debugstr_w(request->server->name), netconn);\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "http_release_netconn",
+   "file": "dlls/wininet/http.c",
+   "start_line": 1865,
+   "end_line": 1914,
+   "static": true,
+   "called_from": [
+    "HTTP_ReceiveRequestData",
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:1961",
+    "dlls/wininet/http.c:3111",
+    "dlls/wininet/http.c:3113",
+    "dlls/wininet/http.c:3187",
+    "dlls/wininet/http.c:5421"
+   ],
+   "signature": "static void http_release_netconn(http_request_t *req, BOOL reuse)",
+   "code": "static void http_release_netconn(http_request_t *req, BOOL reuse)\n{\n    TRACE(\"%p %p %x\\n\",req, req->netconn, reuse);\n\n    if(!is_valid_netconn(req->netconn))\n        return;\n\n    if(reuse && req->netconn->keep_alive) {\n        BOOL run_collector;\n\n        EnterCriticalSection(&connection_pool_cs);\n\n        list_add_head(&req->netconn->server->conn_pool, &req->netconn->pool_entry);\n        req->netconn->keep_until = GetTickCount64() + COLLECT_TIME;\n        req->netconn = NULL;\n\n        run_collector = !collector_running;\n        collector_running = TRUE;\n\n        LeaveCriticalSection(&connection_pool_cs);\n\n        if(run_collector) {\n            HANDLE thread = NULL;\n            HMODULE module;\n\n            GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (const WCHAR*)WININET_hModule, &module);\n            if(module)\n                thread = CreateThread(NULL, 0, collect_connections_proc, NULL, 0, NULL);\n            if(!thread) {\n                EnterCriticalSection(&connection_pool_cs);\n                collector_running = FALSE;\n                LeaveCriticalSection(&connection_pool_cs);\n\n                if(module)\n                    FreeLibrary(module);\n            }\n            else\n                CloseHandle(thread);\n        }\n        return;\n    }\n\n    INTERNET_SendCallback(&req->hdr, req->hdr.dwContext,\n                          INTERNET_STATUS_CLOSING_CONNECTION, 0, 0);\n\n    close_netconn(req->netconn);\n\n    INTERNET_SendCallback(&req->hdr, req->hdr.dwContext,\n                          INTERNET_STATUS_CONNECTION_CLOSED, 0, 0);\n}"
+  },
+  {
+   "name": "build_request_header",
+   "file": "dlls/wininet/http.c",
+   "start_line": 537,
+   "end_line": 592,
+   "static": true,
+   "called_from": [
+    "HTTP_HttpQueryInfoW",
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static WCHAR* build_request_header(http_request_t *request, const WCHAR *verb, const WCHAR *path, const WCHAR *version, BOOL use_cr)",
+   "code": "static WCHAR* build_request_header(http_request_t *request, const WCHAR *verb,\n        const WCHAR *path, const WCHAR *version, BOOL use_cr)\n{\n    LPWSTR requestString;\n    DWORD len, n;\n    LPCWSTR *req;\n    UINT i;\n\n    EnterCriticalSection( &request->headers_section );\n\n    /* allocate space for an array of all the string pointers to be added */\n    len = request->nCustHeaders * 5 + 10;\n    if (!(req = malloc( len * sizeof(const WCHAR *) )))\n    {\n        LeaveCriticalSection( &request->headers_section );\n        return NULL;\n    }\n\n    /* add the verb, path and HTTP version string */\n    n = 0;\n    req[n++] = verb;\n    req[n++] = L\" \";\n    req[n++] = path;\n    req[n++] = L\" \";\n    req[n++] = version;\n    if (use_cr)\n        req[n++] = L\"\\r\";\n    req[n++] = L\"\\n\";\n\n    /* Append custom request headers */\n    for (i = 0; i < request->nCustHeaders; i++)\n    {\n        if (request->custHeaders[i].wFlags & HDR_ISREQUEST)\n        {\n            req[n++] = request->custHeaders[i].lpszField;\n            req[n++] = L\": \";\n            req[n++] = request->custHeaders[i].lpszValue;\n            if (use_cr)\n                req[n++] = L\"\\r\";\n            req[n++] = L\"\\n\";\n\n            TRACE(\"Adding custom header %s (%s)\\n\",\n                   debugstr_w(request->custHeaders[i].lpszField),\n                   debugstr_w(request->custHeaders[i].lpszValue));\n        }\n    }\n    if (use_cr)\n        req[n++] = L\"\\r\";\n    req[n++] = L\"\\n\";\n    req[n] = NULL;\n\n    requestString = HTTP_build_req( req, 4 );\n    free( req );\n    LeaveCriticalSection( &request->headers_section );\n    return requestString;\n}"
+  },
+  {
+   "name": "build_proxy_path_url",
+   "file": "dlls/wininet/http.c",
+   "start_line": 1630,
+   "end_line": 1651,
+   "static": true,
+   "called_from": [
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static WCHAR *build_proxy_path_url(http_request_t *req)",
+   "code": "static WCHAR *build_proxy_path_url(http_request_t *req)\n{\n    DWORD size, len;\n    WCHAR *url;\n\n    len = lstrlenW(req->server->scheme_host_port);\n    size = len + lstrlenW(req->path) + 1;\n    if(*req->path != '/')\n        size++;\n    url = malloc(size * sizeof(WCHAR));\n    if(!url)\n        return NULL;\n\n    memcpy(url, req->server->scheme_host_port, len*sizeof(WCHAR));\n    if(*req->path != '/')\n        url[len++] = '/';\n\n    lstrcpyW(url+len, req->path);\n\n    TRACE(\"url=%s\\n\", debugstr_w(url));\n    return url;\n}"
+  },
+  {
+   "name": "build_ascii_request",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4978,
+   "end_line": 4989,
+   "static": true,
+   "called_from": [
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static char *build_ascii_request( const WCHAR *str, void *data, DWORD data_len, DWORD *out_len )",
+   "code": "static char *build_ascii_request( const WCHAR *str, void *data, DWORD data_len, DWORD *out_len )\n{\n    int len = WideCharToMultiByte( CP_ACP, 0, str, -1, NULL, 0, NULL, NULL );\n    char *ret;\n\n    if (!(ret = malloc( len + data_len ))) return NULL;\n    WideCharToMultiByte( CP_ACP, 0, str, -1, ret, len, NULL, NULL );\n    if (data_len) memcpy( ret + len - 1, data, data_len );\n    *out_len = len + data_len - 1;\n    ret[*out_len] = 0;\n    return ret;\n}"
+  },
+  {
+   "name": "HTTP_GetResponseHeaders",
+   "file": "dlls/wininet/http.c",
+   "start_line": 6023,
+   "end_line": 6142,
+   "static": true,
+   "called_from": [
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:5407"
+   ],
+   "signature": "static DWORD HTTP_GetResponseHeaders(http_request_t *request, INT *len)",
+   "code": "static DWORD HTTP_GetResponseHeaders(http_request_t *request, INT *len)\n{\n    INT cbreaks = 0;\n    WCHAR buffer[MAX_REPLY_LEN];\n    DWORD buflen = MAX_REPLY_LEN;\n    INT  rc = 0;\n    char bufferA[MAX_REPLY_LEN];\n    LPWSTR status_code = NULL, status_text = NULL;\n    DWORD res = ERROR_HTTP_INVALID_SERVER_RESPONSE;\n    BOOL codeHundred = FALSE;\n\n    TRACE(\"-->\\n\");\n\n    if(!is_valid_netconn(request->netconn))\n        goto lend;\n\n    /* clear old response headers (eg. from a redirect response) */\n    HTTP_clear_response_headers( request );\n\n    NETCON_set_timeout( request->netconn, FALSE, request->hdr.receive_timeout );\n    do {\n        /*\n         * We should first receive 'HTTP/1.x nnn OK' where nnn is the status code.\n         */\n        buflen = MAX_REPLY_LEN;\n        if ((res = read_line(request, bufferA, &buflen)))\n            goto lend;\n\n        if (!buflen) goto lend;\n\n        rc += buflen;\n        MultiByteToWideChar( CP_ACP, 0, bufferA, buflen, buffer, MAX_REPLY_LEN );\n        /* check is this a status code line? */\n        if (!wcsncmp(buffer, L\"HTTP/1.0\", 4))\n        {\n            /* split the version from the status code */\n            status_code = wcschr( buffer, ' ' );\n            if( !status_code )\n                goto lend;\n            *status_code++=0;\n\n            /* split the status code from the status text */\n            status_text = wcschr( status_code, ' ' );\n            if( status_text )\n                *status_text++=0;\n\n            request->status_code = wcstol(status_code, NULL, 10);\n\n            TRACE(\"version [%s] status code [%s] status text [%s]\\n\",\n               debugstr_w(buffer), debugstr_w(status_code), debugstr_w(status_text) );\n\n            codeHundred = request->status_code == HTTP_STATUS_CONTINUE;\n        }\n        else if (!codeHundred)\n        {\n            WARN(\"No status line at head of response (%s)\\n\", debugstr_w(buffer));\n\n            free(request->version);\n            free(request->statusText);\n\n            request->status_code = HTTP_STATUS_OK;\n            request->version = wcsdup(L\"HTTP/1.0\");\n            request->statusText = wcsdup(L\"OK\");\n\n            goto lend;\n        }\n    } while (codeHundred);\n\n    /* Add status code */\n    HTTP_ProcessHeader(request, L\"Status\", status_code,\n                       HTTP_ADDREQ_FLAG_REPLACE | HTTP_ADDREQ_FLAG_ADD);\n\n    free(request->version);\n    free(request->statusText);\n\n    request->version = wcsdup(buffer);\n    request->statusText = wcsdup(status_text ? status_text : L\"\");\n\n    /* Restore the spaces */\n    *(status_code-1) = ' ';\n    if (status_text)\n        *(status_text-1) = ' ';\n\n    /* Parse each response line */\n    do\n    {\n        buflen = MAX_REPLY_LEN;\n        if (!read_line(request, bufferA, &buflen) && buflen)\n        {\n            LPWSTR * pFieldAndValue;\n\n            TRACE(\"got line %s, now interpreting\\n\", debugstr_a(bufferA));\n\n            if (!bufferA[0]) break;\n            MultiByteToWideChar( CP_ACP, 0, bufferA, buflen, buffer, MAX_REPLY_LEN );\n\n            pFieldAndValue = HTTP_InterpretHttpHeader(buffer);\n            if (pFieldAndValue)\n            {\n                HTTP_ProcessHeader(request, pFieldAndValue[0], pFieldAndValue[1],\n                                   HTTP_ADDREQ_FLAG_ADD );\n                HTTP_FreeTokens(pFieldAndValue);\n            }\n        }\n        else\n        {\n            cbreaks++;\n            if (cbreaks >= 2)\n                break;\n        }\n    }while(1);\n\n    res = ERROR_SUCCESS;\n\nlend:\n\n    *len = rc;\n    TRACE(\"<--\\n\");\n    return res;\n}"
+  },
+  {
+   "name": "http_process_keep_alive",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4896,
+   "end_line": 4909,
+   "static": true,
+   "called_from": [
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:5414"
+   ],
+   "signature": "static void http_process_keep_alive(http_request_t *req)",
+   "code": "static void http_process_keep_alive(http_request_t *req)\n{\n    const WCHAR *connection = L\"\";\n    int index;\n\n    EnterCriticalSection( &req->headers_section );\n\n    if ((index = HTTP_GetCustomHeaderIndex(req, L\"Connection\", 0, FALSE)) != -1 ||\n        (index = HTTP_GetCustomHeaderIndex(req, L\"Proxy-Connection\", 0, FALSE)) != -1)\n        connection = req->custHeaders[index].lpszValue;\n    req->netconn->keep_alive = has_keep_alive(req->version, connection);\n\n    LeaveCriticalSection( &req->headers_section );\n}"
+  },
+  {
+   "name": "HTTP_ProcessCookies",
+   "file": "dlls/wininet/http.c",
+   "start_line": 647,
+   "end_line": 678,
+   "static": true,
+   "called_from": [
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:5415"
+   ],
+   "signature": "static void HTTP_ProcessCookies( http_request_t *request )",
+   "code": "static void HTTP_ProcessCookies( http_request_t *request )\n{\n    int HeaderIndex;\n    int numCookies = 0;\n    LPHTTPHEADERW setCookieHeader;\n\n    if(request->hdr.dwFlags & INTERNET_FLAG_NO_COOKIES)\n        return;\n\n    EnterCriticalSection( &request->headers_section );\n\n    while((HeaderIndex = HTTP_GetCustomHeaderIndex(request, L\"Set-Cookie\", numCookies++, FALSE)) != -1)\n    {\n        const WCHAR *data;\n        substr_t name;\n\n        setCookieHeader = &request->custHeaders[HeaderIndex];\n\n        if (!setCookieHeader->lpszValue)\n            continue;\n\n        data = wcschr(setCookieHeader->lpszValue, '=');\n        if(!data)\n            continue;\n\n        name = substr(setCookieHeader->lpszValue, data - setCookieHeader->lpszValue);\n        data++;\n        set_cookie(substrz(request->server->name), substrz(request->path), name, substrz(data), INTERNET_COOKIE_HTTPONLY);\n    }\n\n    LeaveCriticalSection( &request->headers_section );\n}"
+  },
+  {
+   "name": "HTTP_ProcessExpires",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4789,
+   "end_line": 4875,
+   "static": true,
+   "called_from": [
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:5416"
+   ],
+   "signature": "static void HTTP_ProcessExpires(http_request_t *request)",
+   "code": "static void HTTP_ProcessExpires(http_request_t *request)\n{\n    BOOL expirationFound = FALSE;\n    int headerIndex;\n\n    EnterCriticalSection( &request->headers_section );\n\n    /* Look for a Cache-Control header with a max-age directive, as it takes\n     * precedence over the Expires header.\n     */\n    headerIndex = HTTP_GetCustomHeaderIndex(request, L\"Cache-Control\", 0, FALSE);\n    if (headerIndex != -1)\n    {\n        LPHTTPHEADERW ccHeader = &request->custHeaders[headerIndex];\n        LPWSTR ptr;\n\n        for (ptr = ccHeader->lpszValue; ptr && *ptr; )\n        {\n            LPWSTR comma = wcschr(ptr, ','), end, equal;\n\n            if (comma)\n                end = comma;\n            else\n                end = ptr + lstrlenW(ptr);\n            for (equal = end - 1; equal > ptr && *equal != '='; equal--)\n                ;\n            if (*equal == '=')\n            {\n                if (!wcsnicmp(ptr, L\"max-age\", equal - ptr - 1))\n                {\n                    LPWSTR nextPtr;\n                    unsigned long age;\n\n                    age = wcstoul(equal + 1, &nextPtr, 10);\n                    if (nextPtr > equal + 1)\n                    {\n                        LARGE_INTEGER ft;\n\n                        NtQuerySystemTime( &ft );\n                        /* Age is in seconds, FILETIME resolution is in\n                         * 100 nanosecond intervals.\n                         */\n                        ft.QuadPart += age * (ULONGLONG)1000000;\n                        request->expires.dwLowDateTime = ft.u.LowPart;\n                        request->expires.dwHighDateTime = ft.u.HighPart;\n                        expirationFound = TRUE;\n                    }\n                }\n            }\n            if (comma)\n            {\n                ptr = comma + 1;\n                while (iswspace(*ptr))\n                    ptr++;\n            }\n            else\n                ptr = NULL;\n        }\n    }\n    if (!expirationFound)\n    {\n        headerIndex = HTTP_GetCustomHeaderIndex(request, L\"Expires\", 0, FALSE);\n        if (headerIndex != -1)\n        {\n            LPHTTPHEADERW expiresHeader = &request->custHeaders[headerIndex];\n            FILETIME ft;\n\n            if (HTTP_ParseDate(expiresHeader->lpszValue, &ft))\n            {\n                expirationFound = TRUE;\n                request->expires = ft;\n            }\n        }\n    }\n    if (!expirationFound)\n    {\n        LARGE_INTEGER t;\n\n        /* With no known age, default to 10 minutes until expiration. */\n        NtQuerySystemTime( &t );\n        t.QuadPart += 10 * 60 * (ULONGLONG)10000000;\n        request->expires.dwLowDateTime = t.u.LowPart;\n        request->expires.dwHighDateTime = t.u.HighPart;\n    }\n\n    LeaveCriticalSection( &request->headers_section );\n}"
+  },
+  {
+   "name": "HTTP_ProcessLastModified",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4877,
+   "end_line": 4894,
+   "static": true,
+   "called_from": [
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:5417"
+   ],
+   "signature": "static void HTTP_ProcessLastModified(http_request_t *request)",
+   "code": "static void HTTP_ProcessLastModified(http_request_t *request)\n{\n    int headerIndex;\n\n    EnterCriticalSection( &request->headers_section );\n\n    headerIndex = HTTP_GetCustomHeaderIndex(request, L\"Last-Modified\", 0, FALSE);\n    if (headerIndex != -1)\n    {\n        LPHTTPHEADERW expiresHeader = &request->custHeaders[headerIndex];\n        FILETIME ft;\n\n        if (HTTP_ParseDate(expiresHeader->lpszValue, &ft))\n            request->last_modified = ft;\n    }\n\n    LeaveCriticalSection( &request->headers_section );\n}"
+  },
+  {
+   "name": "set_content_length",
+   "file": "dlls/wininet/http.c",
+   "start_line": 2925,
+   "end_line": 2999,
+   "static": true,
+   "called_from": [
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:5419"
+   ],
+   "signature": "static DWORD set_content_length(http_request_t *request)",
+   "code": "static DWORD set_content_length(http_request_t *request)\n{\n    WCHAR contentLength[32];\n    WCHAR encoding[20];\n    DWORD size;\n\n    if(request->status_code == HTTP_STATUS_NO_CONTENT || request->status_code == HTTP_STATUS_NOT_MODIFIED ||\n       !wcscmp(request->verb, L\"HEAD\"))\n    {\n        if (HTTP_GetCustomHeaderIndex(request, L\"Content-Length\", 0, FALSE) == -1 ||\n            !wcscmp(request->verb, L\"HEAD\"))\n            request->read_size = 0;\n        request->contentLength = request->netconn_stream.content_length = 0;\n        return ERROR_SUCCESS;\n    }\n\n    size = sizeof(contentLength);\n    if (HTTP_HttpQueryInfoW(request, HTTP_QUERY_CONTENT_LENGTH,\n                            contentLength, &size, NULL) != ERROR_SUCCESS ||\n        !StrToInt64ExW(contentLength, STIF_DEFAULT, (LONGLONG*)&request->contentLength)) {\n        request->contentLength = ~0;\n    }\n\n    request->netconn_stream.content_length = request->contentLength;\n    request->netconn_stream.content_read = request->read_size;\n\n    size = sizeof(encoding);\n    if (HTTP_HttpQueryInfoW(request, HTTP_QUERY_TRANSFER_ENCODING, encoding, &size, NULL) == ERROR_SUCCESS &&\n        !wcsicmp(encoding, L\"chunked\"))\n    {\n        chunked_stream_t *chunked_stream;\n\n        chunked_stream = malloc(sizeof(*chunked_stream));\n        if(!chunked_stream)\n            return ERROR_OUTOFMEMORY;\n\n        chunked_stream->data_stream.vtbl = &chunked_stream_vtbl;\n        chunked_stream->buf_size = chunked_stream->buf_pos = 0;\n        chunked_stream->chunk_size = 0;\n        chunked_stream->state = CHUNKED_STREAM_STATE_READING_CHUNK_SIZE;\n\n        if(request->read_size) {\n            memcpy(chunked_stream->buf, request->read_buf+request->read_pos, request->read_size);\n            chunked_stream->buf_size = request->read_size;\n            request->read_size = request->read_pos = 0;\n        }\n\n        request->data_stream = &chunked_stream->data_stream;\n        request->contentLength = ~0;\n    }\n\n    if(request->hdr.decoding) {\n        int encoding_idx;\n\n        EnterCriticalSection( &request->headers_section );\n\n        encoding_idx = HTTP_GetCustomHeaderIndex(request, L\"Content-Encoding\", 0, FALSE);\n        if(encoding_idx != -1) {\n            if(!wcsicmp(request->custHeaders[encoding_idx].lpszValue, L\"gzip\")) {\n                HTTP_DeleteCustomHeader(request, encoding_idx);\n                LeaveCriticalSection( &request->headers_section );\n                return init_gzip_stream(request, TRUE);\n            }\n            if(!wcsicmp(request->custHeaders[encoding_idx].lpszValue, L\"deflate\")) {\n                HTTP_DeleteCustomHeader(request, encoding_idx);\n                LeaveCriticalSection( &request->headers_section );\n                return init_gzip_stream(request, FALSE);\n            }\n        }\n\n        LeaveCriticalSection( &request->headers_section );\n    }\n\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "get_redirect_url",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4184,
+   "end_line": 4245,
+   "static": true,
+   "called_from": [
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:5434"
+   ],
+   "signature": "static WCHAR *get_redirect_url(http_request_t *request)",
+   "code": "static WCHAR *get_redirect_url(http_request_t *request)\n{\n    static WCHAR szHttp[] = L\"http\";\n    static WCHAR szHttps[] = L\"https\";\n    http_session_t *session = request->session;\n    URL_COMPONENTSW urlComponents = { sizeof(urlComponents) };\n    WCHAR *orig_url = NULL, *redirect_url = NULL, *combined_url = NULL;\n    DWORD url_length = 0, res;\n    BOOL b;\n\n    url_length = 0;\n    res = HTTP_HttpQueryInfoW(request, HTTP_QUERY_LOCATION, redirect_url, &url_length, NULL);\n    if(res == ERROR_INSUFFICIENT_BUFFER) {\n        redirect_url = malloc(url_length);\n        res = HTTP_HttpQueryInfoW(request, HTTP_QUERY_LOCATION, redirect_url, &url_length, NULL);\n    }\n    if(res != ERROR_SUCCESS) {\n        free(redirect_url);\n        return NULL;\n    }\n\n    urlComponents.dwSchemeLength = 1;\n    b = InternetCrackUrlW(redirect_url, url_length / sizeof(WCHAR), 0, &urlComponents);\n    if(b && urlComponents.dwSchemeLength &&\n       urlComponents.nScheme != INTERNET_SCHEME_HTTP && urlComponents.nScheme != INTERNET_SCHEME_HTTPS) {\n        TRACE(\"redirect to non-http URL\\n\");\n        return NULL;\n    }\n\n    urlComponents.lpszScheme = (request->hdr.dwFlags & INTERNET_FLAG_SECURE) ? szHttps : szHttp;\n    urlComponents.dwSchemeLength = 0;\n    urlComponents.lpszHostName = request->server->name;\n    urlComponents.nPort = request->server->port;\n    urlComponents.lpszUserName = session->userName;\n    urlComponents.lpszUrlPath = request->path;\n\n    b = InternetCreateUrlW(&urlComponents, 0, NULL, &url_length);\n    if(!b && GetLastError() == ERROR_INSUFFICIENT_BUFFER) {\n        orig_url = malloc(url_length);\n\n        /* convert from bytes to characters */\n        url_length = url_length / sizeof(WCHAR) - 1;\n        b = InternetCreateUrlW(&urlComponents, 0, orig_url, &url_length);\n    }\n\n    if(b) {\n        url_length = 0;\n        b = InternetCombineUrlW(orig_url, redirect_url, NULL, &url_length, ICU_ENCODE_SPACES_ONLY);\n        if(!b && GetLastError() == ERROR_INSUFFICIENT_BUFFER) {\n            combined_url = malloc(url_length * sizeof(WCHAR));\n            b = InternetCombineUrlW(orig_url, redirect_url, combined_url, &url_length, ICU_ENCODE_SPACES_ONLY);\n            if(!b) {\n                free(combined_url);\n                combined_url = NULL;\n            }\n        }\n    }\n\n    free(orig_url);\n    free(redirect_url);\n    return combined_url;\n}"
+  },
+  {
+   "name": "drain_content",
+   "file": "dlls/wininet/http.c",
+   "start_line": 3119,
+   "end_line": 3135,
+   "static": true,
+   "called_from": [
+    "create_request",
+    "open_http_connection"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:300",
+    "dlls/wininet/http.c:428",
+    "dlls/wininet/http.c:1961",
+    "dlls/wininet/http.c:3112",
+    "dlls/wininet/http.c:3187"
+   ],
+   "signature": "static DWORD drain_content(http_request_t *req, BOOL blocking)",
+   "code": "static DWORD drain_content(http_request_t *req, BOOL blocking)\n{\n    DWORD res;\n\n    TRACE(\"%p\\n\", req->netconn);\n\n    if(!is_valid_netconn(req->netconn))\n        return ERROR_NO_DATA;\n\n    if(!wcscmp(req->verb, L\"HEAD\"))\n        return ERROR_SUCCESS;\n\n    EnterCriticalSection( &req->read_section );\n    res = req->data_stream->vtbl->drain_content(req->data_stream, req, blocking);\n    LeaveCriticalSection( &req->read_section );\n    return res;\n}"
+  },
+  {
+   "name": "HTTP_HandleRedirect",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4251,
+   "end_line": 4360,
+   "static": true,
+   "called_from": [
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:5446"
+   ],
+   "signature": "static DWORD HTTP_HandleRedirect(http_request_t *request, WCHAR *url)",
+   "code": "static DWORD HTTP_HandleRedirect(http_request_t *request, WCHAR *url)\n{\n    URL_COMPONENTSW urlComponents = { sizeof(urlComponents) };\n    http_session_t *session = request->session;\n    size_t url_len = lstrlenW(url);\n\n    if(url[0] == '/')\n    {\n        /* if it's an absolute path, keep the same session info */\n        urlComponents.lpszUrlPath = url;\n        urlComponents.dwUrlPathLength = url_len;\n    }\n    else\n    {\n        urlComponents.dwHostNameLength = 1;\n        urlComponents.dwUserNameLength = 1;\n        urlComponents.dwUrlPathLength = 1;\n        if(!InternetCrackUrlW(url, url_len, 0, &urlComponents))\n            return INTERNET_GetLastError();\n\n        if(!urlComponents.dwHostNameLength)\n            return ERROR_INTERNET_INVALID_URL;\n    }\n\n    INTERNET_SendCallback(&request->hdr, request->hdr.dwContext, INTERNET_STATUS_REDIRECT,\n                          url, (url_len + 1) * sizeof(WCHAR));\n\n    if(urlComponents.dwHostNameLength) {\n        BOOL custom_port = FALSE;\n        substr_t host;\n\n        if(urlComponents.nScheme == INTERNET_SCHEME_HTTP) {\n            if(request->hdr.dwFlags & INTERNET_FLAG_SECURE) {\n                TRACE(\"redirect from secure page to non-secure page\\n\");\n                /* FIXME: warn about from secure redirect to non-secure page */\n                request->hdr.dwFlags &= ~INTERNET_FLAG_SECURE;\n            }\n\n            custom_port = urlComponents.nPort != INTERNET_DEFAULT_HTTP_PORT;\n        }else if(urlComponents.nScheme == INTERNET_SCHEME_HTTPS) {\n            if(!(request->hdr.dwFlags & INTERNET_FLAG_SECURE)) {\n                TRACE(\"redirect from non-secure page to secure page\\n\");\n                /* FIXME: notify about redirect to secure page */\n                request->hdr.dwFlags |= INTERNET_FLAG_SECURE;\n            }\n\n            custom_port = urlComponents.nPort != INTERNET_DEFAULT_HTTPS_PORT;\n        }\n\n        free(session->hostName);\n\n        session->hostName = strndupW(urlComponents.lpszHostName, urlComponents.dwHostNameLength);\n        session->hostPort = urlComponents.nPort;\n\n        free(session->userName);\n        session->userName = NULL;\n        if (urlComponents.dwUserNameLength)\n            session->userName = strndupW(urlComponents.lpszUserName, urlComponents.dwUserNameLength);\n\n        reset_data_stream(request);\n\n        host = substr(urlComponents.lpszHostName, urlComponents.dwHostNameLength);\n\n        if(host.len != lstrlenW(request->server->name) || wcsnicmp(request->server->name, host.str, host.len)\n           || request->server->port != urlComponents.nPort) {\n            server_t *new_server;\n\n            new_server = get_server(host, urlComponents.nPort, urlComponents.nScheme == INTERNET_SCHEME_HTTPS, TRUE);\n            server_release(request->server);\n            request->server = new_server;\n        }\n\n        if (custom_port)\n            HTTP_ProcessHeader(request, L\"Host\", request->server->host_port,\n                               HTTP_ADDREQ_FLAG_ADD | HTTP_ADDREQ_FLAG_REPLACE | HTTP_ADDHDR_FLAG_REQ);\n        else\n            HTTP_ProcessHeader(request, L\"Host\", request->server->name,\n                               HTTP_ADDREQ_FLAG_ADD | HTTP_ADDREQ_FLAG_REPLACE | HTTP_ADDHDR_FLAG_REQ);\n    }\n\n    free(request->path);\n    request->path = NULL;\n    if(urlComponents.dwUrlPathLength)\n    {\n        DWORD needed = 1;\n        HRESULT rc;\n        WCHAR dummy[] = L\"\";\n        WCHAR *path;\n\n        path = strndupW(urlComponents.lpszUrlPath, urlComponents.dwUrlPathLength);\n        rc = UrlEscapeW(path, dummy, &needed, URL_ESCAPE_SPACES_ONLY);\n        if (rc != E_POINTER)\n            ERR(\"Unable to escape string!(%s) (%ld)\\n\",debugstr_w(path),rc);\n        request->path = malloc(needed * sizeof(WCHAR));\n        rc = UrlEscapeW(path, request->path, &needed,\n                        URL_ESCAPE_SPACES_ONLY);\n        if (rc != S_OK)\n        {\n            ERR(\"Unable to escape string!(%s) (%ld)\\n\",debugstr_w(path),rc);\n            lstrcpyW(request->path, path);\n        }\n        free(path);\n    }\n\n    /* Remove custom content-type/length headers on redirects.  */\n    remove_header(request, L\"Content-Type\", TRUE);\n    remove_header(request, L\"Content-Length\", TRUE);\n\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "HTTP_HttpQueryInfoW",
+   "file": "dlls/wininet/http.c",
+   "start_line": 3703,
+   "end_line": 3966,
+   "static": true,
+   "called_from": [
+    "create_request",
+    "get_redirect_url",
+    "set_content_length"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:1946",
+    "dlls/wininet/http.c:1950",
+    "dlls/wininet/http.c:1951",
+    "dlls/wininet/http.c:4103"
+   ],
+   "signature": "static DWORD HTTP_HttpQueryInfoW(http_request_t *request, DWORD dwInfoLevel, LPVOID lpBuffer, LPDWORD lpdwBufferLength, LPDWORD lpdwIndex)",
+   "code": "static DWORD HTTP_HttpQueryInfoW(http_request_t *request, DWORD dwInfoLevel,\n        LPVOID lpBuffer, LPDWORD lpdwBufferLength, LPDWORD lpdwIndex)\n{\n    LPHTTPHEADERW lphttpHdr = NULL;\n    BOOL request_only = !!(dwInfoLevel & HTTP_QUERY_FLAG_REQUEST_HEADERS);\n    INT requested_index = lpdwIndex ? *lpdwIndex : 0;\n    DWORD level = (dwInfoLevel & ~HTTP_QUERY_MODIFIER_FLAGS_MASK);\n    INT index = -1;\n\n    EnterCriticalSection( &request->headers_section );\n\n    /* Find requested header structure */\n    switch (level)\n    {\n    case HTTP_QUERY_CUSTOM:\n        if (!lpBuffer)\n        {\n            LeaveCriticalSection( &request->headers_section );\n            return ERROR_INVALID_PARAMETER;\n        }\n        index = HTTP_GetCustomHeaderIndex(request, lpBuffer, requested_index, request_only);\n        break;\n    case HTTP_QUERY_RAW_HEADERS_CRLF:\n        {\n            LPWSTR headers;\n            DWORD len = 0;\n            DWORD res = ERROR_INVALID_PARAMETER;\n\n            if (request_only)\n                headers = build_request_header(request, request->verb, request->path, request->version, TRUE);\n            else\n                headers = build_response_header(request, TRUE);\n            if (!headers)\n            {\n                LeaveCriticalSection( &request->headers_section );\n                return ERROR_OUTOFMEMORY;\n            }\n\n            len = lstrlenW(headers) * sizeof(WCHAR);\n            if (len + sizeof(WCHAR) > *lpdwBufferLength)\n            {\n                len += sizeof(WCHAR);\n                res = ERROR_INSUFFICIENT_BUFFER;\n            }\n            else if (lpBuffer)\n            {\n                memcpy(lpBuffer, headers, len + sizeof(WCHAR));\n                TRACE(\"returning data: %s\\n\", debugstr_wn(lpBuffer, len / sizeof(WCHAR)));\n                res = ERROR_SUCCESS;\n            }\n            *lpdwBufferLength = len;\n\n            free(headers);\n            LeaveCriticalSection( &request->headers_section );\n            return res;\n        }\n    case HTTP_QUERY_RAW_HEADERS:\n        {\n            LPWSTR headers;\n            DWORD len;\n\n            if (request_only)\n                headers = build_request_header(request, request->verb, request->path, request->version, FALSE);\n            else\n                headers = build_response_header(request, FALSE);\n\n            if (!headers)\n            {\n                LeaveCriticalSection( &request->headers_section );\n                return ERROR_OUTOFMEMORY;\n            }\n\n            len = lstrlenW(headers) * sizeof(WCHAR);\n            if (len > *lpdwBufferLength)\n            {\n                *lpdwBufferLength = len;\n                free(headers);\n                LeaveCriticalSection( &request->headers_section );\n                return ERROR_INSUFFICIENT_BUFFER;\n            }\n\n            if (lpBuffer)\n            {\n                DWORD i;\n\n                TRACE(\"returning data: %s\\n\", debugstr_wn(headers, len / sizeof(WCHAR)));\n\n                for (i = 0; i < len / sizeof(WCHAR); i++)\n                {\n                    if (headers[i] == '\\n')\n                        headers[i] = 0;\n                }\n                memcpy(lpBuffer, headers, len);\n            }\n            *lpdwBufferLength = len - sizeof(WCHAR);\n\n            free(headers);\n            LeaveCriticalSection( &request->headers_section );\n            return ERROR_SUCCESS;\n        }\n    case HTTP_QUERY_STATUS_TEXT:\n        if (request->statusText)\n        {\n            DWORD len = lstrlenW(request->statusText);\n            if (len + 1 > *lpdwBufferLength/sizeof(WCHAR))\n            {\n                *lpdwBufferLength = (len + 1) * sizeof(WCHAR);\n                LeaveCriticalSection( &request->headers_section );\n                return ERROR_INSUFFICIENT_BUFFER;\n            }\n            if (lpBuffer)\n            {\n                memcpy(lpBuffer, request->statusText, (len + 1) * sizeof(WCHAR));\n                TRACE(\"returning data: %s\\n\", debugstr_wn(lpBuffer, len));\n            }\n            *lpdwBufferLength = len * sizeof(WCHAR);\n            LeaveCriticalSection( &request->headers_section );\n            return ERROR_SUCCESS;\n        }\n        break;\n    case HTTP_QUERY_VERSION:\n        if (request->version)\n        {\n            DWORD len = lstrlenW(request->version);\n            if (len + 1 > *lpdwBufferLength/sizeof(WCHAR))\n            {\n                *lpdwBufferLength = (len + 1) * sizeof(WCHAR);\n                LeaveCriticalSection( &request->headers_section );\n                return ERROR_INSUFFICIENT_BUFFER;\n            }\n            if (lpBuffer)\n            {\n                memcpy(lpBuffer, request->version, (len + 1) * sizeof(WCHAR));\n                TRACE(\"returning data: %s\\n\", debugstr_wn(lpBuffer, len));\n            }\n            *lpdwBufferLength = len * sizeof(WCHAR);\n            LeaveCriticalSection( &request->headers_section );\n            return ERROR_SUCCESS;\n        }\n        break;\n    case HTTP_QUERY_CONTENT_ENCODING:\n        index = HTTP_GetCustomHeaderIndex(request, header_lookup[request->read_gzip ? HTTP_QUERY_CONTENT_TYPE : level],\n                requested_index,request_only);\n        break;\n    case HTTP_QUERY_STATUS_CODE: {\n        DWORD res = ERROR_SUCCESS;\n\n        if(request_only)\n        {\n            LeaveCriticalSection( &request->headers_section );\n            return ERROR_HTTP_INVALID_QUERY_REQUEST;\n        }\n\n        if(requested_index)\n            break;\n\n        if(dwInfoLevel & HTTP_QUERY_FLAG_NUMBER) {\n            if(*lpdwBufferLength >= sizeof(DWORD))\n                *(DWORD*)lpBuffer = request->status_code;\n            else\n                res = ERROR_INSUFFICIENT_BUFFER;\n            *lpdwBufferLength = sizeof(DWORD);\n        }else {\n            WCHAR buf[12];\n            DWORD size;\n\n            size = swprintf(buf, ARRAY_SIZE(buf), L\"%u\", request->status_code) * sizeof(WCHAR);\n\n            if(size <= *lpdwBufferLength) {\n                memcpy(lpBuffer, buf, size+sizeof(WCHAR));\n            }else {\n                size += sizeof(WCHAR);\n                res = ERROR_INSUFFICIENT_BUFFER;\n            }\n\n            *lpdwBufferLength = size;\n        }\n        LeaveCriticalSection( &request->headers_section );\n        return res;\n    }\n    default:\n        assert (ARRAY_SIZE(header_lookup) == (HTTP_QUERY_UNLESS_MODIFIED_SINCE + 1));\n\n        if (level < ARRAY_SIZE(header_lookup) && header_lookup[level])\n            index = HTTP_GetCustomHeaderIndex(request, header_lookup[level],\n                                              requested_index,request_only);\n    }\n\n    if (index >= 0)\n        lphttpHdr = &request->custHeaders[index];\n\n    /* Ensure header satisfies requested attributes */\n    if (!lphttpHdr ||\n        ((dwInfoLevel & HTTP_QUERY_FLAG_REQUEST_HEADERS) &&\n         (~lphttpHdr->wFlags & HDR_ISREQUEST)))\n    {\n        LeaveCriticalSection( &request->headers_section );\n        return ERROR_HTTP_HEADER_NOT_FOUND;\n    }\n\n    /* coalesce value to requested type */\n    if (dwInfoLevel & HTTP_QUERY_FLAG_NUMBER && lpBuffer)\n    {\n        unsigned long value;\n\n        if (*lpdwBufferLength != sizeof(DWORD))\n        {\n            LeaveCriticalSection( &request->headers_section );\n            return ERROR_HTTP_INVALID_HEADER;\n        }\n\n        errno = 0;\n        value = wcstoul( lphttpHdr->lpszValue, NULL, 10 );\n        if (value > UINT_MAX || (value == ULONG_MAX && errno == ERANGE))\n        {\n            LeaveCriticalSection( &request->headers_section );\n            return ERROR_HTTP_INVALID_HEADER;\n        }\n\n        *(DWORD *)lpBuffer = value;\n        TRACE(\" returning number: %lu\\n\", *(DWORD *)lpBuffer);\n    }\n    else if (dwInfoLevel & HTTP_QUERY_FLAG_SYSTEMTIME && lpBuffer)\n    {\n        SYSTEMTIME st;\n\n        if (!InternetTimeToSystemTimeW(lphttpHdr->lpszValue, &st, 0))\n        {\n            LeaveCriticalSection( &request->headers_section );\n            return ERROR_HTTP_INVALID_HEADER;\n        }\n        if (*lpdwBufferLength < sizeof(st))\n        {\n            *lpdwBufferLength = sizeof(st);\n            LeaveCriticalSection( &request->headers_section );\n            return ERROR_INSUFFICIENT_BUFFER;\n        }\n        TRACE(\" returning time: %04u/%02u/%02u - %u - %02u:%02u:%02u.%02u\\n\",\n              st.wYear, st.wMonth, st.wDay, st.wDayOfWeek, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);\n        memcpy(lpBuffer, &st, sizeof(st));\n        *lpdwBufferLength = sizeof(st);\n    }\n    else if (lphttpHdr->lpszValue)\n    {\n        DWORD len = (lstrlenW(lphttpHdr->lpszValue) + 1) * sizeof(WCHAR);\n\n        if (len > *lpdwBufferLength)\n        {\n            *lpdwBufferLength = len;\n            LeaveCriticalSection( &request->headers_section );\n            return ERROR_INSUFFICIENT_BUFFER;\n        }\n        if (lpBuffer)\n        {\n            memcpy(lpBuffer, lphttpHdr->lpszValue, len);\n            TRACE(\"! returning string: %s\\n\", debugstr_w(lpBuffer));\n        }\n        *lpdwBufferLength = len - sizeof(WCHAR);\n    }\n    if (lpdwIndex) (*lpdwIndex)++;\n\n    LeaveCriticalSection( &request->headers_section );\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "HTTP_DoAuthorization",
+   "file": "dlls/wininet/http.c",
+   "start_line": 946,
+   "end_line": 1186,
+   "static": true,
+   "called_from": [
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL HTTP_DoAuthorization( http_request_t *request, LPCWSTR pszAuthValue, struct HttpAuthInfo **ppAuthInfo, LPWSTR domain_and_username, LPWSTR password, LPWSTR host )",
+   "code": "static BOOL HTTP_DoAuthorization( http_request_t *request, LPCWSTR pszAuthValue,\n                                  struct HttpAuthInfo **ppAuthInfo,\n                                  LPWSTR domain_and_username, LPWSTR password,\n                                  LPWSTR host )\n{\n    SECURITY_STATUS sec_status;\n    struct HttpAuthInfo *pAuthInfo = *ppAuthInfo;\n    BOOL first = FALSE;\n    LPWSTR szRealm = NULL;\n\n    TRACE(\"%s\\n\", debugstr_w(pszAuthValue));\n\n    if (!pAuthInfo)\n    {\n        TimeStamp exp;\n\n        first = TRUE;\n        pAuthInfo = malloc(sizeof(*pAuthInfo));\n        if (!pAuthInfo)\n            return FALSE;\n\n        SecInvalidateHandle(&pAuthInfo->cred);\n        SecInvalidateHandle(&pAuthInfo->ctx);\n        memset(&pAuthInfo->exp, 0, sizeof(pAuthInfo->exp));\n        pAuthInfo->attr = 0;\n        pAuthInfo->auth_data = NULL;\n        pAuthInfo->auth_data_len = 0;\n        pAuthInfo->finished = FALSE;\n\n        if (is_basic_auth_value(pszAuthValue,NULL))\n        {\n            pAuthInfo->scheme = wcsdup(L\"Basic\");\n            if (!pAuthInfo->scheme)\n            {\n                free(pAuthInfo);\n                return FALSE;\n            }\n        }\n        else\n        {\n            PVOID pAuthData;\n            SEC_WINNT_AUTH_IDENTITY_W nt_auth_identity;\n\n            pAuthInfo->scheme = wcsdup(pszAuthValue);\n            if (!pAuthInfo->scheme)\n            {\n                free(pAuthInfo);\n                return FALSE;\n            }\n\n            if (domain_and_username)\n            {\n                WCHAR *user = wcschr(domain_and_username, '\\\\');\n                WCHAR *domain = domain_and_username;\n\n                /* FIXME: make sure scheme accepts SEC_WINNT_AUTH_IDENTITY before calling AcquireCredentialsHandle */\n\n                pAuthData = &nt_auth_identity;\n\n                if (user) user++;\n                else\n                {\n                    user = domain_and_username;\n                    domain = NULL;\n                }\n\n                nt_auth_identity.Flags = SEC_WINNT_AUTH_IDENTITY_UNICODE;\n                nt_auth_identity.User = user;\n                nt_auth_identity.UserLength = lstrlenW(nt_auth_identity.User);\n                nt_auth_identity.Domain = domain;\n                nt_auth_identity.DomainLength = domain ? user - domain - 1 : 0;\n                nt_auth_identity.Password = password;\n                nt_auth_identity.PasswordLength = lstrlenW(nt_auth_identity.Password);\n\n                cache_authorization(host, pAuthInfo->scheme, &nt_auth_identity);\n            }\n            else if(retrieve_cached_authorization(host, pAuthInfo->scheme, &nt_auth_identity))\n                pAuthData = &nt_auth_identity;\n            else\n                /* use default credentials */\n                pAuthData = NULL;\n\n            sec_status = AcquireCredentialsHandleW(NULL, pAuthInfo->scheme,\n                                                   SECPKG_CRED_OUTBOUND, NULL,\n                                                   pAuthData, NULL,\n                                                   NULL, &pAuthInfo->cred,\n                                                   &exp);\n\n            if(pAuthData && !domain_and_username) {\n                free(nt_auth_identity.User);\n                free(nt_auth_identity.Domain);\n                free(nt_auth_identity.Password);\n            }\n\n            if (sec_status == SEC_E_OK)\n            {\n                PSecPkgInfoW sec_pkg_info;\n                sec_status = QuerySecurityPackageInfoW(pAuthInfo->scheme, &sec_pkg_info);\n                if (sec_status == SEC_E_OK)\n                {\n                    pAuthInfo->max_token = sec_pkg_info->cbMaxToken;\n                    FreeContextBuffer(sec_pkg_info);\n                }\n            }\n            if (sec_status != SEC_E_OK)\n            {\n                WARN(\"AcquireCredentialsHandleW for scheme %s failed with error 0x%08lx\\n\",\n                     debugstr_w(pAuthInfo->scheme), sec_status);\n                free(pAuthInfo->scheme);\n                free(pAuthInfo);\n                return FALSE;\n            }\n        }\n        *ppAuthInfo = pAuthInfo;\n    }\n    else if (pAuthInfo->finished)\n        return FALSE;\n\n    if ((lstrlenW(pszAuthValue) < lstrlenW(pAuthInfo->scheme)) ||\n        wcsnicmp(pszAuthValue, pAuthInfo->scheme, lstrlenW(pAuthInfo->scheme)))\n    {\n        ERR(\"authentication scheme changed from %s to %s\\n\",\n            debugstr_w(pAuthInfo->scheme), debugstr_w(pszAuthValue));\n        return FALSE;\n    }\n\n    if (is_basic_auth_value(pszAuthValue,&szRealm))\n    {\n        int userlen;\n        int passlen;\n        char *auth_data = NULL;\n        UINT auth_data_len = 0;\n\n        TRACE(\"basic authentication realm %s\\n\",debugstr_w(szRealm));\n\n        if (!domain_and_username)\n        {\n            if (host && szRealm)\n                auth_data_len = retrieve_cached_basic_authorization(request, host, szRealm,&auth_data);\n            if (auth_data_len == 0)\n            {\n                free(szRealm);\n                return FALSE;\n            }\n        }\n        else\n        {\n            userlen = WideCharToMultiByte(CP_UTF8, 0, domain_and_username, lstrlenW(domain_and_username), NULL, 0, NULL, NULL);\n            passlen = WideCharToMultiByte(CP_UTF8, 0, password, lstrlenW(password), NULL, 0, NULL, NULL);\n\n            /* length includes a nul terminator, which will be re-used for the ':' */\n            auth_data = malloc(userlen + 1 + passlen);\n            if (!auth_data)\n            {\n                free(szRealm);\n                return FALSE;\n            }\n\n            WideCharToMultiByte(CP_UTF8, 0, domain_and_username, -1, auth_data, userlen, NULL, NULL);\n            auth_data[userlen] = ':';\n            WideCharToMultiByte(CP_UTF8, 0, password, -1, &auth_data[userlen+1], passlen, NULL, NULL);\n            auth_data_len = userlen + 1 + passlen;\n            if (host && szRealm)\n                cache_basic_authorization(host, szRealm, auth_data, auth_data_len);\n        }\n\n        pAuthInfo->auth_data = auth_data;\n        pAuthInfo->auth_data_len = auth_data_len;\n        pAuthInfo->finished = TRUE;\n        free(szRealm);\n        return TRUE;\n    }\n    else\n    {\n        LPCWSTR pszAuthData;\n        SecBufferDesc out_desc, in_desc;\n        SecBuffer out, in;\n        unsigned char *buffer;\n        ULONG context_req = ISC_REQ_CONNECTION | ISC_REQ_USE_DCE_STYLE |\n            ISC_REQ_MUTUAL_AUTH | ISC_REQ_DELEGATE;\n\n        in.BufferType = SECBUFFER_TOKEN;\n        in.cbBuffer = 0;\n        in.pvBuffer = NULL;\n\n        in_desc.ulVersion = 0;\n        in_desc.cBuffers = 1;\n        in_desc.pBuffers = &in;\n\n        pszAuthData = pszAuthValue + lstrlenW(pAuthInfo->scheme);\n        if (*pszAuthData == ' ')\n        {\n            pszAuthData++;\n            in.cbBuffer = HTTP_DecodeBase64(pszAuthData, NULL);\n            in.pvBuffer = malloc(in.cbBuffer);\n            HTTP_DecodeBase64(pszAuthData, in.pvBuffer);\n        }\n\n        buffer = malloc(pAuthInfo->max_token);\n\n        out.BufferType = SECBUFFER_TOKEN;\n        out.cbBuffer = pAuthInfo->max_token;\n        out.pvBuffer = buffer;\n\n        out_desc.ulVersion = 0;\n        out_desc.cBuffers = 1;\n        out_desc.pBuffers = &out;\n\n        sec_status = InitializeSecurityContextW(first ? &pAuthInfo->cred : NULL,\n                                                first ? NULL : &pAuthInfo->ctx,\n                                                first ? request->server->name : NULL,\n                                                context_req, 0, SECURITY_NETWORK_DREP,\n                                                in.pvBuffer ? &in_desc : NULL,\n                                                0, &pAuthInfo->ctx, &out_desc,\n                                                &pAuthInfo->attr, &pAuthInfo->exp);\n        free(in.pvBuffer);\n        if (sec_status == SEC_E_OK)\n        {\n            pAuthInfo->finished = TRUE;\n            pAuthInfo->auth_data = out.pvBuffer;\n            pAuthInfo->auth_data_len = out.cbBuffer;\n            TRACE(\"sending last auth packet\\n\");\n        }\n        else if (sec_status == SEC_I_CONTINUE_NEEDED)\n        {\n            pAuthInfo->auth_data = out.pvBuffer;\n            pAuthInfo->auth_data_len = out.cbBuffer;\n            TRACE(\"sending next auth packet\\n\");\n        }\n        else\n        {\n            ERR(\"InitializeSecurityContextW returned error 0x%08lx\\n\", sec_status);\n            free(out.pvBuffer);\n            destroy_authinfo(pAuthInfo);\n            *ppAuthInfo = NULL;\n            return FALSE;\n        }\n    }\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "destroy_authinfo",
+   "file": "dlls/wininet/http.c",
+   "start_line": 735,
+   "end_line": 747,
+   "static": true,
+   "called_from": [
+    "HTTP_DoAuthorization",
+    "create_request"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:1843",
+    "dlls/wininet/http.c:1844"
+   ],
+   "signature": "static void destroy_authinfo( struct HttpAuthInfo *authinfo )",
+   "code": "static void destroy_authinfo( struct HttpAuthInfo *authinfo )\n{\n    if (!authinfo) return;\n\n    if (SecIsValidHandle(&authinfo->ctx))\n        DeleteSecurityContext(&authinfo->ctx);\n    if (SecIsValidHandle(&authinfo->cred))\n        FreeCredentialsHandle(&authinfo->cred);\n\n    free(authinfo->auth_data);\n    free(authinfo->scheme);\n    free(authinfo);\n}"
+  },
+  {
+   "name": "remove_header",
+   "file": "dlls/wininet/http.c",
+   "start_line": 336,
+   "end_line": 343,
+   "static": true,
+   "called_from": [
+    "HTTP_HandleRedirect",
+    "create_request",
+    "init_gzip_stream"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void remove_header( http_request_t *request, const WCHAR *str, BOOL from_request )",
+   "code": "static void remove_header( http_request_t *request, const WCHAR *str, BOOL from_request )\n{\n    int index;\n    EnterCriticalSection( &request->headers_section );\n    index = HTTP_GetCustomHeaderIndex( request, str, 0, from_request );\n    if (index != -1) HTTP_DeleteCustomHeader( request, index );\n    LeaveCriticalSection( &request->headers_section );\n}"
+  },
+  {
+   "name": "compose_request_url",
+   "file": "dlls/wininet/http.c",
+   "start_line": 1785,
+   "end_line": 1816,
+   "static": true,
+   "called_from": [
+    "create_cache_entry"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:2101"
+   ],
+   "signature": "static WCHAR *compose_request_url(http_request_t *req)",
+   "code": "static WCHAR *compose_request_url(http_request_t *req)\n{\n    const WCHAR *host, *scheme;\n    WCHAR *buf, *ptr;\n    size_t len;\n\n    host = req->server->canon_host_port;\n\n    if (req->server->is_https)\n        scheme = L\"https://\";\n    else\n        scheme = L\"http://\";\n\n    len = lstrlenW(scheme) + lstrlenW(host) + (req->path[0] != '/' ? 1 : 0) + lstrlenW(req->path);\n    ptr = buf = malloc((len + 1) * sizeof(WCHAR));\n    if(buf) {\n        lstrcpyW(ptr, scheme);\n        ptr += lstrlenW(ptr);\n\n        lstrcpyW(ptr, host);\n        ptr += lstrlenW(ptr);\n\n        if(req->path[0] != '/')\n            *ptr++ = '/';\n\n        lstrcpyW(ptr, req->path);\n        ptr += lstrlenW(ptr);\n        *ptr = 0;\n    }\n\n    return buf;\n}"
+  },
+  {
+   "name": "write_cache_file",
+   "file": "dlls/wininet/http.c",
+   "start_line": 2429,
+   "end_line": 2448,
+   "static": true,
+   "called_from": [
+    "create_cache_entry",
+    "read_http_stream"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void write_cache_file(http_request_t *req, const BYTE *buf, DWORD len)",
+   "code": "static void write_cache_file(http_request_t *req, const BYTE *buf, DWORD len)\n{\n    if(!req->hCacheFile) {\n        return;\n    }\n\n    if(len) {\n        BOOL bres;\n        DWORD written;\n\n        bres = WriteFile(req->hCacheFile, buf, len, &written, NULL);\n        if(bres)\n            req->cache_size += written;\n        else\n            FIXME(\"WriteFile failed: %lu\\n\", GetLastError());\n    }\n\n    if(req->data_stream->vtbl->end_of_data(req->data_stream, req))\n        commit_cache_entry(req);\n}"
+  },
+  {
+   "name": "refill_read_buffer",
+   "file": "dlls/wininet/http.c",
+   "start_line": 2639,
+   "end_line": 2663,
+   "static": true,
+   "called_from": [
+    "HTTP_ReceiveRequestData"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:3181",
+    "dlls/wininet/http.c:3401"
+   ],
+   "signature": "static DWORD refill_read_buffer(http_request_t *req, BOOL allow_blocking, DWORD *read_bytes)",
+   "code": "static DWORD refill_read_buffer(http_request_t *req, BOOL allow_blocking, DWORD *read_bytes)\n{\n    DWORD res, read=0;\n\n    if(req->read_size == sizeof(req->read_buf))\n        return ERROR_SUCCESS;\n\n    if(req->read_pos) {\n        if(req->read_size)\n            memmove(req->read_buf, req->read_buf+req->read_pos, req->read_size);\n        req->read_pos = 0;\n    }\n\n    res = read_http_stream(req, req->read_buf+req->read_size, sizeof(req->read_buf) - req->read_size,\n            &read, allow_blocking);\n    if(res != ERROR_SUCCESS)\n        return res;\n\n    req->read_size += read;\n\n    TRACE(\"read %lu bytes, read_size %lu\\n\", read, req->read_size);\n    if(read_bytes)\n        *read_bytes = read;\n    return res;\n}"
+  },
+  {
+   "name": "strip_spaces",
+   "file": "dlls/wininet/http.c",
+   "start_line": 680,
+   "end_line": 697,
+   "static": true,
+   "called_from": [
+    "HTTP_InterpretHttpHeader",
+    "is_basic_auth_value"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void strip_spaces(LPWSTR start)",
+   "code": "static void strip_spaces(LPWSTR start)\n{\n    LPWSTR str = start;\n    LPWSTR end;\n\n    while (*str == ' ')\n        str++;\n\n    if (str != start)\n        memmove(start, str, sizeof(WCHAR) * (lstrlenW(str) + 1));\n\n    end = start + lstrlenW(start) - 1;\n    while (end >= start && *end == ' ')\n    {\n        *end = '\\0';\n        end--;\n    }\n}"
+  },
+  {
+   "name": "encode_auth_data",
+   "file": "dlls/wininet/http.c",
+   "start_line": 1547,
+   "end_line": 1559,
+   "static": true,
+   "called_from": [
+    "HTTP_InsertAuthorization"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static WCHAR *encode_auth_data( const WCHAR *scheme, const char *data, UINT data_len )",
+   "code": "static WCHAR *encode_auth_data( const WCHAR *scheme, const char *data, UINT data_len )\n{\n    WCHAR *ret;\n    UINT len, scheme_len = lstrlenW( scheme );\n\n    /* scheme + space + base64 encoded data (3/2/1 bytes data -> 4 bytes of characters) */\n    len = scheme_len + 1 + ((data_len + 2) * 4) / 3;\n    if (!(ret = malloc( (len + 1) * sizeof(WCHAR) ))) return NULL;\n    memcpy( ret, scheme, scheme_len * sizeof(WCHAR) );\n    ret[scheme_len] = ' ';\n    HTTP_EncodeBase64( data, data_len, ret + scheme_len + 1 );\n    return ret;\n}"
+  },
+  {
+   "name": "get_host_header",
+   "file": "dlls/wininet/http.c",
+   "start_line": 285,
+   "end_line": 295,
+   "static": true,
+   "called_from": [
+    "HTTP_InsertAuthorization"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static WCHAR *get_host_header( http_request_t *req )",
+   "code": "static WCHAR *get_host_header( http_request_t *req )\n{\n    HTTPHEADERW *header;\n    WCHAR *ret = NULL;\n\n    EnterCriticalSection( &req->headers_section );\n    if ((header = HTTP_GetHeader( req, L\"Host\" ))) ret = wcsdup( header->lpszValue );\n    else ret = wcsdup( req->server->canon_host_port );\n    LeaveCriticalSection( &req->headers_section );\n    return ret;\n}"
+  },
+  {
+   "name": "retrieve_cached_basic_authorization",
+   "file": "dlls/wininet/http.c",
+   "start_line": 749,
+   "end_line": 784,
+   "static": true,
+   "called_from": [
+    "HTTP_DoAuthorization",
+    "HTTP_InsertAuthorization"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static UINT retrieve_cached_basic_authorization(http_request_t *req, const WCHAR *host, const WCHAR *realm, char **auth_data)",
+   "code": "static UINT retrieve_cached_basic_authorization(http_request_t *req, const WCHAR *host, const WCHAR *realm, char **auth_data)\n{\n    basicAuthorizationData *ad;\n    UINT rc = 0;\n\n    TRACE(\"Looking for authorization for %s:%s\\n\",debugstr_w(host),debugstr_w(realm));\n\n    EnterCriticalSection(&authcache_cs);\n    LIST_FOR_EACH_ENTRY(ad, &basicAuthorizationCache, basicAuthorizationData, entry)\n    {\n        if (!wcsicmp(host, ad->host) && (!realm || !wcscmp(realm, ad->realm)))\n        {\n            char *colon;\n            DWORD length;\n\n            TRACE(\"Authorization found in cache\\n\");\n            *auth_data = malloc(ad->authorizationLen);\n            memcpy(*auth_data,ad->authorization,ad->authorizationLen);\n            rc = ad->authorizationLen;\n\n            /* update session username and password to reflect current credentials */\n            colon = strchr(ad->authorization, ':');\n            length = colon - ad->authorization;\n\n            free(req->session->userName);\n            free(req->session->password);\n\n            req->session->userName = strndupAtoW(ad->authorization, length, &length);\n            length++;\n            req->session->password = strndupAtoW(&ad->authorization[length], ad->authorizationLen - length, &length);\n            break;\n        }\n    }\n    LeaveCriticalSection(&authcache_cs);\n    return rc;\n}"
+  },
+  {
+   "name": "reset_data_stream",
+   "file": "dlls/wininet/http.c",
+   "start_line": 328,
+   "end_line": 334,
+   "static": true,
+   "called_from": [
+    "HTTP_HandleRedirect",
+    "open_http_connection"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void reset_data_stream(http_request_t *req)",
+   "code": "static void reset_data_stream(http_request_t *req)\n{\n    destroy_data_stream(req->data_stream);\n    req->data_stream = &req->netconn_stream.data_stream;\n    req->read_pos = req->read_size = req->netconn_stream.content_read = 0;\n    req->read_gzip = FALSE;\n}"
+  },
+  {
+   "name": "HTTP_ResolveName",
+   "file": "dlls/wininet/http.c",
+   "start_line": 1762,
+   "end_line": 1783,
+   "static": true,
+   "called_from": [
+    "open_http_connection"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD HTTP_ResolveName(http_request_t *request)",
+   "code": "static DWORD HTTP_ResolveName(http_request_t *request)\n{\n    server_t *server = request->proxy ? request->proxy : request->server;\n\n    if(server->addr)\n        return ERROR_SUCCESS;\n\n    INTERNET_SendCallback(&request->hdr, request->hdr.dwContext,\n                          INTERNET_STATUS_RESOLVING_NAME,\n                          server->name,\n                          (lstrlenW(server->name)+1) * sizeof(WCHAR));\n\n    if (!(server->addr = GetAddress(server->name, server->port)))\n        return ERROR_INTERNET_NAME_NOT_RESOLVED;\n\n    INTERNET_SendCallback(&request->hdr, request->hdr.dwContext,\n                          INTERNET_STATUS_NAME_RESOLVED,\n                          server->addr->addr_str, strlen(server->addr->addr_str)+1);\n\n    TRACE(\"resolved %s to %s\\n\", debugstr_w(server->name), server->addr->addr_str);\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "collect_connections_proc",
+   "file": "dlls/wininet/http.c",
+   "start_line": 249,
+   "end_line": 268,
+   "static": true,
+   "called_from": [
+    "http_release_netconn"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD WINAPI collect_connections_proc(void *arg)",
+   "code": "static DWORD WINAPI collect_connections_proc(void *arg)\n{\n    BOOL remaining_conns;\n\n    SetThreadDescription(GetCurrentThread(), L\"wine_wininet_collect_connections\");\n    do {\n        /* FIXME: Use more sophisticated method */\n        Sleep(5000);\n\n        EnterCriticalSection(&connection_pool_cs);\n\n        remaining_conns = collect_connections(COLLECT_TIMEOUT);\n        if(!remaining_conns)\n            collector_running = FALSE;\n\n        LeaveCriticalSection(&connection_pool_cs);\n    }while(remaining_conns);\n\n    FreeLibraryAndExitThread(WININET_hModule, 0);\n}"
+  },
+  {
+   "name": "HTTP_build_req",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4367,
+   "end_line": 4383,
+   "static": true,
+   "called_from": [
+    "build_request_header",
+    "build_response_header"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static LPWSTR HTTP_build_req( LPCWSTR *list, int len )",
+   "code": "static LPWSTR HTTP_build_req( LPCWSTR *list, int len )\n{\n    LPCWSTR *t;\n    LPWSTR str;\n\n    for( t = list; *t ; t++  )\n        len += lstrlenW( *t );\n    len++;\n\n    str = malloc(len * sizeof(WCHAR));\n    *str = 0;\n\n    for( t = list; *t ; t++ )\n        lstrcatW( str, *t );\n\n    return str;\n}"
+  },
+  {
+   "name": "HTTP_clear_response_headers",
+   "file": "dlls/wininet/http.c",
+   "start_line": 5992,
+   "end_line": 6011,
+   "static": true,
+   "called_from": [
+    "HTTP_GetResponseHeaders"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void HTTP_clear_response_headers( http_request_t *request )",
+   "code": "static void HTTP_clear_response_headers( http_request_t *request )\n{\n    DWORD i;\n\n    EnterCriticalSection( &request->headers_section );\n\n    for( i=0; i<request->nCustHeaders; i++)\n    {\n        if( !request->custHeaders[i].lpszField )\n            continue;\n        if( !request->custHeaders[i].lpszValue )\n            continue;\n        if ( request->custHeaders[i].wFlags & HDR_ISREQUEST )\n            continue;\n        HTTP_DeleteCustomHeader( request, i );\n        i--;\n    }\n\n    LeaveCriticalSection( &request->headers_section );\n}"
+  },
+  {
+   "name": "read_line",
+   "file": "dlls/wininet/http.c",
+   "start_line": 2569,
+   "end_line": 2616,
+   "static": true,
+   "called_from": [
+    "HTTP_GetResponseHeaders"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD read_line( http_request_t *req, LPSTR buffer, DWORD *len )",
+   "code": "static DWORD read_line( http_request_t *req, LPSTR buffer, DWORD *len )\n{\n    int count, bytes_read, pos = 0;\n    DWORD res;\n\n    EnterCriticalSection( &req->read_section );\n    for (;;)\n    {\n        BYTE *eol = memchr( req->read_buf + req->read_pos, '\\n', req->read_size );\n\n        if (eol)\n        {\n            count = eol - (req->read_buf + req->read_pos);\n            bytes_read = count + 1;\n        }\n        else count = bytes_read = req->read_size;\n\n        count = min( count, *len - pos );\n        memcpy( buffer + pos, req->read_buf + req->read_pos, count );\n        pos += count;\n        remove_data( req, bytes_read );\n        if (eol) break;\n\n        if ((res = read_more_data( req, -1 )))\n        {\n            WARN( \"read failed %lu\\n\", res );\n            LeaveCriticalSection( &req->read_section );\n            return res;\n        }\n        if (!req->read_size)\n        {\n            *len = 0;\n            TRACE( \"returning empty string\\n\" );\n            LeaveCriticalSection( &req->read_section );\n            return ERROR_SUCCESS;\n        }\n    }\n    LeaveCriticalSection( &req->read_section );\n\n    if (pos < *len)\n    {\n        if (pos && buffer[pos - 1] == '\\r') pos--;\n        *len = pos + 1;\n    }\n    buffer[*len - 1] = 0;\n    TRACE( \"returning %s\\n\", debugstr_a(buffer));\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "has_keep_alive",
+   "file": "dlls/wininet/http.c",
+   "start_line": 1932,
+   "end_line": 1936,
+   "static": true,
+   "called_from": [
+    "http_process_keep_alive"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:1954"
+   ],
+   "signature": "static BOOL has_keep_alive(const WCHAR *version, const WCHAR *connection)",
+   "code": "static BOOL has_keep_alive(const WCHAR *version, const WCHAR *connection)\n{\n    return !wcsicmp(version, L\"HTTP/1.1\") ? !has_token(connection, L\"Close\")\n                                          : has_token(connection, L\"Keep-Alive\");\n}"
+  },
+  {
+   "name": "HTTP_ParseDate",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4761,
+   "end_line": 4787,
+   "static": true,
+   "called_from": [
+    "HTTP_ProcessExpires",
+    "HTTP_ProcessLastModified"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL HTTP_ParseDate(LPCWSTR value, FILETIME *ft)",
+   "code": "static BOOL HTTP_ParseDate(LPCWSTR value, FILETIME *ft)\n{\n    BOOL ret;\n\n    if (!wcscmp(value, L\"0\"))\n    {\n        ft->dwLowDateTime = ft->dwHighDateTime = 0;\n        ret = TRUE;\n    }\n    else if (wcschr(value, ','))\n    {\n        ret = HTTP_ParseRfc1123Date(value, ft);\n        if (!ret)\n        {\n            ret = HTTP_ParseRfc850Date(value, ft);\n            if (!ret)\n                ERR(\"unexpected date format %s\\n\", debugstr_w(value));\n        }\n    }\n    else\n    {\n        ret = HTTP_ParseDateAsAsctime(value, ft);\n        if (!ret)\n            ERR(\"unexpected date format %s\\n\", debugstr_w(value));\n    }\n    return ret;\n}"
+  },
+  {
+   "name": "init_gzip_stream",
+   "file": "dlls/wininet/http.c",
+   "start_line": 459,
+   "end_line": 491,
+   "static": true,
+   "called_from": [
+    "set_content_length"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD init_gzip_stream(http_request_t *req, BOOL is_gzip)",
+   "code": "static DWORD init_gzip_stream(http_request_t *req, BOOL is_gzip)\n{\n    gzip_stream_t *gzip_stream;\n    int zres;\n\n    gzip_stream = calloc(1, sizeof(gzip_stream_t));\n    if(!gzip_stream)\n        return ERROR_OUTOFMEMORY;\n\n    gzip_stream->stream.vtbl = &gzip_stream_vtbl;\n    gzip_stream->zstream.zalloc = wininet_zalloc;\n    gzip_stream->zstream.zfree = wininet_zfree;\n\n    zres = inflateInit2(&gzip_stream->zstream, is_gzip ? 0x1f : -15);\n    if(zres != Z_OK) {\n        ERR(\"inflateInit failed: %d\\n\", zres);\n        free(gzip_stream);\n        return ERROR_OUTOFMEMORY;\n    }\n\n    remove_header(req, L\"Content-Length\", FALSE);\n\n    if(req->read_size) {\n        memcpy(gzip_stream->buf, req->read_buf+req->read_pos, req->read_size);\n        gzip_stream->buf_size = req->read_size;\n        req->read_pos = req->read_size = 0;\n    }\n\n    req->read_gzip = TRUE;\n    gzip_stream->parent_stream = req->data_stream;\n    req->data_stream = &gzip_stream->stream;\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "get_server",
+   "file": "dlls/wininet/http.c",
+   "start_line": 182,
+   "end_line": 217,
+   "static": false,
+   "called_from": [
+    "HTTP_HandleRedirect"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:1749",
+    "dlls/wininet/http.c:3507",
+    "dlls/wininet/internet.c:5307"
+   ],
+   "signature": "server_t *get_server(substr_t name, INTERNET_PORT port, BOOL is_https, BOOL do_create)",
+   "code": "server_t *get_server(substr_t name, INTERNET_PORT port, BOOL is_https, BOOL do_create)\n{\n    server_t *iter, *server = NULL;\n\n    EnterCriticalSection(&connection_pool_cs);\n\n    LIST_FOR_EACH_ENTRY(iter, &connection_pool, server_t, entry) {\n        if(iter->port == port && name.len == lstrlenW(iter->name) && !wcsnicmp(iter->name, name.str, name.len)\n                && iter->is_https == is_https) {\n            server = iter;\n            server_addref(server);\n            break;\n        }\n    }\n\n    if(!server && do_create) {\n        server = calloc(1, sizeof(*server));\n        if(server) {\n            server->ref = 2; /* list reference and return */\n            server->port = port;\n            server->is_https = is_https;\n            list_init(&server->conn_pool);\n            server->name = strndupW(name.str, name.len);\n            if(server->name && process_host_port(server)) {\n                list_add_head(&connection_pool, &server->entry);\n            }else {\n                free(server);\n                server = NULL;\n            }\n        }\n    }\n\n    LeaveCriticalSection(&connection_pool_cs);\n\n    return server;\n}"
+  },
+  {
+   "name": "server_release",
+   "file": "dlls/wininet/http.c",
+   "start_line": 143,
+   "end_line": 156,
+   "static": false,
+   "called_from": [
+    "HTTP_HandleRedirect",
+    "collect_connections"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:1847",
+    "dlls/wininet/http.c:1849",
+    "dlls/wininet/netconnection.c:348",
+    "dlls/wininet/netconnection.c:574",
+    "dlls/wininet/internet.c:5324"
+   ],
+   "signature": "void server_release(server_t *server)",
+   "code": "void server_release(server_t *server)\n{\n    if(InterlockedDecrement(&server->ref))\n        return;\n\n    list_remove(&server->entry);\n\n    if(server->cert_chain)\n        CertFreeCertificateChain(server->cert_chain);\n    free(server->name);\n    free(server->scheme_host_port);\n    free(server->addr);\n    free(server);\n}"
+  },
+  {
+   "name": "build_response_header",
+   "file": "dlls/wininet/http.c",
+   "start_line": 594,
+   "end_line": 645,
+   "static": true,
+   "called_from": [
+    "HTTP_HttpQueryInfoW",
+    "commit_cache_entry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static WCHAR* build_response_header(http_request_t *request, BOOL use_cr)",
+   "code": "static WCHAR* build_response_header(http_request_t *request, BOOL use_cr)\n{\n    const WCHAR **req;\n    WCHAR *ret, buf[14];\n    DWORD i, n = 0;\n\n    EnterCriticalSection( &request->headers_section );\n\n    if (!(req = malloc((request->nCustHeaders * 5 + 8) * sizeof(WCHAR *))))\n    {\n        LeaveCriticalSection( &request->headers_section );\n        return NULL;\n    }\n\n    if (request->status_code)\n    {\n        req[n++] = request->version;\n        swprintf(buf, ARRAY_SIZE(buf), L\" %u \", request->status_code);\n        req[n++] = buf;\n        req[n++] = request->statusText;\n        if (use_cr)\n            req[n++] = L\"\\r\";\n        req[n++] = L\"\\n\";\n    }\n\n    for(i = 0; i < request->nCustHeaders; i++)\n    {\n        if(!(request->custHeaders[i].wFlags & HDR_ISREQUEST)\n                && wcscmp(request->custHeaders[i].lpszField, L\"Status\"))\n        {\n            req[n++] = request->custHeaders[i].lpszField;\n            req[n++] = L\": \";\n            req[n++] = request->custHeaders[i].lpszValue;\n            if(use_cr)\n                req[n++] = L\"\\r\";\n            req[n++] = L\"\\n\";\n\n            TRACE(\"Adding custom header %s (%s)\\n\",\n                    debugstr_w(request->custHeaders[i].lpszField),\n                    debugstr_w(request->custHeaders[i].lpszValue));\n        }\n    }\n    if(use_cr)\n        req[n++] = L\"\\r\";\n    req[n++] = L\"\\n\";\n    req[n] = NULL;\n\n    ret = HTTP_build_req(req, 0);\n    free(req);\n    LeaveCriticalSection( &request->headers_section );\n    return ret;\n}"
+  },
+  {
+   "name": "is_basic_auth_value",
+   "file": "dlls/wininet/http.c",
+   "start_line": 699,
+   "end_line": 733,
+   "static": true,
+   "called_from": [
+    "HTTP_DoAuthorization"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static inline BOOL is_basic_auth_value( LPCWSTR pszAuthValue, LPWSTR *pszRealm )",
+   "code": "static inline BOOL is_basic_auth_value( LPCWSTR pszAuthValue, LPWSTR *pszRealm )\n{\n    static const WCHAR szBasic[] = {'B','a','s','i','c'}; /* Note: not nul-terminated */\n    static const WCHAR szRealm[] = {'r','e','a','l','m'}; /* Note: not nul-terminated */\n    BOOL is_basic;\n    is_basic = !wcsnicmp(pszAuthValue, szBasic, ARRAY_SIZE(szBasic)) &&\n        ((pszAuthValue[ARRAY_SIZE(szBasic)] == ' ') || !pszAuthValue[ARRAY_SIZE(szBasic)]);\n    if (is_basic && pszRealm)\n    {\n        LPCWSTR token;\n        LPCWSTR ptr = &pszAuthValue[ARRAY_SIZE(szBasic)];\n        LPCWSTR realm;\n        ptr++;\n        *pszRealm=NULL;\n        token = wcschr(ptr,'=');\n        if (!token)\n            return TRUE;\n        realm = ptr;\n        while (*realm == ' ')\n            realm++;\n        if(!wcsnicmp(realm, szRealm, ARRAY_SIZE(szRealm)) &&\n            (realm[ARRAY_SIZE(szRealm)] == ' ' || realm[ARRAY_SIZE(szRealm)] == '='))\n        {\n            token++;\n            while (*token == ' ')\n                token++;\n            if (*token == '\\0')\n                return TRUE;\n            *pszRealm = wcsdup(token);\n            strip_spaces(*pszRealm);\n        }\n    }\n\n    return is_basic;\n}"
+  },
+  {
+   "name": "cache_authorization",
+   "file": "dlls/wininet/http.c",
+   "start_line": 863,
+   "end_line": 913,
+   "static": true,
+   "called_from": [
+    "HTTP_DoAuthorization"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void cache_authorization(LPWSTR host, LPWSTR scheme, SEC_WINNT_AUTH_IDENTITY_W *nt_auth_identity)",
+   "code": "static void cache_authorization(LPWSTR host, LPWSTR scheme,\n        SEC_WINNT_AUTH_IDENTITY_W *nt_auth_identity)\n{\n    authorizationData *ad;\n    BOOL found = FALSE;\n\n    TRACE(\"Caching authorization for %s:%s\\n\", debugstr_w(host), debugstr_w(scheme));\n\n    EnterCriticalSection(&authcache_cs);\n    LIST_FOR_EACH_ENTRY(ad, &authorizationCache, authorizationData, entry)\n        if(!wcsicmp(host, ad->host) && !wcsicmp(scheme, ad->scheme)) {\n            found = TRUE;\n            break;\n        }\n\n    if(found) {\n        free(ad->user);\n        free(ad->password);\n        free(ad->domain);\n    } else {\n        ad = malloc(sizeof(authorizationData));\n        if(!ad) {\n            LeaveCriticalSection(&authcache_cs);\n            return;\n        }\n\n        ad->host = wcsdup(host);\n        ad->scheme = wcsdup(scheme);\n        list_add_head(&authorizationCache, &ad->entry);\n    }\n\n    ad->user = strndupW(nt_auth_identity->User, nt_auth_identity->UserLength);\n    ad->password = strndupW(nt_auth_identity->Password, nt_auth_identity->PasswordLength);\n    ad->domain = strndupW(nt_auth_identity->Domain, nt_auth_identity->DomainLength);\n    ad->user_len = nt_auth_identity->UserLength;\n    ad->password_len = nt_auth_identity->PasswordLength;\n    ad->domain_len = nt_auth_identity->DomainLength;\n\n    if(!ad->host || !ad->scheme || !ad->user || !ad->password\n            || (nt_auth_identity->Domain && !ad->domain)) {\n        free(ad->host);\n        free(ad->scheme);\n        free(ad->user);\n        free(ad->password);\n        free(ad->domain);\n        list_remove(&ad->entry);\n        free(ad);\n    }\n\n    LeaveCriticalSection(&authcache_cs);\n}"
+  },
+  {
+   "name": "retrieve_cached_authorization",
+   "file": "dlls/wininet/http.c",
+   "start_line": 826,
+   "end_line": 861,
+   "static": true,
+   "called_from": [
+    "HTTP_DoAuthorization"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL retrieve_cached_authorization(LPWSTR host, LPWSTR scheme, SEC_WINNT_AUTH_IDENTITY_W *nt_auth_identity)",
+   "code": "static BOOL retrieve_cached_authorization(LPWSTR host, LPWSTR scheme,\n        SEC_WINNT_AUTH_IDENTITY_W *nt_auth_identity)\n{\n    authorizationData *ad;\n\n    TRACE(\"Looking for authorization for %s:%s\\n\", debugstr_w(host), debugstr_w(scheme));\n\n    EnterCriticalSection(&authcache_cs);\n    LIST_FOR_EACH_ENTRY(ad, &authorizationCache, authorizationData, entry) {\n        if(!wcsicmp(host, ad->host) && !wcsicmp(scheme, ad->scheme)) {\n            TRACE(\"Authorization found in cache\\n\");\n\n            nt_auth_identity->User = wcsdup(ad->user);\n            nt_auth_identity->Password = wcsdup(ad->password);\n            nt_auth_identity->Domain = malloc(sizeof(WCHAR) * ad->domain_len);\n            if(!nt_auth_identity->User || !nt_auth_identity->Password ||\n                    (!nt_auth_identity->Domain && ad->domain_len)) {\n                free(nt_auth_identity->User);\n                free(nt_auth_identity->Password);\n                free(nt_auth_identity->Domain);\n                break;\n            }\n\n            nt_auth_identity->Flags = SEC_WINNT_AUTH_IDENTITY_UNICODE;\n            nt_auth_identity->UserLength = ad->user_len;\n            nt_auth_identity->PasswordLength = ad->password_len;\n            memcpy(nt_auth_identity->Domain, ad->domain, sizeof(WCHAR)*ad->domain_len);\n            nt_auth_identity->DomainLength = ad->domain_len;\n            LeaveCriticalSection(&authcache_cs);\n            return TRUE;\n        }\n    }\n    LeaveCriticalSection(&authcache_cs);\n\n    return FALSE;\n}"
+  },
+  {
+   "name": "cache_basic_authorization",
+   "file": "dlls/wininet/http.c",
+   "start_line": 786,
+   "end_line": 824,
+   "static": true,
+   "called_from": [
+    "HTTP_DoAuthorization"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void cache_basic_authorization(LPWSTR host, LPWSTR realm, LPSTR auth_data, UINT auth_data_len)",
+   "code": "static void cache_basic_authorization(LPWSTR host, LPWSTR realm, LPSTR auth_data, UINT auth_data_len)\n{\n    struct list *cursor;\n    basicAuthorizationData* ad = NULL;\n\n    TRACE(\"caching authorization for %s:%s = %s\\n\",debugstr_w(host),debugstr_w(realm),debugstr_an(auth_data,auth_data_len));\n\n    EnterCriticalSection(&authcache_cs);\n    LIST_FOR_EACH(cursor, &basicAuthorizationCache)\n    {\n        basicAuthorizationData *check = LIST_ENTRY(cursor,basicAuthorizationData,entry);\n        if (!wcsicmp(host,check->host) && !wcscmp(realm,check->realm))\n        {\n            ad = check;\n            break;\n        }\n    }\n\n    if (ad)\n    {\n        TRACE(\"Found match in cache, replacing\\n\");\n        free(ad->authorization);\n        ad->authorization = malloc(auth_data_len);\n        memcpy(ad->authorization, auth_data, auth_data_len);\n        ad->authorizationLen = auth_data_len;\n    }\n    else\n    {\n        ad = malloc(sizeof(basicAuthorizationData));\n        ad->host = wcsdup(host);\n        ad->realm = wcsdup(realm);\n        ad->authorization = malloc(auth_data_len);\n        memcpy(ad->authorization, auth_data, auth_data_len);\n        ad->authorizationLen = auth_data_len;\n        list_add_head(&basicAuthorizationCache,&ad->entry);\n        TRACE(\"authorization cached\\n\");\n    }\n    LeaveCriticalSection(&authcache_cs);\n}"
+  },
+  {
+   "name": "HTTP_DecodeBase64",
+   "file": "dlls/wininet/http.c",
+   "start_line": 1497,
+   "end_line": 1545,
+   "static": true,
+   "called_from": [
+    "HTTP_DoAuthorization"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static UINT HTTP_DecodeBase64( LPCWSTR base64, LPSTR bin )",
+   "code": "static UINT HTTP_DecodeBase64( LPCWSTR base64, LPSTR bin )\n{\n    unsigned int n = 0;\n\n    while(*base64)\n    {\n        signed char in[4];\n\n        if (base64[0] >= ARRAY_SIZE(HTTP_Base64Dec) ||\n            ((in[0] = HTTP_Base64Dec[base64[0]]) == -1) ||\n            base64[1] >= ARRAY_SIZE(HTTP_Base64Dec) ||\n            ((in[1] = HTTP_Base64Dec[base64[1]]) == -1))\n        {\n            WARN(\"invalid base64: %s\\n\", debugstr_w(base64));\n            return 0;\n        }\n        if (bin)\n            bin[n] = (unsigned char) (in[0] << 2 | in[1] >> 4);\n        n++;\n\n        if ((base64[2] == '=') && (base64[3] == '='))\n            break;\n        if (base64[2] > ARRAY_SIZE(HTTP_Base64Dec) ||\n            ((in[2] = HTTP_Base64Dec[base64[2]]) == -1))\n        {\n            WARN(\"invalid base64: %s\\n\", debugstr_w(&base64[2]));\n            return 0;\n        }\n        if (bin)\n            bin[n] = (unsigned char) (in[1] << 4 | in[2] >> 2);\n        n++;\n\n        if (base64[3] == '=')\n            break;\n        if (base64[3] > ARRAY_SIZE(HTTP_Base64Dec) ||\n            ((in[3] = HTTP_Base64Dec[base64[3]]) == -1))\n        {\n            WARN(\"invalid base64: %s\\n\", debugstr_w(&base64[3]));\n            return 0;\n        }\n        if (bin)\n            bin[n] = (unsigned char) (((in[2] << 6) & 0xc0) | in[3]);\n        n++;\n\n        base64 += 4;\n    }\n\n    return n;\n}"
+  },
+  {
+   "name": "commit_cache_entry",
+   "file": "dlls/wininet/http.c",
+   "start_line": 2406,
+   "end_line": 2427,
+   "static": true,
+   "called_from": [
+    "write_cache_file"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void commit_cache_entry(http_request_t *req)",
+   "code": "static void commit_cache_entry(http_request_t *req)\n{\n    WCHAR *header;\n    DWORD header_len;\n    BOOL res;\n\n    TRACE(\"%p\\n\", req);\n\n    CloseHandle(req->hCacheFile);\n    req->hCacheFile = NULL;\n\n    header = build_response_header(req, TRUE);\n    header_len = (header ? lstrlenW(header) : 0);\n    res = CommitUrlCacheEntryW(req->req_file->url, req->req_file->file_name, req->expires,\n             req->last_modified, NORMAL_CACHE_ENTRY,\n            header, header_len, NULL, 0);\n    if(res)\n        req->req_file->is_committed = TRUE;\n    else\n        WARN(\"CommitUrlCacheEntry failed: %lu\\n\", GetLastError());\n    free(header);\n}"
+  },
+  {
+   "name": "read_http_stream",
+   "file": "dlls/wininet/http.c",
+   "start_line": 2624,
+   "end_line": 2636,
+   "static": true,
+   "called_from": [
+    "refill_read_buffer"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:3046",
+    "dlls/wininet/http.c:3095",
+    "dlls/wininet/http.c:3157"
+   ],
+   "signature": "static DWORD read_http_stream(http_request_t *req, BYTE *buf, DWORD size, DWORD *read, BOOL allow_blocking)",
+   "code": "static DWORD read_http_stream(http_request_t *req, BYTE *buf, DWORD size, DWORD *read, BOOL allow_blocking)\n{\n    DWORD res;\n\n    res = req->data_stream->vtbl->read(req->data_stream, req, buf, size, read, allow_blocking);\n    if(res != ERROR_SUCCESS)\n        *read = 0;\n    assert(*read <= size);\n\n    write_cache_file(req, buf, *read);\n\n    return res;\n}"
+  },
+  {
+   "name": "HTTP_EncodeBase64",
+   "file": "dlls/wininet/http.c",
+   "start_line": 1441,
+   "end_line": 1480,
+   "static": true,
+   "called_from": [
+    "encode_auth_data"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static UINT HTTP_EncodeBase64( LPCSTR bin, unsigned int len, LPWSTR base64 )",
+   "code": "static UINT HTTP_EncodeBase64( LPCSTR bin, unsigned int len, LPWSTR base64 )\n{\n    UINT n = 0, x;\n    static const CHAR HTTP_Base64Enc[] =\n        \"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/\";\n\n    while( len > 0 )\n    {\n        /* first 6 bits, all from bin[0] */\n        base64[n++] = HTTP_Base64Enc[(bin[0] & 0xfc) >> 2];\n        x = (bin[0] & 3) << 4;\n\n        /* next 6 bits, 2 from bin[0] and 4 from bin[1] */\n        if( len == 1 )\n        {\n            base64[n++] = HTTP_Base64Enc[x];\n            base64[n++] = '=';\n            base64[n++] = '=';\n            break;\n        }\n        base64[n++] = HTTP_Base64Enc[ x | ( (bin[1]&0xf0) >> 4 ) ];\n        x = ( bin[1] & 0x0f ) << 2;\n\n        /* next 6 bits 4 from bin[1] and 2 from bin[2] */\n        if( len == 2 )\n        {\n            base64[n++] = HTTP_Base64Enc[x];\n            base64[n++] = '=';\n            break;\n        }\n        base64[n++] = HTTP_Base64Enc[ x | ( (bin[2]&0xc0 ) >> 6 ) ];\n\n        /* last 6 bits, all from bin [2] */\n        base64[n++] = HTTP_Base64Enc[ bin[2] & 0x3f ];\n        bin += 3;\n        len -= 3;\n    }\n    base64[n] = 0;\n    return n;\n}"
+  },
+  {
+   "name": "destroy_data_stream",
+   "file": "dlls/wininet/http.c",
+   "start_line": 323,
+   "end_line": 326,
+   "static": true,
+   "called_from": [
+    "reset_data_stream"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/http.c:435",
+    "dlls/wininet/http.c:1861"
+   ],
+   "signature": "static inline void destroy_data_stream(data_stream_t *stream)",
+   "code": "static inline void destroy_data_stream(data_stream_t *stream)\n{\n    stream->vtbl->destroy(stream);\n}"
+  },
+  {
+   "name": "collect_connections",
+   "file": "dlls/wininet/http.c",
+   "start_line": 219,
+   "end_line": 247,
+   "static": false,
+   "called_from": [
+    "collect_connections_proc"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/internet.c:328",
+    "dlls/wininet/internet.c:3301"
+   ],
+   "signature": "BOOL collect_connections(collect_type_t collect_type)",
+   "code": "BOOL collect_connections(collect_type_t collect_type)\n{\n    netconn_t *netconn, *netconn_safe;\n    server_t *server, *server_safe;\n    BOOL remaining = FALSE;\n    DWORD64 now;\n\n    now = GetTickCount64();\n\n    LIST_FOR_EACH_ENTRY_SAFE(server, server_safe, &connection_pool, server_t, entry) {\n        LIST_FOR_EACH_ENTRY_SAFE(netconn, netconn_safe, &server->conn_pool, netconn_t, pool_entry) {\n            if(collect_type > COLLECT_TIMEOUT || netconn->keep_until < now) {\n                TRACE(\"freeing %p\\n\", netconn);\n                list_remove(&netconn->pool_entry);\n                free_netconn(netconn);\n            }else {\n                remaining = TRUE;\n            }\n        }\n\n        if(collect_type == COLLECT_CLEANUP) {\n            list_remove(&server->entry);\n            list_init(&server->entry);\n            server_release(server);\n        }\n    }\n\n    return remaining;\n}"
+  },
+  {
+   "name": "remove_data",
+   "file": "dlls/wininet/http.c",
+   "start_line": 2563,
+   "end_line": 2567,
+   "static": true,
+   "called_from": [
+    "read_line"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void remove_data( http_request_t *req, int count )",
+   "code": "static void remove_data( http_request_t *req, int count )\n{\n    if (!(req->read_size -= count)) req->read_pos = 0;\n    else req->read_pos += count;\n}"
+  },
+  {
+   "name": "read_more_data",
+   "file": "dlls/wininet/http.c",
+   "start_line": 2539,
+   "end_line": 2560,
+   "static": true,
+   "called_from": [
+    "read_line"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD read_more_data( http_request_t *req, int maxlen )",
+   "code": "static DWORD read_more_data( http_request_t *req, int maxlen )\n{\n    DWORD res;\n    int len;\n\n    if (req->read_pos)\n    {\n        /* move existing data to the start of the buffer */\n        if(req->read_size)\n            memmove( req->read_buf, req->read_buf + req->read_pos, req->read_size );\n        req->read_pos = 0;\n    }\n\n    if (maxlen == -1) maxlen = sizeof(req->read_buf);\n\n    res = NETCON_recv( req->netconn, req->read_buf + req->read_size,\n                       maxlen - req->read_size, TRUE, &len );\n    if(res == ERROR_SUCCESS)\n        req->read_size += len;\n\n    return res;\n}"
+  },
+  {
+   "name": "has_token",
+   "file": "dlls/wininet/http.c",
+   "start_line": 1916,
+   "end_line": 1930,
+   "static": true,
+   "called_from": [
+    "has_keep_alive"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL has_token(const WCHAR *str, const WCHAR *token)",
+   "code": "static BOOL has_token(const WCHAR *str, const WCHAR *token)\n{\n    UINT len = wcslen(token);\n    const WCHAR *next;\n\n    for (; *str; str = next + wcsspn(next, L\" ,\"))\n    {\n        next = str + wcscspn(str, L\" ,\");\n        if (next - str != len) continue;\n        if (wcsnicmp(str, token, len)) continue;\n        return TRUE;\n    }\n\n    return FALSE;\n}"
+  },
+  {
+   "name": "HTTP_ParseRfc1123Date",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4567,
+   "end_line": 4642,
+   "static": true,
+   "called_from": [
+    "HTTP_ParseDate"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL HTTP_ParseRfc1123Date(LPCWSTR value, FILETIME *ft)",
+   "code": "static BOOL HTTP_ParseRfc1123Date(LPCWSTR value, FILETIME *ft)\n{\n    WCHAR *nextPtr, day[4], month[4], *monthPtr;\n    LPCWSTR ptr;\n    unsigned long num;\n    SYSTEMTIME st = { 0 };\n\n    ptr = wcschr(value, ',');\n    if (!ptr)\n        return FALSE;\n    if (ptr - value != 3)\n    {\n        WARN(\"unexpected weekday %s\\n\", debugstr_wn(value, ptr - value));\n        return FALSE;\n    }\n    memcpy(day, value, (ptr - value) * sizeof(WCHAR));\n    day[3] = 0;\n    st.wDayOfWeek = HTTP_ParseWkday(day);\n    if (st.wDayOfWeek > 6)\n    {\n        WARN(\"unexpected weekday %s\\n\", debugstr_wn(value, ptr - value));\n        return FALSE;\n    }\n    ptr++;\n\n    while (iswspace(*ptr))\n        ptr++;\n\n    num = wcstoul(ptr, &nextPtr, 10);\n    if (!nextPtr || nextPtr <= ptr || !num || num > 31)\n    {\n        WARN(\"unexpected day %s\\n\", debugstr_w(value));\n        return FALSE;\n    }\n    ptr = nextPtr;\n    st.wDay = (WORD)num;\n\n    while (iswspace(*ptr))\n        ptr++;\n\n    for (monthPtr = month; !iswspace(*ptr) && monthPtr - month < ARRAY_SIZE(month) - 1;\n         monthPtr++, ptr++)\n        *monthPtr = *ptr;\n    *monthPtr = 0;\n    st.wMonth = HTTP_ParseMonth(month);\n    if (!st.wMonth || st.wMonth > 12)\n    {\n        WARN(\"unexpected month %s\\n\", debugstr_w(month));\n        return FALSE;\n    }\n\n    while (iswspace(*ptr))\n        ptr++;\n\n    num = wcstoul(ptr, &nextPtr, 10);\n    if (!nextPtr || nextPtr <= ptr || num < 1601 || num > 30827)\n    {\n        ERR(\"unexpected year %s\\n\", debugstr_w(value));\n        return FALSE;\n    }\n    ptr = nextPtr;\n    st.wYear = (WORD)num;\n\n    if (!HTTP_ParseTime(&st, &ptr))\n        return FALSE;\n\n    while (iswspace(*ptr))\n        ptr++;\n\n    if (wcscmp(ptr, L\"GMT\") && wcscmp(ptr, L\"UTC\"))\n    {\n        ERR(\"unexpected time zone %s\\n\", debugstr_w(ptr));\n        return FALSE;\n    }\n    return SystemTimeToFileTime(&st, ft);\n}"
+  },
+  {
+   "name": "HTTP_ParseRfc850Date",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4662,
+   "end_line": 4759,
+   "static": true,
+   "called_from": [
+    "HTTP_ParseDate"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL HTTP_ParseRfc850Date(LPCWSTR value, FILETIME *ft)",
+   "code": "static BOOL HTTP_ParseRfc850Date(LPCWSTR value, FILETIME *ft)\n{\n    WCHAR *nextPtr, day[10], month[4], *monthPtr;\n    LPCWSTR ptr;\n    unsigned long num;\n    SYSTEMTIME st = { 0 };\n\n    ptr = wcschr(value, ',');\n    if (!ptr)\n        return FALSE;\n    if (ptr - value == 3)\n    {\n        memcpy(day, value, (ptr - value) * sizeof(WCHAR));\n        day[3] = 0;\n        st.wDayOfWeek = HTTP_ParseWkday(day);\n        if (st.wDayOfWeek > 6)\n        {\n            ERR(\"unexpected weekday %s\\n\", debugstr_wn(value, ptr - value));\n            return FALSE;\n        }\n    }\n    else if (ptr - value < ARRAY_SIZE(day))\n    {\n        memcpy(day, value, (ptr - value) * sizeof(WCHAR));\n        day[ptr - value + 1] = 0;\n        st.wDayOfWeek = HTTP_ParseWeekday(day);\n        if (st.wDayOfWeek > 6)\n        {\n            ERR(\"unexpected weekday %s\\n\", debugstr_wn(value, ptr - value));\n            return FALSE;\n        }\n    }\n    else\n    {\n        ERR(\"unexpected weekday %s\\n\", debugstr_wn(value, ptr - value));\n        return FALSE;\n    }\n    ptr++;\n\n    while (iswspace(*ptr))\n        ptr++;\n\n    num = wcstoul(ptr, &nextPtr, 10);\n    if (!nextPtr || nextPtr <= ptr || !num || num > 31)\n    {\n        ERR(\"unexpected day %s\\n\", debugstr_w(value));\n        return FALSE;\n    }\n    ptr = nextPtr;\n    st.wDay = (WORD)num;\n\n    if (*ptr != '-')\n    {\n        ERR(\"unexpected month format %s\\n\", debugstr_w(ptr));\n        return FALSE;\n    }\n    ptr++;\n\n    for (monthPtr = month; *ptr != '-' && monthPtr - month < ARRAY_SIZE(month) - 1;\n         monthPtr++, ptr++)\n        *monthPtr = *ptr;\n    *monthPtr = 0;\n    st.wMonth = HTTP_ParseMonth(month);\n    if (!st.wMonth || st.wMonth > 12)\n    {\n        ERR(\"unexpected month %s\\n\", debugstr_w(month));\n        return FALSE;\n    }\n\n    if (*ptr != '-')\n    {\n        ERR(\"unexpected year format %s\\n\", debugstr_w(ptr));\n        return FALSE;\n    }\n    ptr++;\n\n    num = wcstoul(ptr, &nextPtr, 10);\n    if (!nextPtr || nextPtr <= ptr || num < 1601 || num > 30827)\n    {\n        ERR(\"unexpected year %s\\n\", debugstr_w(value));\n        return FALSE;\n    }\n    ptr = nextPtr;\n    st.wYear = (WORD)num;\n\n    if (!HTTP_ParseTime(&st, &ptr))\n        return FALSE;\n\n    while (iswspace(*ptr))\n        ptr++;\n\n    if (wcscmp(ptr, L\"GMT\") && wcscmp(ptr, L\"UTC\"))\n    {\n        ERR(\"unexpected time zone %s\\n\", debugstr_w(ptr));\n        return FALSE;\n    }\n    return SystemTimeToFileTime(&st, ft);\n}"
+  },
+  {
+   "name": "HTTP_ParseDateAsAsctime",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4491,
+   "end_line": 4565,
+   "static": true,
+   "called_from": [
+    "HTTP_ParseDate"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL HTTP_ParseDateAsAsctime(LPCWSTR value, FILETIME *ft)",
+   "code": "static BOOL HTTP_ParseDateAsAsctime(LPCWSTR value, FILETIME *ft)\n{\n    WCHAR day[4], *dayPtr, month[4], *monthPtr, *nextPtr;\n    LPCWSTR ptr;\n    SYSTEMTIME st = { 0 };\n    unsigned long num;\n\n    for (ptr = value, dayPtr = day; *ptr && !iswspace(*ptr) &&\n         dayPtr - day < ARRAY_SIZE(day) - 1; ptr++, dayPtr++)\n        *dayPtr = *ptr;\n    *dayPtr = 0;\n    st.wDayOfWeek = HTTP_ParseWkday(day);\n    if (st.wDayOfWeek >= 7)\n    {\n        ERR(\"unexpected weekday %s\\n\", debugstr_w(day));\n        return FALSE;\n    }\n\n    while (iswspace(*ptr))\n        ptr++;\n\n    for (monthPtr = month; !iswspace(*ptr) && monthPtr - month < ARRAY_SIZE(month) - 1;\n         monthPtr++, ptr++)\n        *monthPtr = *ptr;\n    *monthPtr = 0;\n    st.wMonth = HTTP_ParseMonth(month);\n    if (!st.wMonth || st.wMonth > 12)\n    {\n        ERR(\"unexpected month %s\\n\", debugstr_w(month));\n        return FALSE;\n    }\n\n    while (iswspace(*ptr))\n        ptr++;\n\n    num = wcstoul(ptr, &nextPtr, 10);\n    if (!nextPtr || nextPtr <= ptr || !num || num > 31)\n    {\n        ERR(\"unexpected day %s\\n\", debugstr_w(ptr));\n        return FALSE;\n    }\n    ptr = nextPtr;\n    st.wDay = (WORD)num;\n\n    while (iswspace(*ptr))\n        ptr++;\n\n    if (!HTTP_ParseTime(&st, &ptr))\n        return FALSE;\n\n    while (iswspace(*ptr))\n        ptr++;\n\n    num = wcstoul(ptr, &nextPtr, 10);\n    if (!nextPtr || nextPtr <= ptr || num < 1601 || num > 30827)\n    {\n        ERR(\"unexpected year %s\\n\", debugstr_w(ptr));\n        return FALSE;\n    }\n    ptr = nextPtr;\n    st.wYear = (WORD)num;\n\n    while (iswspace(*ptr))\n        ptr++;\n\n    /* asctime() doesn't report a timezone, but some web servers do, so accept\n     * with or without GMT.\n     */\n    if (*ptr && (wcscmp(ptr, L\"GMT\") && wcscmp(ptr, L\"UTC\")))\n    {\n        ERR(\"unexpected timezone %s\\n\", debugstr_w(ptr));\n        return FALSE;\n    }\n    return SystemTimeToFileTime(&st, ft);\n}"
+  },
+  {
+   "name": "wininet_zalloc",
+   "file": "dlls/wininet/http.c",
+   "start_line": 449,
+   "end_line": 452,
+   "static": true,
+   "called_from": [
+    "init_gzip_stream"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static voidpf wininet_zalloc(voidpf opaque, uInt items, uInt size)",
+   "code": "static voidpf wininet_zalloc(voidpf opaque, uInt items, uInt size)\n{\n    return malloc(items * size);\n}"
+  },
+  {
+   "name": "wininet_zfree",
+   "file": "dlls/wininet/http.c",
+   "start_line": 454,
+   "end_line": 457,
+   "static": true,
+   "called_from": [
+    "init_gzip_stream"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void wininet_zfree(voidpf opaque, voidpf address)",
+   "code": "static void wininet_zfree(voidpf opaque, voidpf address)\n{\n    free(address);\n}"
+  },
+  {
+   "name": "server_addref",
+   "file": "dlls/wininet/http.c",
+   "start_line": 138,
+   "end_line": 141,
+   "static": false,
+   "called_from": [
+    "get_server"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/netconnection.c:329",
+    "dlls/wininet/netconnection.c:575"
+   ],
+   "signature": "void server_addref(server_t *server)",
+   "code": "void server_addref(server_t *server)\n{\n    InterlockedIncrement(&server->ref);\n}"
+  },
+  {
+   "name": "process_host_port",
+   "file": "dlls/wininet/http.c",
+   "start_line": 158,
+   "end_line": 180,
+   "static": true,
+   "called_from": [
+    "get_server"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL process_host_port(server_t *server)",
+   "code": "static BOOL process_host_port(server_t *server)\n{\n    BOOL default_port;\n    size_t name_len, len;\n    WCHAR *buf;\n\n    name_len = lstrlenW(server->name);\n    len = name_len + 10 /* strlen(\"://:<port>\") */ + ARRAY_SIZE(L\"https\");\n    buf = malloc(len * sizeof(WCHAR));\n    if(!buf)\n        return FALSE;\n\n    swprintf(buf, len, L\"%s://%s:%u\", server->is_https ? L\"https\" : L\"http\", server->name, server->port);\n    server->scheme_host_port = buf;\n\n    server->host_port = server->scheme_host_port + 7 /* strlen(\"http://\") */;\n    if(server->is_https)\n        server->host_port++;\n\n    default_port = server->port == (server->is_https ? INTERNET_DEFAULT_HTTPS_PORT : INTERNET_DEFAULT_HTTP_PORT);\n    server->canon_host_port = default_port ? server->name : server->host_port;\n    return TRUE;\n}"
+  },
+  {
+   "name": "HTTP_ParseWkday",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4399,
+   "end_line": 4415,
+   "static": true,
+   "called_from": [
+    "HTTP_ParseDateAsAsctime",
+    "HTTP_ParseRfc1123Date",
+    "HTTP_ParseRfc850Date"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static WORD HTTP_ParseWkday(LPCWSTR day)",
+   "code": "static WORD HTTP_ParseWkday(LPCWSTR day)\n{\n    static const WCHAR days[7][4] = {L\"sun\",\n                                     L\"mon\",\n                                     L\"tue\",\n                                     L\"wed\",\n                                     L\"thu\",\n                                     L\"fri\",\n                                     L\"sat\"};\n    unsigned int i;\n    for (i = 0; i < ARRAY_SIZE(days); i++)\n        if (!wcsicmp(day, days[i]))\n            return i;\n\n    /* Invalid */\n    return 7;\n}"
+  },
+  {
+   "name": "HTTP_ParseMonth",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4417,
+   "end_line": 4433,
+   "static": true,
+   "called_from": [
+    "HTTP_ParseDateAsAsctime",
+    "HTTP_ParseRfc1123Date",
+    "HTTP_ParseRfc850Date"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static WORD HTTP_ParseMonth(LPCWSTR month)",
+   "code": "static WORD HTTP_ParseMonth(LPCWSTR month)\n{\n    if (!wcsicmp(month, L\"jan\")) return 1;\n    if (!wcsicmp(month, L\"feb\")) return 2;\n    if (!wcsicmp(month, L\"mar\")) return 3;\n    if (!wcsicmp(month, L\"apr\")) return 4;\n    if (!wcsicmp(month, L\"may\")) return 5;\n    if (!wcsicmp(month, L\"jun\")) return 6;\n    if (!wcsicmp(month, L\"jul\")) return 7;\n    if (!wcsicmp(month, L\"aug\")) return 8;\n    if (!wcsicmp(month, L\"sep\")) return 9;\n    if (!wcsicmp(month, L\"oct\")) return 10;\n    if (!wcsicmp(month, L\"nov\")) return 11;\n    if (!wcsicmp(month, L\"dec\")) return 12;\n    /* Invalid */\n    return 0;\n}"
+  },
+  {
+   "name": "HTTP_ParseTime",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4440,
+   "end_line": 4489,
+   "static": true,
+   "called_from": [
+    "HTTP_ParseDateAsAsctime",
+    "HTTP_ParseRfc1123Date",
+    "HTTP_ParseRfc850Date"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL HTTP_ParseTime(SYSTEMTIME *st, LPCWSTR *str)",
+   "code": "static BOOL HTTP_ParseTime(SYSTEMTIME *st, LPCWSTR *str)\n{\n    LPCWSTR ptr = *str;\n    WCHAR *nextPtr;\n    unsigned long num;\n\n    while (iswspace(*ptr))\n        ptr++;\n\n    num = wcstoul(ptr, &nextPtr, 10);\n    if (!nextPtr || nextPtr <= ptr || *nextPtr != ':')\n    {\n        ERR(\"unexpected time format %s\\n\", debugstr_w(ptr));\n        return FALSE;\n    }\n    if (num > 23)\n    {\n        ERR(\"unexpected hour in time format %s\\n\", debugstr_w(ptr));\n        return FALSE;\n    }\n    ptr = nextPtr + 1;\n    st->wHour = (WORD)num;\n    num = wcstoul(ptr, &nextPtr, 10);\n    if (!nextPtr || nextPtr <= ptr || *nextPtr != ':')\n    {\n        ERR(\"unexpected time format %s\\n\", debugstr_w(ptr));\n        return FALSE;\n    }\n    if (num > 59)\n    {\n        ERR(\"unexpected minute in time format %s\\n\", debugstr_w(ptr));\n        return FALSE;\n    }\n    ptr = nextPtr + 1;\n    st->wMinute = (WORD)num;\n    num = wcstoul(ptr, &nextPtr, 10);\n    if (!nextPtr || nextPtr <= ptr)\n    {\n        ERR(\"unexpected time format %s\\n\", debugstr_w(ptr));\n        return FALSE;\n    }\n    if (num > 59)\n    {\n        ERR(\"unexpected second in time format %s\\n\", debugstr_w(ptr));\n        return FALSE;\n    }\n    *str = nextPtr;\n    st->wSecond = (WORD)num;\n    return TRUE;\n}"
+  },
+  {
+   "name": "HTTP_ParseWeekday",
+   "file": "dlls/wininet/http.c",
+   "start_line": 4644,
+   "end_line": 4660,
+   "static": true,
+   "called_from": [
+    "HTTP_ParseRfc850Date"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static WORD HTTP_ParseWeekday(LPCWSTR day)",
+   "code": "static WORD HTTP_ParseWeekday(LPCWSTR day)\n{\n    static const WCHAR days[7][10] = {L\"sunday\",\n                                     L\"monday\",\n                                     L\"tuesday\",\n                                     L\"wednesday\",\n                                     L\"thursday\",\n                                     L\"friday\",\n                                     L\"saturday\"};\n    unsigned int i;\n    for (i = 0; i < ARRAY_SIZE(days); i++)\n        if (!wcsicmp(day, days[i]))\n            return i;\n\n    /* Invalid */\n    return 7;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "HttpAuthInfo",
+    "kind": "struct_decl",
+    "start_line": 65,
+    "end_line": 76,
+    "code": "struct HttpAuthInfo\n{\n    LPWSTR scheme;\n    CredHandle cred;\n    CtxtHandle ctx;\n    TimeStamp exp;\n    ULONG attr;\n    ULONG max_token;\n    void *auth_data;\n    unsigned int auth_data_len;\n    BOOL finished; /* finished authenticating */\n};"
+   },
+   {
+    "name": "_authorizationData",
+    "kind": "struct_decl",
+    "start_line": 89,
+    "end_line": 101,
+    "code": "typedef struct _authorizationData\n{\n    struct list entry;\n\n    LPWSTR host;\n    LPWSTR scheme;\n    LPWSTR domain;\n    UINT   domain_len;\n    LPWSTR user;\n    UINT   user_len;\n    LPWSTR password;\n    UINT   password_len;\n} authorizationData;"
+   },
+   {
+    "name": "_basicAuthorizationData",
+    "kind": "struct_decl",
+    "start_line": 79,
+    "end_line": 87,
+    "code": "typedef struct _basicAuthorizationData\n{\n    struct list entry;\n\n    LPWSTR host;\n    LPWSTR realm;\n    LPSTR  authorization;\n    UINT   authorizationLen;\n} basicAuthorizationData;"
+   },
+   {
+    "name": "authorizationData",
+    "kind": "typedef_decl",
+    "start_line": 89,
+    "end_line": 101,
+    "code": "typedef struct _authorizationData\n{\n    struct list entry;\n\n    LPWSTR host;\n    LPWSTR scheme;\n    LPWSTR domain;\n    UINT   domain_len;\n    LPWSTR user;\n    UINT   user_len;\n    LPWSTR password;\n    UINT   password_len;\n} authorizationData;"
+   },
+   {
+    "name": "basicAuthorizationData",
+    "kind": "typedef_decl",
+    "start_line": 79,
+    "end_line": 87,
+    "code": "typedef struct _basicAuthorizationData\n{\n    struct list entry;\n\n    LPWSTR host;\n    LPWSTR realm;\n    LPSTR  authorization;\n    UINT   authorizationLen;\n} basicAuthorizationData;"
+   },
+   {
+    "name": "chunked_stream_t",
+    "kind": "typedef_decl",
+    "start_line": 304,
+    "end_line": 321,
+    "code": "typedef struct {\n    data_stream_t data_stream;\n\n    BYTE buf[READ_BUFFER_SIZE];\n    DWORD buf_size;\n    DWORD buf_pos;\n    DWORD chunk_size;\n\n    enum {\n        CHUNKED_STREAM_STATE_READING_CHUNK_SIZE,\n        CHUNKED_STREAM_STATE_DISCARD_EOL_AFTER_SIZE,\n        CHUNKED_STREAM_STATE_READING_CHUNK,\n        CHUNKED_STREAM_STATE_DISCARD_EOL_AFTER_DATA,\n        CHUNKED_STREAM_STATE_DISCARD_EOL_AT_END,\n        CHUNKED_STREAM_STATE_END_OF_STREAM,\n        CHUNKED_STREAM_STATE_ERROR\n    } state;\n} chunked_stream_t;"
+   },
+   {
+    "name": "data_stream_vtbl_t",
+    "kind": "struct_decl",
+    "start_line": 297,
+    "end_line": 302,
+    "code": "struct data_stream_vtbl_t {\n    BOOL (*end_of_data)(data_stream_t*,http_request_t*);\n    DWORD (*read)(data_stream_t*,http_request_t*,BYTE*,DWORD,DWORD*,BOOL);\n    DWORD (*drain_content)(data_stream_t*,http_request_t*,BOOL);\n    void (*destroy)(data_stream_t*);\n};"
+   },
+   {
+    "name": "enum (unnamed at /Users/xingangao/wine_fuzz/wine_src/wine/dlls/wininet/http.c:312:5)",
+    "kind": "enum_decl",
+    "start_line": 312,
+    "end_line": 320,
+    "code": "    enum {\n        CHUNKED_STREAM_STATE_READING_CHUNK_SIZE,\n        CHUNKED_STREAM_STATE_DISCARD_EOL_AFTER_SIZE,\n        CHUNKED_STREAM_STATE_READING_CHUNK,\n        CHUNKED_STREAM_STATE_DISCARD_EOL_AFTER_DATA,\n        CHUNKED_STREAM_STATE_DISCARD_EOL_AT_END,\n        CHUNKED_STREAM_STATE_END_OF_STREAM,\n        CHUNKED_STREAM_STATE_ERROR\n    } state;"
+   },
+   {
+    "name": "gzip_stream_t",
+    "kind": "typedef_decl",
+    "start_line": 345,
+    "end_line": 353,
+    "code": "typedef struct {\n    data_stream_t stream;\n    data_stream_t *parent_stream;\n    z_stream zstream;\n    BYTE buf[READ_BUFFER_SIZE];\n    DWORD buf_size;\n    DWORD buf_pos;\n    BOOL end_of_data;\n} gzip_stream_t;"
+   },
+   {
+    "name": "send_request_task_t",
+    "kind": "typedef_decl",
+    "start_line": 5364,
+    "end_line": 5372,
+    "code": "typedef struct {\n    task_header_t hdr;\n    WCHAR *headers;\n    DWORD  headers_len;\n    void  *optional;\n    DWORD  optional_len;\n    DWORD  content_len;\n    BOOL   end_request;\n} send_request_task_t;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "HTTP_Base64Dec",
+    "type": "const signed char[128]",
+    "static": true,
+    "start_line": 1482,
+    "end_line": 1492,
+    "code": "static const signed char HTTP_Base64Dec[] =\n{\n    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 0x00 */\n    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 0x10 */\n    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 62, -1, -1, -1, 63, /* 0x20 */\n    52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -1, -1, -1, -1, -1, -1, /* 0x30 */\n    -1,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, /* 0x40 */\n    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -1, -1, -1, -1, -1, /* 0x50 */\n    -1, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, /* 0x60 */\n    41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1  /* 0x70 */\n};"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 59,
+    "end_line": 59,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(wininet);"
+   },
+   {
+    "name": "__wine_dbch_wininet",
+    "type": "struct __wine_debug_channel",
+    "static": true,
+    "start_line": 59,
+    "end_line": 59,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(wininet);"
+   },
+   {
+    "name": "authcache_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 113,
+    "end_line": 113,
+    "code": "static CRITICAL_SECTION authcache_cs = { &critsect_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "authorizationCache",
+    "type": "struct list",
+    "static": true,
+    "start_line": 104,
+    "end_line": 104,
+    "code": "static struct list authorizationCache = LIST_INIT(authorizationCache);"
+   },
+   {
+    "name": "basicAuthorizationCache",
+    "type": "struct list",
+    "static": true,
+    "start_line": 103,
+    "end_line": 103,
+    "code": "static struct list basicAuthorizationCache = LIST_INIT(basicAuthorizationCache);"
+   },
+   {
+    "name": "chunked_stream_vtbl",
+    "type": "const data_stream_vtbl_t",
+    "static": true,
+    "start_line": 2917,
+    "end_line": 2922,
+    "code": "static const data_stream_vtbl_t chunked_stream_vtbl = {\n    chunked_end_of_data,\n    chunked_read,\n    chunked_drain_content,\n    chunked_destroy\n};"
+   },
+   {
+    "name": "collector_running",
+    "type": "BOOL",
+    "static": true,
+    "start_line": 136,
+    "end_line": 136,
+    "code": "static BOOL collector_running;"
+   },
+   {
+    "name": "connection_pool",
+    "type": "struct list",
+    "static": true,
+    "start_line": 135,
+    "end_line": 135,
+    "code": "static struct list connection_pool = LIST_INIT(connection_pool);"
+   },
+   {
+    "name": "connection_pool_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 133,
+    "end_line": 133,
+    "code": "static CRITICAL_SECTION connection_pool_cs = { &connection_pool_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "gzip_stream_vtbl",
+    "type": "const data_stream_vtbl_t",
+    "static": true,
+    "start_line": 442,
+    "end_line": 447,
+    "code": "static const data_stream_vtbl_t gzip_stream_vtbl = {\n    gzip_end_of_data,\n    gzip_read,\n    gzip_drain_content,\n    gzip_destroy\n};"
+   },
+   {
+    "name": "header_lookup",
+    "type": "const LPCWSTR[71]",
+    "static": true,
+    "start_line": 3626,
+    "end_line": 3698,
+    "code": "static const LPCWSTR header_lookup[] = {\n    L\"Mime-Version\",              /* HTTP_QUERY_MIME_VERSION = 0 */\n    L\"Content-Type\",              /* HTTP_QUERY_CONTENT_TYPE = 1 */\n    L\"Content-Transfer-Encoding\", /* HTTP_QUERY_CONTENT_TRANSFER_ENCODING = 2 */\n    L\"Content-ID\",                /* HTTP_QUERY_CONTENT_ID = 3 */\n    NULL,                         /* HTTP_QUERY_CONTENT_DESCRIPTION = 4 */\n    L\"Content-Length\",            /* HTTP_QUERY_CONTENT_LENGTH =  5 */\n    L\"Content-Language\",          /* HTTP_QUERY_CONTENT_LANGUAGE =  6 */\n    L\"Allow\",                     /* HTTP_QUERY_ALLOW = 7 */\n    L\"Public\",                    /* HTTP_QUERY_PUBLIC = 8 */\n    L\"Date\",                      /* HTTP_QUERY_DATE = 9 */\n    L\"Expires\",                   /* HTTP_QUERY_EXPIRES = 10 */\n    L\"Last-Modified\",             /* HTTP_QUERY_LAST_MODIFIED = 11 */\n    NULL,                         /* HTTP_QUERY_MESSAGE_ID = 12 */\n    L\"URI\",                       /* HTTP_QUERY_URI = 13 */\n    L\"From\",                      /* HTTP_QUERY_DERIVED_FROM = 14 */\n    NULL,                         /* HTTP_QUERY_COST = 15 */\n    NULL,                         /* HTTP_QUERY_LINK = 16 */\n    L\"Pragma\",                    /* HTTP_QUERY_PRAGMA = 17 */\n    NULL,                         /* HTTP_QUERY_VERSION = 18 */\n    L\"Status\",                    /* HTTP_QUERY_STATUS_CODE = 19 */\n    NULL,                         /* HTTP_QUERY_STATUS_TEXT = 20 */\n    NULL,                         /* HTTP_QUERY_RAW_HEADERS = 21 */\n    NULL,                         /* HTTP_QUERY_RAW_HEADERS_CRLF = 22 */\n    L\"Connection\",                /* HTTP_QUERY_CONNECTION = 23 */\n    L\"Accept\",                    /* HTTP_QUERY_ACCEPT = 24 */\n    L\"Accept-Charset\",            /* HTTP_QUERY_ACCEPT_CHARSET = 25 */\n    L\"Accept-Encoding\",           /* HTTP_QUERY_ACCEPT_ENCODING = 26 */\n    L\"Accept-Language\",           /* HTTP_QUERY_ACCEPT_LANGUAGE = 27 */\n    L\"Authorization\",             /* HTTP_QUERY_AUTHORIZATION = 28 */\n    L\"Content-Encoding\",          /* HTTP_QUERY_CONTENT_ENCODING = 29 */\n    NULL,                         /* HTTP_QUERY_FORWARDED = 30 */\n    NULL,                         /* HTTP_QUERY_FROM = 31 */\n    L\"If-Modified-Since\",         /* HTTP_QUERY_IF_MODIFIED_SINCE = 32 */\n    L\"Location\",                  /* HTTP_QUERY_LOCATION = 33 */\n    NULL,                         /* HTTP_QUERY_ORIG_URI = 34 */\n    L\"Referer\",                   /* HTTP_QUERY_REFERER = 35 */\n    L\"Retry-After\",               /* HTTP_QUERY_RETRY_AFTER = 36 */\n    L\"Server\",                    /* HTTP_QUERY_SERVER = 37 */\n    NULL,                         /* HTTP_TITLE = 38 */\n    L\"User-Agent\",                /* HTTP_QUERY_USER_AGENT = 39 */\n    L\"WWW-Authenticate\",          /* HTTP_QUERY_WWW_AUTHENTICATE = 40 */\n    L\"Proxy-Authenticate\",        /* HTTP_QUERY_PROXY_AUTHENTICATE = 41 */\n    L\"Accept-Ranges\",             /* HTTP_QUERY_ACCEPT_RANGES = 42 */\n    L\"Set-Cookie\",                /* HTTP_QUERY_SET_COOKIE = 43 */\n    L\"Cookie\",                    /* HTTP_QUERY_COOKIE = 44 */\n    NULL,                         /* HTTP_QUERY_REQUEST_METHOD = 45 */\n    NULL,                         /* HTTP_QUERY_REFRESH = 46 */\n    L\"Content-Disposition\",       /* HTTP_QUERY_CONTENT_DISPOSITION = 47 */\n    L\"Age\",                       /* HTTP_QUERY_AGE = 48 */\n    L\"Cache-Control\",             /* HTTP_QUERY_CACHE_CONTROL = 49 */\n    L\"Content-Base\",              /* HTTP_QUERY_CONTENT_BASE = 50 */\n    L\"Content-Location\",          /* HTTP_QUERY_CONTENT_LOCATION = 51 */\n    L\"Content-MD5\",               /* HTTP_QUERY_CONTENT_MD5 = 52 */\n    L\"Content-Range\",             /* HTTP_QUERY_CONTENT_RANGE = 53 */\n    L\"ETag\",                      /* HTTP_QUERY_ETAG = 54 */\n    L\"Host\",                      /* HTTP_QUERY_HOST = 55 */\n    L\"If-Match\",                  /* HTTP_QUERY_IF_MATCH = 56 */\n    L\"If-None-Match\",             /* HTTP_QUERY_IF_NONE_MATCH = 57 */\n    L\"If-Range\",                  /* HTTP_QUERY_IF_RANGE = 58 */\n    L\"If-Unmodified-Since\",       /* HTTP_QUERY_IF_UNMODIFIED_SINCE = 59 */\n    L\"Max-Forwards\",              /* HTTP_QUERY_MAX_FORWARDS = 60 */\n    L\"Proxy-Authorization\",       /* HTTP_QUERY_PROXY_AUTHORIZATION = 61 */\n    L\"Range\",                     /* HTTP_QUERY_RANGE = 62 */\n    L\"Transfer-Encoding\",         /* HTTP_QUERY_TRANSFER_ENCODING = 63 */\n    L\"Upgrade\",                   /* HTTP_QUERY_UPGRADE = 64 */\n    L\"Vary\",                      /* HTTP_QUERY_VARY = 65 */\n    L\"Via\",                       /* HTTP_QUERY_VIA = 66 */\n    L\"Warning\",                   /* HTTP_QUERY_WARNING = 67 */\n    L\"Expect\",                    /* HTTP_QUERY_EXPECT = 68 */\n    L\"Proxy-Connection\",          /* HTTP_QUERY_PROXY_CONNECTION = 69 */\n    L\"Unless-Modified-Since\",     /* HTTP_QUERY_UNLESS_MODIFIED_SINCE = 70 */\n};"
+   }
+  ],
+  "macros": [
+   {
+    "name": "COALESCEFLAGS",
+    "start_line": 6206,
+    "end_line": 6206,
+    "code": "#define COALESCEFLAGS (HTTP_ADDREQ_FLAG_COALESCE_WITH_COMMA|HTTP_ADDREQ_FLAG_COALESCE_WITH_SEMICOLON)"
+   },
+   {
+    "name": "COLLECT_TIME",
+    "start_line": 63,
+    "end_line": 63,
+    "code": "#define COLLECT_TIME 60000"
+   },
+   {
+    "name": "HTTP_ADDHDR_FLAG_REQ",
+    "start_line": 61,
+    "end_line": 61,
+    "code": "#define HTTP_ADDHDR_FLAG_REQ\t\t\t\t0x02000000"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "GetAddress",
+    "file": "dlls/wininet/utility.c",
+    "start_line": 42
+   },
+   {
+    "name": "INTERNET_AsyncCall",
+    "file": "dlls/wininet/internet.c",
+    "start_line": 4581
+   },
+   {
+    "name": "INTERNET_GetLastError",
+    "file": "dlls/wininet/internet.c",
+    "start_line": 4524
+   },
+   {
+    "name": "INTERNET_SendCallback",
+    "file": "dlls/wininet/utility.c",
+    "start_line": 240
+   },
+   {
+    "name": "NETCON_is_alive",
+    "file": "dlls/wininet/netconnection.c",
+    "start_line": 835
+   },
+   {
+    "name": "NETCON_recv",
+    "file": "dlls/wininet/netconnection.c",
+    "start_line": 783
+   },
+   {
+    "name": "NETCON_secure_connect",
+    "file": "dlls/wininet/netconnection.c",
+    "start_line": 563
+   },
+   {
+    "name": "NETCON_send",
+    "file": "dlls/wininet/netconnection.c",
+    "start_line": 628
+   },
+   {
+    "name": "NETCON_set_timeout",
+    "file": "dlls/wininet/netconnection.c",
+    "start_line": 869
+   },
+   {
+    "name": "WININET_Release",
+    "file": "dlls/wininet/internet.c",
+    "start_line": 240
+   },
+   {
+    "name": "alloc_async_task",
+    "file": "dlls/wininet/internet.c",
+    "start_line": 4560
+   },
+   {
+    "name": "close_netconn",
+    "file": "dlls/wininet/netconnection.c",
+    "start_line": 340
+   },
+   {
+    "name": "create_netconn",
+    "file": "dlls/wininet/netconnection.c",
+    "start_line": 307
+   },
+   {
+    "name": "create_req_file",
+    "file": "dlls/wininet/internet.c",
+    "start_line": 4654
+   },
+   {
+    "name": "free_netconn",
+    "file": "dlls/wininet/netconnection.c",
+    "start_line": 346
+   },
+   {
+    "name": "get_cookie_header",
+    "file": "dlls/wininet/cookie.c",
+    "start_line": 642
+   },
+   {
+    "name": "get_handle_object",
+    "file": "dlls/wininet/internet.c",
+    "start_line": 205
+   },
+   {
+    "name": "is_valid_netconn",
+    "file": "dlls/wininet/netconnection.c",
+    "start_line": 335
+   },
+   {
+    "name": "req_file_release",
+    "file": "dlls/wininet/internet.c",
+    "start_line": 4681
+   },
+   {
+    "name": "set_cookie",
+    "file": "dlls/wininet/cookie.c",
+    "start_line": 908
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "CommitUrlCacheEntryW",
+    "impl": [
+     "dlls/wininet/urlcache.c:3053"
+    ]
+   },
+   {
+    "name": "CreateUrlCacheEntryW",
+    "impl": [
+     "dlls/wininet/urlcache.c:2783"
+    ]
+   },
+   {
+    "name": "InternetCombineUrlW",
+    "impl": [
+     "dlls/wininet/internet.c:4813"
+    ]
+   },
+   {
+    "name": "InternetCrackUrlW",
+    "impl": [
+     "dlls/wininet/internet.c:2045"
+    ]
+   },
+   {
+    "name": "InternetCreateUrlW",
+    "impl": [
+     "dlls/wininet/internet.c:5097"
+    ]
+   },
+   {
+    "name": "InternetTimeToSystemTimeW",
+    "impl": [
+     "dlls/wininet/internet.c:4044"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "AcquireCredentialsHandleW",
+    "module": "schannel",
+    "impl": [
+     "dlls/secur32/wrapper.c:74"
+    ]
+   },
+   {
+    "name": "CertFreeCertificateChain",
+    "module": "crypt32",
+    "impl": [
+     "dlls/crypt32/chain.c:2989"
+    ]
+   },
+   {
+    "name": "CloseHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "CompareStringW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:4928"
+    ]
+   },
+   {
+    "name": "CreateFileW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:795"
+    ]
+   },
+   {
+    "name": "CreateThread",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/thread.c:169"
+    ]
+   },
+   {
+    "name": "DeleteSecurityContext",
+    "module": "schannel",
+    "impl": [
+     "dlls/secur32/wrapper.c:331"
+    ]
+   },
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "FreeContextBuffer",
+    "module": "schannel",
+    "impl": [
+     "dlls/secur32/secur32.c:644"
+    ]
+   },
+   {
+    "name": "FreeCredentialsHandle",
+    "module": "schannel",
+    "impl": [
+     "dlls/secur32/wrapper.c:112"
+    ]
+   },
+   {
+    "name": "FreeLibrary",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/loader.c:232"
+    ]
+   },
+   {
+    "name": "FreeLibraryAndExitThread",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/thread.c:180"
+    ]
+   },
+   {
+    "name": "GetModuleHandleExW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/loader.c:386"
+    ]
+   },
+   {
+    "name": "GetTickCount64",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/sync.c:191"
+    ]
+   },
+   {
+    "name": "InitializeSecurityContextW",
+    "module": "schannel",
+    "impl": [
+     "dlls/secur32/wrapper.c:228"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "MultiByteToWideChar",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7070"
+    ]
+   },
+   {
+    "name": "NtQuerySystemTime",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/sync.c:2485"
+    ]
+   },
+   {
+    "name": "QuerySecurityPackageInfoW",
+    "module": "schannel",
+    "impl": [
+     "dlls/secur32/wrapper.c:606"
+    ]
+   },
+   {
+    "name": "SetThreadDescription",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/thread.c:463"
+    ]
+   },
+   {
+    "name": "Sleep",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/sync.c:361"
+    ]
+   },
+   {
+    "name": "StrToInt64ExW",
+    "module": "shlwapi",
+    "impl": [
+     "dlls/kernelbase/string.c:897"
+    ]
+   },
+   {
+    "name": "SystemTimeToFileTime",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:4296"
+    ]
+   },
+   {
+    "name": "UrlEscapeW",
+    "module": "shlwapi",
+    "impl": [
+     "dlls/kernelbase/path.c:3299"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   },
+   {
+    "name": "WriteFile",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:4026"
+    ]
+   },
+   {
+    "name": "__wine_dbg_get_channel_flags",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/thread.c:93"
+    ]
+   },
+   {
+    "name": "_assert",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/exit.c:319"
+    ]
+   },
+   {
+    "name": "_errno",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/thread.c:445"
+    ]
+   },
+   {
+    "name": "calloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "iswspace",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:631"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memchr",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:73"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "memmove",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:126"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   },
+   {
+    "name": "realloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:459"
+    ]
+   },
+   {
+    "name": "strchr",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:359"
+    ]
+   },
+   {
+    "name": "strlen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:423"
+    ]
+   },
+   {
+    "name": "wcschr",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:256"
+    ]
+   },
+   {
+    "name": "wcscmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:266"
+    ]
+   },
+   {
+    "name": "wcscspn",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:276"
+    ]
+   },
+   {
+    "name": "wcslen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:215"
+    ]
+   },
+   {
+    "name": "wcsncmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:341"
+    ]
+   },
+   {
+    "name": "wcsspn",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:440"
+    ]
+   },
+   {
+    "name": "wcstol",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:669"
+    ]
+   },
+   {
+    "name": "wcstoul",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:716"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetCurrentThread",
+   "GetLastError",
+   "SetLastError",
+   "_InterlockedDecrement",
+   "_InterlockedIncrement",
+   "debugstr_a",
+   "debugstr_an",
+   "debugstr_w",
+   "debugstr_wn",
+   "list_add_head",
+   "list_empty",
+   "list_head",
+   "list_init",
+   "list_remove",
+   "lstrcatW",
+   "lstrcpyW",
+   "lstrcpynW",
+   "lstrlenW",
+   "swprintf",
+   "wcsdup",
+   "wcsicmp",
+   "wcsnicmp",
+   "wine_dbg_log"
+  ],
+  "system": [
+   "inflateInit2_"
+  ],
+  "unresolved": [
+   "strndupAtoW",
+   "strndupW",
+   "substr",
+   "substrz"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "req->data_stream->vtbl->drain_content",
+    "in_function": "drain_content",
+    "at": "dlls/wininet/http.c:3132",
+    "candidates": []
+   },
+   {
+    "expr": "req->data_stream->vtbl->end_of_data",
+    "in_function": "write_cache_file",
+    "at": "dlls/wininet/http.c:2446",
+    "candidates": [
+     "TRUE @ dlls/wininet/http.c:388",
+     "TRUE @ dlls/wininet/http.c:405"
+    ]
+   },
+   {
+    "expr": "req->data_stream->vtbl->read",
+    "in_function": "read_http_stream",
+    "at": "dlls/wininet/http.c:2628",
+    "candidates": []
+   },
+   {
+    "expr": "stream->vtbl->destroy",
+    "in_function": "destroy_data_stream",
+    "at": "dlls/wininet/http.c:325",
+    "candidates": []
+   }
+  ]
+ }
+}

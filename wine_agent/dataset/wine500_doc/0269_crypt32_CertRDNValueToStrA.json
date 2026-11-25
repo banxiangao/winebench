@@ -1,0 +1,112 @@
+{
+ "id": "0269",
+ "function": {
+  "name": "CertRDNValueToStrA",
+  "export_name": "CertRDNValueToStrA",
+  "module": "crypt32",
+  "source_module": "crypt32",
+  "exported_by": [
+   "crypt32"
+  ],
+  "side": "PE",
+  "file": "dlls/crypt32/str.c",
+  "start_line": 30,
+  "end_line": 63,
+  "body_lines": 31,
+  "signature": "DWORD WINAPI CertRDNValueToStrA(DWORD type, PCERT_RDN_VALUE_BLOB value_blob, LPSTR value, DWORD value_len)",
+  "header_comment": null,
+  "code": "DWORD WINAPI CertRDNValueToStrA(DWORD type, PCERT_RDN_VALUE_BLOB value_blob,\n                                LPSTR value, DWORD value_len)\n{\n    DWORD len, len_mb, ret;\n    LPWSTR valueW;\n\n    TRACE(\"(%ld, %p, %p, %ld)\\n\", type, value_blob, value, value_len);\n\n    len = CertRDNValueToStrW(type, value_blob, NULL, 0);\n\n    if (!(valueW = CryptMemAlloc(len * sizeof(*valueW))))\n    {\n        ERR(\"No memory.\\n\");\n        if (value && value_len) *value = 0;\n        return 1;\n    }\n\n    len = CertRDNValueToStrW(type, value_blob, valueW, len);\n    len_mb = WideCharToMultiByte(CP_ACP, 0, valueW, len, NULL, 0, NULL, NULL);\n    if (!value || !value_len)\n    {\n        CryptMemFree(valueW);\n        return len_mb;\n    }\n\n    ret = WideCharToMultiByte(CP_ACP, 0, valueW, len, value, value_len, NULL, NULL);\n    if (ret < len_mb)\n    {\n        value[0] = 0;\n        ret = 1;\n    }\n    CryptMemFree(valueW);\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winuser.h\"",
+   "#include \"wincrypt.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"crypt32_private.h\""
+  ],
+  "resolution": [
+   "crypt32!CertRDNValueToStrA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/crypt32/tests/str.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wincrypt",
+   "path": "sdk-api-src/content/wincrypt/nf-wincrypt-certrdnvaluetostra.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wincrypt/nf-wincrypt-certrdnvaluetostra",
+   "documented_name": "certrdnvaluetostra",
+   "file": "docs/0269_sdk-api_nf-wincrypt-certrdnvaluetostra.md",
+   "text": "---\nUID: NF:wincrypt.CertRDNValueToStrA\ntitle: CertRDNValueToStrA function (wincrypt.h)\ndescription: The CertRDNValueToStr function converts a name in a CERT_RDN_VALUE_BLOB to a null-terminated character string. (ANSI)\nhelpviewer_keywords: [\"CertRDNValueToStrA\", \"wincrypt/CertRDNValueToStrA\"]\nold-location: security\\certrdnvaluetostr.htm\ntech.root: security\nms.assetid: c1e0af19-320e-411e-85bf-c7f01befcac4\nms.date: 12/05/2018\nms.keywords: CertRDNValueToStr, CertRDNValueToStr function [Security], CertRDNValueToStrA, CertRDNValueToStrW, _crypto2_certrdnvaluetostr, security.certrdnvaluetostr, wincrypt/CertRDNValueToStr, wincrypt/CertRDNValueToStrA, wincrypt/CertRDNValueToStrW\nreq.header: wincrypt.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: CertRDNValueToStrW (Unicode) and CertRDNValueToStrA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Crypt32.lib\nreq.dll: Crypt32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CertRDNValueToStrA\n - wincrypt/CertRDNValueToStrA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Crypt32.dll\napi_name:\n - CertRDNValueToStr\n - CertRDNValueToStrA\n - CertRDNValueToStrW\n---\n\n# CertRDNValueToStrA function\n\n\n## -description\n\nThe <b>CertRDNValueToStr</b> function converts a name in a \n<a href=\"/previous-versions/windows/desktop/legacy/aa381414(v=vs.85)\">CERT_RDN_VALUE_BLOB</a> to a <b>null</b>-terminated character string.\n\n## -parameters\n\n### -param dwValueType [in]\n\nIndicates the kind of RDN value to be converted.\n\nThis can be one of the following values:\n\n<ul>\n<li>CERT_RDN_ANY_TYPE</li>\n<li>CERT_RDN_ENCODED_BLOB</li>\n<li>CERT_RDN_OCTET_STRING</li>\n<li>CERT_RDN_NUMERIC_STRING</li>\n<li>CERT_RDN_PRINTABLE_STRING</li>\n<li>CERT_RDN_TELETEX_STRING</li>\n<li>CERT_RDN_T61_STRING</li>\n<li>CERT_RDN_VIDEOTEX_STRING</li>\n<li>CERT_RDN_IA5_STRING</li>\n<li>CERT_RDN_GRAPHIC_STRING</li>\n<li>CERT_RDN_VISIBLE_STRING</li>\n<li>CERT_RDN_ISO646_STRING</li>\n<li>CERT_RDN_GENERAL_STRING</li>\n<li>CERT_RDN_UNIVERSAL_STRING</li>\n<li>CERT_RDN_INT4_STRING</li>\n<li>CERT_RDN_BMP_STRING</li>\n<li>CERT_RDN_UNICODE_STRING</li>\n<li>CERT_RDN_UTF8_STRING</li>\n</ul>\n\n### -param pValue [in]\n\nA pointer to an \n<a href=\"/previous-versions/windows/desktop/legacy/aa381414(v=vs.85)\">CERT_RDN_VALUE_BLOB</a> of a type appropriate for the <i>dwValueType</i>.\n\n### -param psz [out]\n\nA pointer to a buffer to receive the returned string.\n\n### -param csz [in]\n\nSize, in characters, allocated for the returned string. The size must include the terminating <b>NULL</b> character.\n\n## -returns\n\nReturns the number of characters converted, including the terminating <b>NULL</b> character. If <i>psz</i> is <b>NULL</b> or <i>csz</i> is zero, returns the required size of the destination string.\n\n## -remarks\n\nIf <i>psz</i> is not <b>NULL</b> and <i>csz</i> is not zero, the returned <i>psz</i> is always a possibly empty <b>null</b>-terminated string.\n\n\n\n\n\n> [!NOTE]\n> The wincrypt.h header defines CertRDNValueToStr as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/api/wincrypt/nf-wincrypt-certnametostra\">CertNameToStr</a>\n\n\n\n<a href=\"/windows/desktop/SecCrypto/cryptography-functions\">Data Conversion Functions</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 28,
+    "end_line": 28,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(crypt);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "CertRDNValueToStrW",
+    "impl": [
+     "dlls/crypt32/str.c:117"
+    ]
+   },
+   {
+    "name": "CryptMemAlloc",
+    "impl": [
+     "dlls/crypt32/main.c:136"
+    ]
+   },
+   {
+    "name": "CryptMemFree",
+    "impl": [
+     "dlls/crypt32/main.c:146"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

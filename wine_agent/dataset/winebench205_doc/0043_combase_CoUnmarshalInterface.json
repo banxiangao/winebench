@@ -1,0 +1,621 @@
+{
+ "id": "0043",
+ "function": {
+  "name": "CoUnmarshalInterface",
+  "export_name": "CoUnmarshalInterface",
+  "module": "combase",
+  "source_module": "combase",
+  "exported_by": [
+   "combase",
+   "ole32"
+  ],
+  "side": "PE",
+  "file": "dlls/combase/marshal.c",
+  "start_line": 785,
+  "end_line": 833,
+  "body_lines": 46,
+  "signature": "HRESULT WINAPI CoUnmarshalInterface(IStream *stream, REFIID riid, void **ppv)",
+  "header_comment": "/***********************************************************************\n *            CoUnmarshalInterface        (combase.@)\n */",
+  "code": "HRESULT WINAPI CoUnmarshalInterface(IStream *stream, REFIID riid, void **ppv)\n{\n    IMarshal *marshal;\n    IUnknown *object;\n    HRESULT hr;\n    IID iid;\n\n    TRACE(\"%p, %s, %p\\n\", stream, debugstr_guid(riid), ppv);\n\n    if (!stream || !ppv)\n        return E_INVALIDARG;\n\n    hr = get_unmarshaler_from_stream(stream, &marshal, &iid);\n    if (hr == S_FALSE)\n    {\n        hr = std_unmarshal_interface(0, NULL, stream, &iid, (void **)&object, FALSE);\n        if (hr != S_OK)\n            ERR(\"StdMarshal UnmarshalInterface failed, hr %#lx\\n\", hr);\n    }\n    else if (hr == S_OK)\n    {\n        /* call the helper object to do the actual unmarshaling */\n        hr = IMarshal_UnmarshalInterface(marshal, stream, &iid, (void **)&object);\n        IMarshal_Release(marshal);\n        if (hr != S_OK)\n            ERR(\"IMarshal::UnmarshalInterface failed, hr %#lx\\n\", hr);\n    }\n\n    if (hr == S_OK)\n    {\n        /* IID_NULL means use the interface ID of the marshaled object */\n        if (!IsEqualIID(riid, &IID_NULL) && !IsEqualIID(riid, &iid))\n        {\n            TRACE(\"requested interface != marshalled interface, additional QI needed\\n\");\n            hr = IUnknown_QueryInterface(object, riid, ppv);\n            if (hr != S_OK)\n                ERR(\"Couldn't query for interface %s, hr %#lx\\n\", debugstr_guid(riid), hr);\n            IUnknown_Release(object);\n        }\n        else\n        {\n            *ppv = object;\n        }\n    }\n\n    TRACE(\"completed with hr %#lx\\n\", hr);\n\n    return hr;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"objbase.h\"",
+   "#include \"dcom.h\"",
+   "#include \"combase_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "ole32!CoUnmarshalInterface [stdcall] -> forward combase.CoUnmarshalInterface",
+   "combase!CoUnmarshalInterface [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ole32/tests/compobj.c",
+   "dlls/ole32/tests/marshal.c",
+   "dlls/ole32/tests/moniker.c",
+   "dlls/ole32/tests/usrmarshal.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 40
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "combaseapi",
+   "path": "sdk-api-src/content/combaseapi/nf-combaseapi-counmarshalinterface.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/combaseapi/nf-combaseapi-counmarshalinterface",
+   "documented_name": "counmarshalinterface",
+   "file": "docs/0043_sdk-api_nf-combaseapi-counmarshalinterface.md",
+   "text": "---\nUID: NF:combaseapi.CoUnmarshalInterface\ntitle: CoUnmarshalInterface function (combaseapi.h)\ndescription: Initializes a newly created proxy using data written into the stream by a previous call to the CoMarshalInterface function, and returns an interface pointer to that proxy.\nhelpviewer_keywords: [\"CoUnmarshalInterface\",\"CoUnmarshalInterface function [COM]\",\"_com_CoUnmarshalInterface\",\"com.counmarshalinterface\",\"combaseapi/CoUnmarshalInterface\"]\nold-location: com\\counmarshalinterface.htm\ntech.root: com\nms.assetid: d0eac0da-2f41-40c4-b756-31bc22752c17\nms.date: 12/05/2018\nms.keywords: CoUnmarshalInterface, CoUnmarshalInterface function [COM], _com_CoUnmarshalInterface, com.counmarshalinterface, combaseapi/CoUnmarshalInterface\nreq.header: combaseapi.h\nreq.include-header: Objbase.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ole32.lib\nreq.dll: Ole32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CoUnmarshalInterface\n - combaseapi/CoUnmarshalInterface\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-com-l1-1-3.dll\n - api-ms-win-core-com-l1-1-2.dll\n - Ole32.dll\n - API-MS-Win-Core-Com-l1-1-0.dll\n - ComBase.dll\n - API-MS-Win-Core-Com-l1-1-1.dll\n - API-MS-Win-DownLevel-Ole32-l1-1-0.dll\n - API-MS-Win-DownLevel-Ole32-l1-1-1.dll\napi_name:\n - CoUnmarshalInterface\n---\n\n# CoUnmarshalInterface function\n\n\n## -description\n\nInitializes a newly created proxy using data written into the stream by a previous call to the <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-comarshalinterface\">CoMarshalInterface</a> function, and returns an interface pointer to that proxy.\n\n## -parameters\n\n### -param pStm [in]\n\nA pointer to the stream from which the interface is to be unmarshaled.\n\n### -param riid [in]\n\nA reference to the identifier of the interface to be unmarshaled. For <b>IID_NULL</b>, the returned interface is the one defined by the stream, objref.iid.\n\n### -param ppv [out]\n\nThe address of pointer variable that receives the interface pointer requested in riid. Upon successful return, *<i>ppv</i> contains the requested interface pointer for the unmarshaled interface.\n\n## -returns\n\nThis function can return the standard return value E_FAIL, errors returned by <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-cocreateinstance\">CoCreateInstance</a>, and the following values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>S_OK</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe interface pointer was unmarshaled successfully.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STG_E_INVALIDPOINTER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\n<i>pStm</i> is an invalid pointer.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>CO_E_NOTINITIALIZED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <a href=\"/windows/desktop/api/objbase/nf-objbase-coinitialize\">CoInitialize</a> or <a href=\"/windows/desktop/api/ole2/nf-ole2-oleinitialize\">OleInitialize</a> function was not called on the current thread before this function was called.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>CO_E_OBJNOTCONNECTED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe object application has been disconnected from the remoting system (for example, as a result of a call to the <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-codisconnectobject\">CoDisconnectObject</a> function).\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>REGDB_E_CLASSNOTREG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn error occurred reading the registration database.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_NOINTERFACE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe final <a href=\"/windows/desktop/api/unknwn/nf-unknwn-iunknown-queryinterface(q)\">QueryInterface</a> of this function for the requested interface returned E_NOINTERFACE.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\n<div class=\"alert\"><b>Important</b>  <p class=\"note\">Security Note: Calling this method with untrusted data is a security risk. Call this method only with trusted data.\n\n</div>\n<div> </div>\nThe <b>CoUnmarshalInterface</b> function performs the following tasks:\n\n<ol>\n<li>Reads from the stream the CLSID to be used to create an instance of the proxy.\n</li>\n<li>Gets an <a href=\"/windows/desktop/api/objidl/nn-objidl-imarshal\">IMarshal</a> pointer to the proxy that is to do the unmarshaling. If the object uses COM's default marshaling implementation, the pointer thus obtained is to an instance of the generic proxy object. If the marshaling is occurring between two threads in the same process, the pointer is to an instance of the in-process free threaded marshaler. If the object provides its own marshaling code, <b>CoUnmarshalInterface</b> calls the <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-cocreateinstance\">CoCreateInstance</a> function, passing the CLSID it read from the marshaling stream. <b>CoCreateInstance</b> creates an instance of the object's proxy and returns an <b>IMarshal</b> interface pointer to the proxy.</li>\n<li>Using whichever IMarshal interface pointer it has acquired, the function then calls <a href=\"/windows/desktop/api/objidl/nf-objidl-imarshal-unmarshalinterface\">IMarshal::UnmarshalInterface</a> and, if appropriate, <a href=\"/windows/desktop/api/objidl/nf-objidl-imarshal-releasemarshaldata\">IMarshal::ReleaseMarshalData</a>. \n</li>\n</ol>\nThe primary caller of this function is COM itself, from within interface proxies or stubs that unmarshal an interface pointer. There are, however, some situations in which you might call <b>CoUnmarshalInterface</b>. For example, if you are implementing a stub, your implementation would call <b>CoUnmarshalInterface</b> when the stub receives an interface pointer as a parameter in a method call.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-comarshalinterface\">CoMarshalInterface</a>\n\n\n\n<a href=\"/windows/desktop/api/objidl/nf-objidl-imarshal-unmarshalinterface\">IMarshal::UnmarshalInterface</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_unmarshaler_from_stream",
+   "file": "dlls/combase/marshal.c",
+   "start_line": 559,
+   "end_line": 617,
+   "static": true,
+   "called_from": [
+    "CoUnmarshalInterface"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/marshal.c:672"
+   ],
+   "signature": "static HRESULT get_unmarshaler_from_stream(IStream *stream, IMarshal **marshal, IID *iid)",
+   "code": "static HRESULT get_unmarshaler_from_stream(IStream *stream, IMarshal **marshal, IID *iid)\n{\n    OBJREF objref;\n    HRESULT hr;\n    ULONG res;\n\n    /* read common OBJREF header */\n    hr = IStream_Read(stream, &objref, FIELD_OFFSET(OBJREF, u_objref), &res);\n    if (hr != S_OK || (res != FIELD_OFFSET(OBJREF, u_objref)))\n    {\n        ERR(\"Failed to read common OBJREF header, %#lx\\n\", hr);\n        return STG_E_READFAULT;\n    }\n\n    /* sanity check on header */\n    if (objref.signature != OBJREF_SIGNATURE)\n    {\n        ERR(\"Bad OBJREF signature %#lx\\n\", objref.signature);\n        return RPC_E_INVALID_OBJREF;\n    }\n\n    if (iid) *iid = objref.iid;\n\n    /* FIXME: handler marshaling */\n    if (objref.flags & OBJREF_STANDARD)\n    {\n        TRACE(\"Using standard unmarshaling\\n\");\n        *marshal = NULL;\n        return S_FALSE;\n    }\n    else if (objref.flags & OBJREF_CUSTOM)\n    {\n        ULONG custom_header_size = FIELD_OFFSET(OBJREF, u_objref.u_custom.pData) -\n                                   FIELD_OFFSET(OBJREF, u_objref.u_custom);\n        TRACE(\"Using custom unmarshaling\\n\");\n        /* read constant sized OR_CUSTOM data from stream */\n        hr = IStream_Read(stream, &objref.u_objref.u_custom,\n                          custom_header_size, &res);\n        if (hr != S_OK || (res != custom_header_size))\n        {\n            ERR(\"Failed to read OR_CUSTOM header, %#lx\\n\", hr);\n            return STG_E_READFAULT;\n        }\n        /* now create the marshaler specified in the stream */\n        hr = CoCreateInstance(&objref.u_objref.u_custom.clsid, NULL,\n                              CLSCTX_INPROC_SERVER, &IID_IMarshal,\n                              (LPVOID*)marshal);\n    }\n    else\n    {\n        FIXME(\"Invalid or unimplemented marshaling type specified: %lx\\n\", objref.flags);\n        return RPC_E_INVALID_OBJREF;\n    }\n\n    if (hr != S_OK)\n        ERR(\"Failed to create marshal, %#lx\\n\", hr);\n\n    return hr;\n}"
+  },
+  {
+   "name": "std_unmarshal_interface",
+   "file": "dlls/combase/marshal.c",
+   "start_line": 692,
+   "end_line": 780,
+   "static": true,
+   "called_from": [
+    "CoUnmarshalInterface"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/marshal.c:2180"
+   ],
+   "signature": "static HRESULT std_unmarshal_interface(MSHCTX dest_context, void *dest_context_data, IStream *stream, REFIID riid, void **ppv, BOOL dest_context_known)",
+   "code": "static HRESULT std_unmarshal_interface(MSHCTX dest_context, void *dest_context_data,\n        IStream *stream, REFIID riid, void **ppv, BOOL dest_context_known)\n{\n    struct stub_manager *stubmgr = NULL;\n    struct OR_STANDARD obj;\n    ULONG res;\n    HRESULT hres;\n    struct apartment *apt, *stub_apt;\n\n    TRACE(\"(...,%s,....)\\n\", debugstr_guid(riid));\n\n    /* we need an apartment to unmarshal into */\n    if (!(apt = apartment_get_current_or_mta()))\n    {\n        ERR(\"Apartment not initialized\\n\");\n        return CO_E_NOTINITIALIZED;\n    }\n\n    /* read STDOBJREF from wire */\n    hres = IStream_Read(stream, &obj, FIELD_OFFSET(struct OR_STANDARD, saResAddr.aStringArray), &res);\n    if (hres != S_OK)\n    {\n        apartment_release(apt);\n        return STG_E_READFAULT;\n    }\n\n    if (obj.saResAddr.wNumEntries)\n    {\n        ERR(\"unsupported size of DUALSTRINGARRAY\\n\");\n        return E_NOTIMPL;\n    }\n\n    /* check if we're marshalling back to ourselves */\n    if ((apartment_getoxid(apt) == obj.std.oxid) && (stubmgr = get_stub_manager(apt, obj.std.oid)))\n    {\n        TRACE(\"Unmarshalling object marshalled in same apartment for iid %s, \"\n              \"returning original object %p\\n\", debugstr_guid(riid), stubmgr->object);\n\n        hres = IUnknown_QueryInterface(stubmgr->object, riid, ppv);\n\n        /* unref the ifstub. FIXME: only do this on success? */\n        if (!stub_manager_is_table_marshaled(stubmgr, &obj.std.ipid))\n            stub_manager_ext_release(stubmgr, obj.std.cPublicRefs, obj.std.flags & SORFP_TABLEWEAK, FALSE);\n\n        stub_manager_int_release(stubmgr);\n        apartment_release(apt);\n        return hres;\n    }\n\n    /* notify stub manager about unmarshal if process-local object.\n     * note: if the oxid is not found then we and native will quite happily\n     * ignore table marshaling and normal marshaling rules regarding number of\n     * unmarshals, etc, but if you abuse these rules then your proxy could end\n     * up returning RPC_E_DISCONNECTED. */\n    if ((stub_apt = apartment_findfromoxid(obj.std.oxid)))\n    {\n        if ((stubmgr = get_stub_manager(stub_apt, obj.std.oid)))\n        {\n            if (!stub_manager_notify_unmarshal(stubmgr, &obj.std.ipid))\n                hres = CO_E_OBJNOTCONNECTED;\n            if (SUCCEEDED(hres) && !dest_context_known)\n                hres = ipid_get_dest_context(&obj.std.ipid, &dest_context, &dest_context_data);\n        }\n        else\n        {\n            WARN(\"Couldn't find object for OXID %s, OID %s, assuming disconnected\\n\",\n                wine_dbgstr_longlong(obj.std.oxid),\n                wine_dbgstr_longlong(obj.std.oid));\n            hres = CO_E_OBJNOTCONNECTED;\n        }\n    }\n    else\n        TRACE(\"Treating unmarshal from OXID %s as inter-process\\n\",\n            wine_dbgstr_longlong(obj.std.oxid));\n\n    if (hres == S_OK)\n        hres = unmarshal_object(&obj.std, apt, dest_context,\n                                dest_context_data, riid,\n                                stubmgr ? &stubmgr->oxid_info : NULL, ppv);\n\n    if (stubmgr) stub_manager_int_release(stubmgr);\n    if (stub_apt) apartment_release(stub_apt);\n\n    if (hres != S_OK) WARN(\"Failed with error %#lx\\n\", hres);\n    else TRACE(\"Successfully created proxy %p\\n\", *ppv);\n\n    apartment_release(apt);\n    return hres;\n}"
+  },
+  {
+   "name": "unmarshal_object",
+   "file": "dlls/combase/marshal.c",
+   "start_line": 2090,
+   "end_line": 2152,
+   "static": false,
+   "called_from": [
+    "proxy_manager_get_remunknown",
+    "std_unmarshal_interface"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/combase_private.h:183",
+    "dlls/combase/combase.c:2666",
+    "dlls/combase/marshal.c:1058"
+   ],
+   "signature": "HRESULT unmarshal_object(const STDOBJREF *stdobjref, struct apartment *apt, MSHCTX dest_context, void *dest_context_data, REFIID riid, const OXID_INFO *oxid_info, void **object)",
+   "code": "HRESULT unmarshal_object(const STDOBJREF *stdobjref, struct apartment *apt, MSHCTX dest_context,\n        void *dest_context_data, REFIID riid, const OXID_INFO *oxid_info, void **object)\n{\n    struct proxy_manager *proxy_manager = NULL;\n    HRESULT hr = S_OK;\n\n    assert(apt);\n\n    TRACE(\"stdobjref: flags = %#lx cPublicRefs = %ld oxid = %s oid = %s ipid = %s\\n\",\n        stdobjref->flags, stdobjref->cPublicRefs,\n        wine_dbgstr_longlong(stdobjref->oxid),\n        wine_dbgstr_longlong(stdobjref->oid),\n        debugstr_guid(&stdobjref->ipid));\n\n    /* create a new proxy manager if one doesn't already exist for the\n     * object */\n    if (!find_proxy_manager(apt, stdobjref->oxid, stdobjref->oid, &proxy_manager))\n    {\n        hr = proxy_manager_construct(apt, stdobjref->flags,\n                                     stdobjref->oxid, stdobjref->oid, oxid_info,\n                                     &proxy_manager);\n    }\n    else\n        TRACE(\"proxy manager already created, using\\n\");\n\n    if (hr == S_OK)\n    {\n        struct ifproxy * ifproxy;\n\n        proxy_manager_set_context(proxy_manager, dest_context, dest_context_data);\n\n        hr = proxy_manager_find_ifproxy(proxy_manager, riid, &ifproxy);\n        if (hr == E_NOINTERFACE)\n        {\n            IRpcChannelBuffer *chanbuf;\n            hr = rpc_create_clientchannel(&stdobjref->oxid, &stdobjref->ipid,\n                    &proxy_manager->oxid_info, riid, proxy_manager->dest_context,\n                    proxy_manager->dest_context_data, &chanbuf, apt);\n            if (hr == S_OK)\n                hr = proxy_manager_create_ifproxy(proxy_manager, stdobjref, riid, chanbuf, &ifproxy);\n        }\n        else\n            IUnknown_AddRef((IUnknown *)ifproxy->iface);\n\n        if (hr == S_OK)\n        {\n            InterlockedExchangeAdd((LONG *)&ifproxy->refs, stdobjref->cPublicRefs);\n            /* get at least one external reference to the object to keep it alive */\n            hr = ifproxy_get_public_ref(ifproxy);\n            if (FAILED(hr))\n                ifproxy_destroy(ifproxy);\n        }\n\n        if (hr == S_OK)\n            *object = ifproxy->iface;\n    }\n\n    /* release our reference to the proxy manager - the client/apartment\n     * will hold on to the remaining reference for us */\n    if (proxy_manager) IMultiQI_Release(&proxy_manager->IMultiQI_iface);\n\n    return hr;\n}"
+  },
+  {
+   "name": "find_proxy_manager",
+   "file": "dlls/combase/marshal.c",
+   "start_line": 1959,
+   "end_line": 1982,
+   "static": true,
+   "called_from": [
+    "unmarshal_object"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL find_proxy_manager(struct apartment * apt, OXID oxid, OID oid, struct proxy_manager ** proxy_found)",
+   "code": "static BOOL find_proxy_manager(struct apartment * apt, OXID oxid, OID oid, struct proxy_manager ** proxy_found)\n{\n    struct proxy_manager *proxy;\n    BOOL found = FALSE;\n\n    EnterCriticalSection(&apt->cs);\n    LIST_FOR_EACH_ENTRY(proxy, &apt->proxies, struct proxy_manager, entry)\n    {\n        if ((oxid == proxy->oxid) && (oid == proxy->oid))\n        {\n            /* be careful of a race with ClientIdentity_Release, which would\n             * cause us to return a proxy which is in the process of being\n             * destroyed */\n            if (proxy_manager_addref_if_alive(proxy) != 0)\n            {\n                *proxy_found = proxy;\n                found = TRUE;\n                break;\n            }\n        }\n    }\n    LeaveCriticalSection(&apt->cs);\n    return found;\n}"
+  },
+  {
+   "name": "proxy_manager_construct",
+   "file": "dlls/combase/marshal.c",
+   "start_line": 1530,
+   "end_line": 1609,
+   "static": true,
+   "called_from": [
+    "unmarshal_object"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT proxy_manager_construct( struct apartment * apt, ULONG sorflags, OXID oxid, OID oid, const OXID_INFO *oxid_info, struct proxy_manager ** proxy_manager)",
+   "code": "static HRESULT proxy_manager_construct(\n    struct apartment * apt, ULONG sorflags, OXID oxid, OID oid,\n    const OXID_INFO *oxid_info, struct proxy_manager ** proxy_manager)\n{\n    struct proxy_manager * This = malloc(sizeof(*This));\n    if (!This) return E_OUTOFMEMORY;\n\n    This->remoting_mutex = CreateMutexW(NULL, FALSE, NULL);\n    if (!This->remoting_mutex)\n    {\n        free(This);\n        return HRESULT_FROM_WIN32(GetLastError());\n    }\n\n    if (oxid_info)\n    {\n        This->oxid_info.dwPid = oxid_info->dwPid;\n        This->oxid_info.dwTid = oxid_info->dwTid;\n        This->oxid_info.ipidRemUnknown = oxid_info->ipidRemUnknown;\n        This->oxid_info.dwAuthnHint = oxid_info->dwAuthnHint;\n        This->oxid_info.psa = NULL /* FIXME: copy from oxid_info */;\n    }\n    else\n    {\n        HRESULT hr = rpc_resolve_oxid(oxid, &This->oxid_info);\n        if (FAILED(hr))\n        {\n            CloseHandle(This->remoting_mutex);\n            free(This);\n            return hr;\n        }\n    }\n\n    This->IMultiQI_iface.lpVtbl = &ClientIdentity_Vtbl;\n    This->IMarshal_iface.lpVtbl = &ProxyMarshal_Vtbl;\n    This->IClientSecurity_iface.lpVtbl = &ProxyCliSec_Vtbl;\n\n    list_init(&This->entry);\n    list_init(&This->interfaces);\n\n    InitializeCriticalSectionEx(&This->cs, 0, RTL_CRITICAL_SECTION_FLAG_FORCE_DEBUG_INFO);\n    This->cs.DebugInfo->Spare[0] = (DWORD_PTR)(__FILE__ \": proxy_manager\");\n\n    /* the apartment the object was unmarshaled into */\n    This->parent = apt;\n\n    /* the source apartment and id of the object */\n    This->oxid = oxid;\n    This->oid = oid;\n\n    This->refs = 1;\n\n    /* the DCOM draft specification states that the SORF_NOPING flag is\n     * proxy manager specific, not ifproxy specific, so this implies that we\n     * should store the STDOBJREF flags here in the proxy manager. */\n    This->sorflags = sorflags;\n\n    /* we create the IRemUnknown proxy on demand */\n    This->remunk = NULL;\n\n    /* initialise these values to the weakest values and they will be\n     * overwritten in proxy_manager_set_context */\n    This->dest_context = MSHCTX_INPROC;\n    This->dest_context_data = NULL;\n\n    EnterCriticalSection(&apt->cs);\n    /* FIXME: we are dependent on the ordering in here to make sure a proxy's\n     * IRemUnknown proxy doesn't get destroyed before the regular proxy does\n     * because we need the IRemUnknown proxy during the destruction of the\n     * regular proxy. Ideally, we should maintain a separate list for the\n     * IRemUnknown proxies that need late destruction */\n    list_add_tail(&apt->proxies, &This->entry);\n    LeaveCriticalSection(&apt->cs);\n\n    TRACE(\"%p created for OXID %s, OID %s\\n\", This,\n        wine_dbgstr_longlong(oxid), wine_dbgstr_longlong(oid));\n\n    *proxy_manager = This;\n    return S_OK;\n}"
+  },
+  {
+   "name": "proxy_manager_set_context",
+   "file": "dlls/combase/marshal.c",
+   "start_line": 1611,
+   "end_line": 1667,
+   "static": true,
+   "called_from": [
+    "unmarshal_object"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static inline void proxy_manager_set_context(struct proxy_manager *This, MSHCTX dest_context, void *dest_context_data)",
+   "code": "static inline void proxy_manager_set_context(struct proxy_manager *This, MSHCTX dest_context, void *dest_context_data)\n{\n    MSHCTX old_dest_context;\n    MSHCTX new_dest_context;\n\n    do\n    {\n        old_dest_context = This->dest_context;\n        new_dest_context = old_dest_context;\n        /* \"stronger\" values overwrite \"weaker\" values. stronger values are\n         * ones that disable more optimisations */\n        switch (old_dest_context)\n        {\n        case MSHCTX_INPROC:\n            new_dest_context = dest_context;\n            break;\n        case MSHCTX_CROSSCTX:\n            switch (dest_context)\n            {\n            case MSHCTX_INPROC:\n                break;\n            default:\n                new_dest_context = dest_context;\n            }\n            break;\n        case MSHCTX_LOCAL:\n            switch (dest_context)\n            {\n            case MSHCTX_INPROC:\n            case MSHCTX_CROSSCTX:\n                break;\n            default:\n                new_dest_context = dest_context;\n            }\n            break;\n        case MSHCTX_NOSHAREDMEM:\n            switch (dest_context)\n            {\n            case MSHCTX_DIFFERENTMACHINE:\n                new_dest_context = dest_context;\n                break;\n            default:\n                break;\n            }\n            break;\n        default:\n            break;\n        }\n\n        if (old_dest_context == new_dest_context) break;\n\n        new_dest_context = InterlockedCompareExchange((PLONG)&This->dest_context, new_dest_context, old_dest_context);\n    } while (new_dest_context != old_dest_context);\n\n    if (dest_context_data)\n        InterlockedExchangePointer(&This->dest_context_data, dest_context_data);\n}"
+  },
+  {
+   "name": "proxy_manager_find_ifproxy",
+   "file": "dlls/combase/marshal.c",
+   "start_line": 1774,
+   "end_line": 1792,
+   "static": true,
+   "called_from": [
+    "unmarshal_object"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/marshal.c:1156",
+    "dlls/combase/marshal.c:1696"
+   ],
+   "signature": "static HRESULT proxy_manager_find_ifproxy(struct proxy_manager * This, REFIID riid, struct ifproxy ** ifproxy_found)",
+   "code": "static HRESULT proxy_manager_find_ifproxy(struct proxy_manager * This, REFIID riid, struct ifproxy ** ifproxy_found)\n{\n    HRESULT hr = E_NOINTERFACE; /* assume not found */\n    struct ifproxy *ifproxy;\n\n    EnterCriticalSection(&This->cs);\n    LIST_FOR_EACH_ENTRY(ifproxy, &This->interfaces, struct ifproxy, entry)\n    {\n        if (IsEqualIID(riid, &ifproxy->iid))\n        {\n            *ifproxy_found = ifproxy;\n            hr = S_OK;\n            break;\n        }\n    }\n    LeaveCriticalSection(&This->cs);\n\n    return hr;\n}"
+  },
+  {
+   "name": "proxy_manager_create_ifproxy",
+   "file": "dlls/combase/marshal.c",
+   "start_line": 1708,
+   "end_line": 1772,
+   "static": true,
+   "called_from": [
+    "unmarshal_object"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT proxy_manager_create_ifproxy( struct proxy_manager * This, const STDOBJREF *stdobjref, REFIID riid, IRpcChannelBuffer * channel, struct ifproxy ** iif_out)",
+   "code": "static HRESULT proxy_manager_create_ifproxy(\n    struct proxy_manager * This, const STDOBJREF *stdobjref, REFIID riid,\n    IRpcChannelBuffer * channel, struct ifproxy ** iif_out)\n{\n    HRESULT hr;\n    IPSFactoryBuffer * psfb;\n    struct ifproxy * ifproxy = malloc(sizeof(*ifproxy));\n    if (!ifproxy) return E_OUTOFMEMORY;\n\n    list_init(&ifproxy->entry);\n\n    ifproxy->parent = This;\n    ifproxy->stdobjref = *stdobjref;\n    ifproxy->iid = *riid;\n    ifproxy->refs = 0;\n    ifproxy->proxy = NULL;\n\n    assert(channel);\n    ifproxy->chan = channel; /* FIXME: we should take the binding strings and construct the channel in this function */\n\n    /* the IUnknown interface is special because it does not have a\n     * proxy associated with the ifproxy as we handle IUnknown ourselves */\n    if (IsEqualIID(riid, &IID_IUnknown))\n    {\n        ifproxy->iface = &This->IMultiQI_iface;\n        IMultiQI_AddRef(&This->IMultiQI_iface);\n        hr = S_OK;\n    }\n    else\n    {\n        hr = get_facbuf_for_iid(riid, &psfb);\n        if (hr == S_OK)\n        {\n            /* important note: the outer unknown is set to the proxy manager.\n             * This ensures the COM identity rules are not violated, by having a\n             * one-to-one mapping of objects on the proxy side to objects on the\n             * stub side, no matter which interface you view the object through */\n            hr = IPSFactoryBuffer_CreateProxy(psfb, (IUnknown*)&This->IMultiQI_iface, riid,\n                                              &ifproxy->proxy, &ifproxy->iface);\n            IPSFactoryBuffer_Release(psfb);\n            if (hr != S_OK)\n                ERR(\"Could not create proxy for interface %s, error %#lx\\n\", debugstr_guid(riid), hr);\n        }\n        else\n            ERR(\"Could not get IPSFactoryBuffer for interface %s, error %#lx\\n\", debugstr_guid(riid), hr);\n\n        if (hr == S_OK)\n            hr = IRpcProxyBuffer_Connect(ifproxy->proxy, ifproxy->chan);\n    }\n\n    if (hr == S_OK)\n    {\n        EnterCriticalSection(&This->cs);\n        list_add_tail(&This->interfaces, &ifproxy->entry);\n        LeaveCriticalSection(&This->cs);\n\n        *iif_out = ifproxy;\n        TRACE(\"ifproxy %p created for IPID %s, interface %s with %lu public refs\\n\",\n              ifproxy, debugstr_guid(&stdobjref->ipid), debugstr_guid(riid), stdobjref->cPublicRefs);\n    }\n    else\n        ifproxy_destroy(ifproxy);\n\n    return hr;\n}"
+  },
+  {
+   "name": "ifproxy_get_public_ref",
+   "file": "dlls/combase/marshal.c",
+   "start_line": 1418,
+   "end_line": 1453,
+   "static": true,
+   "called_from": [
+    "unmarshal_object"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT ifproxy_get_public_ref(struct ifproxy * This)",
+   "code": "static HRESULT ifproxy_get_public_ref(struct ifproxy * This)\n{\n    HRESULT hr = S_OK;\n\n    if (WAIT_OBJECT_0 != WaitForSingleObject(This->parent->remoting_mutex, INFINITE))\n    {\n        ERR(\"Wait failed for ifproxy %p\\n\", This);\n        return E_UNEXPECTED;\n    }\n\n    if (This->refs == 0)\n    {\n        IRemUnknown *remunk = NULL;\n\n        TRACE(\"getting public ref for ifproxy %p\\n\", This);\n\n        hr = proxy_manager_get_remunknown(This->parent, &remunk);\n        if (hr == S_OK)\n        {\n            HRESULT hrref = S_OK;\n            REMINTERFACEREF rif;\n            rif.ipid = This->stdobjref.ipid;\n            rif.cPublicRefs = NORMALEXTREFS;\n            rif.cPrivateRefs = 0;\n            hr = IRemUnknown_RemAddRef(remunk, 1, &rif, &hrref);\n            IRemUnknown_Release(remunk);\n            if (hr == S_OK && hrref == S_OK)\n                InterlockedExchangeAdd((LONG *)&This->refs, NORMALEXTREFS);\n            else\n                ERR(\"IRemUnknown_RemAddRef returned with %#lx, hrref = %#lx\\n\", hr, hrref);\n        }\n    }\n    ReleaseMutex(This->parent->remoting_mutex);\n\n    return hr;\n}"
+  },
+  {
+   "name": "ifproxy_destroy",
+   "file": "dlls/combase/marshal.c",
+   "start_line": 1509,
+   "end_line": 1528,
+   "static": true,
+   "called_from": [
+    "proxy_manager_create_ifproxy",
+    "unmarshal_object"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/marshal.c:1942"
+   ],
+   "signature": "static void ifproxy_destroy(struct ifproxy * This)",
+   "code": "static void ifproxy_destroy(struct ifproxy * This)\n{\n    TRACE(\"%p\\n\", This);\n\n    /* release public references to this object so that the stub can know\n     * when to destroy itself */\n    ifproxy_release_public_refs(This);\n\n    list_remove(&This->entry);\n\n    if (This->chan)\n    {\n        IRpcChannelBuffer_Release(This->chan);\n        This->chan = NULL;\n    }\n\n    if (This->proxy) IRpcProxyBuffer_Release(This->proxy);\n\n    free(This);\n}"
+  },
+  {
+   "name": "proxy_manager_addref_if_alive",
+   "file": "dlls/combase/marshal.c",
+   "start_line": 1890,
+   "end_line": 1908,
+   "static": true,
+   "called_from": [
+    "find_proxy_manager"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static LONG proxy_manager_addref_if_alive(struct proxy_manager * This)",
+   "code": "static LONG proxy_manager_addref_if_alive(struct proxy_manager * This)\n{\n    LONG refs = ReadNoFence(&This->refs);\n    LONG old_refs, new_refs;\n\n    do\n    {\n        if (refs == 0)\n        {\n            /* This proxy manager is about to be destroyed */\n            return 0;\n        }\n\n        old_refs = refs;\n        new_refs = refs + 1;\n    } while ((refs = InterlockedCompareExchange(&This->refs, new_refs, old_refs)) != old_refs);\n\n    return new_refs;\n}"
+  },
+  {
+   "name": "get_facbuf_for_iid",
+   "file": "dlls/combase/marshal.c",
+   "start_line": 850,
+   "end_line": 859,
+   "static": true,
+   "called_from": [
+    "proxy_manager_create_ifproxy"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/marshal.c:899"
+   ],
+   "signature": "static inline HRESULT get_facbuf_for_iid(REFIID riid, IPSFactoryBuffer **facbuf)",
+   "code": "static inline HRESULT get_facbuf_for_iid(REFIID riid, IPSFactoryBuffer **facbuf)\n{\n    HRESULT       hr;\n    CLSID         clsid;\n\n    hr = CoGetPSClsid(riid, &clsid);\n    if (hr != S_OK)\n        return hr;\n    return CoGetClassObject(&clsid, CLSCTX_INPROC_SERVER | CLSCTX_PS_DLL, NULL, &IID_IPSFactoryBuffer, (void **)facbuf);\n}"
+  },
+  {
+   "name": "proxy_manager_get_remunknown",
+   "file": "dlls/combase/marshal.c",
+   "start_line": 1821,
+   "end_line": 1882,
+   "static": true,
+   "called_from": [
+    "ifproxy_get_public_ref",
+    "ifproxy_release_public_refs"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/marshal.c:1035",
+    "dlls/combase/marshal.c:1185",
+    "dlls/combase/marshal.c:1236"
+   ],
+   "signature": "static HRESULT proxy_manager_get_remunknown(struct proxy_manager * This, IRemUnknown **remunk)",
+   "code": "static HRESULT proxy_manager_get_remunknown(struct proxy_manager * This, IRemUnknown **remunk)\n{\n    HRESULT hr = S_OK;\n    struct apartment *apt;\n    BOOL called_in_original_apt;\n\n    /* we don't want to try and unmarshal or use IRemUnknown if we don't want\n     * lifetime management */\n    if (This->sorflags & SORFP_NOLIFETIMEMGMT)\n        return S_FALSE;\n\n    if (!(apt = apartment_get_current_or_mta()))\n        return CO_E_NOTINITIALIZED;\n\n    called_in_original_apt = This->parent && (This->parent->oxid == apt->oxid);\n\n    EnterCriticalSection(&This->cs);\n    /* only return the cached object if called from the original apartment.\n     * in future, we might want to make the IRemUnknown proxy callable from any\n     * apartment to avoid these checks */\n    if (This->remunk && called_in_original_apt)\n    {\n        /* already created - return existing object */\n        *remunk = This->remunk;\n        IRemUnknown_AddRef(*remunk);\n    }\n    else if (!This->parent)\n    {\n        /* disconnected - we can't create IRemUnknown */\n        *remunk = NULL;\n        hr = S_FALSE;\n    }\n    else\n    {\n        STDOBJREF stdobjref;\n        /* Don't want IRemUnknown lifetime management as this is IRemUnknown!\n         * We also don't care about whether or not the stub is still alive */\n        stdobjref.flags = SORFP_NOLIFETIMEMGMT | SORF_NOPING;\n        stdobjref.cPublicRefs = 1;\n        /* oxid of destination object */\n        stdobjref.oxid = This->oxid;\n        /* FIXME: what should be used for the oid? The DCOM draft doesn't say */\n        stdobjref.oid = (OID)-1;\n        stdobjref.ipid = This->oxid_info.ipidRemUnknown;\n\n        /* do the unmarshal */\n        hr = unmarshal_object(&stdobjref, apt, This->dest_context,\n                              This->dest_context_data, &IID_IRundown,\n                              &This->oxid_info, (void**)remunk);\n        if (hr == S_OK && called_in_original_apt)\n        {\n            This->remunk = *remunk;\n            IRemUnknown_AddRef(This->remunk);\n        }\n    }\n    LeaveCriticalSection(&This->cs);\n    apartment_release(apt);\n\n    TRACE(\"got IRemUnknown* pointer %p, hr = %#lx\\n\", *remunk, hr);\n\n    return hr;\n}"
+  },
+  {
+   "name": "ifproxy_release_public_refs",
+   "file": "dlls/combase/marshal.c",
+   "start_line": 1455,
+   "end_line": 1496,
+   "static": true,
+   "called_from": [
+    "ifproxy_destroy"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/marshal.c:1501"
+   ],
+   "signature": "static HRESULT ifproxy_release_public_refs(struct ifproxy * This)",
+   "code": "static HRESULT ifproxy_release_public_refs(struct ifproxy * This)\n{\n    HRESULT hr = S_OK;\n    LONG public_refs;\n\n    if (WAIT_OBJECT_0 != WaitForSingleObject(This->parent->remoting_mutex, INFINITE))\n    {\n        ERR(\"Wait failed for ifproxy %p\\n\", This);\n        return E_UNEXPECTED;\n    }\n\n    public_refs = This->refs;\n    if (public_refs > 0)\n    {\n        IRemUnknown *remunk = NULL;\n\n        TRACE(\"releasing %ld refs\\n\", public_refs);\n\n        hr = proxy_manager_get_remunknown(This->parent, &remunk);\n        if (hr == S_OK)\n        {\n            REMINTERFACEREF rif;\n            rif.ipid = This->stdobjref.ipid;\n            rif.cPublicRefs = public_refs;\n            rif.cPrivateRefs = 0;\n            hr = IRemUnknown_RemRelease(remunk, 1, &rif);\n            IRemUnknown_Release(remunk);\n            if (hr == S_OK)\n                InterlockedExchangeAdd((LONG *)&This->refs, -public_refs);\n            else if (hr == RPC_E_DISCONNECTED)\n                WARN(\"couldn't release references because object was \"\n                     \"disconnected: oxid = %s, oid = %s\\n\",\n                     wine_dbgstr_longlong(This->parent->oxid),\n                     wine_dbgstr_longlong(This->parent->oid));\n            else\n                ERR(\"IRemUnknown_RemRelease failed with error %#lx\\n\", hr);\n        }\n    }\n    ReleaseMutex(This->parent->remoting_mutex);\n\n    return hr;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "ifproxy",
+    "kind": "struct_decl",
+    "start_line": 46,
+    "end_line": 56,
+    "code": "struct ifproxy\n{\n    struct list entry;       /* entry in proxy_manager list (CS parent->cs) */\n    struct proxy_manager *parent; /* owning proxy_manager (RO) */\n    void *iface;             /* interface pointer (RO) */\n    STDOBJREF stdobjref;     /* marshal data that represents this object (RO) */\n    IID iid;                 /* interface ID (RO) */\n    IRpcProxyBuffer *proxy;  /* interface proxy (RO) */\n    ULONG refs;              /* imported (public) references (LOCK) */\n    IRpcChannelBuffer *chan; /* channel to object (CS parent->cs) */\n};"
+   },
+   {
+    "name": "proxy_manager",
+    "kind": "struct_decl",
+    "start_line": 59,
+    "end_line": 77,
+    "code": "struct proxy_manager\n{\n    IMultiQI IMultiQI_iface;\n    IMarshal IMarshal_iface;\n    IClientSecurity IClientSecurity_iface;\n    struct apartment *parent; /* owning apartment (RO) */\n    struct list entry;        /* entry in apartment (CS parent->cs) */\n    OXID oxid;                /* object exported ID (RO) */\n    OXID_INFO oxid_info;      /* string binding, ipid of rem unknown and other information (RO) */\n    OID oid;                  /* object ID (RO) */\n    struct list interfaces;   /* imported interfaces (CS cs) */\n    LONG refs;                /* proxy reference count (LOCK); 0 if about to be removed from list */\n    CRITICAL_SECTION cs;      /* thread safety for this object and children */\n    ULONG sorflags;           /* STDOBJREF flags (RO) */\n    IRemUnknown *remunk;      /* proxy to IRemUnknown used for lifecycle management (CS cs) */\n    HANDLE remoting_mutex;    /* mutex used for synchronizing access to IRemUnknown */\n    MSHCTX dest_context;      /* context used for activating optimisations (LOCK) */\n    void *dest_context_data;  /* reserved context value (LOCK) */\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "ClientIdentity_Vtbl",
+    "type": "const IMultiQIVtbl",
+    "static": true,
+    "start_line": 1091,
+    "end_line": 1097,
+    "code": "static const IMultiQIVtbl ClientIdentity_Vtbl =\n{\n    ClientIdentity_QueryInterface,\n    ClientIdentity_AddRef,\n    ClientIdentity_Release,\n    ClientIdentity_QueryMultipleInterfaces\n};"
+   },
+   {
+    "name": "ProxyCliSec_Vtbl",
+    "type": "const IClientSecurityVtbl",
+    "static": true,
+    "start_line": 1408,
+    "end_line": 1416,
+    "code": "static const IClientSecurityVtbl ProxyCliSec_Vtbl =\n{\n    ProxyCliSec_QueryInterface,\n    ProxyCliSec_AddRef,\n    ProxyCliSec_Release,\n    ProxyCliSec_QueryBlanket,\n    ProxyCliSec_SetBlanket,\n    ProxyCliSec_CopyProxy\n};"
+   },
+   {
+    "name": "ProxyMarshal_Vtbl",
+    "type": "const IMarshalVtbl",
+    "static": true,
+    "start_line": 1323,
+    "end_line": 1334,
+    "code": "static const IMarshalVtbl ProxyMarshal_Vtbl =\n{\n    Proxy_QueryInterface,\n    Proxy_AddRef,\n    Proxy_Release,\n    Proxy_GetUnmarshalClass,\n    Proxy_GetMarshalSizeMax,\n    Proxy_MarshalInterface,\n    Proxy_UnmarshalInterface,\n    Proxy_ReleaseMarshalData,\n    Proxy_DisconnectObject\n};"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 32,
+    "end_line": 32,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ole);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "NORMALEXTREFS",
+    "start_line": 40,
+    "end_line": 40,
+    "code": "#define NORMALEXTREFS 5"
+   },
+   {
+    "name": "SORFP_TABLEWEAK",
+    "start_line": 43,
+    "end_line": 43,
+    "code": "#define SORFP_TABLEWEAK SORF_OXRES1"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "apartment_findfromoxid",
+    "file": "dlls/combase/apartment.c",
+    "start_line": 635
+   },
+   {
+    "name": "apartment_get_current_or_mta",
+    "file": "dlls/combase/apartment.c",
+    "start_line": 623
+   },
+   {
+    "name": "apartment_getoxid",
+    "file": "dlls/combase/apartment.c",
+    "start_line": 1284
+   },
+   {
+    "name": "apartment_release",
+    "file": "dlls/combase/apartment.c",
+    "start_line": 444
+   },
+   {
+    "name": "get_stub_manager",
+    "file": "dlls/combase/stubmanager.c",
+    "start_line": 383
+   },
+   {
+    "name": "ipid_get_dest_context",
+    "file": "dlls/combase/stubmanager.c",
+    "start_line": 559
+   },
+   {
+    "name": "rpc_create_clientchannel",
+    "file": "dlls/combase/rpc.c",
+    "start_line": 1638
+   },
+   {
+    "name": "rpc_resolve_oxid",
+    "file": "dlls/combase/rpc.c",
+    "start_line": 2157
+   },
+   {
+    "name": "stub_manager_ext_release",
+    "file": "dlls/combase/stubmanager.c",
+    "start_line": 439
+   },
+   {
+    "name": "stub_manager_int_release",
+    "file": "dlls/combase/stubmanager.c",
+    "start_line": 311
+   },
+   {
+    "name": "stub_manager_is_table_marshaled",
+    "file": "dlls/combase/stubmanager.c",
+    "start_line": 632
+   },
+   {
+    "name": "stub_manager_notify_unmarshal",
+    "file": "dlls/combase/stubmanager.c",
+    "start_line": 585
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "CoCreateInstance",
+    "impl": [
+     "dlls/combase/combase.c:1695"
+    ]
+   },
+   {
+    "name": "CoGetClassObject",
+    "impl": [
+     "dlls/combase/combase.c:1935"
+    ]
+   },
+   {
+    "name": "CoGetPSClsid",
+    "impl": [
+     "dlls/combase/combase.c:2307"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CloseHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "CreateMutexW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/sync.c:711"
+    ]
+   },
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "InitializeCriticalSectionEx",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/sync.c:1016"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "ReleaseMutex",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/sync.c:782"
+    ]
+   },
+   {
+    "name": "WaitForSingleObject",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/sync.c:395"
+    ]
+   },
+   {
+    "name": "_assert",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/exit.c:319"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetLastError",
+   "HRESULT_FROM_WIN32",
+   "IMarshal_Release",
+   "IMarshal_UnmarshalInterface",
+   "IMultiQI_AddRef",
+   "IMultiQI_Release",
+   "IPSFactoryBuffer_CreateProxy",
+   "IPSFactoryBuffer_Release",
+   "IRpcChannelBuffer_Release",
+   "IRpcProxyBuffer_Connect",
+   "IRpcProxyBuffer_Release",
+   "IStream_Read",
+   "ReadNoFence",
+   "_InterlockedCompareExchange",
+   "_InterlockedExchangeAdd",
+   "_InterlockedExchangePointer",
+   "debugstr_guid",
+   "list_add_tail",
+   "list_init",
+   "list_remove",
+   "wine_dbg_log",
+   "wine_dbgstr_longlong"
+  ],
+  "system": [],
+  "unresolved": [
+   "IRemUnknown_AddRef",
+   "IRemUnknown_Release",
+   "IRemUnknown_RemAddRef",
+   "IRemUnknown_RemRelease"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "combase.CoUnmarshalInterface",
+  "category": {
+   "l1": "System services",
+   "l2": "COM",
+   "header": "combaseapi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 49,
+   "body": 48,
+   "code": 28
+  },
+  "cyclomatic": 11,
+  "return_type": "HRESULT",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 40,
+   "n_tests": 46,
+   "n_tests_other": 6,
+   "own_test_functions": [
+    "dlls/ole32/tests/compobj.c::cowait_unmarshal_thread",
+    "dlls/ole32/tests/compobj.c::test_CoMarshalInterThreadInterfaceInStream",
+    "dlls/ole32/tests/compobj.c::test_CoUnmarshalInterface",
+    "dlls/ole32/tests/marshal.c::implicit_mta_unmarshal_proc",
+    "dlls/ole32/tests/marshal.c::no_couninitialize_client_proc",
+    "dlls/ole32/tests/marshal.c::test_StdMarshal_custom_marshaling",
+    "dlls/ole32/tests/marshal.c::test_call_from_message",
+    "dlls/ole32/tests/marshal.c::test_channel_hook",
+    "dlls/ole32/tests/marshal.c::test_client_security",
+    "dlls/ole32/tests/marshal.c::test_handler_marshaling",
+    "dlls/ole32/tests/marshal.c::test_implicit_mta",
+    "dlls/ole32/tests/marshal.c::test_interthread_marshal_and_unmarshal",
+    "dlls/ole32/tests/marshal.c::test_marshal_and_unmarshal_invalid",
+    "dlls/ole32/tests/marshal.c::test_marshal_channel_buffer",
+    "dlls/ole32/tests/marshal.c::test_marshal_proxy_apartment_shutdown",
+    "dlls/ole32/tests/marshal.c::test_marshal_proxy_join_mta_apartment",
+    "dlls/ole32/tests/marshal.c::test_marshal_proxy_mta_apartment_shutdown",
+    "dlls/ole32/tests/marshal.c::test_marshal_stub_apartment_shutdown",
+    "dlls/ole32/tests/marshal.c::test_message_filter",
+    "dlls/ole32/tests/marshal.c::test_mta_creation_thread_change_apartment",
+    "dlls/ole32/tests/marshal.c::test_no_couninitialize_server",
+    "dlls/ole32/tests/marshal.c::test_normal_marshal_and_unmarshal",
+    "dlls/ole32/tests/marshal.c::test_normal_marshal_and_unmarshal_twice",
+    "dlls/ole32/tests/marshal.c::test_proxy_interfaces",
+    "dlls/ole32/tests/marshal.c::test_proxy_marshal_and_unmarshal",
+    "dlls/ole32/tests/marshal.c::test_proxy_marshal_and_unmarshal2",
+    "dlls/ole32/tests/marshal.c::test_proxy_marshal_and_unmarshal_strong",
+    "dlls/ole32/tests/marshal.c::test_proxy_marshal_and_unmarshal_weak",
+    "dlls/ole32/tests/marshal.c::test_proxy_used_in_wrong_thread",
+    "dlls/ole32/tests/marshal.c::test_same_apartment_unmarshal_failure",
+    "dlls/ole32/tests/marshal.c::test_tablestrong_marshal_and_unmarshal_twice",
+    "dlls/ole32/tests/marshal.c::test_tableweak_and_normal_marshal_and_unmarshal",
+    "dlls/ole32/tests/marshal.c::test_tableweak_marshal_and_unmarshal_twice",
+    "dlls/ole32/tests/marshal.c::test_tableweak_marshal_releasedata1",
+    "dlls/ole32/tests/marshal.c::window_proc",
+    "dlls/ole32/tests/moniker.c::test_file_moniker",
+    "dlls/ole32/tests/moniker.c::test_moniker",
+    "dlls/ole32/tests/moniker.c::test_objref_moniker",
+    "dlls/ole32/tests/moniker.c::test_pointer_moniker",
+    "dlls/ole32/tests/usrmarshal.c::test_GetDataHere_Proxy"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/combaseapi/nf-combaseapi-counmarshalinterface",
+   "source": "win32",
+   "description": "Initializes a newly created proxy using data written into the stream by a previous call to the CoMarshalInterface function, and returns an interface pointer to that proxy.",
+   "min_windows": "Windows 2000 Professional [desktop apps \\| UWP apps]",
+   "documented_dll": "Ole32.dll"
+  },
+  "exports": [
+   "combase.CoUnmarshalInterface",
+   "ole32.CoUnmarshalInterface"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

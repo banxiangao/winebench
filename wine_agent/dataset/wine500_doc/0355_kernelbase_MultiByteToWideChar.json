@@ -1,0 +1,467 @@
+{
+ "id": "0355",
+ "function": {
+  "name": "MultiByteToWideChar",
+  "export_name": "MultiByteToWideChar",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase",
+   "unicows"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/locale.c",
+  "start_line": 7070,
+  "end_line": 7113,
+  "body_lines": 41,
+  "signature": "INT WINAPI DECLSPEC_HOTPATCH MultiByteToWideChar( UINT codepage, DWORD flags, const char *src, INT srclen, WCHAR *dst, INT dstlen )",
+  "header_comment": "/******************************************************************************\n *\tMultiByteToWideChar   (kernelbase.@)\n */",
+  "code": "INT WINAPI DECLSPEC_HOTPATCH MultiByteToWideChar( UINT codepage, DWORD flags, const char *src, INT srclen,\n                                                  WCHAR *dst, INT dstlen )\n{\n    const CPTABLEINFO *info;\n    int ret;\n\n    if (!src || !srclen || (!dst && dstlen) || dstlen < 0)\n    {\n        SetLastError( ERROR_INVALID_PARAMETER );\n        return 0;\n    }\n    if (srclen < 0) srclen = strlen(src) + 1;\n\n    switch (codepage)\n    {\n    case CP_SYMBOL:\n        ret = mbstowcs_cpsymbol( flags, src, srclen, dst, dstlen );\n        break;\n    case CP_UTF7:\n        ret = mbstowcs_utf7( flags, src, srclen, dst, dstlen );\n        break;\n    case CP_UNIXCP:\n        codepage = unix_cp;\n        /* fall through */\n    default:\n        if (!(info = get_codepage_table( codepage )))\n        {\n            SetLastError( ERROR_INVALID_PARAMETER );\n            return 0;\n        }\n        if (flags & ~(MB_PRECOMPOSED | MB_COMPOSITE | MB_USEGLYPHCHARS | MB_ERR_INVALID_CHARS))\n        {\n            SetLastError( ERROR_INVALID_FLAGS );\n            return 0;\n        }\n        if (info->CodePage == CP_UTF8)\n            ret = mbstowcs_utf8( flags, src, srclen, dst, dstlen );\n        else\n            ret = mbstowcs_codepage( info, flags, src, srclen, dst, dstlen );\n        break;\n    }\n    TRACE( \"cp %d %s -> %s, ret = %d\\n\", codepage, debugstr_an(src, srclen), debugstr_wn(dst, ret), ret );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winternl.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!MultiByteToWideChar [stdcall -import] -> import from kernelbase",
+   "kernelbase!MultiByteToWideChar [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/actctx.c",
+   "dlls/kernel32/tests/codepage.c",
+   "dlls/kernel32/tests/comm.c",
+   "dlls/kernel32/tests/file.c",
+   "dlls/kernel32/tests/format_msg.c",
+   "dlls/kernel32/tests/loader.c",
+   "dlls/kernel32/tests/locale.c",
+   "dlls/kernel32/tests/module.c",
+   "dlls/kernel32/tests/path.c",
+   "dlls/kernel32/tests/process.c",
+   "dlls/kernel32/tests/thread.c",
+   "dlls/kernelbase/tests/path.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "stringapiset",
+   "path": "sdk-api-src/content/stringapiset/nf-stringapiset-multibytetowidechar.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar",
+   "documented_name": "multibytetowidechar",
+   "file": "docs/0355_sdk-api_nf-stringapiset-multibytetowidechar.md",
+   "text": "---\nUID: NF:stringapiset.MultiByteToWideChar\ntitle: MultiByteToWideChar function (stringapiset.h)\ndescription: Maps a character string to a UTF-16 (wide character) string.\nhelpviewer_keywords: [\"CP_ACP\",\"CP_MACCP\",\"CP_OEMCP\",\"CP_SYMBOL\",\"CP_THREAD_ACP\",\"CP_UTF7\",\"CP_UTF8\",\"MB_COMPOSITE\",\"MB_ERR_INVALID_CHARS\",\"MB_PRECOMPOSED\",\"MB_USEGLYPHCHARS\",\"MultiByteToWideChar\",\"MultiByteToWideChar function [Internationalization for Windows Applications]\",\"_win32_MultiByteToWideChar\",\"intl.multibytetowidechar\",\"stringapiset/MultiByteToWideChar\"]\nold-location: intl\\multibytetowidechar.htm\ntech.root: Intl\nms.assetid: a117fdfe-b52b-466f-9300-6455e91ea2a8\nms.date: 02/05/2024\nms.keywords: CP_ACP, CP_MACCP, CP_OEMCP, CP_SYMBOL, CP_THREAD_ACP, CP_UTF7, CP_UTF8, MB_COMPOSITE, MB_ERR_INVALID_CHARS, MB_PRECOMPOSED, MB_USEGLYPHCHARS, MultiByteToWideChar, MultiByteToWideChar function [Internationalization for Windows Applications], _win32_MultiByteToWideChar, intl.multibytetowidechar, stringapiset/MultiByteToWideChar\nreq.header: stringapiset.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: snippet-project\nf1_keywords:\n - MultiByteToWideChar\n - stringapiset/MultiByteToWideChar\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - kernel32.dll\n - API-MS-Win-Core-String-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\n - vertdll.dll\napi_name:\n - MultiByteToWideChar\n---\n\n# MultiByteToWideChar function\n\n## -description\n\nMaps a character string to a UTF-16 (wide character) string. The character string is not necessarily from a multibyte character set.\n\n## -parameters\n\n### -param CodePage [in]\n\nCode page to use in performing the conversion. This parameter can be set to the value of any code page that is installed or available in the operating system. For a list of code pages, see [Code Page Identifiers](/windows/win32/Intl/code-page-identifiers). Your application can also specify one of the values shown in the following table.\n\n| Value                | Meaning |\n|----------------------|---------|\n| **CP_ACP**           | The system default Windows ANSI code page.<br><br>**Note:** This value can be different on different computers, even on the same network. It can be changed on the same computer, leading to stored data becoming irrecoverably corrupted. This value is only intended for temporary use and permanent storage should use UTF-16 or UTF-8 if possible. |\n| **CP_MACCP**         | The current system Macintosh code page (used primarily in legacy code and is typically not needed as Macintosh computers use Unicode for encoding.).<br><br>**Note:** This value can be different on different computers, even on the same network. It can be changed on the same computer, leading to stored data becoming irrecoverably corrupted. This value is only intended for temporary use and permanent storage should use UTF-16 or UTF-8 if possible. |\n| **CP_OEMCP**         | The current system OEM code page.<br><br>**Note:** This value can be different on different computers, even on the same network. It can be changed on the same computer, leading to stored data becoming irrecoverably corrupted. This value is only intended for temporary use and permanent storage should use UTF-16 or UTF-8 if possible. |\n| **CP_SYMBOL**        | Symbol code page (42). |\n| **CP_THREAD_ACP**    | The Windows ANSI code page for the current thread.<br><br>**Note:** This value can be different on different computers, even on the same network. It can be changed on the same computer, leading to stored data becoming irrecoverably corrupted. This value is only intended for temporary use and permanent storage should use UTF-16 or UTF-8 if possible. |\n| **CP_UTF7**          | UTF-7. Use this value only when forced by a 7-bit transport mechanism. Use of UTF-8 is preferred. |\n| **CP_UTF8**          | UTF-8. |\n\n### -param dwFlags [in]\n\nFlags indicating the conversion type. The application can specify a combination of the following values, with MB_PRECOMPOSED being the default. MB_PRECOMPOSED and MB_COMPOSITE are mutually exclusive. MB_USEGLYPHCHARS and MB_ERR_INVALID_CHARS can be set regardless of the state of the other flags.\n\n| Value | Meaning |\n|-------|---------|\n| **MB_COMPOSITE** | Always use decomposed characters, that is, characters in which a base character and one or more nonspacing characters each have distinct code point values. For example, Ä is represented by A + ¨: LATIN CAPITAL LETTER A (U+0041) + COMBINING DIAERESIS (U+0308). Note that this flag cannot be used with MB_PRECOMPOSED. |\n| **MB_ERR_INVALID_CHARS** | Fail if an invalid input character is encountered.<br/><br/>Starting with Windows Vista, the function does not drop illegal code points if the application does not set this flag, but instead replaces illegal sequences with U+FFFD (encoded as appropriate for the specified codepage).<br/><br/>**Windows 2000 with SP4 and later, Windows XP:** If this flag is not set, the function silently drops illegal code points. A call to [GetLastError](../errhandlingapi/nf-errhandlingapi-getlasterror.md) returns ERROR_NO_UNICODE_TRANSLATION. |\n| **MB_PRECOMPOSED** | Default; do not use with MB_COMPOSITE. Always use precomposed characters, that is, characters having a single character value for a base or nonspacing character combination. For example, in the character è, the e is the base character and the accent grave mark is the nonspacing character. If a single Unicode code point is defined for a character, the application should use it instead of a separate base character and a nonspacing character. For example, Ä is represented by the single Unicode code point LATIN CAPITAL LETTER A WITH DIAERESIS (U+00C4). |\n| **MB_USEGLYPHCHARS** | Use glyph characters instead of control characters. |\n\nFor the code pages listed below, *dwFlags* must be set to `0`. Otherwise, the function fails with **ERROR_INVALID_FLAGS**.\n\n- 50220\n- 50221\n- 50222\n- 50225\n- 50227\n- 50229\n- 57002 through 57011\n- 65000 (UTF-7)\n- 42 (Symbol)\n\n> [!NOTE]\n> For UTF-8 or code page 54936 (GB18030, starting with Windows Vista), *dwFlags* must be set to either `0` or **MB_ERR_INVALID_CHARS**. Otherwise, the function fails with **ERROR_INVALID_FLAGS**.\n\n### -param lpMultiByteStr [in]\n\nPointer to the character string to convert.\n\n### -param cbMultiByte [in]\n\nSize, in bytes, of the string indicated by the *lpMultiByteStr* parameter. Alternatively, this parameter can be set to -1 if the string is null-terminated. Note that, if *cbMultiByte* is `0`, the function fails.\n\nIf this parameter is -1, the function processes the entire input string, including the terminating null character. Therefore, the resulting Unicode string has a terminating null character, and the length returned by the function includes this character.\n\nIf this parameter is set to a positive integer, the function processes exactly the specified number of bytes. If the provided size does not include a terminating null character, the resulting Unicode string is not null-terminated, and the returned length does not include this character.\n\n### -param lpWideCharStr [out, optional]\n\nPointer to a buffer that receives the converted string.\n\n### -param cchWideChar [in]\n\nSize, in characters, of the buffer indicated by *lpWideCharStr*. If this value is `0`, the function returns the required buffer size, in characters, including any terminating null character, and makes no use of the *lpWideCharStr* buffer.\n\n## -returns\n\nReturns the number of characters written to the buffer indicated by *lpWideCharStr* if successful. If the function succeeds and *cchWideChar* is `0`, the return value is the required size, in characters, for the buffer indicated by *lpWideCharStr*. Also see *dwFlags* for info about how the **MB_ERR_INVALID_CHARS** flag affects the return value when invalid sequences are input.\n\nThe function returns `0` if it does not succeed. To get extended error information, the application can call [GetLastError](../errhandlingapi/nf-errhandlingapi-getlasterror.md), which can return one of the following error codes:\n\n- **ERROR_INSUFFICIENT_BUFFER**:  A supplied buffer size was not large enough, or it was incorrectly set to `NULL`.\n- **ERROR_INVALID_FLAGS**: The values supplied for flags were not valid.\n- **ERROR_INVALID_PARAMETER**: Any of the parameter values was invalid.\n- **ERROR_NO_UNICODE_TRANSLATION**: Invalid Unicode was found in a string.\n\n## -remarks\n\nThe default behavior of this function is to translate to a precomposed form of the input character string. If a precomposed form does not exist, the function attempts to translate to a composite form.\n\n> [!WARNING]\n> Using **MultiByteToWideChar** incorrectly can compromise the security of your application. Calling this function can easily cause a buffer overrun because the size of the input buffer indicated by *lpMultiByteStr* equals the number of bytes in the string, while the size of the output buffer indicated by *lpWideCharStr* equals the number of characters. To avoid a buffer overrun, your application must specify a buffer size appropriate for the data type the buffer receives. For more information, see <a href=\"/windows/win32/Intl/security-considerations--international-features\">Security Considerations: International Features</a>.\n\nThe ANSI code pages can be different on different computers, or can be changed for a single computer, leading to data corruption. For the most consistent results, applications should use Unicode, such as UTF-8 or UTF-16, instead of a specific code page, unless legacy standards or data formats prevent the use of Unicode. If using Unicode is not possible, applications should tag the data stream with the appropriate encoding name when protocols allow it. HTML and XML files allow tagging, but text files do not.\n\nThe output buffer can easily be overrun if this function is not first called with *cchWideChar* set to `0` in order to obtain the required size. If the MB_COMPOSITE flag is used, the output can be three or more characters long for each input character.\n\nThe use of the MB_PRECOMPOSED flag has very little effect on most code pages because most input data is composed already. Consider calling [NormalizeString](../winnls/nf-winnls-normalizestring.md) after converting with **MultiByteToWideChar**. **NormalizeString** provides more accurate, standard, and consistent data, and can also be faster. Note that for the [NORM_FORM](../winnls/ne-winnls-norm_form.md) enumeration being passed to **NormalizeString**, NormalizationC corresponds to MB_PRECOMPOSED and NormalizationD corresponds to MB_COMPOSITE.\n\nThe *lpMultiByteStr* and *lpWideCharStr* pointers must not be the same. If they are the same, the function fails, and [GetLastError](../errhandlingapi/nf-errhandlingapi-getlasterror.md) returns the value ERROR_INVALID_PARAMETER.\n\n**MultiByteToWideChar** does not null-terminate an output string if the input string length is explicitly specified without a terminating null character. To null-terminate an output string for this function, the application should pass in -1 or explicitly count the terminating null character for the input string.\n\nThe function fails if MB_ERR_INVALID_CHARS is set and an invalid character is encountered in the source string. An invalid character is one of the following:\n\n- A character that is not the default character in the source string, but translates to the default character when MB_ERR_INVALID_CHARS is not set.\n- For DBCS strings, a character that has a lead byte but no valid trail byte.\n\nStarting with Windows Vista, this function fully conforms with the Unicode 4.1 specification for UTF-8 and UTF-16. The function used on earlier operating systems encodes or decodes lone [surrogate](/windows/win32/Intl/surrogates-and-supplementary-characters) halves or mismatched surrogate pairs. Code written in earlier versions of Windows that rely on this behavior to encode random non-text binary data might run into problems. However, code that uses this function on valid UTF-8 strings will behave the same way as on earlier Windows operating systems.\n\n**Windows XP:** To prevent the security problem of the non-shortest-form versions of UTF-8 characters, **MultiByteToWideChar** deletes these characters.\n\n**Starting with Windows 8:** **MultiByteToWideChar** is declared in `Stringapiset.h`. Before Windows 8, it was declared in `Winnls.h`.\n\n## Code example\n\n```cpp\ncatch (std::exception e)\n{\n    // Save in-memory logging buffer to a log file on error.\n\n    ::std::wstring wideWhat;\n    if (e.what() != nullptr)\n    {\n        int convertResult = MultiByteToWideChar(CP_UTF8, 0, e.what(), (int)strlen(e.what()), NULL, 0);\n        if (convertResult <= 0)\n        {\n            wideWhat = L\"Exception occurred: Failure to convert its message text using MultiByteToWideChar: convertResult=\";\n            wideWhat += convertResult.ToString()->Data();\n            wideWhat += L\"  GetLastError()=\";\n            wideWhat += GetLastError().ToString()->Data();\n        }\n        else\n        {\n            wideWhat.resize(convertResult + 10);\n            convertResult = MultiByteToWideChar(CP_UTF8, 0, e.what(), (int)strlen(e.what()), &wideWhat[0], (int)wideWhat.size());\n            if (convertResult <= 0)\n            {\n                wideWhat = L\"Exception occurred: Failure to convert its message text using MultiByteToWideChar: convertResult=\";\n                wideWhat += convertResult.ToString()->Data();\n                wideWhat += L\"  GetLastError()=\";\n                wideWhat += GetLastError().ToString()->Data();\n            }\n            else\n            {\n                wideWhat.insert(0, L\"Exception occurred: \");\n            }\n        }\n    }\n    else\n    {\n        wideWhat = L\"Exception occurred: Unknown.\";\n    }\n\n    Platform::String^ errorMessage = ref new Platform::String(wideWhat.c_str());\n    // The session added the channel at level Warning. Log the message at\n    // level Error which is above (more critical than) Warning, which\n    // means it will actually get logged.\n    _channel->LogMessage(errorMessage, LoggingLevel::Error);\n    SaveLogInMemoryToFileAsync().then([=](StorageFile^ logFile) {\n        _logFileGeneratedCount++;\n        StatusChanged(this, ref new LoggingScenarioEventArgs(LoggingScenarioEventType::LogFileGenerated, logFile->Path->Data()));\n    }).wait();\n}\n```\n\nExample from [Windows Universal Samples](https://github.com/microsoft/Windows-universal-samples/blob/master/Samples/Logging/cpp/LoggingSessionScenario.cpp) on GitHub.\n\n## -see-also\n\n[Unicode and Character Set Functions](/windows/win32/Intl/unicode-and-character-set-functions)\n\n[Unicode and Character Sets](/windows/win32/Intl/unicode-and-character-sets)\n\n[WideCharToMultiByte](nf-stringapiset-widechartomultibyte.md)\n\n[Vertdll APIs available in VBS enclaves](/windows/win32/trusted-execution/enclaves-available-in-vertdll)\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "mbstowcs_cpsymbol",
+   "file": "dlls/kernelbase/locale.c",
+   "start_line": 2435,
+   "end_line": 2457,
+   "static": true,
+   "called_from": [
+    "MultiByteToWideChar"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static int mbstowcs_cpsymbol( DWORD flags, const char *src, int srclen, WCHAR *dst, int dstlen )",
+   "code": "static int mbstowcs_cpsymbol( DWORD flags, const char *src, int srclen, WCHAR *dst, int dstlen )\n{\n    int len, i;\n\n    if (flags)\n    {\n        SetLastError( ERROR_INVALID_FLAGS );\n        return 0;\n    }\n    if (!dstlen) return srclen;\n    len = min( srclen, dstlen );\n    for (i = 0; i < len; i++)\n    {\n        unsigned char c = src[i];\n        dst[i] = (c < 0x20) ? c : c + 0xf000;\n    }\n    if (len < srclen)\n    {\n        SetLastError( ERROR_INSUFFICIENT_BUFFER );\n        return 0;\n    }\n    return len;\n}"
+  },
+  {
+   "name": "mbstowcs_utf7",
+   "file": "dlls/kernelbase/locale.c",
+   "start_line": 2460,
+   "end_line": 2559,
+   "static": true,
+   "called_from": [
+    "MultiByteToWideChar"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static int mbstowcs_utf7( DWORD flags, const char *src, int srclen, WCHAR *dst, int dstlen )",
+   "code": "static int mbstowcs_utf7( DWORD flags, const char *src, int srclen, WCHAR *dst, int dstlen )\n{\n    static const signed char base64_decoding_table[] =\n    {\n        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 0x00-0x0F */\n        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 0x10-0x1F */\n        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 62, -1, -1, -1, 63, /* 0x20-0x2F */\n        52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -1, -1, -1, -1, -1, -1, /* 0x30-0x3F */\n        -1,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, /* 0x40-0x4F */\n        15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -1, -1, -1, -1, -1, /* 0x50-0x5F */\n        -1, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, /* 0x60-0x6F */\n        41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1  /* 0x70-0x7F */\n    };\n\n    const char *source_end = src + srclen;\n    int offset = 0, pos = 0;\n    DWORD byte_pair = 0;\n\n    if (flags)\n    {\n        SetLastError( ERROR_INVALID_FLAGS );\n        return 0;\n    }\n#define OUTPUT(ch) \\\n    do { \\\n        if (dstlen > 0) \\\n        { \\\n            if (pos >= dstlen) goto overflow; \\\n            dst[pos] = (ch); \\\n        } \\\n        pos++; \\\n    } while(0)\n\n    while (src < source_end)\n    {\n        if (*src == '+')\n        {\n            src++;\n            if (src >= source_end) break;\n            if (*src == '-')\n            {\n                /* just a plus sign escaped as +- */\n                OUTPUT( '+' );\n                src++;\n                continue;\n            }\n\n            do\n            {\n                signed char sextet = *src;\n                if (sextet == '-')\n                {\n                    /* skip over the dash and end base64 decoding\n                     * the current, unfinished byte pair is discarded */\n                    src++;\n                    offset = 0;\n                    break;\n                }\n                if (sextet < 0)\n                {\n                    /* the next character of src is < 0 and therefore not part of a base64 sequence\n                     * the current, unfinished byte pair is NOT discarded in this case\n                     * this is probably a bug in Windows */\n                    break;\n                }\n                sextet = base64_decoding_table[sextet];\n                if (sextet == -1)\n                {\n                    /* -1 means that the next character of src is not part of a base64 sequence\n                     * in other words, all sextets in this base64 sequence have been processed\n                     * the current, unfinished byte pair is discarded */\n                    offset = 0;\n                    break;\n                }\n\n                byte_pair = (byte_pair << 6) | sextet;\n                offset += 6;\n                if (offset >= 16)\n                {\n                    /* this byte pair is done */\n                    OUTPUT( byte_pair >> (offset - 16) );\n                    offset -= 16;\n                }\n                src++;\n            }\n            while (src < source_end);\n        }\n        else\n        {\n            OUTPUT( (unsigned char)*src );\n            src++;\n        }\n    }\n    return pos;\n\noverflow:\n    SetLastError( ERROR_INSUFFICIENT_BUFFER );\n    return 0;\n#undef OUTPUT\n}"
+  },
+  {
+   "name": "get_codepage_table",
+   "file": "dlls/kernelbase/locale.c",
+   "start_line": 2272,
+   "end_line": 2319,
+   "static": true,
+   "called_from": [
+    "MultiByteToWideChar"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/locale.c:5593",
+    "dlls/kernelbase/locale.c:5613",
+    "dlls/kernelbase/locale.c:6739",
+    "dlls/kernelbase/locale.c:6768",
+    "dlls/kernelbase/locale.c:7452"
+   ],
+   "signature": "static const CPTABLEINFO *get_codepage_table( UINT codepage )",
+   "code": "static const CPTABLEINFO *get_codepage_table( UINT codepage )\n{\n    static const CPTABLEINFO utf7_cpinfo = { CP_UTF7, 5, '?', 0xfffd, '?', '?' };\n    static const CPTABLEINFO utf8_cpinfo = { CP_UTF8, 4, '?', 0xfffd, '?', '?' };\n    unsigned int i;\n    USHORT *ptr;\n    SIZE_T size;\n\n    switch (codepage)\n    {\n    case CP_ACP:\n        return &ansi_cpinfo;\n    case CP_OEMCP:\n        return &oem_cpinfo;\n    case CP_MACCP:\n        codepage = system_locale->idefaultmaccodepage;\n        break;\n    case CP_THREAD_ACP:\n        codepage = get_lcid_codepage( NtCurrentTeb()->CurrentLocale, 0 );\n        break;\n    }\n    if (codepage == ansi_cpinfo.CodePage) return &ansi_cpinfo;\n    if (codepage == oem_cpinfo.CodePage) return &oem_cpinfo;\n    if (codepage == CP_UTF8) return &utf8_cpinfo;\n    if (codepage == CP_UTF7) return &utf7_cpinfo;\n\n    RtlEnterCriticalSection( &locale_section );\n\n    for (i = 0; i < nb_codepages; i++) if (codepages[i].CodePage == codepage) goto done;\n\n    if (i == ARRAY_SIZE( codepages ))\n    {\n        RtlLeaveCriticalSection( &locale_section );\n        ERR( \"too many codepages\\n\" );\n        return NULL;\n    }\n    if (NtGetNlsSectionPtr( 11, codepage, NULL, (void **)&ptr, &size ))\n    {\n        RtlLeaveCriticalSection( &locale_section );\n        SetLastError( ERROR_INVALID_PARAMETER );\n        return NULL;\n    }\n    RtlInitCodePageTable( ptr, &codepages[i] );\n    nb_codepages++;\ndone:\n    RtlLeaveCriticalSection( &locale_section );\n    return &codepages[i];\n}"
+  },
+  {
+   "name": "mbstowcs_utf8",
+   "file": "dlls/kernelbase/locale.c",
+   "start_line": 2562,
+   "end_line": 2580,
+   "static": true,
+   "called_from": [
+    "MultiByteToWideChar"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static int mbstowcs_utf8( DWORD flags, const char *src, int srclen, WCHAR *dst, int dstlen )",
+   "code": "static int mbstowcs_utf8( DWORD flags, const char *src, int srclen, WCHAR *dst, int dstlen )\n{\n    DWORD reslen;\n    NTSTATUS status;\n\n    if (!dstlen) dst = NULL;\n    status = RtlUTF8ToUnicodeN( dst, dstlen * sizeof(WCHAR), &reslen, src, srclen );\n    if (status == STATUS_SOME_NOT_MAPPED)\n    {\n        if (flags & MB_ERR_INVALID_CHARS)\n        {\n            SetLastError( ERROR_NO_UNICODE_TRANSLATION );\n            return 0;\n        }\n    }\n    else if (!set_ntstatus( status )) reslen = 0;\n\n    return reslen / sizeof(WCHAR);\n}"
+  },
+  {
+   "name": "mbstowcs_codepage",
+   "file": "dlls/kernelbase/locale.c",
+   "start_line": 2807,
+   "end_line": 2831,
+   "static": true,
+   "called_from": [
+    "MultiByteToWideChar"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static int mbstowcs_codepage( const CPTABLEINFO *info, DWORD flags, const char *src, int srclen, WCHAR *dst, int dstlen )",
+   "code": "static int mbstowcs_codepage( const CPTABLEINFO *info, DWORD flags, const char *src, int srclen,\n                              WCHAR *dst, int dstlen )\n{\n    CPTABLEINFO local_info;\n    const unsigned char *str = (const unsigned char *)src;\n\n    if ((flags & MB_USEGLYPHCHARS) && info->MultiByteTable[256] == 256)\n    {\n        local_info = *info;\n        local_info.MultiByteTable += 257;\n        info = &local_info;\n    }\n    if ((flags & MB_ERR_INVALID_CHARS) && check_invalid_chars( info, str, srclen ))\n    {\n        SetLastError( ERROR_NO_UNICODE_TRANSLATION );\n        return 0;\n    }\n\n    if (flags & MB_COMPOSITE) return mbstowcs_decompose( info, str, srclen, dst, dstlen );\n\n    if (info->DBCSOffsets)\n        return mbstowcs_dbcs( info, str, srclen, dst, dstlen );\n    else\n        return mbstowcs_sbcs( info, str, srclen, dst, dstlen );\n}"
+  },
+  {
+   "name": "get_lcid_codepage",
+   "file": "dlls/kernelbase/locale.c",
+   "start_line": 2259,
+   "end_line": 2269,
+   "static": true,
+   "called_from": [
+    "get_codepage_table"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/locale.c:4871",
+    "dlls/kernelbase/locale.c:6216",
+    "dlls/kernelbase/locale.c:6983",
+    "dlls/kernelbase/locale.c:8305",
+    "dlls/kernelbase/locale.c:8373"
+   ],
+   "signature": "static UINT get_lcid_codepage( LCID lcid, ULONG flags )",
+   "code": "static UINT get_lcid_codepage( LCID lcid, ULONG flags )\n{\n    UINT ret = ansi_cpinfo.CodePage;\n\n    if (!(flags & LOCALE_USE_CP_ACP) && lcid != system_lcid)\n    {\n        const NLS_LOCALE_DATA *locale = NlsValidateLocale( &lcid, 0 );\n        if (locale) ret = locale->idefaultansicodepage;\n    }\n    return ret;\n}"
+  },
+  {
+   "name": "check_invalid_chars",
+   "file": "dlls/kernelbase/locale.c",
+   "start_line": 2589,
+   "end_line": 2621,
+   "static": true,
+   "called_from": [
+    "mbstowcs_codepage"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static int check_invalid_chars( const CPTABLEINFO *info, const unsigned char *src, int srclen )",
+   "code": "static int check_invalid_chars( const CPTABLEINFO *info, const unsigned char *src, int srclen )\n{\n    if (info->DBCSOffsets)\n    {\n        for ( ; srclen; src++, srclen-- )\n        {\n            USHORT off = info->DBCSOffsets[*src];\n            if (off)\n            {\n                if (srclen == 1) break;  /* partial char, error */\n                if (info->DBCSOffsets[off + src[1]] == info->UniDefaultChar &&\n                    ((src[0] << 8) | src[1]) != info->TransUniDefaultChar) break;\n                src++;\n                srclen--;\n                continue;\n            }\n            if (info->MultiByteTable[*src] == info->UniDefaultChar && *src != info->TransUniDefaultChar)\n                break;\n            if (is_private_use_area_char( info->MultiByteTable[*src] )) break;\n        }\n    }\n    else\n    {\n        for ( ; srclen; src++, srclen-- )\n        {\n            if (info->MultiByteTable[*src] == info->UniDefaultChar && *src != info->TransUniDefaultChar)\n                break;\n            if (is_private_use_area_char( info->MultiByteTable[*src] )) break;\n        }\n    }\n    return !!srclen;\n\n}"
+  },
+  {
+   "name": "mbstowcs_decompose",
+   "file": "dlls/kernelbase/locale.c",
+   "start_line": 2624,
+   "end_line": 2704,
+   "static": true,
+   "called_from": [
+    "mbstowcs_codepage"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static int mbstowcs_decompose( const CPTABLEINFO *info, const unsigned char *src, int srclen, WCHAR *dst, int dstlen )",
+   "code": "static int mbstowcs_decompose( const CPTABLEINFO *info, const unsigned char *src, int srclen,\n                               WCHAR *dst, int dstlen )\n{\n    WCHAR ch;\n    USHORT off;\n    int len;\n    const WCHAR *decomp;\n    unsigned int decomp_len;\n\n    if (info->DBCSOffsets)\n    {\n        if (!dstlen)  /* compute length */\n        {\n            for (len = 0; srclen; srclen--, src++, len += decomp_len)\n            {\n                if ((off = info->DBCSOffsets[*src]))\n                {\n                    if (srclen > 1 && src[1])\n                    {\n                        src++;\n                        srclen--;\n                        ch = info->DBCSOffsets[off + *src];\n                    }\n                    else ch = info->UniDefaultChar;\n                }\n                else ch = info->MultiByteTable[*src];\n                get_decomposition( ch, &decomp_len );\n            }\n            return len;\n        }\n\n        for (len = dstlen; srclen && len; srclen--, src++, dst += decomp_len, len -= decomp_len)\n        {\n            if ((off = info->DBCSOffsets[*src]))\n            {\n                if (srclen > 1 && src[1])\n                {\n                    src++;\n                    srclen--;\n                    ch = info->DBCSOffsets[off + *src];\n                }\n                else ch = info->UniDefaultChar;\n            }\n            else ch = info->MultiByteTable[*src];\n\n            if ((decomp = get_decomposition( ch, &decomp_len )))\n            {\n                if (len < decomp_len) break;\n                memcpy( dst, decomp, decomp_len * sizeof(WCHAR) );\n            }\n            else *dst = ch;\n        }\n    }\n    else\n    {\n        if (!dstlen)  /* compute length */\n        {\n            for (len = 0; srclen; srclen--, src++, len += decomp_len)\n                get_decomposition( info->MultiByteTable[*src], &decomp_len );\n            return len;\n        }\n\n        for (len = dstlen; srclen && len; srclen--, src++, dst += decomp_len, len -= decomp_len)\n        {\n            ch = info->MultiByteTable[*src];\n            if ((decomp = get_decomposition( ch, &decomp_len )))\n            {\n                if (len < decomp_len) break;\n                memcpy( dst, decomp, decomp_len * sizeof(WCHAR) );\n            }\n            else *dst = ch;\n        }\n    }\n\n    if (srclen)\n    {\n        SetLastError( ERROR_INSUFFICIENT_BUFFER );\n        return 0;\n    }\n    return dstlen - len;\n}"
+  },
+  {
+   "name": "mbstowcs_dbcs",
+   "file": "dlls/kernelbase/locale.c",
+   "start_line": 2771,
+   "end_line": 2804,
+   "static": true,
+   "called_from": [
+    "mbstowcs_codepage"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static int mbstowcs_dbcs( const CPTABLEINFO *info, const unsigned char *src, int srclen, WCHAR *dst, int dstlen )",
+   "code": "static int mbstowcs_dbcs( const CPTABLEINFO *info, const unsigned char *src, int srclen,\n                          WCHAR *dst, int dstlen )\n{\n    USHORT off;\n    int i;\n\n    if (!dstlen)\n    {\n        for (i = 0; srclen; i++, src++, srclen--)\n            if (info->DBCSOffsets[*src] && srclen > 1 && src[1]) { src++; srclen--; }\n        return i;\n    }\n\n    for (i = dstlen; srclen && i; i--, srclen--, src++, dst++)\n    {\n        if ((off = info->DBCSOffsets[*src]))\n        {\n            if (srclen > 1 && src[1])\n            {\n                src++;\n                srclen--;\n                *dst = info->DBCSOffsets[off + *src];\n            }\n            else *dst = info->UniDefaultChar;\n        }\n        else *dst = info->MultiByteTable[*src];\n    }\n    if (srclen)\n    {\n        SetLastError( ERROR_INSUFFICIENT_BUFFER );\n        return 0;\n    }\n    return dstlen - i;\n}"
+  },
+  {
+   "name": "mbstowcs_sbcs",
+   "file": "dlls/kernelbase/locale.c",
+   "start_line": 2707,
+   "end_line": 2768,
+   "static": true,
+   "called_from": [
+    "mbstowcs_codepage"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static int mbstowcs_sbcs( const CPTABLEINFO *info, const unsigned char *src, int srclen, WCHAR *dst, int dstlen )",
+   "code": "static int mbstowcs_sbcs( const CPTABLEINFO *info, const unsigned char *src, int srclen,\n                          WCHAR *dst, int dstlen )\n{\n    const USHORT *table = info->MultiByteTable;\n    int ret = srclen;\n\n    if (!dstlen) return srclen;\n\n    if (dstlen < srclen)  /* buffer too small: fill it up to dstlen and return error */\n    {\n        srclen = dstlen;\n        SetLastError( ERROR_INSUFFICIENT_BUFFER );\n        ret = 0;\n    }\n\n    while (srclen >= 16)\n    {\n        dst[0]  = table[src[0]];\n        dst[1]  = table[src[1]];\n        dst[2]  = table[src[2]];\n        dst[3]  = table[src[3]];\n        dst[4]  = table[src[4]];\n        dst[5]  = table[src[5]];\n        dst[6]  = table[src[6]];\n        dst[7]  = table[src[7]];\n        dst[8]  = table[src[8]];\n        dst[9]  = table[src[9]];\n        dst[10] = table[src[10]];\n        dst[11] = table[src[11]];\n        dst[12] = table[src[12]];\n        dst[13] = table[src[13]];\n        dst[14] = table[src[14]];\n        dst[15] = table[src[15]];\n        src += 16;\n        dst += 16;\n        srclen -= 16;\n    }\n\n    /* now handle the remaining characters */\n    src += srclen;\n    dst += srclen;\n    switch (srclen)\n    {\n    case 15: dst[-15] = table[src[-15]];\n    case 14: dst[-14] = table[src[-14]];\n    case 13: dst[-13] = table[src[-13]];\n    case 12: dst[-12] = table[src[-12]];\n    case 11: dst[-11] = table[src[-11]];\n    case 10: dst[-10] = table[src[-10]];\n    case 9:  dst[-9]  = table[src[-9]];\n    case 8:  dst[-8]  = table[src[-8]];\n    case 7:  dst[-7]  = table[src[-7]];\n    case 6:  dst[-6]  = table[src[-6]];\n    case 5:  dst[-5]  = table[src[-5]];\n    case 4:  dst[-4]  = table[src[-4]];\n    case 3:  dst[-3]  = table[src[-3]];\n    case 2:  dst[-2]  = table[src[-2]];\n    case 1:  dst[-1]  = table[src[-1]];\n    case 0: break;\n    }\n    return ret;\n}"
+  },
+  {
+   "name": "is_private_use_area_char",
+   "file": "dlls/kernelbase/locale.c",
+   "start_line": 2583,
+   "end_line": 2586,
+   "static": true,
+   "called_from": [
+    "check_invalid_chars"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/locale.c:6848"
+   ],
+   "signature": "static inline int is_private_use_area_char( WCHAR code )",
+   "code": "static inline int is_private_use_area_char( WCHAR code )\n{\n    return (code >= 0xe000 && code <= 0xf8ff);\n}"
+  },
+  {
+   "name": "get_decomposition",
+   "file": "dlls/kernelbase/locale.c",
+   "start_line": 2186,
+   "end_line": 2225,
+   "static": true,
+   "called_from": [
+    "mbstowcs_decompose"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/locale.c:4145"
+   ],
+   "signature": "static const WCHAR *get_decomposition( WCHAR ch, unsigned int *ret_len )",
+   "code": "static const WCHAR *get_decomposition( WCHAR ch, unsigned int *ret_len )\n{\n    const struct pair { WCHAR src; USHORT dst; } *pairs;\n    const USHORT *hash_table = (const USHORT *)norm_info + norm_info->decomp_hash;\n    const WCHAR *ret;\n    unsigned int i, pos, end, len, hash;\n\n    *ret_len = 1;\n    hash = ch % norm_info->decomp_size;\n    pos = hash_table[hash];\n    if (pos >> 13)\n    {\n        if (get_char_props( norm_info, ch ) != 0xbf) return NULL;\n        ret = (const USHORT *)norm_info + norm_info->decomp_seq + (pos & 0x1fff);\n        len = pos >> 13;\n    }\n    else\n    {\n        pairs = (const struct pair *)((const USHORT *)norm_info + norm_info->decomp_map);\n\n        /* find the end of the hash bucket */\n        for (i = hash + 1; i < norm_info->decomp_size; i++) if (!(hash_table[i] >> 13)) break;\n        if (i < norm_info->decomp_size) end = hash_table[i];\n        else for (end = pos; pairs[end].src; end++) ;\n\n        for ( ; pos < end; pos++)\n        {\n            if (pairs[pos].src != (WCHAR)ch) continue;\n            ret = (const USHORT *)norm_info + norm_info->decomp_seq + (pairs[pos].dst & 0x1fff);\n            len = pairs[pos].dst >> 13;\n            break;\n        }\n        if (pos >= end) return NULL;\n    }\n\n    if (len == 7) while (ret[len]) len++;\n    if (!ret[0]) len = 0;  /* ignored char */\n    *ret_len = len;\n    return ret;\n}"
+  },
+  {
+   "name": "get_char_props",
+   "file": "dlls/kernelbase/locale.c",
+   "start_line": 2175,
+   "end_line": 2183,
+   "static": true,
+   "called_from": [
+    "get_decomposition"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BYTE get_char_props( const struct norm_table *info, unsigned int ch )",
+   "code": "static BYTE get_char_props( const struct norm_table *info, unsigned int ch )\n{\n    const BYTE *level1 = (const BYTE *)((const USHORT *)info + info->props_level1);\n    const BYTE *level2 = (const BYTE *)((const USHORT *)info + info->props_level2);\n    BYTE off = level1[ch / 128];\n\n    if (!off || off >= 0xfb) return rol( off, 5 );\n    return level2[(off - 1) * 128 + ch % 128];\n}"
+  },
+  {
+   "name": "rol",
+   "file": "dlls/kernelbase/locale.c",
+   "start_line": 2169,
+   "end_line": 2172,
+   "static": true,
+   "called_from": [
+    "get_char_props"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BYTE rol( BYTE val, BYTE count )",
+   "code": "static BYTE rol( BYTE val, BYTE count )\n{\n    return (val << count) | (val >> (8 - count));\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "norm_table",
+    "kind": "struct_decl",
+    "start_line": 273,
+    "end_line": 300,
+    "code": "struct norm_table\n{\n    WCHAR   name[13];      /* 00 file name */\n    USHORT  checksum[3];   /* 1a checksum? */\n    USHORT  version[4];    /* 20 Unicode version */\n    USHORT  form;          /* 28 normalization form */\n    USHORT  len_factor;    /* 2a factor for length estimates */\n    USHORT  unknown1;      /* 2c */\n    USHORT  decomp_size;   /* 2e decomposition hash size */\n    USHORT  comp_size;     /* 30 composition hash size */\n    USHORT  unknown2;      /* 32 */\n    USHORT  classes;       /* 34 combining classes table offset */\n    USHORT  props_level1;  /* 36 char properties table level 1 offset */\n    USHORT  props_level2;  /* 38 char properties table level 2 offset */\n    USHORT  decomp_hash;   /* 3a decomposition hash table offset */\n    USHORT  decomp_map;    /* 3c decomposition character map table offset */\n    USHORT  decomp_seq;    /* 3e decomposition character sequences offset */\n    USHORT  comp_hash;     /* 40 composition hash table offset */\n    USHORT  comp_seq;      /* 42 composition character sequences offset */\n    /* BYTE[]       combining class values */\n    /* BYTE[0x2200] char properties index level 1 */\n    /* BYTE[]       char properties index level 2 */\n    /* WORD[]       decomposition hash table */\n    /* WORD[]       decomposition character map */\n    /* WORD[]       decomposition character sequences */\n    /* WORD[]       composition hash table */\n    /* WORD[]       composition character sequences */\n};"
+   },
+   {
+    "name": "pair",
+    "kind": "struct_decl",
+    "start_line": 2188,
+    "end_line": 2188,
+    "code": "    const struct pair { WCHAR src; USHORT dst; } *pairs;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(nls);"
+   },
+   {
+    "name": "ansi_cpinfo",
+    "type": "CPTABLEINFO",
+    "static": true,
+    "start_line": 302,
+    "end_line": 302,
+    "code": "static CPTABLEINFO ansi_cpinfo;"
+   },
+   {
+    "name": "codepages",
+    "type": "CPTABLEINFO[128]",
+    "static": true,
+    "start_line": 319,
+    "end_line": 319,
+    "code": "static CPTABLEINFO codepages[128];"
+   },
+   {
+    "name": "locale_section",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 435,
+    "end_line": 435,
+    "code": "static CRITICAL_SECTION locale_section = { &critsect_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "nb_codepages",
+    "type": "unsigned int",
+    "static": true,
+    "start_line": 320,
+    "end_line": 320,
+    "code": "static unsigned int nb_codepages;"
+   },
+   {
+    "name": "norm_info",
+    "type": "struct norm_table *",
+    "static": true,
+    "start_line": 322,
+    "end_line": 322,
+    "code": "static struct norm_table *norm_info;"
+   },
+   {
+    "name": "oem_cpinfo",
+    "type": "CPTABLEINFO",
+    "static": true,
+    "start_line": 303,
+    "end_line": 303,
+    "code": "static CPTABLEINFO oem_cpinfo;"
+   },
+   {
+    "name": "system_lcid",
+    "type": "LCID",
+    "static": true,
+    "start_line": 305,
+    "end_line": 305,
+    "code": "static LCID system_lcid;"
+   },
+   {
+    "name": "system_locale",
+    "type": "const NLS_LOCALE_DATA *",
+    "static": true,
+    "start_line": 315,
+    "end_line": 315,
+    "code": "static const NLS_LOCALE_DATA *system_locale;"
+   },
+   {
+    "name": "unix_cp",
+    "type": "UINT",
+    "static": true,
+    "start_line": 304,
+    "end_line": 304,
+    "code": "static UINT unix_cp = CP_UTF8;"
+   }
+  ],
+  "macros": [
+   {
+    "name": "OUTPUT",
+    "start_line": 2483,
+    "end_line": 2491,
+    "code": "#define OUTPUT(ch) \\\n    do { \\\n        if (dstlen > 0) \\\n        { \\\n            if (pos >= dstlen) goto overflow; \\\n            dst[pos] = (ch); \\\n        } \\\n        pos++; \\\n    } while(0)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "NlsValidateLocale",
+    "impl": [
+     "dlls/kernelbase/locale.c:770"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtGetNlsSectionPtr",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/env.c:2196"
+    ]
+   },
+   {
+    "name": "RtlEnterCriticalSection",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "RtlInitCodePageTable",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/locale.c:572"
+    ]
+   },
+   {
+    "name": "RtlLeaveCriticalSection",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "RtlUTF8ToUnicodeN",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/locale.c:1201"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "strlen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:423"
+    ]
+   }
+  ],
+  "header_inline": [
+   "NtCurrentTeb",
+   "debugstr_an",
+   "debugstr_wn",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "set_ntstatus"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

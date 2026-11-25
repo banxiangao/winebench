@@ -1,0 +1,110 @@
+{
+ "id": "0454",
+ "function": {
+  "name": "RtlAnsiStringToUnicodeString",
+  "export_name": "RtlAnsiStringToUnicodeString",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll",
+   "ntoskrnl.exe"
+  ],
+  "side": "PE",
+  "file": "dlls/ntdll/rtlstr.c",
+  "start_line": 563,
+  "end_line": 583,
+  "body_lines": 18,
+  "signature": "NTSTATUS WINAPI RtlAnsiStringToUnicodeString( PUNICODE_STRING uni, /* [I/O] Destination for the unicode string */ PCANSI_STRING ansi,  /* [I]   Ansi string to be converted */ BOOLEAN doalloc)     /* [I]   TRUE=Allocate new buffer for uni, FALSE=Use existing buffer */",
+  "header_comment": "/**************************************************************************\n *      RtlAnsiStringToUnicodeString   (NTDLL.@)\n *\n * Converts an ansi string to a unicode string.\n *\n * RETURNS\n *  Success: STATUS_SUCCESS. uni contains the converted string\n *  Failure: STATUS_BUFFER_OVERFLOW, if doalloc is FALSE and ansi is too small.\n *           STATUS_NO_MEMORY, if doalloc is TRUE and the allocation fails.\n *           STATUS_INVALID_PARAMETER_2, if the unicode string would be larger than 65535.\n *\n * NOTES\n *  This function always writes a terminating '\\0'.\n */",
+  "code": "NTSTATUS WINAPI RtlAnsiStringToUnicodeString(\n    PUNICODE_STRING uni, /* [I/O] Destination for the unicode string */\n    PCANSI_STRING ansi,  /* [I]   Ansi string to be converted */\n    BOOLEAN doalloc)     /* [I]   TRUE=Allocate new buffer for uni, FALSE=Use existing buffer */\n{\n    DWORD total = RtlAnsiStringToUnicodeSize( ansi );\n\n    if (total > 0xffff) return STATUS_INVALID_PARAMETER_2;\n    uni->Length = total - sizeof(WCHAR);\n    if (doalloc)\n    {\n        uni->MaximumLength = total;\n        if (!(uni->Buffer = RtlAllocateHeap( GetProcessHeap(), 0, total )))\n            return STATUS_NO_MEMORY;\n    }\n    else if (total > uni->MaximumLength) return STATUS_BUFFER_OVERFLOW;\n\n    RtlMultiByteToUnicodeN( uni->Buffer, uni->Length, NULL, ansi->Buffer, ansi->Length );\n    uni->Buffer[uni->Length / sizeof(WCHAR)] = 0;\n    return STATUS_SUCCESS;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"winsock2.h\"",
+   "#include \"windef.h\"",
+   "#include \"winnt.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"in6addr.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"ntdll_misc.h\""
+  ],
+  "resolution": [
+   "ntdll!RtlAnsiStringToUnicodeString [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntoskrnl.exe/tests/driver.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winternl",
+   "path": "sdk-api-src/content/winternl/nf-winternl-rtlansistringtounicodestring.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winternl/nf-winternl-rtlansistringtounicodestring",
+   "documented_name": "rtlansistringtounicodestring",
+   "file": "docs/0454_sdk-api_nf-winternl-rtlansistringtounicodestring.md",
+   "text": "---\nUID: NF:winternl.RtlAnsiStringToUnicodeString\ntitle: RtlAnsiStringToUnicodeString function (winternl.h)\ndescription: Converts the specified ANSI source string into a Unicode string.\nhelpviewer_keywords: [\"FALSE\",\"RtlAnsiStringToUnicodeString\",\"RtlAnsiStringToUnicodeString function [Windows API]\",\"TRUE\",\"winprog.rtlansistringtounicodestring\",\"winternl/RtlAnsiStringToUnicodeString\",\"winui.rtlansistringtounicodestring\"]\nold-location: winprog\\rtlansistringtounicodestring.htm\ntech.root: winprog\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\lowlevelclientsupport\\misc\\rtlansistringtounicodestring.htm\nms.date: 12/05/2018\nms.keywords: FALSE, RtlAnsiStringToUnicodeString, RtlAnsiStringToUnicodeString function [Windows API], TRUE, winprog.rtlansistringtounicodestring, winternl/RtlAnsiStringToUnicodeString, winui.rtlansistringtounicodestring\nreq.header: winternl.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: ntdll.lib\nreq.dll: ntdll.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - RtlAnsiStringToUnicodeString\n - winternl/RtlAnsiStringToUnicodeString\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Ntdll.dll\napi_name:\n - RtlAnsiStringToUnicodeString\n---\n\n# RtlAnsiStringToUnicodeString function\n\n\n## -description\n\nConverts the specified ANSI source string into a\n    Unicode string.\n\n## -parameters\n\n### -param DestinationString [in, out]\n\nA pointer to a <a href=\"/windows/desktop/api/subauth/ns-subauth-unicode_string\">UNICODE_STRING</a> structure to hold the converted Unicode string. If <i>AllocateDestinationString</i> is <b>TRUE</b>, the routine allocates a new buffer to hold the string data, and updates the <b>Buffer</b> member of <i>DestinationString</i> to point to the new buffer. Otherwise, the routine uses the currently specified buffer to hold the string.\n\n### -param SourceString [in]\n\nA pointer to the <b>ANSI_STRING</b> structure that contains the ANSI string to be converted to Unicode.\n\n### -param AllocateDestinationString [in]\n\nControls allocation of buffer space for the destination string.  \n\n\n\n#### TRUE\n\nBuffer space is allocated for <i>DestinationString</i>. If set to <b>TRUE</b>, the buffer must be deallocated using <a href=\"/windows/desktop/api/winternl/nf-winternl-rtlfreeunicodestring\">RtlFreeUnicodeString</a>.\n\n\n\n#### FALSE\n\nBuffer space is not allocated for <i>DestinationString</i>.\n\n## -returns\n\nThe various NTSTATUS values are defined in NTSTATUS.H, which is distributed with the Windows DDK.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_SUCCESS</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe ANSI string was converted to Unicode. On failure, the routine does not allocate any memory.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe translation is done with respect to the\n    current system locale information.\n\t\t\n\nIf caller sets <i>AllocateDestinationString</i> to <b>TRUE</b>, the routine replaces the <b>Buffer</b> member of <i>DestinationString</i> with a pointer to the buffer it allocates. The old value can be overwritten even when the routine returns an error status code.\n\t\t\n\nBecause there is no import library for this function, you must use <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-getprocaddress\">GetProcAddress</a>."
+  },
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "wdm",
+   "path": "wdk-ddi-src/content/wdm/nf-wdm-rtlansistringtounicodestring.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlansistringtounicodestring",
+   "documented_name": "rtlansistringtounicodestring",
+   "file": "docs/0454_windows-driver-docs-ddi_nf-wdm-rtlansistringtounicodestring.md",
+   "text": "---\nUID: NF:wdm.RtlAnsiStringToUnicodeString\ntitle: RtlAnsiStringToUnicodeString function (wdm.h)\ndescription: RtlAnsiStringToUnicodeString converts the given ANSI source string into a Unicode string.\ntech.root: kernel\nms.date: 01/18/2023\nkeywords: [\"RtlAnsiStringToUnicodeString function\"]\nms.keywords: RtlAnsiStringToUnicodeString, RtlAnsiStringToUnicodeString function [Kernel-Mode Driver Architecture], k109_d27ee285-6d32-4ecb-994b-ba8a47f1e588.xml, kernel.rtlansistringtounicodestring, wdm/RtlAnsiStringToUnicodeString\nreq.header: wdm.h\nreq.include-header: Wdm.h, Ntddk.h, Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt:\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: PASSIVE_LEVEL\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - RtlAnsiStringToUnicodeString\n - wdm/RtlAnsiStringToUnicodeString\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - RtlAnsiStringToUnicodeString\n---\n\n## -description\n\n**RtlAnsiStringToUnicodeString** converts the given ANSI source string into a Unicode string.\n\n## -parameters\n\n### -param DestinationString [in, out]\n\nPointer to a [**UNICODE_STRING**](/windows/win32/api/ntdef/ns-ntdef-_unicode_string) structure to hold the converted Unicode string. If *AllocateDestinationString* is **TRUE**, the routine allocates a new buffer to hold the string data, and updates the **Buffer** member of *DestinationString* to point to the new buffer. Otherwise, the routine uses the currently-specified buffer to hold the string.\n\n### -param SourceString [in]\n\nPointer to the ANSI string to be converted to Unicode.\n\n### -param AllocateDestinationString [in]\n\nSpecifies if this routine should allocate the buffer space for the destination string. If it does, the caller must deallocate the buffer by calling [RtlFreeUnicodeString](./nf-wdm-rtlfreeunicodestring.md).\n\n## -returns\n\nIf the conversion succeeds, **RtlAnsiStringToUnicodeString** returns STATUS_SUCCESS. On failure, the routine does not allocate any memory.\n\n## -remarks\n\nThe translation conforms to the current system locale information.\n\nIf caller sets *AllocateDestinationString* to **TRUE**, the routine replaces the **Buffer** member of *DestinationString* with a pointer to the buffer it allocates. The old value can be overwritten even when the routine returns an error status code.\n\nThis routine is not declared in a header file. However, you can copy the following declaration to your source code:\n\n```cpp\nNTSYSAPI\nWCHAR\nNTAPI\nRtlAnsiCharToUnicodeChar(\n    __inout PUCHAR *SourceCharacter\n    );\n```\n\nYou can use the following routines to convert single-byte and double-byte characters to Unicode characters:\n\n- [RtlAnsiStringToUnicodeSize](./nf-wdm-rtlansistringtounicodesize.md)\n\n- **RtlAnsiStringToUnicodeString**\n\n- [RtlMultiByteToUnicodeSize](../ntifs/nf-ntifs-rtlmultibytetounicodesize.md)\n\n- [RtlMultiByteToUnicodeN](../ntifs/nf-ntifs-rtlmultibytetounicoden.md)\n\nFor more information about these and other string-handling routines, see [Run-Time Library (RTL) Routines](../_kernel/index.md#run-time-library-rtl-routines).\n\n**RtlAnsiCharToUnicodeChar** has security deficiencies. Consider using the **RtlAnsiStringToUnicodeString** routine instead.\n\nIf, on entry, **SourceCharacter* points to a one-byte buffer that contains the first byte of a two-byte character code, **RtlAnsiCharToUnicodeChar** overruns the buffer when it tries to read the second byte.\n\nAt system startup, the operating system determines the user language from the locale settings and installs the appropriate system ANSI code page. **RtlAnsiCharToUnicodeChar** uses this code page to convert a single-byte or double-byte character to the corresponding Unicode character.\n\nIf the system ANSI code page defines a single-byte character set (that is, the ANSI character set), **RtlAnsiCharToUnicodeChar** speeds up the conversion operation by simply [zero-extending](/windows-hardware/drivers/) an ANSI character in the range 0x00 to 0x7f to produce the corresponding Unicode character. The routine converts the ANSI value 0x5c to the backslash character (\"\\\\\"), even if the single-byte code page defines this character as the yen sign.\n\nIf, on entry, **SourceCharacter* points to an invalid character code, **RtlAnsiCharToUnicodeChar** returns the Unicode space character code, 0x0020. The following list shows examples of invalid character codes:\n\n- The first byte of the character code is a value that is valid only as the second byte of a two-byte character code.\n\n- The second byte of a two-byte character code is a value that is valid only as the first byte.\n\n## -see-also\n\n[**ANSI_STRING**](/windows/win32/api/ntdef/ns-ntdef-string)\n\n[RtlAnsiStringToUnicodeSize](./nf-wdm-rtlansistringtounicodesize.md)\n\n[RtlFreeUnicodeString](./nf-wdm-rtlfreeunicodestring.md)\n\n[RtlInitAnsiString](./nf-wdm-rtlinitansistring.md)\n\n[RtlUnicodeStringToAnsiString](./nf-wdm-rtlunicodestringtoansistring.md)\n\n[**UNICODE_STRING**](/windows/win32/api/ntdef/ns-ntdef-_unicode_string)"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "RtlAllocateHeap",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "RtlAnsiStringToUnicodeSize",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:901"
+    ]
+   },
+   {
+    "name": "RtlMultiByteToUnicodeN",
+    "impl": [
+     "dlls/ntdll/locale.c:767"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "GetProcessHeap"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

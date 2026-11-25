@@ -1,0 +1,173 @@
+{
+ "id": "0149",
+ "function": {
+  "name": "SetFilePointer",
+  "export_name": "SetFilePointer",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/file.c",
+  "start_line": 3878,
+  "end_line": 3894,
+  "body_lines": 14,
+  "signature": "DWORD WINAPI DECLSPEC_HOTPATCH SetFilePointer( HANDLE file, LONG distance, LONG *highword, DWORD method )",
+  "header_comment": "/***********************************************************************\n *\tSetFilePointer   (kernelbase.@)\n */",
+  "code": "DWORD WINAPI DECLSPEC_HOTPATCH SetFilePointer( HANDLE file, LONG distance, LONG *highword, DWORD method )\n{\n    LARGE_INTEGER dist, newpos;\n\n    if (highword)\n    {\n        dist.u.LowPart  = distance;\n        dist.u.HighPart = *highword;\n    }\n    else dist.QuadPart = distance;\n\n    if (!SetFilePointerEx( file, dist, &newpos, method )) return INVALID_SET_FILE_POINTER;\n\n    if (highword) *highword = newpos.u.HighPart;\n    if (newpos.u.LowPart == INVALID_SET_FILE_POINTER) SetLastError( 0 );\n    return newpos.u.LowPart;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include \"winerror.h\"",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"wincon.h\"",
+   "#include \"fileapi.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"ddk/ntddser.h\"",
+   "#include \"ioringapi.h\"",
+   "#include \"ddk/ntifs.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!SetFilePointer [stdcall -import] -> import from kernelbase",
+   "kernelbase!SetFilePointer [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/file.c",
+   "dlls/kernel32/tests/loader.c",
+   "dlls/kernel32/tests/module.c",
+   "dlls/kernel32/tests/resource.c",
+   "dlls/kernel32/tests/version.c",
+   "dlls/kernel32/tests/virtual.c",
+   "dlls/kernelbase/tests/process.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 24
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "fileapi",
+   "path": "sdk-api-src/content/fileapi/nf-fileapi-setfilepointer.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/fileapi/nf-fileapi-setfilepointer",
+   "documented_name": "setfilepointer",
+   "file": "docs/0149_sdk-api_nf-fileapi-setfilepointer.md",
+   "text": "---\nUID: NF:fileapi.SetFilePointer\ntitle: SetFilePointer function (fileapi.h)\ndescription: Moves the file pointer of the specified file. (SetFilePointer)\nhelpviewer_keywords: [\"FILE_BEGIN\",\"FILE_CURRENT\",\"FILE_END\",\"SetFilePointer\",\"SetFilePointer function [Files]\",\"_win32_setfilepointer\",\"base.setfilepointer\",\"fileapi/SetFilePointer\",\"fs.setfilepointer\",\"winbase/SetFilePointer\"]\nold-location: fs\\setfilepointer.htm\ntech.root: fs\nms.assetid: a0a0081b-9132-4dea-967b-1ee1d1fdfa13\nms.date: 12/05/2018\nms.keywords: FILE_BEGIN, FILE_CURRENT, FILE_END, SetFilePointer, SetFilePointer function [Files], _win32_setfilepointer, base.setfilepointer, fileapi/SetFilePointer, fs.setfilepointer, winbase/SetFilePointer\nreq.header: fileapi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SetFilePointer\n - fileapi/SetFilePointer\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-file-l1-2-5.dll\n - api-ms-win-core-file-l1-2-4.dll\n - api-ms-win-core-file-l1-2-3.dll\n - Kernel32.dll\n - API-MS-Win-Core-File-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-File-l1-2-0.dll\n - API-MS-Win-Core-File-l1-2-1.dll\n - API-MS-Win-Core-File-l1-2-2.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\napi_name:\n - SetFilePointer\n---\n\n# SetFilePointer function\n\n\n## -description\n\nMoves the file pointer of the specified file.\n\nThis function stores the file pointer in two <b>LONG</b> values. To work with file pointers\n     that are larger than a single <b>LONG</b> value, it is easier to use the \n     <a href=\"/windows/desktop/api/fileapi/nf-fileapi-setfilepointerex\">SetFilePointerEx</a> function.\n\n## -parameters\n\n### -param hFile [in]\n\nA handle to the file.\n      \n\nThe file handle must be created with the <b>GENERIC_READ</b> or \n       <b>GENERIC_WRITE</b> access right. For more information, see \n       <a href=\"/windows/desktop/FileIO/file-security-and-access-rights\">File Security and Access Rights</a>.\n\n### -param lDistanceToMove [in]\n\nThe low order 32-bits of a signed value that specifies the number of bytes to move the file pointer.\n      \n\nIf <i>lpDistanceToMoveHigh</i> is not <b>NULL</b>, \n       <i>lpDistanceToMoveHigh</i> and <i>lDistanceToMove</i> form a single \n       64-bit signed value that specifies the distance to move.\n\nIf <i>lpDistanceToMoveHigh</i> is <b>NULL</b>, \n       <i>lDistanceToMove</i> is a 32-bit signed value. A positive value for \n       <i>lDistanceToMove</i> moves the file pointer forward in the file, and a negative value \n       moves the file pointer back.\n\n### -param lpDistanceToMoveHigh [in, out, optional]\n\nA pointer to the high order 32-bits of the signed 64-bit distance to move.\n      \n\nIf you do not need the high order 32-bits, this pointer must be set to <b>NULL</b>.\n\nWhen  not <b>NULL</b>, this parameter also receives the high order \n       <b>DWORD</b> of the new value of the file pointer. For more information, see the Remarks \n       section in this topic.\n\n### -param dwMoveMethod [in]\n\nThe starting point for the file pointer move.\n      \n\nThis parameter can be one of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"FILE_BEGIN\"></a><a id=\"file_begin\"></a><dl>\n<dt><b>FILE_BEGIN</b></dt>\n<dt>0</dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe starting point is zero or the beginning of the file.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"FILE_CURRENT\"></a><a id=\"file_current\"></a><dl>\n<dt><b>FILE_CURRENT</b></dt>\n<dt>1</dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe starting point is the current value of the file pointer.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"FILE_END\"></a><a id=\"file_end\"></a><dl>\n<dt><b>FILE_END</b></dt>\n<dt>2</dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe starting point is the current end-of-file position.\n\n</td>\n</tr>\n</table>\n\n## -returns\n\nIf the function succeeds and <i>lpDistanceToMoveHigh</i> is \n       <b>NULL</b>, the return value is the low-order <b>DWORD</b> of the new \n       file pointer.\n       <b>Note</b>  If the function returns a value other than <b>INVALID_SET_FILE_POINTER</b>, the call \n         to <b>SetFilePointer</b> has succeeded. You do not need to \n         call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n\n\nIf function succeeds and <i>lpDistanceToMoveHigh</i> is not \n       <b>NULL</b>, the return value is the low-order <b>DWORD</b> of the new \n       file pointer and <i>lpDistanceToMoveHigh</i> contains the high order \n       <b>DWORD</b> of the new file pointer.\n\nIf the function fails, the return value is <b>INVALID_SET_FILE_POINTER</b>. To get \n       extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\nIf a new file pointer is a negative value, the function fails, the file pointer is not moved, and the code \n       returned by <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> is \n       <b>ERROR_NEGATIVE_SEEK</b>.\n\nIf <i>lpDistanceToMoveHigh</i> is <b>NULL</b> and the new file position \n       does not fit in a 32-bit value, the function fails and returns \n       <b>INVALID_SET_FILE_POINTER</b>.\n\n<div class=\"alert\"><b>Note</b>  Because <b>INVALID_SET_FILE_POINTER</b> is a valid value for the \n       low-order <b>DWORD</b> of the new file pointer, you must check both the return value of \n       the function and the error code returned by \n       <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> to determine whether or not an error has \n       occurred. If an error has occurred, the return value of \n       <b>SetFilePointer</b> is \n       <b>INVALID_SET_FILE_POINTER</b> and \n       <b>GetLastError</b> returns a value other than \n       <b>NO_ERROR</b>. For a code example that demonstrates how to check for failure, see the \n       Remarks section in this topic.</div>\n<div> </div>\n\n## -remarks\n\nThe file pointer that is identified by the value of the <i>hFile</i> parameter is not used \n    for overlapped read and write operations. \n\nThe <i>hFile</i> parameter must refer to a file stored on a seeking device; for example, a disk volume. Calling the \n    <b>SetFilePointer</b> function with a handle to a non-seeking \n    device such as a pipe or a communications device is not supported, even though the \n    <b>SetFilePointer</b> function may not return an error. The behavior of the \n    <b>SetFilePointer</b> function in this case is undefined.\n\n<p class=\"proch\"><b>To specify the offset for overlapped operations</b>\n\n<ul>\n<li>Use the <b>Offset</b> and <b>OffsetHigh</b> members of the \n      <a href=\"/windows/desktop/api/minwinbase/ns-minwinbase-overlapped\">OVERLAPPED</a> structure.</li>\n</ul>\n<p class=\"proch\"><b>To determine the file type for <i>hFile</i></b>\n\n<ul>\n<li>Use the <a href=\"/windows/desktop/api/fileapi/nf-fileapi-getfiletype\">GetFileType</a> function.</li>\n</ul>\nFor information about how to determine the position of a file pointer, see \n    <a href=\"/windows/desktop/FileIO/positioning-a-file-pointer\">Positioning a File Pointer</a>.\n\nBe careful when you set a file pointer in a multithreaded application. You must synchronize access to shared \n    resources. For example, an application with threads that share a file handle, update the file pointer, and read \n    from the file must protect this sequence by using a critical section object or mutex object. For more information, \n    see <a href=\"/windows/desktop/Sync/critical-section-objects\">Critical Section Objects</a> and \n    <a href=\"/windows/desktop/Sync/mutex-objects\">Mutex Objects</a>.\n\nIf the <i>hFile</i> handle is opened with the \n    <b>FILE_FLAG_NO_BUFFERING</b> flag set, an application can move the file pointer only to \n    sector-aligned positions. A sector-aligned position is a position that is a whole number multiple of the volume \n    sector size. An application can obtain a volume sector size by calling the \n    <a href=\"/windows/desktop/api/fileapi/nf-fileapi-getdiskfreespacea\">GetDiskFreeSpace</a> function.\n\nIf an application calls <b>SetFilePointer</b> with distance \n     to move values that result in a position not sector-aligned and a handle that is opened with \n     <b>FILE_FLAG_NO_BUFFERING</b>, the function fails, and \n     <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> returns \n      <b>ERROR_INVALID_PARAMETER</b>.\n\nIt is not an error to set a file pointer to a position beyond the end of the file. The size of the file does \n    not increase until you call the <a href=\"/windows/desktop/api/fileapi/nf-fileapi-setendoffile\">SetEndOfFile</a>, \n    <a href=\"/windows/desktop/api/fileapi/nf-fileapi-writefile\">WriteFile</a>, or \n    <a href=\"/windows/desktop/api/fileapi/nf-fileapi-writefileex\">WriteFileEx</a> function. A write operation increases the size \n    of the file to the file pointer position plus the size of the buffer written, which results in the intervening \n    bytes being zero initialized.\n\nIf the return value is <b>INVALID_SET_FILE_POINTER</b> and if \n    <i>lpDistanceToMoveHigh</i> is non-<b>NULL</b>, an application must call \n    <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> to determine whether or not the function has \n    succeeded or failed. The following code example shows you that scenario.\n\n\n```cpp\n  // Case One: calling the function with lpDistanceToMoveHigh == NULL \n\n  // Try to move hFile file pointer some distance  \n  DWORD dwPtr = SetFilePointer( hFile, \n                                lDistance, \n                                NULL, \n                                FILE_BEGIN ); \n   \n  if (dwPtr == INVALID_SET_FILE_POINTER) // Test for failure\n   { \n    // Obtain the error code. \n    DWORD dwError = GetLastError() ; \n   \n    // Deal with failure \n    // . . . \n   \n   } // End of error handler \n\n\n  //\n  // Case Two: calling the function with lpDistanceToMoveHigh != NULL\n\n  // Try to move hFile file pointer a huge distance \n  DWORD dwPtrLow = SetFilePointer( hFile, \n                                   lDistLow, \n                                   &lDistHigh, \n                                   FILE_BEGIN ); \n   \n  // Test for failure\n  if ( dwPtrLow == INVALID_SET_FILE_POINTER && \n       GetLastError() != NO_ERROR )\n   {\n    // Deal with failure\n    // . . .\n\n   } // End of error handler\n\n```\n\n\nAlthough the parameter <i>lpDistanceToMoveHigh</i> is used to manipulate huge files, the \n    value of the parameter should be set when moving files of any size. If it is set to \n    <b>NULL</b>, then <i>lDistanceToMove</i> has a maximum value of \n    2^31–2, or 2 gigabytes less 2, because all file pointer values are signed values. Therefore, \n    if there is even a small chance for the file to increase to that size, it is best to treat the file as a huge file \n    and work with 64-bit file pointers. With \n    <a href=\"/windows/desktop/FileIO/file-compression-and-decompression\">file compression</a> on the NTFS file \n    system, and <a href=\"/windows/desktop/FileIO/sparse-files\">sparse files</a>, it is possible to have files that \n    are large even if the underlying volume is not very large.\n\nIf <i>lpDistanceToMoveHigh</i> is not <b>NULL</b>, then \n    <i>lpDistanceToMoveHigh</i> and <i>lDistanceToMove</i> form a single 64-bit \n    signed value. The <i>lDistanceToMove</i> parameter is treated as the low-order 32 bits of the \n    value, and <i>lpDistanceToMoveHigh</i> as the high-order 32 bits, which means that \n    <i>lpDistanceToMoveHigh</i> is a sign extension of \n    <i>lDistanceToMove</i>.\n\nTo move the file pointer from zero  to 2 gigabytes, <i>lpDistanceToMoveHigh</i> must be \n    set to either <b>NULL</b> or a sign extension of <i>lDistanceToMove</i>. To \n    move the pointer more than 2 gigabytes, use <i>lpDistanceToMoveHigh</i> and \n    <i>lDistanceToMove</i> as a single 64-bit quantity. For example, to move in the range from 2 \n    gigabytes to 4 gigabytes set the contents of <i>lpDistanceToMoveHigh</i> to zero, or to \n    –1 for a negative sign extension of <i>lDistanceToMove</i>.\n\nTo work with 64-bit file pointers, you can declare a <b>LONG</b>, treat it as the upper \n    half of the 64-bit file pointer, and pass its address in <i>lpDistanceToMoveHigh</i>. This \n    means that you have to treat two different variables as a logical unit, which can cause an error. It is best to \n    use the <b>LARGE_INTEGER</b> structure to create a 64-bit value and pass the two 32-bit \n    values by using the appropriate elements of the union.\n\nAlso, it is best to use a function to hide the interface to \n    <b>SetFilePointer</b>. The following code example shows you that \n    scenario.\n\n\n```cpp\n__int64 myFileSeek (HANDLE hf, __int64 distance, DWORD MoveMethod)\n{\n   LARGE_INTEGER li;\n\n   li.QuadPart = distance;\n\n   li.LowPart = SetFilePointer (hf, \n                                li.LowPart, \n                                &li.HighPart, \n                                MoveMethod);\n\n   if (li.LowPart == INVALID_SET_FILE_POINTER && GetLastError() \n       != NO_ERROR)\n   {\n      li.QuadPart = -1;\n   }\n\n   return li.QuadPart;\n}\n\n```\n\n\nYou can use <b>SetFilePointer</b> to determine the length of \n    a file. To do this, use <b>FILE_END</b> for <i>dwMoveMethod</i> and seek to \n    location zero. The file offset returned is the length of the file. However, this practice can have unintended \n    side effects, for example, failure to save the current file pointer so that the program can return to that \n    location. It is best to use <a href=\"/windows/desktop/api/fileapi/nf-fileapi-getfilesize\">GetFileSize</a> instead.\n\nYou can also use the <b>SetFilePointer</b> function to query \n    the current file pointer position. To do this, specify a move method of <b>FILE_CURRENT</b> and \n    a distance of zero.\n\nIn Windows 8 and Windows Server 2012, this function is supported by the following technologies.\n\n<table>\n<tr>\n<th>Technology</th>\n<th>Supported</th>\n</tr>\n<tr>\n<td>\nServer Message Block (SMB) 3.0 protocol\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nSMB 3.0 Transparent Failover (TFO)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nSMB 3.0 with Scale-out File Shares (SO)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nCluster Shared Volume File System (CsvFS)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nResilient File System (ReFS)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n</table>\n \n\n\n#### Examples\n\nFor a code example of appending files, see \n     <a href=\"/windows/desktop/FileIO/appending-one-file-to-another-file\">Appending One File to Another File</a>.\n\n<div class=\"code\"></div>\n\n## -see-also\n\n<a href=\"/windows/desktop/FileIO/file-management-functions\">File Management Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-getdiskfreespacea\">GetDiskFreeSpace</a>\n\n\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-getfilesize\">GetFileSize</a>\n\n\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-getfiletype\">GetFileType</a>\n\n\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-readfile\">ReadFile</a>\n\n\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-readfileex\">ReadFileEx</a>\n\n\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-setendoffile\">SetEndOfFile</a>\n\n\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-setfilepointerex\">SetFilePointerEx</a>\n\n\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-writefile\">WriteFile</a>\n\n\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-writefileex\">WriteFileEx</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "SetFilePointerEx",
+    "impl": [
+     "dlls/kernelbase/file.c:3900"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "kernelbase.SetFilePointer",
+  "category": {
+   "l1": "Data access and storage",
+   "l2": "Files and I/O",
+   "header": "fileapi.h",
+   "textbook": "File management",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 17,
+   "body": 16,
+   "code": 9
+  },
+  "cyclomatic": 5,
+  "return_type": "DWORD",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 24,
+   "n_tests": 56,
+   "n_tests_other": 32,
+   "own_test_functions": [
+    "dlls/kernel32/tests/file.c::test_SetFileValidData",
+    "dlls/kernel32/tests/file.c::test_eof",
+    "dlls/kernel32/tests/file.c::test_file_access",
+    "dlls/kernel32/tests/file.c::test_offset_in_overlapped_structure",
+    "dlls/kernel32/tests/file.c::test_read_write",
+    "dlls/kernel32/tests/loader.c::child_process",
+    "dlls/kernel32/tests/loader.c::create_test_dll",
+    "dlls/kernel32/tests/loader.c::create_test_dll_sections",
+    "dlls/kernel32/tests/loader.c::gen_forward_chain_testdll",
+    "dlls/kernel32/tests/loader.c::test_ExitProcess",
+    "dlls/kernel32/tests/loader.c::test_ResolveDelayLoadedAPI",
+    "dlls/kernel32/tests/loader.c::test_import_resolution",
+    "dlls/kernel32/tests/loader.c::test_section_access",
+    "dlls/kernel32/tests/module.c::create_test_dll",
+    "dlls/kernel32/tests/resource.c::create_test_dll",
+    "dlls/kernel32/tests/version.c::test_pe_os_version",
+    "dlls/kernel32/tests/virtual.c::test_CreateFileMapping",
+    "dlls/kernel32/tests/virtual.c::test_CreateFileMapping_protection",
+    "dlls/kernel32/tests/virtual.c::test_MapViewOfFile",
+    "dlls/kernel32/tests/virtual.c::test_NtAreMappedFilesTheSame",
+    "dlls/kernel32/tests/virtual.c::test_mappings",
+    "dlls/kernel32/tests/virtual.c::test_write_watch",
+    "dlls/kernelbase/tests/process.c::test_MapViewOfFile3",
+    "dlls/kernelbase/tests/process.c::test_MapViewOfFileFromApp"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/fileapi/nf-fileapi-setfilepointer",
+   "source": "win32",
+   "description": "Moves the file pointer of the specified file. (SetFilePointer)",
+   "min_windows": "Windows XP [desktop apps \\| UWP apps]",
+   "documented_dll": "Kernel32.dll"
+  },
+  "exports": [
+   "kernel32.SetFilePointer",
+   "kernelbase.SetFilePointer"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

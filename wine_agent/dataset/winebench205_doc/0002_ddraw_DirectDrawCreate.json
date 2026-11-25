@@ -1,0 +1,217 @@
+{
+ "id": "0002",
+ "function": {
+  "name": "DirectDrawCreate",
+  "export_name": "DirectDrawCreate",
+  "module": "ddraw",
+  "source_module": "ddraw",
+  "exported_by": [
+   "ddraw"
+  ],
+  "side": "PE",
+  "file": "dlls/ddraw/main.c",
+  "start_line": 355,
+  "end_line": 373,
+  "body_lines": 16,
+  "signature": "HRESULT WINAPI DECLSPEC_HOTPATCH DirectDrawCreate(GUID *driver_guid, IDirectDraw **ddraw, IUnknown *outer)",
+  "header_comment": "/***********************************************************************\n * DirectDrawCreate (DDRAW.@)\n *\n * Creates legacy DirectDraw Interfaces. Can't create IDirectDraw7\n * interfaces in theory\n *\n * Arguments, return values: See DDRAW_Create\n *\n ***********************************************************************/",
+  "code": "HRESULT WINAPI DECLSPEC_HOTPATCH DirectDrawCreate(GUID *driver_guid, IDirectDraw **ddraw, IUnknown *outer)\n{\n    HRESULT hr;\n\n    TRACE(\"driver_guid %s, ddraw %p, outer %p.\\n\",\n            debugstr_guid(driver_guid), ddraw, outer);\n\n    wined3d_mutex_lock();\n    hr = DDRAW_Create(driver_guid, (void **)ddraw, outer, &IID_IDirectDraw);\n    wined3d_mutex_unlock();\n\n    if (SUCCEEDED(hr))\n    {\n        if (FAILED(hr = IDirectDraw_Initialize(*ddraw, driver_guid)))\n            IDirectDraw_Release(*ddraw);\n    }\n\n    return hr;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ddraw_private.h\"",
+   "#include \"rpcproxy.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"winreg.h\""
+  ],
+  "resolution": [
+   "ddraw!DirectDrawCreate [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ddraw/tests/d3d.c",
+   "dlls/ddraw/tests/ddraw1.c",
+   "dlls/ddraw/tests/ddraw2.c",
+   "dlls/ddraw/tests/ddraw4.c",
+   "dlls/ddraw/tests/ddrawmodes.c",
+   "dlls/ddraw/tests/dsurface.c",
+   "dlls/ddraw/tests/refcount.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 11
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "ddraw",
+   "path": "sdk-api-src/content/ddraw/nf-ddraw-directdrawcreate.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/ddraw/nf-ddraw-directdrawcreate",
+   "documented_name": "directdrawcreate",
+   "file": "docs/0002_sdk-api_nf-ddraw-directdrawcreate.md",
+   "text": "---\nUID: NF:ddraw.DirectDrawCreate\ntitle: DirectDrawCreate function (ddraw.h)\ndescription: Creates an instance of a DirectDraw object.\nhelpviewer_keywords: [\"DDCREATE_EMULATIONONLY\",\"DDCREATE_HARDWAREONLY\",\"DirectDrawCreate\",\"DirectDrawCreate function [DirectDraw]\",\"ddraw/DirectDrawCreate\",\"directdraw.directdrawcreate\"]\nold-location: directdraw\\directdrawcreate.htm\ntech.root: directdraw\nms.assetid: bad18493-417f-499d-a9a8-719d094be62a\nms.date: 12/05/2018\nms.keywords: DDCREATE_EMULATIONONLY, DDCREATE_HARDWAREONLY, DirectDrawCreate, DirectDrawCreate function [DirectDraw], ddraw/DirectDrawCreate, directdraw.directdrawcreate\nreq.header: ddraw.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ddraw.lib\nreq.dll: Ddraw.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - DirectDrawCreate\n - ddraw/DirectDrawCreate\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Ddraw.dll\n - Ext-MS-Win-DX-DDraw-L1-1-0.dll\napi_name:\n - DirectDrawCreate\n---\n\n# DirectDrawCreate function\n\n\n## -description\n\nCreates an instance of a DirectDraw object. A DirectDraw object that is created by using this function does not support the complete set of Direct3D interfaces in DirectX 7.0. To create a DirectDraw object that is capable of exposing all of the features of Direct3D in DirectX 7.0, use the <a href=\"/windows/desktop/api/ddraw/nf-ddraw-directdrawcreateex\">DirectDrawCreateEx</a> function.\n\n## -parameters\n\n### -param lpGUID [in]\n\nA pointer to the globally unique identifier (GUID) that represents the driver to be created. This can be NULL to indicate the active display driver, or you can pass one of the following flags to restrict the active display driver's behavior for debugging purposes:\n\n\n\n#### DDCREATE_EMULATIONONLY\n\nThe DirectDraw object uses emulation for all features; it does not take advantage of any hardware-supported features.\n\n\n\n#### DDCREATE_HARDWAREONLY\n\nThe DirectDraw object never emulates features not supported by the hardware. Attempts to call methods that require unsupported features fail, returning DDERR_UNSUPPORTED.\n\n### -param lplpDD [out]\n\nA pointer to a variable to be set to a valid <b>IDirectDraw</b> interface pointer if the call succeeds.\n\n### -param pUnkOuter [in]\n\nAllows for future compatibility with COM aggregation features. Presently, however, this function returns an error if this parameter is anything but NULL.\n\n## -returns\n\nIf the function succeeds, the return value is DD_OK.\n\n\n\nIf it fails, the function can return one of the following error values:\n\n<ul>\n<li>DDERR_DIRECTDRAWALREADYCREATED</li>\n<li>DDERR_GENERIC</li>\n<li>DDERR_INVALIDDIRECTDRAWGUID</li>\n<li>DDERR_INVALIDPARAMS</li>\n<li>DDERR_NODIRECTDRAWHW</li>\n<li>DDERR_OUTOFMEMORY</li>\n</ul>\n\n## -remarks\n\nThis function attempts to initialize a DirectDraw object, and then sets a pointer to the object if the call succeeds.\n\nOn computers with multiple monitors, if you specify NULL for <i>lpGUID</i>, the DirectDraw object runs in emulation mode when the normal cooperative level is set. To make use of hardware acceleration on these computers, specify the device's GUID.\n\nYou must use <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-loadlibrarya\">LoadLibrary</a> to explicitly link to Ddraw.dll and then use <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-getprocaddress\">GetProcAddress</a> to access the <b>DirectDrawCreate</b> function."
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "DDRAW_Create",
+   "file": "dlls/ddraw/main.c",
+   "start_line": 291,
+   "end_line": 344,
+   "static": true,
+   "called_from": [
+    "DirectDrawCreate"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ddraw/main.c:396",
+    "dlls/ddraw/main.c:560"
+   ],
+   "signature": "static HRESULT DDRAW_Create(const GUID *guid, void **out, IUnknown *outer_unknown, REFIID iid)",
+   "code": "static HRESULT DDRAW_Create(const GUID *guid, void **out, IUnknown *outer_unknown, REFIID iid)\n{\n    enum wined3d_device_type device_type;\n    struct ddraw *ddraw;\n    DWORD flags = 0;\n    HRESULT hr;\n\n    TRACE(\"driver_guid %s, ddraw %p, outer_unknown %p, interface_iid %s.\\n\",\n            debugstr_guid(guid), out, outer_unknown, debugstr_guid(iid));\n\n    *out = NULL;\n\n    if (guid == (GUID *) DDCREATE_EMULATIONONLY)\n    {\n        device_type = WINED3D_DEVICE_TYPE_REF;\n    }\n    else if (guid == (GUID *) DDCREATE_HARDWAREONLY)\n    {\n        device_type = WINED3D_DEVICE_TYPE_HAL;\n    }\n    else\n    {\n        device_type = WINED3D_DEVICE_TYPE_HAL;\n    }\n\n    /* DDraw doesn't support aggregation, according to msdn */\n    if (outer_unknown != NULL)\n        return CLASS_E_NOAGGREGATION;\n\n    if (!IsEqualGUID(iid, &IID_IDirectDraw7))\n        flags = WINED3D_LEGACY_FFP_LIGHTING;\n\n    if (!(ddraw = calloc(1, sizeof(*ddraw))))\n    {\n        ERR(\"Out of memory when creating DirectDraw.\\n\");\n        return E_OUTOFMEMORY;\n    }\n\n    if (FAILED(hr = ddraw_init(ddraw, flags, device_type)))\n    {\n        WARN(\"Failed to initialize ddraw object, hr %#lx.\\n\", hr);\n        free(ddraw);\n        return hr;\n    }\n\n    hr = IDirectDraw7_QueryInterface(&ddraw->IDirectDraw7_iface, iid, out);\n    IDirectDraw7_Release(&ddraw->IDirectDraw7_iface);\n    if (SUCCEEDED(hr))\n        list_add_head(&global_ddraw_list, &ddraw->ddraw_list_entry);\n    else\n        WARN(\"Failed to query interface %s from ddraw object %p.\\n\", debugstr_guid(iid), ddraw);\n\n    return hr;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 31,
+    "end_line": 31,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ddraw);"
+   },
+   {
+    "name": "global_ddraw_list",
+    "type": "struct list",
+    "static": true,
+    "start_line": 33,
+    "end_line": 33,
+    "code": "static struct list global_ddraw_list = LIST_INIT(global_ddraw_list);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "ddraw_init",
+    "file": "dlls/ddraw/ddraw.c",
+    "start_line": 5108
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "calloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   },
+   {
+    "name": "wined3d_mutex_lock",
+    "module": "wined3d",
+    "impl": [
+     "dlls/wined3d/wined3d_main.c:555"
+    ]
+   },
+   {
+    "name": "wined3d_mutex_unlock",
+    "module": "wined3d",
+    "impl": [
+     "dlls/wined3d/wined3d_main.c:560"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_guid",
+   "list_add_head",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "(p)->lpVtbl->Initialize",
+    "in_function": "DirectDrawCreate",
+    "at": "dlls/ddraw/main.c:368",
+    "candidates": []
+   }
+  ]
+ },
+ "winebench": {
+  "id": "ddraw.DirectDrawCreate",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "DirectDraw",
+   "header": "ddraw.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 19,
+   "body": 18,
+   "code": 10
+  },
+  "cyclomatic": 3,
+  "return_type": "HRESULT",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 11,
+   "n_tests": 29,
+   "n_tests_other": 18,
+   "own_test_functions": [
+    "dlls/ddraw/tests/d3d.c::D3D1_createObjects",
+    "dlls/ddraw/tests/d3d.c::d3d2_create_objects",
+    "dlls/ddraw/tests/ddraw1.c::create_ddraw",
+    "dlls/ddraw/tests/ddraw1.c::test_caps",
+    "dlls/ddraw/tests/ddraw2.c::create_ddraw",
+    "dlls/ddraw/tests/ddraw2.c::test_caps",
+    "dlls/ddraw/tests/ddraw4.c::create_ddraw",
+    "dlls/ddraw/tests/ddraw4.c::test_caps",
+    "dlls/ddraw/tests/ddrawmodes.c::createdirectdraw",
+    "dlls/ddraw/tests/dsurface.c::CreateDirectDraw",
+    "dlls/ddraw/tests/refcount.c::test_d3d_ifaces"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/ddraw/nf-ddraw-directdrawcreate",
+   "source": "win32",
+   "description": "Creates an instance of a DirectDraw object.",
+   "min_windows": "",
+   "documented_dll": "Ddraw.dll"
+  },
+  "exports": [
+   "ddraw.DirectDrawCreate"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

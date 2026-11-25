@@ -1,0 +1,157 @@
+{
+ "id": "0483",
+ "function": {
+  "name": "CryptDestroyKey",
+  "export_name": "CryptDestroyKey",
+  "module": "advapi32",
+  "source_module": "advapi32",
+  "exported_by": [
+   "advapi32",
+   "cryptsp"
+  ],
+  "side": "PE",
+  "file": "dlls/advapi32/crypt.c",
+  "start_line": 894,
+  "end_line": 916,
+  "body_lines": 20,
+  "signature": "BOOL WINAPI CryptDestroyKey (HCRYPTKEY hKey)",
+  "header_comment": "/******************************************************************************\n * CryptDestroyKey (ADVAPI32.@)\n *\n * Releases the handle referenced by hKey.\n *\n * PARAMS\n *  hKey [I] Handle of the key to be destroyed.\n *\n * RETURNS\n *  Success: TRUE\n *  Failure: FALSE\n */",
+  "code": "BOOL WINAPI CryptDestroyKey (HCRYPTKEY hKey)\n{\n\tPCRYPTPROV prov;\n\tPCRYPTKEY key;\n\tBOOL ret;\n\n\tTRACE(\"(0x%Ix)\\n\", hKey);\n\n\tif (!(key = key_from_handle(hKey)))\n\t\treturn FALSE;\n\n\tif (!key->pProvider || key->pProvider->dwMagic != MAGIC_CRYPTPROV)\n\t{\n\t\tSetLastError(ERROR_INVALID_PARAMETER);\n\t\treturn FALSE;\n\t}\n\n\tprov = key->pProvider;\n\tret = prov->pFuncs->pCPDestroyKey(prov->hPrivate, key->hPrivate);\n\tkey->dwMagic = 0;\n\tCRYPT_Free(key);\n\treturn ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <limits.h>",
+   "#include <time.h>",
+   "#include <stdlib.h>",
+   "#include <stdio.h>",
+   "#include <sys/types.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"crypt.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winreg.h\"",
+   "#include \"rpc.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"winternl.h\""
+  ],
+  "resolution": [
+   "advapi32!CryptDestroyKey [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/advapi32/tests/crypt.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wincrypt",
+   "path": "sdk-api-src/content/wincrypt/nf-wincrypt-cryptdestroykey.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wincrypt/nf-wincrypt-cryptdestroykey",
+   "documented_name": "cryptdestroykey",
+   "file": "docs/0483_sdk-api_nf-wincrypt-cryptdestroykey.md",
+   "text": "---\nUID: NF:wincrypt.CryptDestroyKey\ntitle: CryptDestroyKey function (wincrypt.h)\ndescription: Releases the handle referenced by the hKey parameter.\nhelpviewer_keywords: [\"CryptDestroyKey\",\"CryptDestroyKey function [Security]\",\"_crypto2_cryptdestroykey\",\"security.cryptdestroykey\",\"wincrypt/CryptDestroyKey\"]\nold-location: security\\cryptdestroykey.htm\ntech.root: security\nms.assetid: ed5d8047-c9fd-4765-915f-a6a014004b30\nms.date: 12/05/2018\nms.keywords: CryptDestroyKey, CryptDestroyKey function [Security], _crypto2_cryptdestroykey, security.cryptdestroykey, wincrypt/CryptDestroyKey\nreq.header: wincrypt.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Advapi32.lib\nreq.dll: Advapi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CryptDestroyKey\n - wincrypt/CryptDestroyKey\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Advapi32.dll\n - API-MS-Win-Security-cryptoapi-l1-1-0.dll\n - cryptsp.dll\napi_name:\n - CryptDestroyKey\n---\n\n# CryptDestroyKey function\n\n\n## -description\n\n<div class=\"alert\"><b>Important</b>  This API is deprecated. New and existing software should start using <a href=\"/windows/desktop/SecCNG/cng-portal\">Cryptography Next Generation APIs.</a> Microsoft may remove this API in future releases.</div><div> </div>The <b>CryptDestroyKey</b> function releases the handle referenced by the <i>hKey</i> parameter. After a key handle has been released, it is no longer valid and cannot be used again.\n\nIf the handle refers to a session key, or to a public key that has been imported into the <a href=\"/windows/desktop/SecGloss/c-gly\">cryptographic service provider</a> (CSP) through \n<a href=\"/windows/desktop/api/wincrypt/nf-wincrypt-cryptimportkey\">CryptImportKey</a>, this function destroys the key and frees the memory that the key used. Many CSPs overwrite the memory where the key was held before freeing it. However, the underlying <a href=\"/windows/desktop/SecGloss/p-gly\">public/private key pair</a> is not destroyed by this function. Only the handle is destroyed.\n\n## -parameters\n\n### -param hKey [in]\n\nThe handle of the key to be destroyed.\n\n## -returns\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero. For extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\nThe error codes prefaced by \"NTE\" are generated by the particular CSP being used. Some possible error codes are listed in the following table.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_BUSY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe key object specified by <i>hKey</i> is currently being used and cannot be destroyed.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_HANDLE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <i>hKey</i> parameter specifies a handle that is not valid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <i>hKey</i> parameter contains a value that is not valid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>NTE_BAD_KEY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <i>hKey</i> parameter does not contain a valid handle to a key.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>NTE_BAD_UID</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe CSP context that was specified when the key was created cannot be found.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nKeys take up both operating system's memory space and the CSP's memory space. Some CSPs are implemented in hardware with limited memory resources. Applications must destroy all keys with the <b>CryptDestroyKey</b> function when they are finished with them.\n\nAll key handles that have been created or imported by using a specific CSP must be destroyed before that CSP handle is released with the <a href=\"/windows/desktop/api/wincrypt/nf-wincrypt-cryptreleasecontext\">CryptReleaseContext</a> function.\n\n\n#### Examples\n\nFor an example that uses the <b>CryptDestroyKey</b>  function, see <a href=\"/windows/desktop/SecCrypto/example-c-program-creating-and-hashing-a-session-key\">Example C Program: Creating and Hashing a Session Key</a>.\n\n<div class=\"code\"></div>\n\n## -see-also\n\n<a href=\"/windows/desktop/api/wincrypt/nf-wincrypt-cryptderivekey\">CryptDeriveKey</a>\n\n\n\n<a href=\"/windows/desktop/api/wincrypt/nf-wincrypt-cryptgenkey\">CryptGenKey</a>\n\n\n\n<a href=\"/windows/desktop/api/wincrypt/nf-wincrypt-cryptgetuserkey\">CryptGetUserKey</a>\n\n\n\n<a href=\"/windows/desktop/api/wincrypt/nf-wincrypt-cryptimportkey\">CryptImportKey</a>\n\n\n\n<a href=\"/windows/desktop/SecCrypto/cryptography-functions\">Key Generation and Exchange Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "key_from_handle",
+   "file": "dlls/advapi32/crypt.c",
+   "start_line": 79,
+   "end_line": 82,
+   "static": true,
+   "called_from": [
+    "CryptDestroyKey"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/advapi32/crypt.c:710",
+    "dlls/advapi32/crypt.c:772",
+    "dlls/advapi32/crypt.c:997",
+    "dlls/advapi32/crypt.c:1063",
+    "dlls/advapi32/crypt.c:1374"
+   ],
+   "signature": "static PCRYPTKEY key_from_handle(HCRYPTKEY handle)",
+   "code": "static PCRYPTKEY key_from_handle(HCRYPTKEY handle)\n{\n    return pointer_from_handle(handle, MAGIC_CRYPTKEY);\n}"
+  },
+  {
+   "name": "pointer_from_handle",
+   "file": "dlls/advapi32/crypt.c",
+   "start_line": 49,
+   "end_line": 67,
+   "static": true,
+   "called_from": [
+    "key_from_handle"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/advapi32/crypt.c:71",
+    "dlls/advapi32/crypt.c:76"
+   ],
+   "signature": "static void *pointer_from_handle(UINT_PTR handle, DWORD magic)",
+   "code": "static void *pointer_from_handle(UINT_PTR handle, DWORD magic)\n{\n    void *ret = NULL;\n\n    __TRY\n    {\n        if (handle && *(DWORD *)handle == magic)\n            ret = (void *)handle;\n    }\n    __EXCEPT_PAGE_FAULT\n    {\n    }\n    __ENDTRY\n\n    if (!ret)\n        SetLastError(ERROR_INVALID_PARAMETER);\n\n    return ret;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 42,
+    "end_line": 42,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(crypt);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "CRYPT_Free",
+    "start_line": 47,
+    "end_line": 47,
+    "code": "#define CRYPT_Free(buffer) (LocalFree(buffer))"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "LocalFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:1107"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "__wine_pop_frame",
+   "__wine_push_frame",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "__wine_exception_handler_page_fault",
+   "__wine_setjmpex"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "prov->pFuncs->pCPDestroyKey",
+    "in_function": "CryptDestroyKey",
+    "at": "dlls/advapi32/crypt.c:912",
+    "candidates": []
+   }
+  ]
+ }
+}

@@ -1,0 +1,173 @@
+{
+ "id": "0197",
+ "function": {
+  "name": "SymCleanup",
+  "export_name": "SymCleanup",
+  "module": "dbghelp",
+  "source_module": "dbghelp",
+  "exported_by": [
+   "dbghelp",
+   "imagehlp"
+  ],
+  "side": "PE",
+  "file": "dlls/dbghelp/dbghelp.c",
+  "start_line": 544,
+  "end_line": 568,
+  "body_lines": 22,
+  "signature": "BOOL WINAPI SymCleanup(HANDLE hProcess)",
+  "header_comment": "/******************************************************************\n *\t\tSymCleanup (DBGHELP.@)\n *\n */",
+  "code": "BOOL WINAPI SymCleanup(HANDLE hProcess)\n{\n    struct process**    ppcs;\n    struct process*     next;\n\n    TRACE(\"(%p)\\n\", hProcess);\n\n    for (ppcs = &process_first; *ppcs; ppcs = &(*ppcs)->next)\n    {\n        if ((*ppcs)->handle == hProcess)\n        {\n            while ((*ppcs)->lmodules) module_remove(*ppcs, (*ppcs)->lmodules);\n\n            HeapFree(GetProcessHeap(), 0, (*ppcs)->search_path);\n            free((*ppcs)->environment);\n            next = (*ppcs)->next;\n            HeapFree(GetProcessHeap(), 0, *ppcs);\n            *ppcs = next;\n            return TRUE;\n        }\n    }\n\n    ERR(\"this process has not had SymInitialize() called for it!\\n\");\n    return FALSE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <unistd.h>",
+   "#include \"dbghelp_private.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winerror.h\"",
+   "#include \"psapi.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wdbgexts.h\"",
+   "#include \"winnls.h\""
+  ],
+  "resolution": [
+   "dbghelp!SymCleanup [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/dbghelp/tests/dbghelp.c",
+   "dlls/dbghelp/tests/path.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 13
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "dbghelp",
+   "path": "sdk-api-src/content/dbghelp/nf-dbghelp-symcleanup.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/dbghelp/nf-dbghelp-symcleanup",
+   "documented_name": "symcleanup",
+   "file": "docs/0197_sdk-api_nf-dbghelp-symcleanup.md",
+   "text": "---\nUID: NF:dbghelp.SymCleanup\ntitle: SymCleanup function (dbghelp.h)\ndescription: Deallocates all resources associated with the process handle.\nhelpviewer_keywords: [\"SymCleanup\",\"SymCleanup function\",\"_win32_symcleanup\",\"base.symcleanup\",\"dbghelp/SymCleanup\"]\nold-location: base\\symcleanup.htm\ntech.root: Debug\nms.assetid: 56107b71-a3f9-49af-9a90-df3585aed7c8\nms.date: 12/05/2018\nms.keywords: SymCleanup, SymCleanup function, _win32_symcleanup, base.symcleanup, dbghelp/SymCleanup\nreq.header: dbghelp.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Dbghelp.lib\nreq.dll: Dbghelp.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: DbgHelp.dll 5.1 or later\nms.custom: 19H1\nf1_keywords:\n - SymCleanup\n - dbghelp/SymCleanup\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Dbghelp.dll\n - imagehlp.dll\napi_name:\n - SymCleanup\n---\n\n# SymCleanup function\n\n\n## -description\n\nDeallocates all resources associated with the process handle.\n\n## -parameters\n\n### -param hProcess [in]\n\nA handle to the process that was originally passed to the \n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-syminitialize\">SymInitialize</a> function.\n\n## -returns\n\nIf the function succeeds, the return value is <b>TRUE</b>.\n\nIf the function fails, the return value is <b>FALSE</b>. To retrieve extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThis function frees all resources associated with the process handle. Failure to call this function causes memory and resource leaks in the calling application.\n\nAll DbgHelp functions, such as this one, are single threaded. Therefore, calls from more than one thread to this function will likely result in unexpected behavior or memory corruption. To avoid this, call \n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-syminitialize\">SymInitialize</a> only when your process starts and \n<b>SymCleanup</b> only when your process ends. It is not necessary for each thread in the process to call these functions.\n\n\n#### Examples\n\nFor an example, see \n<a href=\"/windows/desktop/Debug/terminating-the-symbol-handler\">Terminating the Symbol Handler</a>.\n\n<div class=\"code\"></div>\n\n## -see-also\n\n<a href=\"/windows/desktop/Debug/dbghelp-functions\">DbgHelp Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-syminitialize\">SymInitialize</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 31,
+    "end_line": 31,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(dbghelp);"
+   },
+   {
+    "name": "process_first",
+    "type": "struct process *",
+    "static": true,
+    "start_line": 75,
+    "end_line": 75,
+    "code": "static struct process* process_first /* = NULL */;"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "module_remove",
+    "file": "dlls/dbghelp/module.c",
+    "start_line": 1025
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "dbghelp.SymCleanup",
+  "category": {
+   "l1": "Diagnostics",
+   "l2": "Debugging and error handling",
+   "header": "dbghelp.h",
+   "textbook": "Process control",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 25,
+   "body": 24,
+   "code": 14
+  },
+  "cyclomatic": 4,
+  "return_type": "BOOL",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 13,
+   "n_tests": 13,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/dbghelp/tests/dbghelp.c::START_TEST(dbghelp)",
+    "dlls/dbghelp/tests/dbghelp.c::get_test_module",
+    "dlls/dbghelp/tests/dbghelp.c::skip_too_old_dbghelp",
+    "dlls/dbghelp/tests/dbghelp.c::test_function_tables",
+    "dlls/dbghelp/tests/dbghelp.c::test_loaded_modules",
+    "dlls/dbghelp/tests/dbghelp.c::test_modules",
+    "dlls/dbghelp/tests/dbghelp.c::test_modules_overlap",
+    "dlls/dbghelp/tests/dbghelp.c::test_refresh_modules",
+    "dlls/dbghelp/tests/path.c::skip_too_old_dbghelp",
+    "dlls/dbghelp/tests/path.c::test_find_in_path_pdb",
+    "dlls/dbghelp/tests/path.c::test_find_in_path_pe",
+    "dlls/dbghelp/tests/path.c::test_load_modules_details",
+    "dlls/dbghelp/tests/path.c::test_load_modules_path"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/dbghelp/nf-dbghelp-symcleanup",
+   "source": "win32",
+   "description": "Deallocates all resources associated with the process handle.",
+   "min_windows": "",
+   "documented_dll": "Dbghelp.dll"
+  },
+  "exports": [
+   "dbghelp.SymCleanup",
+   "imagehlp.SymCleanup"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 6,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

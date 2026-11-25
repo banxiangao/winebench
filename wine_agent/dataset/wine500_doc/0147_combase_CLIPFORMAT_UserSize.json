@@ -1,0 +1,126 @@
+{
+ "id": "0147",
+ "function": {
+  "name": "CLIPFORMAT_UserSize",
+  "export_name": "CLIPFORMAT_UserSize",
+  "module": "combase",
+  "source_module": "combase",
+  "exported_by": [
+   "combase",
+   "ole32"
+  ],
+  "side": "PE",
+  "file": "dlls/combase/usrmarshal.c",
+  "start_line": 163,
+  "end_line": 187,
+  "body_lines": 22,
+  "signature": "ULONG __RPC_USER CLIPFORMAT_UserSize(ULONG *pFlags, ULONG size, CLIPFORMAT *pCF)",
+  "header_comment": "/******************************************************************************\n *           CLIPFORMAT_UserSize (combase.@)\n *\n * Calculates the buffer size required to marshal a clip format.\n *\n * PARAMS\n *  pFlags       [I] Flags. See notes.\n *  StartingSize [I] Starting size of the buffer. This value is added on to\n *                   the buffer size required for the clip format.\n *  pCF          [I] Clip format to size.\n *\n * RETURNS\n *  The buffer size required to marshal a clip format plus the starting size.\n *\n * NOTES\n *  Even though the function is documented to take a pointer to an unsigned\n *  long in pFlags, it actually takes a pointer to a USER_MARSHAL_CB structure, of which\n *  the first parameter is an unsigned long.\n *  This function is only intended to be called by the RPC runtime.\n */",
+  "code": "ULONG __RPC_USER CLIPFORMAT_UserSize(ULONG *pFlags, ULONG size, CLIPFORMAT *pCF)\n{\n    TRACE(\"%s, %lu, %p.\\n\", debugstr_user_flags(pFlags), size, pCF);\n\n    ALIGN_LENGTH(size, 3);\n\n    size += 8;\n\n    /* only need to marshal the name if it is not a pre-defined type and\n     * we are going remote */\n    if ((*pCF >= 0xc000) && (LOWORD(*pFlags) == MSHCTX_DIFFERENTMACHINE))\n    {\n        WCHAR format[255];\n        INT ret;\n        size += 3 * sizeof(UINT);\n        /* urg! this function is badly designed because it won't tell us how\n         * much space is needed without doing a dummy run of storing the\n         * name into a buffer */\n        ret = GetClipboardFormatNameW(*pCF, format, ARRAY_SIZE(format)-1);\n        if (!ret)\n            RaiseException(DV_E_CLIPFORMAT, 0, 0, NULL);\n        size += (ret + 1) * sizeof(WCHAR);\n    }\n    return size;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ole2.h\"",
+   "#include \"winstring.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "combase!CLIPFORMAT_UserSize [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ole32/tests/usrmarshal.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "oleidl",
+   "path": "sdk-api-src/content/oleidl/nf-oleidl-clipformat_usersize.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/oleidl/nf-oleidl-clipformat_usersize",
+   "documented_name": "clipformat_usersize",
+   "file": "docs/0147_sdk-api_nf-oleidl-clipformat_usersize.md",
+   "text": "---\nUID: NF:oleidl.CLIPFORMAT_UserSize\ntech.root: com\ntitle: CLIPFORMAT_UserSize (oleidl.h)\nms.date: 08/15/2022\ntargetos: Windows\ndescription: The CLIPFORMAT_UserSize function (oleidl.h) calculates the wire size of the CLIPFORMAT object and gets its handle and data.\nprerelease: false\nreq.assembly: \nreq.construct-type: function\nreq.ddi-compliance: \nreq.dll: \nreq.header: oleidl.h\nreq.idl: \nreq.include-header: \nreq.irql: \nreq.kmdf-ver: \nreq.lib: \nreq.max-support: \nreq.namespace: \nreq.redist: \nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: \nreq.target-type: \nreq.type-library: \nreq.umdf-ver: \nreq.unicode-ansi: \ntopic_type:\n - apiref\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-marshal-l1-1-0.dll\n - ole32.dll\napi_name:\n - CLIPFORMAT_UserSize\nf1_keywords:\n - CLIPFORMAT_UserSize\n - oleidl/CLIPFORMAT_UserSize\ndev_langs:\n - c++\nhelpviewer_keywords:\n - CLIPFORMAT_UserSize\n---\n\n## -description\n\nCalculates the wire size of the CLIPFORMAT object and gets its handle and data.\n\n## -parameters\n\n### -param unnamedParam1 [in]\n\nThe data used by RPC.\n\n### -param unnamedParam2 [in]\n\nThe current buffer offset where the object will be marshaled. The method has to account for any padding needed for the CLIPFORMAT object to be properly aligned when it will be marshaled to the buffer.\n\n### -param unnamedParam3 [in]\n\nThe object.\n\n## -returns\n\n## -remarks\n\n## -see-also\n\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "debugstr_user_flags",
+   "file": "dlls/combase/usrmarshal.c",
+   "start_line": 35,
+   "end_line": 62,
+   "static": true,
+   "called_from": [
+    "CLIPFORMAT_UserSize"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/usrmarshal.c:114",
+    "dlls/combase/usrmarshal.c:120",
+    "dlls/combase/usrmarshal.c:126",
+    "dlls/combase/usrmarshal.c:132",
+    "dlls/combase/usrmarshal.c:210"
+   ],
+   "signature": "static const char* debugstr_user_flags(ULONG *pFlags)",
+   "code": "static const char* debugstr_user_flags(ULONG *pFlags)\n{\n    char buf[12];\n    const char* loword;\n    switch (LOWORD(*pFlags))\n    {\n    case MSHCTX_LOCAL:\n        loword = \"MSHCTX_LOCAL\";\n        break;\n    case MSHCTX_NOSHAREDMEM:\n        loword = \"MSHCTX_NOSHAREDMEM\";\n        break;\n    case MSHCTX_DIFFERENTMACHINE:\n        loword = \"MSHCTX_DIFFERENTMACHINE\";\n        break;\n    case MSHCTX_INPROC:\n        loword = \"MSHCTX_INPROC\";\n        break;\n    default:\n        sprintf(buf, \"%d\", LOWORD(*pFlags));\n        loword=buf;\n    }\n\n    if (HIWORD(*pFlags) == NDR_LOCAL_DATA_REPRESENTATION)\n        return wine_dbg_sprintf(\"MAKELONG(%s, NDR_LOCAL_DATA_REPRESENTATION)\", loword);\n    else\n        return wine_dbg_sprintf(\"MAKELONG(%s, 0x%04x)\", loword, HIWORD(*pFlags));\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 28,
+    "end_line": 28,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ole);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "ALIGN_LENGTH",
+    "start_line": 32,
+    "end_line": 32,
+    "code": "#define ALIGN_LENGTH(_Len, _Align) _Len = ALIGNED_LENGTH(_Len, _Align)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "GetClipboardFormatNameW",
+    "module": "user32",
+    "impl": [
+     "dlls/win32u/clipboard.c:350"
+    ]
+   },
+   {
+    "name": "RaiseException",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/debug.c:318"
+    ]
+   }
+  ],
+  "header_inline": [
+   "sprintf",
+   "wine_dbg_log",
+   "wine_dbg_sprintf"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

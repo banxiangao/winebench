@@ -1,0 +1,206 @@
+{
+ "id": "0136",
+ "function": {
+  "name": "SHGetFolderLocation",
+  "export_name": "SHGetFolderLocation",
+  "module": "shell32",
+  "source_module": "shell32",
+  "exported_by": [
+   "shell32",
+   "windows.storage"
+  ],
+  "side": "PE",
+  "file": "dlls/shell32/shellpath.c",
+  "start_line": 3453,
+  "end_line": 3533,
+  "body_lines": 78,
+  "signature": "HRESULT WINAPI SHGetFolderLocation( HWND hwndOwner, int nFolder, HANDLE hToken, DWORD dwReserved, LPITEMIDLIST *ppidl)",
+  "header_comment": "/*************************************************************************\n * SHGetFolderLocation [SHELL32.@]\n *\n * Gets the folder locations from the registry and creates a pidl.\n *\n * PARAMS\n *   hwndOwner  [I]\n *   nFolder    [I] CSIDL_xxxxx\n *   hToken     [I] token representing user, or NULL for current user, or -1 for\n *                  default user\n *   dwReserved [I] must be zero\n *   ppidl      [O] PIDL of a special folder\n *\n * RETURNS\n *  Success: S_OK\n *  Failure: Standard OLE-defined error result, S_FALSE or E_INVALIDARG\n *\n * NOTES\n *  Creates missing reg keys and directories.\n *  Mostly forwards to SHGetFolderPathW, but a few values of nFolder return\n *  virtual folders that are handled here.\n */",
+  "code": "HRESULT WINAPI SHGetFolderLocation(\n\tHWND hwndOwner,\n\tint nFolder,\n\tHANDLE hToken,\n\tDWORD dwReserved,\n\tLPITEMIDLIST *ppidl)\n{\n    HRESULT hr = E_INVALIDARG;\n\n    TRACE(\"%p 0x%08x %p 0x%08lx %p\\n\",\n     hwndOwner, nFolder, hToken, dwReserved, ppidl);\n    \n    if (!ppidl)\n        return E_INVALIDARG;\n    if (dwReserved)\n        return E_INVALIDARG;\n\n    /* The virtual folders' locations are not user-dependent */\n    *ppidl = NULL;\n    switch (nFolder & CSIDL_FOLDER_MASK)\n    {\n        case CSIDL_DESKTOP:\n            *ppidl = _ILCreateDesktop();\n            break;\n\n        case CSIDL_PERSONAL:\n            *ppidl = _ILCreateMyDocuments();\n            break;\n\n        case CSIDL_INTERNET:\n            *ppidl = _ILCreateIExplore();\n            break;\n\n        case CSIDL_CONTROLS:\n            *ppidl = _ILCreateControlPanel();\n            break;\n\n        case CSIDL_PRINTERS:\n            *ppidl = _ILCreatePrinters();\n            break;\n\n        case CSIDL_BITBUCKET:\n            *ppidl = _ILCreateBitBucket();\n            break;\n\n        case CSIDL_DRIVES:\n            *ppidl = _ILCreateMyComputer();\n            break;\n\n        case CSIDL_NETWORK:\n            *ppidl = _ILCreateNetwork();\n            break;\n\n        default:\n        {\n            WCHAR szPath[MAX_PATH];\n\n            hr = SHGetFolderPathW(hwndOwner, nFolder, hToken,\n             SHGFP_TYPE_CURRENT, szPath);\n            if (SUCCEEDED(hr))\n            {\n                DWORD attributes=0;\n\n                TRACE(\"Value=%s\\n\", debugstr_w(szPath));\n                hr = SHILCreateFromPathW(szPath, ppidl, &attributes);\n            }\n            else if (hr == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))\n            {\n                /* unlike SHGetFolderPath, SHGetFolderLocation in shell32\n                 * version 6.0 returns E_FAIL for nonexistent paths\n                 */\n                hr = E_FAIL;\n            }\n        }\n    }\n    if(*ppidl)\n        hr = S_OK;\n\n    TRACE(\"-- (new pidl %p)\\n\",*ppidl);\n    return hr;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdio.h>",
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include <ctype.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winreg.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"ddk/mountmgr.h\"",
+   "#include \"shlobj.h\"",
+   "#include \"shtypes.h\"",
+   "#include \"shresdef.h\"",
+   "#include \"shell32_main.h\"",
+   "#include \"pidl.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"sddl.h\"",
+   "#include \"knownfolders.h\"",
+   "#include \"initguid.h\"",
+   "#include \"shobjidl.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "shell32!SHGetFolderLocation [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/shell32/tests/shelllink.c",
+   "dlls/shell32/tests/shellpath.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 5
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "shlobj_core",
+   "path": "sdk-api-src/content/shlobj_core/nf-shlobj_core-shgetfolderlocation.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/shlobj_core/nf-shlobj_core-shgetfolderlocation",
+   "documented_name": "shgetfolderlocation",
+   "file": "docs/0136_sdk-api_nf-shlobj_core-shgetfolderlocation.md",
+   "text": "---\nUID: NF:shlobj_core.SHGetFolderLocation\ntitle: SHGetFolderLocation function (shlobj_core.h)\ndescription: Deprecated. Retrieves the path of a folder as an ITEMIDLIST structure.\nhelpviewer_keywords: [\"SHGetFolderLocation\",\"SHGetFolderLocation function [Windows Shell]\",\"_win32_SHGetFolderLocation\",\"shell.SHGetFolderLocation\",\"shlobj_core/SHGetFolderLocation\"]\nold-location: shell\\SHGetFolderLocation.htm\ntech.root: shell\nms.assetid: 6fcac066-1ab0-443a-9994-b68ead3bbc20\nms.date: 12/05/2018\nms.keywords: SHGetFolderLocation, SHGetFolderLocation function [Windows Shell], _win32_SHGetFolderLocation, shell.SHGetFolderLocation, shlobj_core/SHGetFolderLocation\nreq.header: shlobj_core.h\nreq.include-header: Shlobj.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional, Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Shell32.lib\nreq.dll: Shell32.dll (version 5.0 or later)\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SHGetFolderLocation\n - shlobj_core/SHGetFolderLocation\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-shell32-shellfolders-l1-2-1.dll\n - ext-ms-win-shell32-shellfolders-l1-2-0.dll\n - api-ms-win-shell-shellfolders-l1-1-1.dll\n - Shell32.dll\n - API-MS-Win-shell-shellfolders-l1-1-0.dll\n - KernelBase.dll\n - Ext-MS-Win-Shell32-Shellfolders-L1-1-0.dll\n - Ext-MS-Win-Shell32-Shellfolders-L1-1-1.dll\n - Windows.Storage.dll\napi_name:\n - SHGetFolderLocation\n---\n\n# SHGetFolderLocation function\n\n\n## -description\n\nDeprecated. Retrieves the path of a folder as an <a href=\"/windows/desktop/api/shtypes/ns-shtypes-itemidlist\">ITEMIDLIST</a> structure.\n\n## -parameters\n\n### -param hwnd [in]\n\nType: <b>HWND</b>\n\nReserved.\n\n### -param csidl [in]\n\nType: <b>int</b>\n\nA <a href=\"/windows/desktop/shell/csidl\">CSIDL</a> value that identifies the folder to be located. The folders associated with the CSIDLs might not exist on a particular system.\n\n### -param hToken [in]\n\nType: <b>HANDLE</b>\n\nAn <a href=\"/windows/desktop/SecAuthZ/access-tokens\">access token</a> that can be used to represent a particular user. It is usually set to <b>NULL</b>, but it may be needed when there are multiple users for those folders that are treated as belonging to a single user. The most commonly used folder of this type is <b>My Documents</b>. The calling application is responsible for correct impersonation when <i>hToken</i> is non-<b>NULL</b>. It must have appropriate security privileges for the particular user, and the user's registry hive must be currently mounted. See <a href=\"/windows/desktop/SecAuthZ/access-control\">Access Control</a> for further discussion of access control issues.\n    \n    \t\t\t\t\t\n\nAssigning the <i>hToken</i> parameter a value of -1 indicates the Default User. This allows clients of <b>SHGetFolderLocation</b> to find folder locations (such as the Desktop folder) for the Default User. The Default User user profile is duplicated when any new user account is created, and includes special folders such as <b>My Documents</b> and <b>Desktop</b>. Any items added to the Default User folder also appear in any new user account.\n\n### -param dwFlags [in]\n\nType: <b>DWORD</b>\n\n### -param ppidl [out]\n\nType: <b>PIDLIST_ABSOLUTE*</b>\n\nThe address of a pointer to an item identifier list structure that specifies the folder's location relative to the root of the namespace (the desktop). The <i>ppidl</i> parameter is set to <b>NULL</b> on failure. The calling application is responsible for freeing this resource by calling <a href=\"/windows/desktop/api/shlobj_core/nf-shlobj_core-ilfree\">ILFree</a>.\n\n## -returns\n\nType: <b>HRESULT</b>\n\nReturns S_OK if successful, or an error value otherwise, including the following:\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <a href=\"/windows/desktop/shell/csidl\">CSIDL</a> in <i>nFolder</i> is valid but the folder does not exist.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_INVALIDARG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <a href=\"/windows/desktop/shell/csidl\">CSIDL</a> in <i>nFolder</i> is not valid.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\n<div class=\"alert\"><b>Note</b>  As of Windows Vista, this function is merely a wrapper for <a href=\"/windows/desktop/api/shlobj_core/nf-shlobj_core-shgetknownfolderidlist\">SHGetKnownFolderIDList</a>. The CSIDL value is translated to its associated <a href=\"/windows/desktop/shell/knownfolderid\">KNOWNFOLDERID</a> and <b>SHGetKnownFolderIDList</b> is called. New applications should use the known folder system rather than the older CSIDL system, which is supported only for backward compatibility.</div>\n<div> </div>\nThe <b>SHGetFolderLocation</b>, <a href=\"/windows/desktop/api/shlobj_core/nf-shlobj_core-shgetfolderpatha\">SHGetFolderPath</a>, <a href=\"/windows/desktop/api/shlobj_core/nf-shlobj_core-shgetspecialfolderlocation\">SHGetSpecialFolderLocation</a>, and <a href=\"/windows/desktop/api/shlobj_core/nf-shlobj_core-shgetspecialfolderpatha\">SHGetSpecialFolderPath</a> functions are the preferred ways to obtain handles to folders on systems earlier than Windows Vista. Functions such as <a href=\"/windows/desktop/api/rrascfg/nn-rrascfg-ieapproviderconfig\">ExpandEnvironmentStrings</a> that use the environment variable names directly, in the form %VariableName%, may not be reliable.\n\nThis function is a superset of <a href=\"/windows/desktop/api/shlobj_core/nf-shlobj_core-shgetspecialfolderlocation\">SHGetSpecialFolderLocation</a>, included with earlier versions of the Shell.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/shobjidl_core/nf-shobjidl_core-iknownfolder-getidlist\">IKnownFolder::GetIDList</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 57,
+    "end_line": 57,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(shell);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "SHILCreateFromPathW",
+    "file": "dlls/shell32/pidl.c",
+    "start_line": 383
+   },
+   {
+    "name": "_ILCreateBitBucket",
+    "file": "dlls/shell32/pidl.c",
+    "start_line": 1651
+   },
+   {
+    "name": "_ILCreateControlPanel",
+    "file": "dlls/shell32/pidl.c",
+    "start_line": 1607
+   },
+   {
+    "name": "_ILCreateDesktop",
+    "file": "dlls/shell32/pidl.c",
+    "start_line": 1578
+   },
+   {
+    "name": "_ILCreateIExplore",
+    "file": "dlls/shell32/pidl.c",
+    "start_line": 1601
+   },
+   {
+    "name": "_ILCreateMyComputer",
+    "file": "dlls/shell32/pidl.c",
+    "start_line": 1589
+   },
+   {
+    "name": "_ILCreateMyDocuments",
+    "file": "dlls/shell32/pidl.c",
+    "start_line": 1595
+   },
+   {
+    "name": "_ILCreateNetwork",
+    "file": "dlls/shell32/pidl.c",
+    "start_line": 1645
+   },
+   {
+    "name": "_ILCreatePrinters",
+    "file": "dlls/shell32/pidl.c",
+    "start_line": 1626
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "SHGetFolderPathW",
+    "impl": [
+     "dlls/shell32/shellpath.c:2871"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "HRESULT_FROM_WIN32",
+   "debugstr_w",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "shell32.SHGetFolderLocation",
+  "category": {
+   "l1": "Windows environment (Shell)",
+   "l2": "Windows Shell",
+   "header": "shlobj_core.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 81,
+   "body": 75,
+   "code": 47
+  },
+  "cyclomatic": 14,
+  "return_type": "HRESULT",
+  "n_params": 5,
+  "tests": {
+   "n_tests_own": 5,
+   "n_tests": 5,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/shell32/tests/shelllink.c::test_get_set",
+    "dlls/shell32/tests/shellpath.c::doChild",
+    "dlls/shell32/tests/shellpath.c::matchGUID",
+    "dlls/shell32/tests/shellpath.c::testSHGetFolderLocation",
+    "dlls/shell32/tests/shellpath.c::test_parameters"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/shlobj_core/nf-shlobj_core-shgetfolderlocation",
+   "source": "win32",
+   "description": "Deprecated. Retrieves the path of a folder as an ITEMIDLIST structure.",
+   "min_windows": "Windows 2000 Professional, Windows XP [desktop apps only]",
+   "documented_dll": "Shell32.dll (version 5.0 or later)"
+  },
+  "exports": [
+   "shell32.SHGetFolderLocation",
+   "windows.storage.SHGetFolderLocation"
+  ],
+  "subset": {
+   "selected_by": "topup",
+   "lower_bound_used": 1,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

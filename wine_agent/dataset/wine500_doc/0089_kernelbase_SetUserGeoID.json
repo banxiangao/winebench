@@ -1,0 +1,171 @@
+{
+ "id": "0089",
+ "function": {
+  "name": "SetUserGeoID",
+  "export_name": "SetUserGeoID",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/locale.c",
+  "start_line": 7309,
+  "end_line": 7332,
+  "body_lines": 21,
+  "signature": "BOOL WINAPI DECLSPEC_HOTPATCH SetUserGeoID( GEOID id )",
+  "header_comment": "/******************************************************************************\n *\tSetUserGeoID   (kernelbase.@)\n */",
+  "code": "BOOL WINAPI DECLSPEC_HOTPATCH SetUserGeoID( GEOID id )\n{\n    const struct geo_id *geo = find_geo_id_entry( id );\n    WCHAR bufferW[10];\n    HKEY hkey;\n\n    if (!geo)\n    {\n        SetLastError( ERROR_INVALID_PARAMETER );\n        return FALSE;\n    }\n    if (!RegCreateKeyExW( intl_key, L\"Geo\", 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkey, NULL ))\n    {\n        const WCHAR *name = geo->class == GEOCLASS_NATION ? L\"Nation\" : L\"Region\";\n        swprintf( bufferW, ARRAY_SIZE(bufferW), L\"%u\", geo->id );\n        RegSetValueExW( hkey, name, 0, REG_SZ, (BYTE *)bufferW, (lstrlenW(bufferW) + 1) * sizeof(WCHAR) );\n\n        if (geo->class == GEOCLASS_NATION && wcscmp( geo->iso2, L\"XX\" ))\n            RegSetValueExW( hkey, L\"Name\", 0, REG_SZ,\n                            (BYTE *)geo->iso2, (lstrlenW(geo->iso2) + 1) * sizeof(WCHAR) );\n        RegCloseKey( hkey );\n    }\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winternl.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!SetUserGeoID [stdcall -import] -> import from kernelbase",
+   "kernelbase!SetUserGeoID [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/locale.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winnls",
+   "path": "sdk-api-src/content/winnls/nf-winnls-setusergeoid.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winnls/nf-winnls-setusergeoid",
+   "documented_name": "setusergeoid",
+   "file": "docs/0089_sdk-api_nf-winnls-setusergeoid.md",
+   "text": "---\nUID: NF:winnls.SetUserGeoID\ntitle: SetUserGeoID function (winnls.h)\ndescription: Sets the geographical location identifier for the user. This identifier should have one of the values described in Table of Geographical Locations.\nhelpviewer_keywords: [\"SetUserGeoID\",\"SetUserGeoID function [Internationalization for Windows Applications]\",\"_win32_SetUserGeoID\",\"intl.setusergeoid\",\"winnls/SetUserGeoID\"]\nold-location: intl\\setusergeoid.htm\ntech.root: Intl\nms.assetid: 2e201a7e-6767-4908-b98c-f5b7f0544e60\nms.date: 12/05/2018\nms.keywords: SetUserGeoID, SetUserGeoID function [Internationalization for Windows Applications], _win32_SetUserGeoID, intl.setusergeoid, winnls/SetUserGeoID\nreq.header: winnls.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SetUserGeoID\n - winnls/SetUserGeoID\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-localization-l1-2-4.dll\n - api-ms-win-core-localization-l1-2-3.dll\n - Kernel32.dll\n - API-MS-Win-Core-Localization-l1-2-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-Localization-l1-2-1.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\n - API-MS-Win-Core-Localization-L1-2-2.dll\napi_name:\n - SetUserGeoID\n---\n\n# SetUserGeoID function\n\n\n## -description\n\n<p class=\"CCE_Message\">[<b>SetUserGeoID</b> is available for use in the operating systems specified in the Requirements section. It may be altered or unavailable in subsequent versions. Instead, use <a href=\"/windows/desktop/api/winnls/nf-winnls-setusergeoname\">SetUserGeoName</a>.\n\n]\n\nSets the geographical location identifier for the user. This identifier should have one of the values described in <a href=\"/windows/desktop/Intl/table-of-geographical-locations\">Table of Geographical Locations</a>.\n\n## -parameters\n\n### -param GeoId [in]\n\nIdentifier for the geographical location of the user.\n\n## -returns\n\nReturns <b>TRUE</b> if successful or <b>FALSE</b> otherwise.\n\n<b>Windows XP, Windows Server 2003</b>: This function does not supply extended error information. Thus it is not appropriate for an application to call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> after this function. If the application does call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>, it can return a value set by some previously called function.\n\nIf this function does not succeed, the application can call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>, which can return one of the following error codes:\n\n<ul>\n<li>ERROR_ACCESS_DISABLED_BY_POLICY. The group policy of the computer or the user has forbidden this operation.</li>\n<li>ERROR_INTERNAL_ERROR. An unexpected error occurred in the function.</li>\n<li>ERROR_INVALID_PARAMETER. Any of the parameter values was invalid.</li>\n</ul>\n\n## -remarks\n\nThis function writes to the registry the geographical location for a particular user instead of a particular application. This action affects the behavior of other applications run by the user. As a rule, the application should call this function only when the user has explicitly requested changes, but not for purely application-specific reasons.\n\n<b>SetUserGeoID</b> is intended for use by applications that are designed to change user settings, such as in Windows Settings. Other applications should not call this function.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winnls/nf-winnls-getusergeoid\">GetUserGeoID</a>\n\n\n\n<a href=\"/windows/desktop/Intl/national-language-support\">National Language Support</a>\n\n\n\n<a href=\"/windows/desktop/Intl/national-language-support-functions\">National Language Support Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/winnls/nf-winnls-setusergeoname\">SetUserGeoName</a>\n\n\n\n<a href=\"/windows/desktop/Intl/table-of-geographical-locations\">Table of Geographical Locations</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "find_geo_id_entry",
+   "file": "dlls/kernelbase/locale.c",
+   "start_line": 612,
+   "end_line": 624,
+   "static": true,
+   "called_from": [
+    "SetUserGeoID"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/locale.c:6006",
+    "dlls/kernelbase/locale.c:7499"
+   ],
+   "signature": "static const struct geo_id *find_geo_id_entry( GEOID id )",
+   "code": "static const struct geo_id *find_geo_id_entry( GEOID id )\n{\n    int min = 0, max = geo_ids_count - 1;\n\n    while (min <= max)\n    {\n        int pos = (min + max) / 2;\n        if (id < geo_ids[pos].id) max = pos - 1;\n        else if (id > geo_ids[pos].id) min = pos + 1;\n        else return &geo_ids[pos];\n    }\n    return NULL;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "geo_id",
+    "kind": "struct_decl",
+    "start_line": 233,
+    "end_line": 246,
+    "code": "static const struct geo_id\n{\n    GEOID    id;\n    WCHAR    latitude[12];\n    WCHAR    longitude[12];\n    GEOCLASS class;\n    GEOID    parent;\n    WCHAR    iso2[4];\n    WCHAR    iso3[4];\n    USHORT   uncode;\n    USHORT   dialcode;\n    WCHAR    currcode[4];\n    WCHAR    currsymbol[8];\n} *geo_ids;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "geo_ids",
+    "type": "const struct geo_id *",
+    "static": true,
+    "start_line": 246,
+    "end_line": 246,
+    "code": "{\n    GEOID    id;\n    WCHAR    latitude[12];\n    WCHAR    longitude[12];\n    GEOCLASS class;\n    GEOID    parent;\n    WCHAR    iso2[4];\n    WCHAR    iso3[4];\n    USHORT   uncode;\n    USHORT   dialcode;\n    WCHAR    currcode[4];\n    WCHAR    currsymbol[8];\n} *geo_ids;"
+   },
+   {
+    "name": "geo_ids_count",
+    "type": "unsigned int",
+    "static": true,
+    "start_line": 254,
+    "end_line": 254,
+    "code": "static unsigned int geo_ids_count;"
+   },
+   {
+    "name": "intl_key",
+    "type": "HKEY",
+    "static": true,
+    "start_line": 308,
+    "end_line": 308,
+    "code": "static HKEY intl_key;"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "RegCloseKey",
+    "impl": [
+     "dlls/kernelbase/registry.c:1129"
+    ]
+   },
+   {
+    "name": "RegCreateKeyExW",
+    "impl": [
+     "dlls/kernelbase/registry.c:566"
+    ]
+   },
+   {
+    "name": "RegSetValueExW",
+    "impl": [
+     "dlls/kernelbase/registry.c:1209"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   },
+   {
+    "name": "lstrlenW",
+    "impl": [
+     "dlls/kernelbase/string.c:166"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "wcscmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:266"
+    ]
+   }
+  ],
+  "header_inline": [
+   "swprintf"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

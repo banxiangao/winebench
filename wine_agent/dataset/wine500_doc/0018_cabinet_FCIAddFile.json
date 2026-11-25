@@ -1,0 +1,783 @@
+{
+ "id": "0018",
+ "function": {
+  "name": "FCIAddFile",
+  "export_name": "FCIAddFile",
+  "module": "cabinet",
+  "source_module": "cabinet",
+  "exported_by": [
+   "cabinet"
+  ],
+  "side": "PE",
+  "file": "dlls/cabinet/fci.c",
+  "start_line": 1389,
+  "end_line": 1585,
+  "body_lines": 194,
+  "signature": "BOOL __cdecl FCIAddFile( HFCI                  hfci, char                 *pszSourceFile, char                 *pszFileName, BOOL                  fExecute, PFNFCIGETNEXTCABINET  pfnfcignc, PFNFCISTATUS          pfnfcis, PFNFCIGETOPENINFO     pfnfcigoi, TCOMP                 typeCompress)",
+  "header_comment": "/***********************************************************************\n *\t\tFCIAddFile (CABINET.11)\n *\n * FCIAddFile adds a file to the to be created cabinet file\n *\n * PARAMS\n *   hfci          [I]  An HFCI from FCICreate\n *   pszSourceFile [I]  A pointer to a C string which contains the name and\n *                      location of the file which will be added to the cabinet\n *   pszFileName   [I]  A pointer to a C string which contains the name under\n *                      which the file will be stored in the cabinet\n *   fExecute      [I]  A boolean value which indicates if the file should be\n *                      executed after extraction of self extracting\n *                      executables\n *   pfnfcignc     [I]  A pointer to a function which gets information about\n *                      the next cabinet\n *   pfnfcis      [IO]  A pointer to a function which will report status\n *                      information about the compression process\n *   pfnfcioi      [I]  A pointer to a function which reports file attributes\n *                      and time and date information\n *   typeCompress  [I]  Compression type\n *\n * RETURNS\n *   On success, returns TRUE\n *   On failure, returns FALSE\n *\n * INCLUDES\n *   fci.h\n *\n */",
+  "code": "BOOL __cdecl FCIAddFile(\n\tHFCI                  hfci,\n\tchar                 *pszSourceFile,\n\tchar                 *pszFileName,\n\tBOOL                  fExecute,\n\tPFNFCIGETNEXTCABINET  pfnfcignc,\n\tPFNFCISTATUS          pfnfcis,\n\tPFNFCIGETOPENINFO     pfnfcigoi,\n\tTCOMP                 typeCompress)\n{\n  cab_ULONG read_result;\n  FCI_Int *p_fci_internal = get_fci_ptr( hfci );\n\n  if (!p_fci_internal) return FALSE;\n\n  if ((!pszSourceFile) || (!pszFileName) || (!pfnfcignc) || (!pfnfcis) ||\n      (!pfnfcigoi) || strlen(pszFileName)>=CB_MAX_FILENAME) {\n    set_error( p_fci_internal, FCIERR_NONE, ERROR_BAD_ARGUMENTS );\n    return FALSE;\n  }\n\n  if (typeCompress != p_fci_internal->compression)\n  {\n      if (!FCIFlushFolder( hfci, pfnfcignc, pfnfcis )) return FALSE;\n      switch (typeCompress)\n      {\n      case tcompTYPE_MSZIP:\n          p_fci_internal->compression = tcompTYPE_MSZIP;\n          p_fci_internal->compress    = compress_MSZIP;\n          break;\n      default:\n          FIXME( \"compression %x not supported, defaulting to none\\n\", typeCompress );\n          /* fall through */\n      case tcompTYPE_NONE:\n          p_fci_internal->compression = tcompTYPE_NONE;\n          p_fci_internal->compress    = compress_NONE;\n          break;\n      }\n  }\n\n  /* TODO check if pszSourceFile??? */\n\n  if(p_fci_internal->fGetNextCabInVain && p_fci_internal->fNextCab) {\n    /* internal error */\n    set_error( p_fci_internal, FCIERR_NONE, ERROR_GEN_FAILURE );\n    return FALSE;\n  }\n\n  if(p_fci_internal->fNextCab) {\n    /* internal error */\n    set_error( p_fci_internal, FCIERR_NONE, ERROR_GEN_FAILURE );\n    return FALSE;\n  }\n\n  /* REUSE the variable read_result */\n  read_result=get_header_size( p_fci_internal ) + p_fci_internal->ccab.cbReserveCFFolder;\n\n  read_result+= sizeof(CFFILE) + strlen(pszFileName)+1 +\n    p_fci_internal->files_size + p_fci_internal->folders_data_size +\n    p_fci_internal->placed_files_size + p_fci_internal->folders_size +\n    sizeof(CFFOLDER); /* size of new CFFolder entry */\n\n  /* Might be too much data for the maximum size of a cabinet.*/\n  /* When any further data will be added later, it might not */\n  /* be possible to flush the cabinet, because there might */\n  /* not be enough space to store the name of the following */\n  /* cabinet and name of the corresponding disk. */\n  /* So take care of this and get the name of the next cabinet */\n  if( p_fci_internal->fGetNextCabInVain==FALSE &&\n      p_fci_internal->fNextCab==FALSE &&\n      ( p_fci_internal->ccab.cb < read_result +\n        CB_MAX_CABINET_NAME + CB_MAX_DISK_NAME\n      )\n  ) {\n    /* increment cabinet index */\n    ++(p_fci_internal->pccab->iCab);\n    /* get name of next cabinet */\n    p_fci_internal->estimatedCabinetSize=p_fci_internal->statusFolderTotal;\n    if (!(*pfnfcignc)(p_fci_internal->pccab,\n        p_fci_internal->estimatedCabinetSize, /* estimated size of cab */\n        p_fci_internal->pv)) {\n      /* error handling */\n      set_error( p_fci_internal, FCIERR_NONE, ERROR_FUNCTION_FAILED );\n      return FALSE;\n    }\n    /* Skip a few lines of code. This is caught by the next if. */\n    p_fci_internal->fGetNextCabInVain=TRUE;\n  }\n\n  if( p_fci_internal->fGetNextCabInVain &&\n      p_fci_internal->fNextCab\n  ) {\n    /* THIS CAN NEVER HAPPEN */\n    /* set error code */\n    set_error( p_fci_internal, FCIERR_NONE, ERROR_GEN_FAILURE );\n    return FALSE;\n  }\n\n  /* too much data for cabinet */\n  if( p_fci_internal->fGetNextCabInVain &&\n     (\n      p_fci_internal->ccab.cb < read_result +\n      strlen(p_fci_internal->pccab->szCab)+1+\n      strlen(p_fci_internal->pccab->szDisk)+1\n  )) {\n    p_fci_internal->fGetNextCabInVain=FALSE;\n    p_fci_internal->fNextCab=TRUE;\n    if(!fci_flush_cabinet( p_fci_internal, FALSE, pfnfcignc, pfnfcis)) return FALSE;\n  }\n\n  if( p_fci_internal->fNextCab ) {\n    /* THIS MAY NEVER HAPPEN */\n    /* set error code */\n    set_error( p_fci_internal, FCIERR_NONE, ERROR_GEN_FAILURE );\n    return FALSE;\n  }\n\n  if (!add_file_data( p_fci_internal, pszSourceFile, pszFileName, fExecute, pfnfcigoi, pfnfcis ))\n      return FALSE;\n\n  /* REUSE the variable read_result */\n  read_result = get_header_size( p_fci_internal ) + p_fci_internal->ccab.cbReserveCFFolder;\n  read_result+= p_fci_internal->pending_data_size +\n    p_fci_internal->files_size + p_fci_internal->folders_data_size +\n    p_fci_internal->placed_files_size + p_fci_internal->folders_size +\n    sizeof(CFFOLDER); /* set size of new CFFolder entry */\n\n  /* too much data for the maximum size of a cabinet */\n  /* (ignoring the unflushed data block) */\n  if( p_fci_internal->fGetNextCabInVain==FALSE &&\n      p_fci_internal->fNextCab==FALSE && /* this is always the case */\n      p_fci_internal->ccab.cb < read_result ) {\n    return fci_flush_cabinet( p_fci_internal, FALSE, pfnfcignc, pfnfcis);\n  }\n\n  /* Might be too much data for the maximum size of a cabinet.*/\n  /* When any further data will be added later, it might not */\n  /* be possible to flush the cabinet, because there might */\n  /* not be enough space to store the name of the following */\n  /* cabinet and name of the corresponding disk. */\n  /* So take care of this and get the name of the next cabinet */\n  /* (ignoring the unflushed data block) */\n  if( p_fci_internal->fGetNextCabInVain==FALSE &&\n      p_fci_internal->fNextCab==FALSE &&\n      ( p_fci_internal->ccab.cb < read_result +\n        CB_MAX_CABINET_NAME + CB_MAX_DISK_NAME\n      )\n  ) {\n    /* increment cabinet index */\n    ++(p_fci_internal->pccab->iCab);\n    /* get name of next cabinet */\n    p_fci_internal->estimatedCabinetSize=p_fci_internal->statusFolderTotal;\n    if (!(*pfnfcignc)(p_fci_internal->pccab,\n        p_fci_internal->estimatedCabinetSize,/* estimated size of cab */\n        p_fci_internal->pv)) {\n      /* error handling */\n      set_error( p_fci_internal, FCIERR_NONE, ERROR_FUNCTION_FAILED );\n      return FALSE;\n    }\n    /* Skip a few lines of code. This is caught by the next if. */\n    p_fci_internal->fGetNextCabInVain=TRUE;\n  }\n\n  if( p_fci_internal->fGetNextCabInVain &&\n      p_fci_internal->fNextCab\n  ) {\n    /* THIS CAN NEVER HAPPEN */\n    set_error( p_fci_internal, FCIERR_NONE, ERROR_GEN_FAILURE );\n    return FALSE;\n  }\n\n  /* too much data for cabinet */\n  if( (p_fci_internal->fGetNextCabInVain ||\n      p_fci_internal->fNextCab) && (\n      p_fci_internal->ccab.cb < read_result +\n      strlen(p_fci_internal->pccab->szCab)+1+\n      strlen(p_fci_internal->pccab->szDisk)+1\n  )) {\n\n    p_fci_internal->fGetNextCabInVain=FALSE;\n    p_fci_internal->fNextCab=TRUE;\n    return fci_flush_cabinet( p_fci_internal, FALSE, pfnfcignc, pfnfcis);\n  }\n\n  if( p_fci_internal->fNextCab ) {\n    /* THIS MAY NEVER HAPPEN */\n    /* set error code */\n    set_error( p_fci_internal, FCIERR_NONE, ERROR_GEN_FAILURE );\n    return FALSE;\n  }\n\n  /* if the FolderThreshold has been reached flush the folder automatically */\n  if (p_fci_internal->cCompressedBytesInFolder >= p_fci_internal->ccab.cbFolderThresh)\n      return FCIFlushFolder(hfci, pfnfcignc, pfnfcis);\n\n  return TRUE;\n} /* end of FCIAddFile */",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <string.h>",
+   "#include <sys/stat.h>",
+   "#include <fcntl.h>",
+   "#include <zlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winternl.h\"",
+   "#include \"fci.h\"",
+   "#include \"cabinet.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "cabinet!FCIAddFile [cdecl]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/cabinet/tests/extract.c",
+   "dlls/cabinet/tests/fdi.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "fci",
+   "path": "sdk-api-src/content/fci/nf-fci-fciaddfile.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/fci/nf-fci-fciaddfile",
+   "documented_name": "fciaddfile",
+   "file": "docs/0018_sdk-api_nf-fci-fciaddfile.md",
+   "text": "---\nUID: NF:fci.FCIAddFile\ntitle: FCIAddFile function (fci.h)\ndescription: The FCIAddFile adds a file to the cabinet under construction.\nhelpviewer_keywords: [\"FCIAddFile\",\"FCIAddFile function [Windows API]\",\"fci/FCIAddFile\",\"tcompTYPE_MSZIP\",\"tcompTYPE_NONE\",\"winprog.fciaddfile\"]\nold-location: winprog\\fciaddfile.htm\ntech.root: winprog\nms.assetid: f99e8718-853b-4d35-98ae-61a8333dbaba\nms.date: 12/05/2018\nms.keywords: FCIAddFile, FCIAddFile function [Windows API], fci/FCIAddFile, tcompTYPE_MSZIP, tcompTYPE_NONE, winprog.fciaddfile\nreq.header: fci.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Cabinet.lib\nreq.dll: Cabinet.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - FCIAddFile\n - fci/FCIAddFile\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Cabinet.dll\napi_name:\n - FCIAddFile\n---\n\n# FCIAddFile function\n\n\n## -description\n\nThe <b>FCIAddFile</b> adds a file to the cabinet under construction.\n\n## -parameters\n\n### -param hfci [in]\n\nA valid FCI context handle returned by the <a href=\"/windows/desktop/api/fci/nf-fci-fcicreate\">FCICreate</a> function.\n\n### -param pszSourceFile [in]\n\nThe name of the file to add; this value should include path information.\n\n### -param pszFileName [in]\n\nThe name under which to store the file in the cabinet.\n\n### -param fExecute [in]\n\nIf set <b>TRUE</b>, the file will be executed when extracted.\n\n### -param pfnfcignc [in]\n\nPointer to an application-defined callback function to obtain specifications on the next cabinet to create. The function should be declared using the <a href=\"/windows/desktop/api/fci/nf-fci-fnfcigetnextcabinet\">FNFCIGETNEXTCABINET</a> macro.\n\n### -param pfnfcis [in]\n\nPointer to an application-defined callback function to update the progress information available to the user. The function should be declared using the <a href=\"/windows/desktop/api/fci/nf-fci-fnfcistatus\">FNFCISTATUS</a> macro.\n\n### -param pfnfcigoi [in]\n\nPointer to an application-defined callback function to open a file and retrieve the file date, time, and attributes. The function should be declared using the <a href=\"/windows/desktop/api/fci/nf-fci-fnfcigetopeninfo\">FNFCIGETOPENINFO</a> macro.\n\n### -param typeCompress [in]\n\nThe compression type to use.\n\n<div class=\"alert\"><b>Note</b>  To indicate LZX compression, use the <a href=\"/windows/desktop/api/fdi_fci_types/nf-fdi_fci_types-tcompfromlzxwindow\">TCOMPfromLZXWindow</a> macro.</div>\n<div> </div>\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"tcompTYPE_NONE\"></a><a id=\"tcomptype_none\"></a><a id=\"TCOMPTYPE_NONE\"></a><dl>\n<dt><b>tcompTYPE_NONE</b></dt>\n<dt>0x0000</dt>\n</dl>\n</td>\n<td width=\"60%\">\nNo compression.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"tcompTYPE_MSZIP\"></a><a id=\"tcomptype_mszip\"></a><a id=\"TCOMPTYPE_MSZIP\"></a><dl>\n<dt><b>tcompTYPE_MSZIP</b></dt>\n<dt>0x0001</dt>\n</dl>\n</td>\n<td width=\"60%\">\nMicrosoft ZIP compression.\n\n</td>\n</tr>\n</table>\n\n## -returns\n\nIf the function succeeds, it returns <b>TRUE</b>; otherwise, <b>FALSE</b>.\n\nExtended error information is provided in the <a href=\"/windows/desktop/api/fdi_fci_types/ns-fdi_fci_types-erf\">ERF</a> structure used to create the FCI context.\n\n## -remarks\n\nWhen set, the _A_EXEC attribute is added to the file entry in the CAB. This mechanism is used in some Microsoft self-extracting executables, and could be used for this purpose in any custom extraction application.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/fci/nf-fci-fcicreate\">FCICreate</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_fci_ptr",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 200,
+   "end_line": 210,
+   "static": true,
+   "called_from": [
+    "FCIAddFile"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/cabinet/fci.c:1626",
+    "dlls/cabinet/fci.c:1671",
+    "dlls/cabinet/fci.c:1704"
+   ],
+   "signature": "static FCI_Int *get_fci_ptr( HFCI hfci )",
+   "code": "static FCI_Int *get_fci_ptr( HFCI hfci )\n{\n    FCI_Int *fci= (FCI_Int *)hfci;\n\n    if (!fci || fci->magic != FCI_INT_MAGIC)\n    {\n        SetLastError( ERROR_INVALID_HANDLE );\n        return NULL;\n    }\n    return fci;\n}"
+  },
+  {
+   "name": "set_error",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 192,
+   "end_line": 198,
+   "static": true,
+   "called_from": [
+    "FCIAddFile",
+    "add_data_block",
+    "add_data_to_folder",
+    "add_file",
+    "add_file_data",
+    "add_folder",
+    "close_temp_file",
+    "compress_MSZIP",
+    "copy_data_blocks",
+    "copy_file",
+    "create_temp_file",
+    "fci_flush_cabinet",
+    "fci_flush_folder",
+    "write_cabinet",
+    "write_data_blocks",
+    "write_files",
+    "write_folders"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void set_error( FCI_Int *fci, int oper, int err )",
+   "code": "static void set_error( FCI_Int *fci, int oper, int err )\n{\n    fci->perf->erfOper = oper;\n    fci->perf->erfType = err;\n    fci->perf->fError = TRUE;\n    if (err) SetLastError( err );\n}"
+  },
+  {
+   "name": "compress_MSZIP",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 920,
+   "end_line": 942,
+   "static": true,
+   "called_from": [
+    "FCIAddFile"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static cab_UWORD compress_MSZIP( FCI_Int *fci )",
+   "code": "static cab_UWORD compress_MSZIP( FCI_Int *fci )\n{\n    z_stream stream;\n\n    stream.zalloc = zalloc;\n    stream.zfree  = zfree;\n    stream.opaque = fci;\n    if (deflateInit2( &stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY ) != Z_OK)\n    {\n        set_error( fci, FCIERR_ALLOC_FAIL, ERROR_NOT_ENOUGH_MEMORY );\n        return 0;\n    }\n    stream.next_in   = fci->data_in;\n    stream.avail_in  = fci->cdata_in;\n    stream.next_out  = fci->data_out + 2;\n    stream.avail_out = sizeof(fci->data_out) - 2;\n    /* insert the signature */\n    fci->data_out[0] = 'C';\n    fci->data_out[1] = 'K';\n    deflate( &stream, Z_FINISH );\n    deflateEnd( &stream );\n    return stream.total_out + 2;\n}"
+  },
+  {
+   "name": "compress_NONE",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 902,
+   "end_line": 906,
+   "static": true,
+   "called_from": [
+    "FCIAddFile"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/cabinet/fci.c:1048"
+   ],
+   "signature": "static cab_UWORD compress_NONE( FCI_Int *fci )",
+   "code": "static cab_UWORD compress_NONE( FCI_Int *fci )\n{\n    memcpy( fci->data_out, fci->data_in, fci->cdata_in );\n    return fci->cdata_in;\n}"
+  },
+  {
+   "name": "get_header_size",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 213,
+   "end_line": 227,
+   "static": true,
+   "called_from": [
+    "FCIAddFile",
+    "add_data_to_folder",
+    "fci_flush_cabinet",
+    "fci_flush_folder",
+    "write_cabinet"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static cab_ULONG get_header_size( FCI_Int *fci )",
+   "code": "static cab_ULONG get_header_size( FCI_Int *fci )\n{\n    cab_ULONG ret = sizeof(CFHEADER) + fci->ccab.cbReserveCFHeader;\n\n    if (fci->ccab.cbReserveCFHeader || fci->ccab.cbReserveCFFolder || fci->ccab.cbReserveCFData)\n        ret += 4;\n\n    if (fci->fPrevCab)\n        ret += strlen( fci->szPrevCab ) + 1 + strlen( fci->szPrevDisk ) + 1;\n\n    if (fci->fNextCab)\n        ret += strlen( fci->pccab->szCab ) + 1 + strlen( fci->pccab->szDisk ) + 1;\n\n    return ret;\n}"
+  },
+  {
+   "name": "fci_flush_cabinet",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 1223,
+   "end_line": 1353,
+   "static": true,
+   "called_from": [
+    "FCIAddFile"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/cabinet/fci.c:1675",
+    "dlls/cabinet/fci.c:1679"
+   ],
+   "signature": "static BOOL fci_flush_cabinet( FCI_Int *p_fci_internal, BOOL                  fGetNextCab, PFNFCIGETNEXTCABINET  pfnfcignc, PFNFCISTATUS          pfnfcis)",
+   "code": "static BOOL fci_flush_cabinet( FCI_Int *p_fci_internal,\n\tBOOL                  fGetNextCab,\n\tPFNFCIGETNEXTCABINET  pfnfcignc,\n\tPFNFCISTATUS          pfnfcis)\n{\n  cab_ULONG read_result=0;\n  BOOL returntrue=FALSE;\n\n  /* TODO test if fci_flush_cabinet really aborts if there was no FCIAddFile */\n\n  /* when FCIFlushCabinet was or FCIAddFile hasn't been called */\n  if( p_fci_internal->files_size==0 && fGetNextCab ) {\n    returntrue=TRUE;\n  }\n\n  if (!fci_flush_folder(p_fci_internal,fGetNextCab,pfnfcignc,pfnfcis)){\n    /* TODO set error */\n    return FALSE;\n  }\n\n  if(returntrue) return TRUE;\n\n  if ( (p_fci_internal->fSplitFolder && p_fci_internal->fNextCab==FALSE)||\n       (p_fci_internal->folders_size==0 &&\n         (p_fci_internal->files_size!=0 ||\n          p_fci_internal->placed_files_size!=0 )\n     ) )\n  {\n      /* error */\n      set_error( p_fci_internal, FCIERR_NONE, ERROR_GEN_FAILURE );\n      return FALSE;\n  }\n\n  /* create the cabinet */\n  if (!write_cabinet( p_fci_internal, pfnfcis )) return FALSE;\n\n  p_fci_internal->fPrevCab=TRUE;\n  /* The sections szPrevCab and szPrevDisk are not being updated, because */\n  /* MS CABINET.DLL always puts the first cabinet name and disk into them */\n\n  if (p_fci_internal->fNextCab) {\n    p_fci_internal->fNextCab=FALSE;\n\n    if (p_fci_internal->files_size==0 && p_fci_internal->pending_data_size!=0) {\n      /* THIS CAN NEVER HAPPEN */\n      /* set error code */\n      set_error( p_fci_internal, FCIERR_NONE, ERROR_GEN_FAILURE );\n      return FALSE;\n    }\n\n    if( p_fci_internal->fNewPrevious ) {\n      memcpy(p_fci_internal->szPrevCab, p_fci_internal->ccab.szCab,\n        CB_MAX_CABINET_NAME);\n      memcpy(p_fci_internal->szPrevDisk, p_fci_internal->ccab.szDisk,\n        CB_MAX_DISK_NAME);\n      p_fci_internal->fNewPrevious=FALSE;\n    }\n    p_fci_internal->ccab = *p_fci_internal->pccab;\n\n    /* REUSE the variable read_result */\n    read_result=get_header_size( p_fci_internal );\n    if(p_fci_internal->files_size!=0) {\n        read_result+=p_fci_internal->ccab.cbReserveCFFolder;\n    }\n    read_result+= p_fci_internal->pending_data_size +\n      p_fci_internal->files_size + p_fci_internal->folders_data_size +\n      p_fci_internal->placed_files_size + p_fci_internal->folders_size +\n      sizeof(CFFOLDER); /* set size of new CFFolder entry */\n\n    /* too much data for the maximum size of a cabinet */\n    if( p_fci_internal->fGetNextCabInVain==FALSE &&\n        p_fci_internal->ccab.cb < read_result ) {\n      return fci_flush_cabinet( p_fci_internal, FALSE, pfnfcignc, pfnfcis);\n    }\n\n    /* Might be too much data for the maximum size of a cabinet.*/\n    /* When any further data will be added later, it might not */\n    /* be possible to flush the cabinet, because there might */\n    /* not be enough space to store the name of the following */\n    /* cabinet and name of the corresponding disk. */\n    /* So take care of this and get the name of the next cabinet */\n    if (p_fci_internal->fGetNextCabInVain==FALSE && (\n      p_fci_internal->ccab.cb < read_result +\n      CB_MAX_CABINET_NAME + CB_MAX_DISK_NAME\n    )) {\n      /* increment cabinet index */\n      ++(p_fci_internal->pccab->iCab);\n      /* get name of next cabinet */\n      p_fci_internal->estimatedCabinetSize=p_fci_internal->statusFolderTotal;\n      if (!(*pfnfcignc)(p_fci_internal->pccab,\n          p_fci_internal->estimatedCabinetSize, /* estimated size of cab */\n          p_fci_internal->pv)) {\n        /* error handling */\n        set_error( p_fci_internal, FCIERR_NONE, ERROR_FUNCTION_FAILED );\n        return FALSE;\n      }\n      /* Skip a few lines of code. This is caught by the next if. */\n      p_fci_internal->fGetNextCabInVain=TRUE;\n    }\n\n    /* too much data for cabinet */\n    if (p_fci_internal->fGetNextCabInVain && (\n        p_fci_internal->ccab.cb < read_result +\n        strlen(p_fci_internal->ccab.szCab)+1+\n        strlen(p_fci_internal->ccab.szDisk)+1\n    )) {\n      p_fci_internal->fGetNextCabInVain=FALSE;\n      p_fci_internal->fNextCab=TRUE;\n      return fci_flush_cabinet( p_fci_internal, FALSE, pfnfcignc, pfnfcis);\n    }\n\n    /* if the FolderThreshold has been reached flush the folder automatically */\n    if (p_fci_internal->cCompressedBytesInFolder >= p_fci_internal->ccab.cbFolderThresh)\n        return fci_flush_folder(p_fci_internal, FALSE, pfnfcignc, pfnfcis);\n\n    if( p_fci_internal->files_size>0 ) {\n      if( !fci_flush_folder(p_fci_internal, FALSE, pfnfcignc, pfnfcis) ) return FALSE;\n      p_fci_internal->fNewPrevious=TRUE;\n    }\n  } else {\n    p_fci_internal->fNewPrevious=FALSE;\n    if( p_fci_internal->files_size>0 || p_fci_internal->pending_data_size) {\n      /* THIS MAY NEVER HAPPEN */\n      /* set error structures */\n      set_error( p_fci_internal, FCIERR_NONE, ERROR_GEN_FAILURE );\n      return FALSE;\n    }\n  }\n\n  return TRUE;\n} /* end of fci_flush_cabinet */"
+  },
+  {
+   "name": "add_file_data",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 349,
+   "end_line": 384,
+   "static": true,
+   "called_from": [
+    "FCIAddFile"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL add_file_data( FCI_Int *fci, char *sourcefile, char *filename, BOOL execute, PFNFCIGETOPENINFO get_open_info, PFNFCISTATUS status_callback )",
+   "code": "static BOOL add_file_data( FCI_Int *fci, char *sourcefile, char *filename, BOOL execute,\n                           PFNFCIGETOPENINFO get_open_info, PFNFCISTATUS status_callback )\n{\n    int err, len;\n    INT_PTR handle;\n    struct file *file;\n\n    if (!(file = add_file( fci, filename ))) return FALSE;\n\n    handle = get_open_info( sourcefile, &file->date, &file->time, &file->attribs, &err, fci->pv );\n    if (handle == -1)\n    {\n        free_file( fci, file );\n        set_error( fci, FCIERR_OPEN_SRC, err );\n        return FALSE;\n    }\n    if (execute) file->attribs |= _A_EXEC;\n\n    for (;;)\n    {\n        len = fci->read( handle, fci->data_in + fci->cdata_in,\n                         CAB_BLOCKMAX - fci->cdata_in, &err, fci->pv );\n        if (!len) break;\n\n        if (len == -1)\n        {\n            set_error( fci, FCIERR_READ_SRC, err );\n            return FALSE;\n        }\n        file->size += len;\n        fci->cdata_in += len;\n        if (fci->cdata_in == CAB_BLOCKMAX && !add_data_block( fci, status_callback )) return FALSE;\n    }\n    fci->close( handle, &err, fci->pv );\n    return TRUE;\n}"
+  },
+  {
+   "name": "zalloc",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 908,
+   "end_line": 912,
+   "static": true,
+   "called_from": [
+    "compress_MSZIP"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void *zalloc( void *opaque, unsigned int items, unsigned int size )",
+   "code": "static void *zalloc( void *opaque, unsigned int items, unsigned int size )\n{\n    FCI_Int *fci = opaque;\n    return fci->alloc( items * size );\n}"
+  },
+  {
+   "name": "zfree",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 914,
+   "end_line": 918,
+   "static": true,
+   "called_from": [
+    "compress_MSZIP"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void zfree( void *opaque, void *ptr )",
+   "code": "static void zfree( void *opaque, void *ptr )\n{\n    FCI_Int *fci = opaque;\n    fci->free( ptr );\n}"
+  },
+  {
+   "name": "fci_flush_folder",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 1063,
+   "end_line": 1218,
+   "static": true,
+   "called_from": [
+    "fci_flush_cabinet"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/cabinet/fci.c:1629"
+   ],
+   "signature": "static BOOL fci_flush_folder( FCI_Int *p_fci_internal, BOOL                  fGetNextCab, PFNFCIGETNEXTCABINET  pfnfcignc, PFNFCISTATUS          pfnfcis)",
+   "code": "static BOOL fci_flush_folder( FCI_Int *p_fci_internal,\n\tBOOL                  fGetNextCab,\n\tPFNFCIGETNEXTCABINET  pfnfcignc,\n\tPFNFCISTATUS          pfnfcis)\n{\n  cab_ULONG payload;\n  cab_ULONG read_result;\n  struct folder *folder;\n\n  if ((!pfnfcignc) || (!pfnfcis)) {\n    set_error( p_fci_internal, FCIERR_NONE, ERROR_BAD_ARGUMENTS );\n    return FALSE;\n  }\n\n  if( p_fci_internal->fGetNextCabInVain &&\n      p_fci_internal->fNextCab ){\n    /* internal error */\n    set_error( p_fci_internal, FCIERR_NONE, ERROR_GEN_FAILURE );\n    return FALSE;\n  }\n\n  /* If there was no FCIAddFile or FCIFlushFolder has already been called */\n  /* this function will return TRUE */\n  if( p_fci_internal->files_size == 0 ) {\n    if ( p_fci_internal->pending_data_size != 0 ) {\n      /* error handling */\n      set_error( p_fci_internal, FCIERR_NONE, ERROR_GEN_FAILURE );\n      return FALSE;\n    }\n    return TRUE;\n  }\n\n  /* FCIFlushFolder has already been called... */\n  if (p_fci_internal->fSplitFolder && p_fci_internal->placed_files_size!=0) {\n    return TRUE;\n  }\n\n  /* This can be set already, because it makes only a difference */\n  /* when the current function exits with return FALSE */\n  p_fci_internal->fSplitFolder=FALSE;\n\n  /* START of COPY */\n  if (!add_data_block( p_fci_internal, pfnfcis )) return FALSE;\n\n  /* reset to get the number of data blocks of this folder which are */\n  /* actually in this cabinet ( at least partially ) */\n  p_fci_internal->cDataBlocks=0;\n\n  p_fci_internal->statusFolderTotal = get_header_size( p_fci_internal ) +\n      sizeof(CFFOLDER) + p_fci_internal->ccab.cbReserveCFFolder +\n      p_fci_internal->placed_files_size+\n      p_fci_internal->folders_data_size + p_fci_internal->files_size+\n      p_fci_internal->pending_data_size + p_fci_internal->folders_size;\n  p_fci_internal->statusFolderCopied = 0;\n\n  /* report status with pfnfcis about copied size of folder */\n  if( (*pfnfcis)(statusFolder, p_fci_internal->statusFolderCopied,\n      p_fci_internal->statusFolderTotal, /* TODO total folder size */\n      p_fci_internal->pv) == -1) {\n    set_error( p_fci_internal, FCIERR_USER_ABORT, 0 );\n    return FALSE;\n  }\n\n  /* USE the variable read_result */\n  read_result = get_header_size( p_fci_internal ) + p_fci_internal->folders_data_size +\n      p_fci_internal->placed_files_size + p_fci_internal->folders_size;\n\n  if(p_fci_internal->files_size!=0) {\n    read_result+= sizeof(CFFOLDER)+p_fci_internal->ccab.cbReserveCFFolder;\n  }\n\n  /* Check if multiple cabinets have to be created. */\n\n  /* Might be too much data for the maximum allowed cabinet size.*/\n  /* When any further data will be added later, it might not */\n  /* be possible to flush the cabinet, because there might */\n  /* not be enough space to store the name of the following */\n  /* cabinet and name of the corresponding disk. */\n  /* So take care of this and get the name of the next cabinet */\n  if( p_fci_internal->fGetNextCabInVain==FALSE &&\n      p_fci_internal->fNextCab==FALSE &&\n      (\n        (\n          p_fci_internal->ccab.cb < read_result +\n          p_fci_internal->pending_data_size +\n          p_fci_internal->files_size +\n          CB_MAX_CABINET_NAME +   /* next cabinet name */\n          CB_MAX_DISK_NAME        /* next disk name */\n        ) || fGetNextCab\n      )\n  ) {\n    /* increment cabinet index */\n    ++(p_fci_internal->pccab->iCab);\n    /* get name of next cabinet */\n    p_fci_internal->estimatedCabinetSize=p_fci_internal->statusFolderTotal;\n    if (!(*pfnfcignc)(p_fci_internal->pccab,\n        p_fci_internal->estimatedCabinetSize, /* estimated size of cab */\n        p_fci_internal->pv)) {\n      set_error( p_fci_internal, FCIERR_NONE, ERROR_FUNCTION_FAILED );\n      return FALSE;\n    }\n\n    /* Skip a few lines of code. This is caught by the next if. */\n    p_fci_internal->fGetNextCabInVain=TRUE;\n  }\n\n  /* too much data for cabinet */\n  if( (p_fci_internal->fGetNextCabInVain ||\n        p_fci_internal->fNextCab ) &&\n      (\n        (\n          p_fci_internal->ccab.cb < read_result +\n          p_fci_internal->pending_data_size +\n          p_fci_internal->files_size +\n          strlen(p_fci_internal->pccab->szCab)+1 +   /* next cabinet name */\n          strlen(p_fci_internal->pccab->szDisk)+1    /* next disk name */\n        ) || fGetNextCab\n      )\n  ) {\n    p_fci_internal->fGetNextCabInVain=FALSE;\n    p_fci_internal->fNextCab=TRUE;\n\n    /* return FALSE if there is not enough space left*/\n    /* this should never happen */\n    if (p_fci_internal->ccab.cb <=\n        p_fci_internal->files_size +\n        read_result +\n        strlen(p_fci_internal->pccab->szCab)+1 + /* next cabinet name */\n        strlen(p_fci_internal->pccab->szDisk)+1  /* next disk name */\n    ) {\n\n      return FALSE;\n    }\n\n    /* the folder will be split across cabinets */\n    p_fci_internal->fSplitFolder=TRUE;\n\n  } else {\n    /* this should never happen */\n    if (p_fci_internal->fNextCab) {\n      /* internal error */\n      set_error( p_fci_internal, FCIERR_NONE, ERROR_GEN_FAILURE );\n      return FALSE;\n    }\n  }\n\n  if (!(folder = add_folder( p_fci_internal ))) return FALSE;\n  if (!add_data_to_folder( p_fci_internal, folder, &payload, pfnfcis )) return FALSE;\n  if (!add_files_to_folder( p_fci_internal, folder, payload )) return FALSE;\n\n  /* reset CFFolder specific information */\n  p_fci_internal->cDataBlocks=0;\n  p_fci_internal->cCompressedBytesInFolder=0;\n\n  return TRUE;\n}"
+  },
+  {
+   "name": "write_cabinet",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 645,
+   "end_line": 755,
+   "static": true,
+   "called_from": [
+    "fci_flush_cabinet"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL write_cabinet( FCI_Int *fci, PFNFCISTATUS status_callback )",
+   "code": "static BOOL write_cabinet( FCI_Int *fci, PFNFCISTATUS status_callback )\n{\n    char filename[CB_MAX_CAB_PATH + CB_MAX_CABINET_NAME];\n    int err;\n    char *ptr;\n    INT_PTR handle;\n    CFHEADER *cfheader = (CFHEADER *)fci->data_out;\n    cab_UWORD flags = 0;\n    cab_ULONG header_size = get_header_size( fci );\n    cab_ULONG total_size = header_size + fci->folders_size +\n                           fci->placed_files_size + fci->folders_data_size;\n\n    assert( header_size <= sizeof(fci->data_out) );\n    memset( cfheader, 0, header_size );\n\n    if (fci->fPrevCab) flags |= cfheadPREV_CABINET;\n    if (fci->fNextCab) flags |= cfheadNEXT_CABINET;\n    if (fci->ccab.cbReserveCFHeader || fci->ccab.cbReserveCFFolder || fci->ccab.cbReserveCFData)\n      flags |= cfheadRESERVE_PRESENT;\n\n    memcpy( cfheader->signature, \"!CAB\", 4 );\n    cfheader->cbCabinet    = fci_endian_ulong( total_size );\n    cfheader->coffFiles    = fci_endian_ulong( header_size + fci->folders_size );\n    cfheader->versionMinor = 3;\n    cfheader->versionMajor = 1;\n    cfheader->cFolders     = fci_endian_uword( fci->cFolders );\n    cfheader->cFiles       = fci_endian_uword( fci->cFiles );\n    cfheader->flags        = fci_endian_uword( flags );\n    cfheader->setID        = fci_endian_uword( fci->ccab.setID );\n    cfheader->iCabinet     = fci_endian_uword( fci->ccab.iCab );\n    ptr = (char *)(cfheader + 1);\n\n    if (flags & cfheadRESERVE_PRESENT)\n    {\n        struct\n        {\n            cab_UWORD cbCFHeader;\n            cab_UBYTE cbCFFolder;\n            cab_UBYTE cbCFData;\n        } *reserve = (void *)ptr;\n\n        reserve->cbCFHeader = fci_endian_uword( fci->ccab.cbReserveCFHeader );\n        reserve->cbCFFolder = fci->ccab.cbReserveCFFolder;\n        reserve->cbCFData   = fci->ccab.cbReserveCFData;\n        ptr = (char *)(reserve + 1);\n    }\n    ptr += fci->ccab.cbReserveCFHeader;\n\n    if (flags & cfheadPREV_CABINET)\n    {\n        strcpy( ptr, fci->szPrevCab );\n        ptr += strlen( ptr ) + 1;\n        strcpy( ptr, fci->szPrevDisk );\n        ptr += strlen( ptr ) + 1;\n    }\n\n    if (flags & cfheadNEXT_CABINET)\n    {\n        strcpy( ptr, fci->pccab->szCab );\n        ptr += strlen( ptr ) + 1;\n        strcpy( ptr, fci->pccab->szDisk );\n        ptr += strlen( ptr ) + 1;\n    }\n\n    assert( ptr - (char *)cfheader == header_size );\n\n    strcpy( filename, fci->ccab.szCabPath );\n    strcat( filename, fci->ccab.szCab );\n\n    if ((handle = fci->open( filename, _O_RDWR | _O_CREAT | _O_TRUNC | _O_BINARY,\n                             _S_IREAD | _S_IWRITE, &err, fci->pv )) == -1)\n    {\n        set_error( fci, FCIERR_CAB_FILE, err );\n        return FALSE;\n    }\n\n    if (fci->write( handle, cfheader, header_size, &err, fci->pv ) != header_size)\n    {\n        set_error( fci, FCIERR_CAB_FILE, err );\n        goto failed;\n    }\n\n    /* add size of header size of all CFFOLDERs and size of all CFFILEs */\n    header_size += fci->placed_files_size + fci->folders_size;\n    if (!write_folders( fci, handle, header_size, status_callback )) goto failed;\n    if (!write_files( fci, handle, status_callback )) goto failed;\n    if (!write_data_blocks( fci, handle, status_callback )) goto failed;\n\n    /* update the signature */\n    if (fci->seek( handle, 0, SEEK_SET, &err, fci->pv ) != 0 )\n    {\n        set_error( fci, FCIERR_CAB_FILE, err );\n        goto failed;\n    }\n    memcpy( cfheader->signature, \"MSCF\", 4 );\n    if (fci->write( handle, cfheader->signature, 4, &err, fci->pv ) != 4)\n    {\n        set_error( fci, FCIERR_CAB_FILE, err );\n        goto failed;\n    }\n    fci->close( handle, &err, fci->pv );\n\n    reset_cabinet( fci );\n    status_callback( statusCabinet, fci->estimatedCabinetSize, total_size, fci->pv );\n    return TRUE;\n\nfailed:\n    fci->close( handle, &err, fci->pv );\n    fci->delete( filename, &err, fci->pv );\n    return FALSE;\n}"
+  },
+  {
+   "name": "add_file",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 266,
+   "end_line": 286,
+   "static": true,
+   "called_from": [
+    "add_file_data"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static struct file *add_file( FCI_Int *fci, const char *filename )",
+   "code": "static struct file *add_file( FCI_Int *fci, const char *filename )\n{\n    unsigned int size = FIELD_OFFSET( struct file, name[strlen(filename) + 1] );\n    struct file *file = fci->alloc( size );\n\n    if (!file)\n    {\n        set_error( fci, FCIERR_ALLOC_FAIL, ERROR_NOT_ENOUGH_MEMORY );\n        return NULL;\n    }\n    file->size    = 0;\n    file->offset  = fci->cDataBlocks * CAB_BLOCKMAX + fci->cdata_in;\n    file->folder  = fci->cFolders;\n    file->date    = 0;\n    file->time    = 0;\n    file->attribs = 0;\n    strcpy( file->name, filename );\n    list_add_tail( &fci->files_list, &file->entry );\n    fci->files_size += sizeof(CFFILE) + strlen(filename) + 1;\n    return file;\n}"
+  },
+  {
+   "name": "free_file",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 302,
+   "end_line": 306,
+   "static": true,
+   "called_from": [
+    "add_file_data",
+    "free_folder"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/cabinet/fci.c:1718"
+   ],
+   "signature": "static void free_file( FCI_Int *fci, struct file *file )",
+   "code": "static void free_file( FCI_Int *fci, struct file *file )\n{\n    list_remove( &file->entry );\n    fci->free( file );\n}"
+  },
+  {
+   "name": "add_data_block",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 309,
+   "end_line": 346,
+   "static": true,
+   "called_from": [
+    "add_file_data",
+    "fci_flush_folder"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL add_data_block( FCI_Int *fci, PFNFCISTATUS status_callback )",
+   "code": "static BOOL add_data_block( FCI_Int *fci, PFNFCISTATUS status_callback )\n{\n    int err;\n    struct data_block *block;\n\n    if (!fci->cdata_in) return TRUE;\n\n    if (fci->data.handle == -1 && !create_temp_file( fci, &fci->data )) return FALSE;\n\n    if (!(block = fci->alloc( sizeof(*block) )))\n    {\n        set_error( fci, FCIERR_ALLOC_FAIL, ERROR_NOT_ENOUGH_MEMORY );\n        return FALSE;\n    }\n    block->uncompressed = fci->cdata_in;\n    block->compressed   = fci->compress( fci );\n\n    if (fci->write( fci->data.handle, fci->data_out,\n                    block->compressed, &err, fci->pv ) != block->compressed)\n    {\n        set_error( fci, FCIERR_TEMP_FILE, err );\n        fci->free( block );\n        return FALSE;\n    }\n\n    fci->cdata_in = 0;\n    fci->pending_data_size += sizeof(CFDATA) + fci->ccab.cbReserveCFData + block->compressed;\n    fci->cCompressedBytesInFolder += block->compressed;\n    fci->cDataBlocks++;\n    list_add_tail( &fci->blocks_list, &block->entry );\n\n    if (status_callback( statusFile, block->compressed, block->uncompressed, fci->pv ) == -1)\n    {\n        set_error( fci, FCIERR_USER_ABORT, 0 );\n        return FALSE;\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "add_folder",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 392,
+   "end_line": 411,
+   "static": true,
+   "called_from": [
+    "fci_flush_folder"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static struct folder *add_folder( FCI_Int *fci )",
+   "code": "static struct folder *add_folder( FCI_Int *fci )\n{\n    struct folder *folder = fci->alloc( sizeof(*folder) );\n\n    if (!folder)\n    {\n        set_error( fci, FCIERR_ALLOC_FAIL, ERROR_NOT_ENOUGH_MEMORY );\n        return NULL;\n    }\n    folder->data.handle = -1;\n    folder->data_start  = fci->folders_data_size;\n    folder->data_count  = 0;\n    folder->compression = fci->compression;\n    list_init( &folder->files_list );\n    list_init( &folder->blocks_list );\n    list_add_tail( &fci->folders_list, &folder->entry );\n    fci->folders_size += sizeof(CFFOLDER) + fci->ccab.cbReserveCFFolder;\n    fci->cFolders++;\n    return folder;\n}"
+  },
+  {
+   "name": "add_data_to_folder",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 758,
+   "end_line": 832,
+   "static": true,
+   "called_from": [
+    "fci_flush_folder"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL add_data_to_folder( FCI_Int *fci, struct folder *folder, cab_ULONG *payload, PFNFCISTATUS status_callback )",
+   "code": "static BOOL add_data_to_folder( FCI_Int *fci, struct folder *folder, cab_ULONG *payload,\n                                PFNFCISTATUS status_callback )\n{\n    struct data_block *block, *new, *next;\n    BOOL split_block = FALSE;\n    cab_ULONG current_size, start_pos = 0;\n\n    *payload = 0;\n    current_size = get_header_size( fci ) + fci->folders_size +\n                   fci->files_size + fci->placed_files_size + fci->folders_data_size;\n\n    /* move the temp file into the folder structure */\n    folder->data = fci->data;\n    fci->data.handle = -1;\n    fci->pending_data_size = 0;\n\n    LIST_FOR_EACH_ENTRY_SAFE( block, next, &fci->blocks_list, struct data_block, entry )\n    {\n        /* No more CFDATA fits into the cabinet under construction */\n        /* So don't try to store more data into it */\n        if (fci->fNextCab && (fci->ccab.cb <= sizeof(CFDATA) + fci->ccab.cbReserveCFData +\n                              current_size + sizeof(CFFOLDER) + fci->ccab.cbReserveCFFolder))\n            break;\n\n        if (!(new = fci->alloc( sizeof(*new) )))\n        {\n            set_error( fci, FCIERR_ALLOC_FAIL, ERROR_NOT_ENOUGH_MEMORY );\n            return FALSE;\n        }\n        /* Is cabinet with new CFDATA too large? Then data block has to be split */\n        if( fci->fNextCab &&\n            (fci->ccab.cb < sizeof(CFDATA) + fci->ccab.cbReserveCFData +\n             block->compressed + current_size + sizeof(CFFOLDER) + fci->ccab.cbReserveCFFolder))\n        {\n            /* Modify the size of the compressed data to store only a part of the */\n            /* data block into the current cabinet. This is done to prevent */\n            /* that the maximum cabinet size will be exceeded. The remainder */\n            /* will be stored into the next following cabinet. */\n\n            new->compressed = fci->ccab.cb - (sizeof(CFDATA) + fci->ccab.cbReserveCFData + current_size +\n                                              sizeof(CFFOLDER) + fci->ccab.cbReserveCFFolder );\n            new->uncompressed = 0; /* on split blocks of data this is zero */\n            block->compressed -= new->compressed;\n            split_block = TRUE;\n        }\n        else\n        {\n            new->compressed   = block->compressed;\n            new->uncompressed = block->uncompressed;\n        }\n\n        start_pos += new->compressed;\n        current_size += sizeof(CFDATA) + fci->ccab.cbReserveCFData + new->compressed;\n        fci->folders_data_size += sizeof(CFDATA) + fci->ccab.cbReserveCFData + new->compressed;\n        fci->statusFolderCopied += new->compressed;\n        (*payload) += new->uncompressed;\n\n        list_add_tail( &folder->blocks_list, &new->entry );\n        folder->data_count++;\n\n        /* report status with pfnfcis about copied size of folder */\n        if (status_callback( statusFolder, fci->statusFolderCopied,\n                             fci->statusFolderTotal, fci->pv ) == -1)\n        {\n            set_error( fci, FCIERR_USER_ABORT, 0 );\n            return FALSE;\n        }\n        if (split_block) break;\n        free_data_block( fci, block );\n        fci->cDataBlocks--;\n    }\n\n    if (list_empty( &fci->blocks_list )) return TRUE;\n    return copy_data_blocks( fci, folder->data.handle, start_pos, &fci->data, status_callback );\n}"
+  },
+  {
+   "name": "add_files_to_folder",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 835,
+   "end_line": 900,
+   "static": true,
+   "called_from": [
+    "fci_flush_folder"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL add_files_to_folder( FCI_Int *fci, struct folder *folder, cab_ULONG payload )",
+   "code": "static BOOL add_files_to_folder( FCI_Int *fci, struct folder *folder, cab_ULONG payload )\n{\n    cab_ULONG sizeOfFiles = 0, sizeOfFilesPrev;\n    cab_ULONG cbFileRemainder = 0;\n    struct file *file, *next;\n\n    LIST_FOR_EACH_ENTRY_SAFE( file, next, &fci->files_list, struct file, entry )\n    {\n        cab_ULONG size = sizeof(CFFILE) + strlen(file->name) + 1;\n\n        /* fnfilfnfildest: placed file on cabinet */\n        fci->fileplaced( &fci->ccab, file->name, file->size,\n                         (file->folder == cffileCONTINUED_FROM_PREV), fci->pv );\n\n        sizeOfFilesPrev = sizeOfFiles;\n        /* set complete size of all processed files */\n        if (file->folder == cffileCONTINUED_FROM_PREV && fci->cbFileRemainder != 0)\n        {\n            sizeOfFiles += fci->cbFileRemainder;\n            fci->cbFileRemainder = 0;\n        }\n        else sizeOfFiles += file->size;\n\n        /* check if spanned file fits into this cabinet folder */\n        if (sizeOfFiles > payload)\n        {\n            if (file->folder == cffileCONTINUED_FROM_PREV)\n                file->folder = cffileCONTINUED_PREV_AND_NEXT;\n            else\n                file->folder = cffileCONTINUED_TO_NEXT;\n        }\n\n        list_remove( &file->entry );\n        list_add_tail( &folder->files_list, &file->entry );\n        fci->placed_files_size += size;\n        fci->cFiles++;\n\n        /* This is only true for files which will be written into the */\n        /* next cabinet of the spanning folder */\n        if (sizeOfFiles > payload)\n        {\n            /* add a copy back onto the list */\n            if (!(file = copy_file( fci, file ))) return FALSE;\n            list_add_before( &next->entry, &file->entry );\n\n            /* Files which data will be partially written into the current cabinet */\n            if (file->folder == cffileCONTINUED_PREV_AND_NEXT || file->folder == cffileCONTINUED_TO_NEXT)\n            {\n                if (sizeOfFilesPrev <= payload)\n                {\n                    /* The size of the uncompressed, data of a spanning file in a */\n                    /* spanning data */\n                    cbFileRemainder = sizeOfFiles - payload;\n                }\n                file->folder = cffileCONTINUED_FROM_PREV;\n            }\n            else file->folder = 0;\n        }\n        else\n        {\n            fci->files_size -= size;\n        }\n    }\n    fci->cbFileRemainder = cbFileRemainder;\n    return TRUE;\n}"
+  },
+  {
+   "name": "write_folders",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 525,
+   "end_line": 547,
+   "static": true,
+   "called_from": [
+    "write_cabinet"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL write_folders( FCI_Int *fci, INT_PTR handle, cab_ULONG header_size, PFNFCISTATUS status_callback )",
+   "code": "static BOOL write_folders( FCI_Int *fci, INT_PTR handle, cab_ULONG header_size, PFNFCISTATUS status_callback )\n{\n    struct folder *folder;\n    int err;\n    CFFOLDER *cffolder = (CFFOLDER *)fci->data_out;\n    cab_ULONG folder_size = sizeof(CFFOLDER) + fci->ccab.cbReserveCFFolder;\n\n    memset( cffolder, 0, folder_size );\n\n    /* write the folders */\n    LIST_FOR_EACH_ENTRY( folder, &fci->folders_list, struct folder, entry )\n    {\n        cffolder->coffCabStart = fci_endian_ulong( folder->data_start + header_size );\n        cffolder->cCFData      = fci_endian_uword( folder->data_count );\n        cffolder->typeCompress = fci_endian_uword( folder->compression );\n        if (fci->write( handle, cffolder, folder_size, &err, fci->pv ) != folder_size)\n        {\n            set_error( fci, FCIERR_CAB_FILE, err );\n            return FALSE;\n        }\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "write_files",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 550,
+   "end_line": 592,
+   "static": true,
+   "called_from": [
+    "write_cabinet"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL write_files( FCI_Int *fci, INT_PTR handle, PFNFCISTATUS status_callback )",
+   "code": "static BOOL write_files( FCI_Int *fci, INT_PTR handle, PFNFCISTATUS status_callback )\n{\n    cab_ULONG file_size;\n    struct folder *folder;\n    struct file *file;\n    int err;\n    CFFILE *cffile = (CFFILE *)fci->data_out;\n\n    LIST_FOR_EACH_ENTRY( folder, &fci->folders_list, struct folder, entry )\n    {\n        LIST_FOR_EACH_ENTRY( file, &folder->files_list, struct file, entry )\n        {\n            cffile->cbFile          = fci_endian_ulong( file->size );\n            cffile->uoffFolderStart = fci_endian_ulong( file->offset );\n            cffile->iFolder         = fci_endian_uword( file->folder );\n            cffile->date            = fci_endian_uword( file->date );\n            cffile->time            = fci_endian_uword( file->time );\n            cffile->attribs         = fci_endian_uword( file->attribs );\n            lstrcpynA( (char *)(cffile + 1), file->name, CB_MAX_FILENAME );\n            file_size = sizeof(CFFILE) + strlen( (char *)(cffile + 1) ) + 1;\n            if (fci->write( handle, cffile, file_size, &err, fci->pv ) != file_size)\n            {\n                set_error( fci, FCIERR_CAB_FILE, err );\n                return FALSE;\n            }\n            if (!fci->fSplitFolder)\n            {\n                fci->statusFolderCopied = 0;\n                /* TODO TEST THIS further */\n                fci->statusFolderTotal = fci->folders_data_size + fci->placed_files_size;\n            }\n            fci->statusFolderCopied += file_size;\n            /* report status about copied size of folder */\n            if (status_callback( statusFolder, fci->statusFolderCopied,\n                                 fci->statusFolderTotal, fci->pv ) == -1)\n            {\n                set_error( fci, FCIERR_USER_ABORT, 0 );\n                return FALSE;\n            }\n        }\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "write_data_blocks",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 595,
+   "end_line": 642,
+   "static": true,
+   "called_from": [
+    "write_cabinet"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL write_data_blocks( FCI_Int *fci, INT_PTR handle, PFNFCISTATUS status_callback )",
+   "code": "static BOOL write_data_blocks( FCI_Int *fci, INT_PTR handle, PFNFCISTATUS status_callback )\n{\n    struct folder *folder;\n    struct data_block *block;\n    int err, len;\n    CFDATA *cfdata;\n    void *data;\n    cab_UWORD header_size;\n\n    header_size = sizeof(CFDATA) + fci->ccab.cbReserveCFData;\n    cfdata = (CFDATA *)fci->data_out;\n    memset( cfdata, 0, header_size );\n    data = (char *)cfdata + header_size;\n\n    LIST_FOR_EACH_ENTRY( folder, &fci->folders_list, struct folder, entry )\n    {\n        if (fci->seek( folder->data.handle, 0, SEEK_SET, &err, fci->pv ) != 0)\n        {\n            set_error( fci, FCIERR_CAB_FILE, err );\n            return FALSE;\n        }\n        LIST_FOR_EACH_ENTRY( block, &folder->blocks_list, struct data_block, entry )\n        {\n            len = fci->read( folder->data.handle, data, block->compressed, &err, fci->pv );\n            if (len != block->compressed) return FALSE;\n\n            cfdata->cbData = fci_endian_uword( block->compressed );\n            cfdata->cbUncomp = fci_endian_uword( block->uncompressed );\n            cfdata->csum = fci_endian_ulong( fci_get_checksum( &cfdata->cbData,\n                                                               header_size - FIELD_OFFSET(CFDATA, cbData),\n                                                               fci_get_checksum( data, len, 0 )));\n\n            fci->statusFolderCopied += len;\n            len += header_size;\n            if (fci->write( handle, fci->data_out, len, &err, fci->pv ) != len)\n            {\n                set_error( fci, FCIERR_CAB_FILE, err );\n                return FALSE;\n            }\n            if (status_callback( statusFolder, fci->statusFolderCopied, fci->statusFolderTotal, fci->pv) == -1)\n            {\n                set_error( fci, FCIERR_USER_ABORT, 0 );\n                return FALSE;\n            }\n        }\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "reset_cabinet",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 428,
+   "end_line": 440,
+   "static": true,
+   "called_from": [
+    "write_cabinet"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void reset_cabinet( FCI_Int *fci )",
+   "code": "static void reset_cabinet( FCI_Int *fci )\n{\n    struct folder *folder, *folder_next;\n\n    LIST_FOR_EACH_ENTRY_SAFE( folder, folder_next, &fci->folders_list, struct folder, entry )\n        free_folder( fci, folder );\n\n    fci->cFolders          = 0;\n    fci->cFiles            = 0;\n    fci->folders_size      = 0;\n    fci->placed_files_size = 0;\n    fci->folders_data_size = 0;\n}"
+  },
+  {
+   "name": "create_temp_file",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 229,
+   "end_line": 245,
+   "static": true,
+   "called_from": [
+    "add_data_block",
+    "copy_data_blocks"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL create_temp_file( FCI_Int *fci, struct temp_file *file )",
+   "code": "static BOOL create_temp_file( FCI_Int *fci, struct temp_file *file )\n{\n    int err;\n\n    if (!fci->gettemp( file->name, CB_MAX_FILENAME, fci->pv ))\n    {\n        set_error( fci, FCIERR_TEMP_FILE, ERROR_FUNCTION_FAILED );\n        return FALSE;\n    }\n    if ((file->handle = fci->open( file->name, _O_RDWR | _O_CREAT | _O_EXCL | _O_BINARY,\n                                   _S_IREAD | _S_IWRITE, &err, fci->pv )) == -1)\n    {\n        set_error( fci, FCIERR_TEMP_FILE, err );\n        return FALSE;\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "free_data_block",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 386,
+   "end_line": 390,
+   "static": true,
+   "called_from": [
+    "add_data_to_folder",
+    "free_folder"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/cabinet/fci.c:1722"
+   ],
+   "signature": "static void free_data_block( FCI_Int *fci, struct data_block *block )",
+   "code": "static void free_data_block( FCI_Int *fci, struct data_block *block )\n{\n    list_remove( &block->entry );\n    fci->free( block );\n}"
+  },
+  {
+   "name": "copy_data_blocks",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 481,
+   "end_line": 522,
+   "static": true,
+   "called_from": [
+    "add_data_to_folder"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL copy_data_blocks( FCI_Int *fci, INT_PTR handle, cab_ULONG start_pos, struct temp_file *temp, PFNFCISTATUS status_callback )",
+   "code": "static BOOL copy_data_blocks( FCI_Int *fci, INT_PTR handle, cab_ULONG start_pos,\n                              struct temp_file *temp, PFNFCISTATUS status_callback )\n{\n    struct data_block *block;\n    int err;\n\n    if (fci->seek( handle, start_pos, SEEK_SET, &err, fci->pv ) != start_pos)\n    {\n        set_error( fci, FCIERR_TEMP_FILE, err );\n        return FALSE;\n    }\n    if (!create_temp_file( fci, temp )) return FALSE;\n\n    LIST_FOR_EACH_ENTRY( block, &fci->blocks_list, struct data_block, entry )\n    {\n        if (fci->read( handle, fci->data_out, block->compressed,\n                       &err, fci->pv ) != block->compressed)\n        {\n            close_temp_file( fci, temp );\n            set_error( fci, FCIERR_TEMP_FILE, err );\n            return FALSE;\n        }\n        if (fci->write( temp->handle, fci->data_out, block->compressed,\n                        &err, fci->pv ) != block->compressed)\n        {\n            close_temp_file( fci, temp );\n            set_error( fci, FCIERR_TEMP_FILE, err );\n            return FALSE;\n        }\n        fci->pending_data_size += sizeof(CFDATA) + fci->ccab.cbReserveCFData + block->compressed;\n        fci->statusFolderCopied += block->compressed;\n\n        if (status_callback( statusFolder, fci->statusFolderCopied,\n                             fci->statusFolderTotal, fci->pv) == -1)\n        {\n            close_temp_file( fci, temp );\n            set_error( fci, FCIERR_USER_ABORT, 0 );\n            return FALSE;\n        }\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "copy_file",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 288,
+   "end_line": 300,
+   "static": true,
+   "called_from": [
+    "add_files_to_folder"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static struct file *copy_file( FCI_Int *fci, const struct file *orig )",
+   "code": "static struct file *copy_file( FCI_Int *fci, const struct file *orig )\n{\n    unsigned int size = FIELD_OFFSET( struct file, name[strlen(orig->name) + 1] );\n    struct file *file = fci->alloc( size );\n\n    if (!file)\n    {\n        set_error( fci, FCIERR_ALLOC_FAIL, ERROR_NOT_ENOUGH_MEMORY );\n        return NULL;\n    }\n    memcpy( file, orig, size );\n    return file;\n}"
+  },
+  {
+   "name": "fci_get_checksum",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 442,
+   "end_line": 478,
+   "static": true,
+   "called_from": [
+    "write_data_blocks"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static cab_ULONG fci_get_checksum( const void *pv, UINT cb, cab_ULONG seed )",
+   "code": "static cab_ULONG fci_get_checksum( const void *pv, UINT cb, cab_ULONG seed )\n{\n  cab_ULONG     csum;\n  cab_ULONG     ul;\n  int           cUlong;\n  const BYTE    *pb;\n\n  csum = seed;\n  cUlong = cb / 4;\n  pb = pv;\n\n  while (cUlong-- > 0) {\n    ul = *pb++;\n    ul |= (((cab_ULONG)(*pb++)) <<  8);\n    ul |= (((cab_ULONG)(*pb++)) << 16);\n    ul |= (((cab_ULONG)(*pb++)) << 24);\n    csum ^= ul;\n  }\n\n  ul = 0;\n  switch (cb % 4) {\n    case 3:\n      ul |= (((ULONG)(*pb++)) << 16);\n      /* fall through */\n    case 2:\n      ul |= (((ULONG)(*pb++)) <<  8);\n      /* fall through */\n    case 1:\n      ul |= *pb;\n      /* fall through */\n    default:\n      break;\n  }\n  csum ^= ul;\n\n  return csum;\n}"
+  },
+  {
+   "name": "free_folder",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 413,
+   "end_line": 425,
+   "static": true,
+   "called_from": [
+    "reset_cabinet"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/cabinet/fci.c:1714"
+   ],
+   "signature": "static void free_folder( FCI_Int *fci, struct folder *folder )",
+   "code": "static void free_folder( FCI_Int *fci, struct folder *folder )\n{\n    struct file *file, *file_next;\n    struct data_block *block, *block_next;\n\n    LIST_FOR_EACH_ENTRY_SAFE( file, file_next, &folder->files_list, struct file, entry )\n        free_file( fci, file );\n    LIST_FOR_EACH_ENTRY_SAFE( block, block_next, &folder->blocks_list, struct data_block, entry )\n        free_data_block( fci, block );\n    close_temp_file( fci, &folder->data );\n    list_remove( &folder->entry );\n    fci->free( folder );\n}"
+  },
+  {
+   "name": "close_temp_file",
+   "file": "dlls/cabinet/fci.c",
+   "start_line": 247,
+   "end_line": 264,
+   "static": true,
+   "called_from": [
+    "copy_data_blocks",
+    "free_folder"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/cabinet/fci.c:1725"
+   ],
+   "signature": "static BOOL close_temp_file( FCI_Int *fci, struct temp_file *file )",
+   "code": "static BOOL close_temp_file( FCI_Int *fci, struct temp_file *file )\n{\n    int err;\n\n    if (file->handle == -1) return TRUE;\n    if (fci->close( file->handle, &err, fci->pv ) == -1)\n    {\n        set_error( fci, FCIERR_TEMP_FILE, err );\n        return FALSE;\n    }\n    file->handle = -1;\n    if (fci->delete( file->name, &err, fci->pv ) == -1)\n    {\n        set_error( fci, FCIERR_TEMP_FILE, err );\n        return FALSE;\n    }\n    return TRUE;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "CFDATA",
+    "kind": "typedef_decl",
+    "start_line": 97,
+    "end_line": 103,
+    "code": "typedef struct {\n  cab_ULONG csum;          /* checksum of this entry*/\n  cab_UWORD cbData;        /* number of compressed bytes  */\n  cab_UWORD cbUncomp;      /* number of bytes when data is uncompressed */\n  /* optional reserved area */\n  /* compressed data */\n} CFDATA;"
+   },
+   {
+    "name": "CFFILE",
+    "kind": "typedef_decl",
+    "start_line": 85,
+    "end_line": 94,
+    "code": "typedef struct {\n  cab_ULONG cbFile;          /* size of the uncompressed file in bytes */\n  cab_ULONG uoffFolderStart; /* offset of the uncompressed file in the folder */\n  cab_UWORD iFolder;         /* number of folder in the cabinet 0=first  */\n                             /* for special values see below this structure*/\n  cab_UWORD date;            /* last modification date*/\n  cab_UWORD time;            /* last modification time*/\n  cab_UWORD attribs;         /* DOS fat attributes and UTF indicator */\n  /* ... and a C string with the name of the file */\n} CFFILE; /* 16 bytes + name of file */"
+   },
+   {
+    "name": "CFFOLDER",
+    "kind": "typedef_decl",
+    "start_line": 78,
+    "end_line": 83,
+    "code": "typedef struct {\n  cab_ULONG coffCabStart; /* offset to the folder's first CFDATA section */\n  cab_UWORD cCFData;      /* number of this folder's CFDATA sections */\n  cab_UWORD typeCompress; /* compression type of data in CFDATA section*/\n  /* additional area if reserve flag was set */\n} CFFOLDER; /* minimum 8 bytes */"
+   },
+   {
+    "name": "CFHEADER",
+    "kind": "typedef_decl",
+    "start_line": 61,
+    "end_line": 76,
+    "code": "typedef struct {\n  cab_UBYTE signature[4]; /* !CAB for unfinished cabinets else MSCF */\n  cab_ULONG reserved1;\n  cab_ULONG cbCabinet;    /*  size of the cabinet file in bytes*/\n  cab_ULONG reserved2;\n  cab_ULONG coffFiles;    /* offset to first CFFILE section */\n  cab_ULONG reserved3;\n  cab_UBYTE versionMinor; /* 3 */\n  cab_UBYTE versionMajor; /* 1 */\n  cab_UWORD cFolders;     /* number of CFFOLDER entries in the cabinet*/\n  cab_UWORD cFiles;       /* number of CFFILE entries in the cabinet*/\n  cab_UWORD flags;        /* 1=prev cab, 2=next cabinet, 4=reserved sections*/\n  cab_UWORD setID;        /* identification number of all cabinets in a set*/\n  cab_UWORD iCabinet;     /* number of the cabinet in a set */\n  /* additional area if \"flags\" were set*/\n} CFHEADER; /* minimum 36 bytes */"
+   },
+   {
+    "name": "FCI_Int",
+    "kind": "typedef_decl",
+    "start_line": 141,
+    "end_line": 188,
+    "code": "typedef struct FCI_Int\n{\n  unsigned int       magic;\n  PERF               perf;\n  PFNFCIFILEPLACED   fileplaced;\n  PFNFCIALLOC        alloc;\n  PFNFCIFREE         free;\n  PFNFCIOPEN         open;\n  PFNFCIREAD         read;\n  PFNFCIWRITE        write;\n  PFNFCICLOSE        close;\n  PFNFCISEEK         seek;\n  PFNFCIDELETE       delete;\n  PFNFCIGETTEMPFILE  gettemp;\n  CCAB               ccab;\n  PCCAB              pccab;\n  BOOL               fPrevCab;\n  BOOL               fNextCab;\n  BOOL               fSplitFolder;\n  cab_ULONG          statusFolderCopied;\n  cab_ULONG          statusFolderTotal;\n  BOOL               fGetNextCabInVain;\n  void               *pv;\n  char               szPrevCab[CB_MAX_CABINET_NAME]; /* previous cabinet name */\n  char               szPrevDisk[CB_MAX_DISK_NAME];   /* disk name of previous cabinet */\n  unsigned char      data_in[CAB_BLOCKMAX];          /* uncompressed data blocks */\n  unsigned char      data_out[2 * CAB_BLOCKMAX];     /* compressed data blocks */\n  cab_UWORD          cdata_in;\n  ULONG              cCompressedBytesInFolder;\n  cab_UWORD          cFolders;\n  cab_UWORD          cFiles;\n  cab_ULONG          cDataBlocks;\n  cab_ULONG          cbFileRemainder; /* uncompressed, yet to be written data */\n               /* of spanned file of a spanning folder of a spanning cabinet */\n  struct temp_file   data;\n  BOOL               fNewPrevious;\n  cab_ULONG          estimatedCabinetSize;\n  struct list        folders_list;\n  struct list        files_list;\n  struct list        blocks_list;\n  cab_ULONG          folders_size;\n  cab_ULONG          files_size;          /* size of files not yet assigned to a folder */\n  cab_ULONG          placed_files_size;   /* size of files already placed into a folder */\n  cab_ULONG          pending_data_size;   /* size of data not yet assigned to a folder */\n  cab_ULONG          folders_data_size;   /* total size of data contained in the current folders */\n  TCOMP              compression;\n  cab_UWORD        (*compress)(struct FCI_Int *);\n} FCI_Int;"
+   },
+   {
+    "name": "data_block",
+    "kind": "struct_decl",
+    "start_line": 134,
+    "end_line": 139,
+    "code": "struct data_block\n{\n    struct list entry;\n    cab_UWORD   compressed;\n    cab_UWORD   uncompressed;\n};"
+   },
+   {
+    "name": "file",
+    "kind": "struct_decl",
+    "start_line": 122,
+    "end_line": 132,
+    "code": "struct file\n{\n    struct list entry;\n    cab_ULONG   size;    /* uncompressed size */\n    cab_ULONG   offset;  /* offset in folder */\n    cab_UWORD   folder;  /* index of folder */\n    cab_UWORD   date;\n    cab_UWORD   time;\n    cab_UWORD   attribs;\n    char        name[1];\n};"
+   },
+   {
+    "name": "folder",
+    "kind": "struct_decl",
+    "start_line": 111,
+    "end_line": 120,
+    "code": "struct folder\n{\n    struct list      entry;\n    struct list      files_list;\n    struct list      blocks_list;\n    struct temp_file data;\n    cab_ULONG        data_start;\n    cab_UWORD        data_count;\n    TCOMP            compression;\n};"
+   },
+   {
+    "name": "struct (unnamed at /Users/xingangao/wine_fuzz/wine_src/wine/dlls/cabinet/fci.c:679:9)",
+    "kind": "struct_decl",
+    "start_line": 679,
+    "end_line": 684,
+    "code": "        struct\n        {\n            cab_UWORD cbCFHeader;\n            cab_UBYTE cbCFFolder;\n            cab_UBYTE cbCFData;\n        } *reserve = (void *)ptr;"
+   },
+   {
+    "name": "temp_file",
+    "kind": "struct_decl",
+    "start_line": 105,
+    "end_line": 109,
+    "code": "struct temp_file\n{\n    INT_PTR   handle;\n    char      name[CB_MAX_FILENAME];\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 50,
+    "end_line": 50,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(cabinet);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "FCI_INT_MAGIC",
+    "start_line": 190,
+    "end_line": 190,
+    "code": "#define FCI_INT_MAGIC 0xfcfcfc05"
+   },
+   {
+    "name": "fci_endian_ulong",
+    "start_line": 56,
+    "end_line": 56,
+    "code": "#define fci_endian_ulong(x) (x)"
+   },
+   {
+    "name": "fci_endian_uword",
+    "start_line": 57,
+    "end_line": 57,
+    "code": "#define fci_endian_uword(x) (x)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "FCIFlushFolder",
+    "impl": [
+     "dlls/cabinet/fci.c:1621"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "_assert",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/exit.c:319"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   },
+   {
+    "name": "strcat",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:327"
+    ]
+   },
+   {
+    "name": "strcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:381"
+    ]
+   },
+   {
+    "name": "strlen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:423"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "list_add_before",
+   "list_add_tail",
+   "list_empty",
+   "list_init",
+   "list_remove",
+   "lstrcpynA",
+   "wine_dbg_log"
+  ],
+  "system": [
+   "deflate",
+   "deflateEnd",
+   "deflateInit2_"
+  ],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "(*pfnfcignc)",
+    "in_function": "FCIAddFile",
+    "at": "dlls/cabinet/fci.c:1467",
+    "candidates": []
+   },
+   {
+    "expr": "get_open_info",
+    "in_function": "add_file_data",
+    "at": "dlls/cabinet/fci.c:358",
+    "candidates": []
+   },
+   {
+    "expr": "fci->read",
+    "in_function": "add_file_data",
+    "at": "dlls/cabinet/fci.c:369",
+    "candidates": [
+     "pfnread @ dlls/cabinet/fci.c:1038",
+     "pfnread @ dlls/cabinet/fdi.c:450"
+    ]
+   },
+   {
+    "expr": "fci->close",
+    "in_function": "add_file_data",
+    "at": "dlls/cabinet/fci.c:382",
+    "candidates": [
+     "pfnclose @ dlls/cabinet/fci.c:1040",
+     "pfnclose @ dlls/cabinet/fdi.c:452"
+    ]
+   },
+   {
+    "expr": "fci->alloc",
+    "in_function": "zalloc",
+    "at": "dlls/cabinet/fci.c:911",
+    "candidates": [
+     "pfnalloc @ dlls/cabinet/fci.c:1035",
+     "pfnalloc @ dlls/cabinet/fdi.c:447"
+    ]
+   },
+   {
+    "expr": "fci->free",
+    "in_function": "zfree",
+    "at": "dlls/cabinet/fci.c:917",
+    "candidates": [
+     "pfnfree @ dlls/cabinet/fci.c:1036",
+     "pfnfree @ dlls/cabinet/fdi.c:448"
+    ]
+   },
+   {
+    "expr": "(*pfnfcis)",
+    "in_function": "fci_flush_folder",
+    "at": "dlls/cabinet/fci.c:1119",
+    "candidates": []
+   },
+   {
+    "expr": "fci->open",
+    "in_function": "write_cabinet",
+    "at": "dlls/cabinet/fci.c:714",
+    "candidates": [
+     "pfnopen @ dlls/cabinet/fci.c:1037",
+     "pfnopen @ dlls/cabinet/fdi.c:449"
+    ]
+   },
+   {
+    "expr": "fci->write",
+    "in_function": "write_cabinet",
+    "at": "dlls/cabinet/fci.c:721",
+    "candidates": [
+     "pfnwrite @ dlls/cabinet/fci.c:1039",
+     "pfnwrite @ dlls/cabinet/fdi.c:451"
+    ]
+   },
+   {
+    "expr": "fci->seek",
+    "in_function": "write_cabinet",
+    "at": "dlls/cabinet/fci.c:734",
+    "candidates": [
+     "pfnseek @ dlls/cabinet/fci.c:1041",
+     "pfnseek @ dlls/cabinet/fdi.c:453"
+    ]
+   },
+   {
+    "expr": "status_callback",
+    "in_function": "write_cabinet",
+    "at": "dlls/cabinet/fci.c:748",
+    "candidates": []
+   },
+   {
+    "expr": "fci->delete",
+    "in_function": "write_cabinet",
+    "at": "dlls/cabinet/fci.c:753",
+    "candidates": [
+     "pfndelete @ dlls/cabinet/fci.c:1042"
+    ]
+   },
+   {
+    "expr": "fci->compress",
+    "in_function": "add_data_block",
+    "at": "dlls/cabinet/fci.c:324",
+    "candidates": [
+     "compress_MSZIP @ dlls/cabinet/fci.c:1417",
+     "compress_NONE @ dlls/cabinet/fci.c:1048",
+     "compress_NONE @ dlls/cabinet/fci.c:1424"
+    ]
+   },
+   {
+    "expr": "fci->fileplaced",
+    "in_function": "add_files_to_folder",
+    "at": "dlls/cabinet/fci.c:846",
+    "candidates": [
+     "pfnfiledest @ dlls/cabinet/fci.c:1034"
+    ]
+   },
+   {
+    "expr": "fci->gettemp",
+    "in_function": "create_temp_file",
+    "at": "dlls/cabinet/fci.c:233",
+    "candidates": [
+     "pfnfcigtf @ dlls/cabinet/fci.c:1043"
+    ]
+   }
+  ]
+ }
+}

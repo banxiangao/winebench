@@ -1,0 +1,103 @@
+{
+ "id": "0138",
+ "function": {
+  "name": "NtUserSetTimer",
+  "export_name": "SetCoalescableTimer",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/message.c",
+  "start_line": 4468,
+  "end_line": 4495,
+  "body_lines": 25,
+  "signature": "UINT_PTR WINAPI NtUserSetTimer( HWND hwnd, UINT_PTR id, UINT timeout, TIMERPROC proc, ULONG tolerance )",
+  "header_comment": "/***********************************************************************\n *           NtUserSetTimer (win32u.@)\n */",
+  "code": "UINT_PTR WINAPI NtUserSetTimer( HWND hwnd, UINT_PTR id, UINT timeout, TIMERPROC proc, ULONG tolerance )\n{\n    UINT_PTR ret;\n    WNDPROC winproc = 0;\n\n    if (proc) winproc = alloc_winproc( (WNDPROC)proc, TRUE );\n\n    timeout = min( max( USER_TIMER_MINIMUM, timeout ), USER_TIMER_MAXIMUM );\n\n    SERVER_START_REQ( set_win_timer )\n    {\n        req->win    = wine_server_user_handle( hwnd );\n        req->msg    = WM_TIMER;\n        req->id     = id;\n        req->rate   = timeout;\n        req->lparam = (ULONG_PTR)winproc;\n        if (!wine_server_call_err( req ))\n        {\n            ret = reply->id;\n            if (!ret) ret = TRUE;\n        }\n        else ret = 0;\n    }\n    SERVER_END_REQ;\n\n    TRACE( \"Added %p %lx %p timeout %d\\n\", hwnd, (long)id, winproc, timeout );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ddk/wdm.h\"",
+   "#include \"win32u_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"winnls.h\"",
+   "#include \"hidusage.h\"",
+   "#include \"dbt.h\"",
+   "#include \"dde.h\"",
+   "#include \"immdev.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "user32!SetCoalescableTimer [stdcall] -> NtUserSetTimer implicitly imported from win32u",
+   "win32u!NtUserSetTimer [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/msg.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-setcoalescabletimer.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-setcoalescabletimer",
+   "documented_name": "setcoalescabletimer",
+   "file": "docs/0138_sdk-api_nf-winuser-setcoalescabletimer.md",
+   "text": "---\nUID: NF:winuser.SetCoalescableTimer\ntitle: SetCoalescableTimer function (winuser.h)\ndescription: Creates a timer with the specified time-out value and coalescing tolerance delay.\nhelpviewer_keywords: [\"Any other value\",\"SetCoalescableTimer\",\"SetCoalescableTimer function [Windows and Messages]\",\"TIMERV_DEFAULT_COALESCING\",\"TIMERV_NO_COALESCING\",\"winmsg.setcoalescabletimer\",\"winuser/SetCoalescableTimer\"]\nold-location: winmsg\\setcoalescabletimer.htm\ntech.root: winmsg\nms.assetid: 39303811-972f-4131-deea-cebf84c50867\nms.date: 10/23/2020\nms.keywords: Any other value, SetCoalescableTimer, SetCoalescableTimer function [Windows and Messages], TIMERV_DEFAULT_COALESCING, TIMERV_NO_COALESCING, winmsg.setcoalescabletimer, winuser/SetCoalescableTimer\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 8 [desktop apps only]\nreq.target-min-winversvr: Windows Server 2012 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SetCoalescableTimer\n - winuser/SetCoalescableTimer\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-rtcore-ntuser-window-ext-l1-1-1.dll\n - ext-ms-win-ntuser-window-l1-1-6.dll\n - ext-ms-win-ntuser-window-l1-1-5.dll\n - User32.dll\n - Ext-MS-Win-NTUser-Misc-l1-1-0.dll\n - Ext-MS-Win-NTUser-Misc-l1-2-0.dll\n - Ext-MS-Win-NTUser-Window-l1-1-2.dll\n - Ext-MS-Win-RTCore-NTUser-Window-Ext-l1-1-0.dll\n - minuser.dll\n - ext-ms-win-ntuser-window-l1-1-3.dll\n - Ext-MS-Win-NTUser-Window-L1-1-4.dll\napi_name:\n - SetCoalescableTimer\nreq.apiset: ext-ms-win-ntuser-window-l1-1-2 (introduced in Windows 10, version 10.0.10240)\n---\n\n# SetCoalescableTimer function\n\n\n## -description\n\nCreates a timer with the specified time-out value and coalescing tolerance delay.\n\n## -parameters\n\n### -param hWnd [in, optional]\n\nType: <b>HWND</b>\n\nA handle to the window to be associated with the timer. This window must be owned by the calling thread. If a <b>NULL</b> value for <i>hWnd</i> is passed in along with an <i>nIDEvent</i> of an existing timer, that timer will be replaced in the same way that an existing non-NULL <i>hWnd</i> timer will be.\n\n### -param nIDEvent [in]\n\nType: <b>UINT_PTR</b>\n\nA timer identifier. If the <i>hWnd</i> parameter is <b>NULL</b>, and the <i>nIDEvent</i> does not match an existing timer, then the <i>nIDEvent</i> is ignored and a new timer ID is generated. If the <i>hWnd</i> parameter is not <b>NULL</b> and the window specified by <i>hWnd</i> already has a timer with the value <i>nIDEvent</i>, then the existing timer is replaced by the new timer. When <b>SetCoalescableTimer</b> replaces a timer, the timer is reset. Therefore, a message will be sent after the current time-out value elapses, but the previously set time-out value is ignored. If the call is not intended to replace an existing timer, <i>nIDEvent</i> should be 0 if the <i>hWnd</i> is <b>NULL</b>.\n\n### -param uElapse [in]\n\nType: <b>UINT</b>\n\nThe time-out value, in milliseconds.\n\n If <i>uElapse</i> is less than <b>USER_TIMER_MINIMUM</b> (0x0000000A), the timeout is set to <b>USER_TIMER_MINIMUM</b>. If <i>uElapse</i> is greater than <b>USER_TIMER_MAXIMUM</b> (0x7FFFFFFF), the timeout is set to <b>USER_TIMER_MAXIMUM</b>.\n\nIf the sum of <i>uElapse</i> and <i>uToleranceDelay</i> exceeds <b>USER_TIMER_MAXIMUM</b>, an ERROR_INVALID_PARAMETER exception occurs.\n\n### -param lpTimerFunc [in, optional]\n\nType: <b>TIMERPROC</b>\n\nA pointer to the function to be notified when the time-out value elapses. For more information about the function, see <a href=\"/windows/desktop/api/winuser/nc-winuser-timerproc\">TimerProc</a>. If <i>lpTimerFunc</i> is <b>NULL</b>, the system posts a <a href=\"/windows/desktop/winmsg/wm-timer\">WM_TIMER</a> message to the application queue. The <b>hwnd</b> member of the message's <a href=\"/windows/desktop/api/winuser/ns-winuser-msg\">MSG</a> structure contains the value of the <i>hWnd</i> parameter.\n\n### -param uToleranceDelay [in]\n\nType: <b>ULONG</b>\n\nIt can be one of the following values:\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"TIMERV_DEFAULT_COALESCING\"></a><a id=\"timerv_default_coalescing\"></a><dl>\n<dt><b>TIMERV_DEFAULT_COALESCING</b></dt>\n<dt>0x00000000</dt>\n</dl>\n</td>\n<td width=\"60%\">\nUses the system default timer coalescing. \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"TIMERV_NO_COALESCING\"></a><a id=\"timerv_no_coalescing\"></a><dl>\n<dt><b>TIMERV_NO_COALESCING</b></dt>\n<dt>0xFFFFFFFF</dt>\n</dl>\n</td>\n<td width=\"60%\">\nUses no timer coalescing.  When this value is used, the created timer is not coalesced, no matter what the system default timer coalescing is or the application compatibility flags are.\n\n\n<div class=\"alert\"><b>Note</b>  Do not use this value unless you are certain that the  timer requires no coalescing. </div>\n<div> </div>\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt>0x1 - 0x7FFFFFF5</dt>\n</dl>\n</td>\n<td width=\"60%\">\nSpecifies the coalescing tolerance delay, in milliseconds. \n\nApplications should set this value to the system default (<b>TIMERV_DEFAULT_COALESCING</b>) or the largest value possible. \n\nIf the sum of <i>uElapse</i> and <i>uToleranceDelay</i> exceeds <b>USER_TIMER_MAXIMUM</b> (0x7FFFFFFF), an ERROR_INVALID_PARAMETER exception occurs.\n\nSee <a href=\"https://download.microsoft.com/download/9/C/5/9C5B2167-8017-4BAE-9FDE-D599BAC8184A/TimerCoal.docx\">Windows Timer Coalescing</a> for more details and best practices.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"Any_other_value\"></a><a id=\"any_other_value\"></a><a id=\"ANY_OTHER_VALUE\"></a><dl>\n<dt><b>Any other value</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn invalid value. If <i>uToleranceDelay</i> is set to an invalid value, the function fails and returns zero.  \n\n</td>\n</tr>\n</table>\n\n## -returns\n\nType: <b>UINT_PTR</b>\n\nIf the function succeeds and the <i>hWnd</i> parameter is <b>NULL</b>, the return value is an integer identifying the new timer. An application can pass this value to the <a href=\"/windows/desktop/api/winuser/nf-winuser-killtimer\">KillTimer</a> function to destroy the timer.\n\nIf the function succeeds and the <i>hWnd</i> parameter is not <b>NULL</b>, then the return value is a nonzero integer. An application can pass the value of the <i>nIDEvent</i> parameter to the <a href=\"/windows/desktop/api/winuser/nf-winuser-killtimer\">KillTimer</a> function to destroy the timer.\n\nIf the function fails to create a timer, the return value is zero. To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nAn application can process <a href=\"/windows/desktop/winmsg/wm-timer\">WM_TIMER</a> messages by including a <b>WM_TIMER</b> case statement in the window procedure or by specifying a <a href=\"/windows/desktop/api/winuser/nc-winuser-timerproc\">TimerProc</a> callback function when creating the timer. When you specify a <b>TimerProc</b> callback function, the default window procedure calls the callback function when it processes <b>WM_TIMER</b>. Therefore, you need to dispatch messages in the calling thread, even when you use <b>TimerProc</b> instead of processing <b>WM_TIMER</b>.\n\nThe <i>wParam</i> parameter of the <a href=\"/windows/desktop/winmsg/wm-timer\">WM_TIMER</a> message contains the value of the <i>nIDEvent</i> parameter. \n\nThe timer identifier, <i>nIDEvent</i>, is specific to the associated window. Another window can have its own timer which has the same identifier as a timer owned by another window. The timers are distinct. \n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-settimer\">SetTimer</a> can reuse timer IDs in the case where <i>hWnd</i> is <b>NULL</b>. \n            \n\nWhen <i>uToleranceDelay</i> is set to 0, the system default timer coalescing is used and   <b>SetCoalescableTimer</b>  behaves the same as <a href=\"/windows/desktop/api/winuser/nf-winuser-settimer\">SetTimer</a>.\n\nBefore using **SetCoalescableTimer** or other timer-related functions, it is recommended to set the **UOI_TIMERPROC_EXCEPTION_SUPPRESSION** flag to **false** through the **SetUserObjectInformationW** function, otherwise the application could behave unpredictably and could be vulnerable to security exploits. For more info, see <a href=\"/windows/win32/api/winuser/nf-winuser-setuserobjectinformationw\">SetUserObjectInformationW</a>.\n\n## -see-also\n\n<a href=\"https://github.com/microsoftarchive/msdn-code-gallery-microsoft/tree/master/Official%20Windows%20Platform%20Sample/Windows%208.1%20desktop%20samples/99647-Windows%208.1%20desktop%20samples/Coalescing%20timers%20sample/C%2B%2B\">Coalescing timers sample</a>\n\n\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/content/wdm/nf-wdm-kesetcoalescabletimer\">KeSetCoalescableTimer</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/content/wdm/nf-wdm-kesettimerex\">KeSetTimer</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-killtimer\">KillTimer</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/ns-winuser-msg\">MSG</a>\n\n\n\n<b>Reference</b>\n\n\n\n<b>Sample</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-settimer\">SetTimer</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nc-winuser-timerproc\">TimerProc</a>\n\n\n\n<a href=\"/windows/desktop/winmsg/timers\">Timers</a>\n\n\n\n<a href=\"/windows/desktop/winmsg/using-timers\">Using Timers</a>\n\n\n\n<a href=\"/windows/desktop/winmsg/wm-timer\">WM_TIMER</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(msg);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "alloc_winproc",
+    "file": "dlls/win32u/class.c",
+    "start_line": 250
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_dbg_log",
+   "wine_server_call_err",
+   "wine_server_user_handle"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [
+   {
+    "request": "set_win_timer",
+    "handler": "server/queue.c:3463"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

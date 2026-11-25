@@ -1,0 +1,184 @@
+{
+ "id": "0049",
+ "function": {
+  "name": "GetModuleFileNameW",
+  "export_name": "GetModuleFileNameW",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase",
+   "unicows"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/loader.c",
+  "start_line": 300,
+  "end_line": 330,
+  "body_lines": 28,
+  "signature": "DWORD WINAPI DECLSPEC_HOTPATCH GetModuleFileNameW( HMODULE module, LPWSTR filename, DWORD size )",
+  "header_comment": "/***********************************************************************\n *\tGetModuleFileNameW   (kernelbase.@)\n */",
+  "code": "DWORD WINAPI DECLSPEC_HOTPATCH GetModuleFileNameW( HMODULE module, LPWSTR filename, DWORD size )\n{\n    ULONG len = 0;\n    WIN16_SUBSYSTEM_TIB *win16_tib;\n    UNICODE_STRING name;\n    NTSTATUS status;\n\n    if (!module && ((win16_tib = NtCurrentTeb()->Tib.SubSystemTib)) && win16_tib->exe_name)\n    {\n        len = min( size, win16_tib->exe_name->Length / sizeof(WCHAR) );\n        memcpy( filename, win16_tib->exe_name->Buffer, len * sizeof(WCHAR) );\n        if (len < size) filename[len] = 0;\n        goto done;\n    }\n\n    name.Buffer = filename;\n    name.MaximumLength = min( size, UNICODE_STRING_MAX_CHARS ) * sizeof(WCHAR);\n    status = LdrGetDllFullName( module, &name );\n    if (!status || status == STATUS_BUFFER_TOO_SMALL)\n    {\n        len = name.Length / sizeof(WCHAR);\n        /* LdrGetDllFullName calls RtlCopyUnicodeString which should terminate\n           if there's space, otherwise: */\n        if (status == STATUS_BUFFER_TOO_SMALL && size > 0)\n            filename[size - 1] = 0;\n    }\n    SetLastError( RtlNtStatusToDosError( status ));\ndone:\n    TRACE( \"%s\\n\", debugstr_wn(filename, len) );\n    return len;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/asm.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\""
+  ],
+  "resolution": [
+   "kernel32!GetModuleFileNameW [stdcall -import] -> import from kernelbase",
+   "kernelbase!GetModuleFileNameW [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/actctx.c",
+   "dlls/kernel32/tests/loader.c",
+   "dlls/kernel32/tests/module.c",
+   "dlls/kernel32/tests/path.c",
+   "dlls/kernelbase/tests/path.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 12
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "libloaderapi",
+   "path": "sdk-api-src/content/libloaderapi/nf-libloaderapi-getmodulefilenamew.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulefilenamew",
+   "documented_name": "getmodulefilenamew",
+   "file": "docs/0049_sdk-api_nf-libloaderapi-getmodulefilenamew.md",
+   "text": "---\nUID: NF:libloaderapi.GetModuleFileNameW\ntitle: GetModuleFileNameW function (libloaderapi.h)\ndescription: Retrieves the fully qualified path for the file that contains the specified module. The module must have been loaded by the current process. (Unicode)\nhelpviewer_keywords: [\"GetModuleFileName\", \"GetModuleFileName function\", \"GetModuleFileNameW\", \"_win32_getmodulefilename\", \"base.getmodulefilename\", \"libloaderapi/GetModuleFileName\", \"libloaderapi/GetModuleFileNameW\"]\nold-location: base\\getmodulefilename.htm\ntech.root: base\nms.assetid: f124c99f-8be1-4a9c-a84c-b1b323921f1a\nms.date: 12/05/2018\nms.keywords: GetModuleFileName, GetModuleFileName function, GetModuleFileNameA, GetModuleFileNameW, _win32_getmodulefilename, base.getmodulefilename, libloaderapi/GetModuleFileName, libloaderapi/GetModuleFileNameA, libloaderapi/GetModuleFileNameW, winbase/GetModuleFileName, winbase/GetModuleFileNameA, winbase/GetModuleFileNameW\nreq.header: libloaderapi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: GetModuleFileNameW (Unicode) and GetModuleFileNameA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetModuleFileNameW\n - libloaderapi/GetModuleFileNameW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-libraryloader-l1-2-3.dll\n - Kernel32.dll\n - API-MS-Win-Core-LibraryLoader-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-LibraryLoader-l1-1-1.dll\n - API-MS-Win-Core-LibraryLoader-l1-2-0.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\n - API-MS-Win-Core-Libraryloader-l1-2-1.dll\n - API-MS-Win-Core-LibraryLoader-L1-2-2.dll\napi_name:\n - GetModuleFileName\n - GetModuleFileNameA\n - GetModuleFileNameW\n---\n\n# GetModuleFileNameW function\n\n\n## -description\n\nRetrieves the fully qualified path for the file that contains the specified module. The module must have been loaded by the current process.\n\nTo locate the file for a module that was loaded by another process, use the \n<a href=\"/windows/desktop/api/psapi/nf-psapi-getmodulefilenameexa\">GetModuleFileNameEx</a> function.\n\n## -parameters\n\n### -param hModule [in, optional]\n\nA handle to the loaded module whose path is being requested. If this parameter is <b>NULL</b>, \n<b>GetModuleFileName</b> retrieves the path of the executable file of the current process.\n\nThe <b>GetModuleFileName</b> function does not retrieve the path for modules  that were loaded using the <b>LOAD_LIBRARY_AS_DATAFILE</b> flag. For more information, see <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-loadlibraryexa\">LoadLibraryEx</a>.\n\n### -param lpFilename [out]\n\nA pointer to a buffer that receives the fully qualified path of the module. If the length of the path is less than the size that the <i>nSize</i> parameter specifies, the function succeeds and the path is returned as a null-terminated string. \n\nIf the length of the path equals or exceeds the value specified by <i>nSize</i>, the function succeeds and the string is truncated to <i>nSize</i>  characters (including the terminating null character).\n\n<b>Windows XP:  </b>The string is truncated to <i>nSize</i> characters and is not null-terminated.\n\nThe string returned will use the same format that was specified when the module was loaded. Therefore, the path can be a long or short file name, and can use the prefix \"\\\\?\\\". For more information, see \n<a href=\"/windows/desktop/FileIO/naming-a-file\">Naming a File</a>.\n\n### -param nSize [in]\n\nThe size of the <i>lpFilename</i> buffer, in <b>WCHARs</b>.\n\n## -returns\n\nIf the function succeeds, the return value is the length of the string that is copied to the buffer, in characters, not including the terminating null character. If the buffer is too small to hold the module name, the string is truncated to <i>nSize</i> characters including the terminating null character, the function returns <i>nSize</i>, and the function sets the last error to <b>ERROR_INSUFFICIENT_BUFFER</b>.\n\n<b>Windows XP:  </b>If the buffer is too small to hold the module name, the function returns <i>nSize</i> and the last error code is not modified. If <i>nSize</i> is zero, the return value is zero and the last error code is not modified.\n\nIf the function fails, the return value is 0 (zero). To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nIf a DLL is loaded in two processes, its file name in one process may differ in case from its file name in the other process.\n\nThe global variable <code>_pgmptr</code> is automatically initialized to the full path of the executable file, and can be used to retrieve the full path name of an executable file. \n\n\n#### Examples\n\nFor an example, see \n<a href=\"/windows/desktop/Services/installing-a-service\">Installing a Service</a>.\n\n<div class=\"code\"></div>\n\n\n\n\n> [!NOTE]\n> The libloaderapi.h header defines GetModuleFileName as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/Dlls/dynamic-link-library-functions\">Dynamic-Link Library Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/psapi/nf-psapi-getmodulefilenameexa\">GetModuleFileNameEx</a>\n\n\n\n<a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-getmodulehandlea\">GetModuleHandle</a>\n\n\n\n<a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-loadlibrarya\">LoadLibrary</a>\n\n\n\n<a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-loadlibraryexa\">LoadLibraryEx</a>\n\n\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 37,
+    "end_line": 37,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(module);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "LdrGetDllFullName",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/loader.c:3513"
+    ]
+   },
+   {
+    "name": "RtlNtStatusToDosError",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:77"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "NtCurrentTeb",
+   "debugstr_wn",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "kernelbase.GetModuleFileNameW",
+  "category": {
+   "l1": "System services",
+   "l2": "Dynamic-link libraries",
+   "header": "libloaderapi.h",
+   "textbook": "Process control",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 31,
+   "body": 30,
+   "code": 20
+  },
+  "cyclomatic": 9,
+  "return_type": "DWORD",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 12,
+   "n_tests": 43,
+   "n_tests_other": 31,
+   "own_test_functions": [
+    "dlls/kernel32/tests/actctx.c::init_paths",
+    "dlls/kernel32/tests/actctx.c::test_CreateActCtx",
+    "dlls/kernel32/tests/actctx.c::test_manifest_resource_name_omitted",
+    "dlls/kernel32/tests/loader.c::map_image_section",
+    "dlls/kernel32/tests/loader.c::test_getmodulefilenamew_string_termination",
+    "dlls/kernel32/tests/module.c::START_TEST(module)",
+    "dlls/kernel32/tests/module.c::testGetModuleFileName",
+    "dlls/kernel32/tests/module.c::testGetModuleFileName_Wrong",
+    "dlls/kernel32/tests/module.c::test_LdrGetDllFullName",
+    "dlls/kernel32/tests/path.c::build_search_path",
+    "dlls/kernel32/tests/path.c::test_LdrGetDllPath",
+    "dlls/kernelbase/tests/path.c::test_actctx"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulefilenamew",
+   "source": "win32",
+   "description": "Retrieves the fully qualified path for the file that contains the specified module. The module must have been loaded by the current process. (Unicode)",
+   "min_windows": "Windows XP [desktop apps \\| UWP apps]",
+   "documented_dll": "Kernel32.dll"
+  },
+  "exports": [
+   "kernel32.GetModuleFileNameW",
+   "kernelbase.GetModuleFileNameW",
+   "shlwapi.GetModuleFileNameWrapW",
+   "unicows.GetModuleFileNameW"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

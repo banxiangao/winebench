@@ -1,0 +1,125 @@
+{
+ "id": "0324",
+ "function": {
+  "name": "CertRemoveEnhancedKeyUsageIdentifier",
+  "export_name": "CertRemoveEnhancedKeyUsageIdentifier",
+  "module": "crypt32",
+  "source_module": "crypt32",
+  "exported_by": [
+   "crypt32"
+  ],
+  "side": "PE",
+  "file": "dlls/crypt32/cert.c",
+  "start_line": 3350,
+  "end_line": 3405,
+  "body_lines": 53,
+  "signature": "BOOL WINAPI CertRemoveEnhancedKeyUsageIdentifier(PCCERT_CONTEXT pCertContext, LPCSTR pszUsageIdentifier)",
+  "header_comment": null,
+  "code": "BOOL WINAPI CertRemoveEnhancedKeyUsageIdentifier(PCCERT_CONTEXT pCertContext,\n LPCSTR pszUsageIdentifier)\n{\n    BOOL ret;\n    DWORD size;\n    CERT_ENHKEY_USAGE usage;\n\n    TRACE(\"(%p, %s)\\n\", pCertContext, debugstr_a(pszUsageIdentifier));\n\n    size = sizeof(usage);\n    ret = CertGetEnhancedKeyUsage(pCertContext,\n     CERT_FIND_PROP_ONLY_ENHKEY_USAGE_FLAG, &usage, &size);\n    if (!ret && GetLastError() == ERROR_MORE_DATA)\n    {\n        PCERT_ENHKEY_USAGE pUsage = CryptMemAlloc(size);\n\n        if (pUsage)\n        {\n            ret = CertGetEnhancedKeyUsage(pCertContext,\n             CERT_FIND_PROP_ONLY_ENHKEY_USAGE_FLAG, pUsage, &size);\n            if (ret)\n            {\n                if (pUsage->cUsageIdentifier)\n                {\n                    DWORD i;\n                    BOOL found = FALSE;\n\n                    for (i = 0; i < pUsage->cUsageIdentifier; i++)\n                    {\n                        if (!strcmp(pUsage->rgpszUsageIdentifier[i],\n                         pszUsageIdentifier))\n                            found = TRUE;\n                        if (found && i < pUsage->cUsageIdentifier - 1)\n                            pUsage->rgpszUsageIdentifier[i] =\n                             pUsage->rgpszUsageIdentifier[i + 1];\n                    }\n                    pUsage->cUsageIdentifier--;\n                    /* Remove the usage if it's empty */\n                    if (pUsage->cUsageIdentifier)\n                        ret = CertSetEnhancedKeyUsage(pCertContext, pUsage);\n                    else\n                        ret = CertSetEnhancedKeyUsage(pCertContext, NULL);\n                }\n            }\n            CryptMemFree(pUsage);\n        }\n        else\n            ret = FALSE;\n    }\n    else\n    {\n        /* it fit in an empty usage, therefore there's nothing to remove */\n        ret = TRUE;\n    }\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winternl.h\"",
+   "#include \"wincrypt.h\"",
+   "#include \"snmp.h\"",
+   "#include \"bcrypt.h\"",
+   "#include \"winnls.h\"",
+   "#include \"rpc.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"crypt32_private.h\""
+  ],
+  "resolution": [
+   "crypt32!CertRemoveEnhancedKeyUsageIdentifier [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/crypt32/tests/cert.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wincrypt",
+   "path": "sdk-api-src/content/wincrypt/nf-wincrypt-certremoveenhancedkeyusageidentifier.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wincrypt/nf-wincrypt-certremoveenhancedkeyusageidentifier",
+   "documented_name": "certremoveenhancedkeyusageidentifier",
+   "file": "docs/0324_sdk-api_nf-wincrypt-certremoveenhancedkeyusageidentifier.md",
+   "text": "---\nUID: NF:wincrypt.CertRemoveEnhancedKeyUsageIdentifier\ntitle: CertRemoveEnhancedKeyUsageIdentifier function (wincrypt.h)\ndescription: The CertRemoveEnhancedKeyUsageIdentifier function removes a usage identifier object identifier (OID) from the enhanced key usage (EKU) extended property of the certificate.\nhelpviewer_keywords: [\"CertRemoveEnhancedKeyUsageIdentifier\",\"CertRemoveEnhancedKeyUsageIdentifier function [Security]\",\"_crypto2_certremoveenhancedkeyusageidentifier\",\"security.certremoveenhancedkeyusageidentifier\",\"wincrypt/CertRemoveEnhancedKeyUsageIdentifier\"]\nold-location: security\\certremoveenhancedkeyusageidentifier.htm\ntech.root: security\nms.assetid: 4fb27073-674c-4bac-9a62-6e33e1a5785e\nms.date: 12/05/2018\nms.keywords: CertRemoveEnhancedKeyUsageIdentifier, CertRemoveEnhancedKeyUsageIdentifier function [Security], _crypto2_certremoveenhancedkeyusageidentifier, security.certremoveenhancedkeyusageidentifier, wincrypt/CertRemoveEnhancedKeyUsageIdentifier\nreq.header: wincrypt.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Crypt32.lib\nreq.dll: Crypt32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CertRemoveEnhancedKeyUsageIdentifier\n - wincrypt/CertRemoveEnhancedKeyUsageIdentifier\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Crypt32.dll\napi_name:\n - CertRemoveEnhancedKeyUsageIdentifier\n---\n\n# CertRemoveEnhancedKeyUsageIdentifier function\n\n\n## -description\n\nThe <b>CertRemoveEnhancedKeyUsageIdentifier</b> function removes a usage identifier <a href=\"/windows/desktop/SecGloss/o-gly\">object identifier</a> (OID) from the <a href=\"/windows/desktop/SecGloss/e-gly\">enhanced key usage</a> (EKU) extended property of the certificate.\n\n## -parameters\n\n### -param pCertContext [in]\n\nA pointer to a \n<a href=\"/windows/desktop/api/wincrypt/ns-wincrypt-cert_context\">CERT_CONTEXT</a> of the certificate for which the usage identifier OID is to be removed.\n\n### -param pszUsageIdentifier [in]\n\nA pointer to the usage identifier OID to remove.\n\n## -returns\n\nIf the function succeeds, the function returns nonzero (<b>TRUE</b>).\n\nIf the function fails, it returns zero (<b>FALSE</b>). For extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -see-also\n\n<a href=\"/windows/desktop/SecCrypto/cryptography-functions\">Enhanced Key Usage Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(crypt);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "CertGetEnhancedKeyUsage",
+    "impl": [
+     "dlls/crypt32/cert.c:3134"
+    ]
+   },
+   {
+    "name": "CertSetEnhancedKeyUsage",
+    "impl": [
+     "dlls/crypt32/cert.c:3239"
+    ]
+   },
+   {
+    "name": "CryptMemAlloc",
+    "impl": [
+     "dlls/crypt32/main.c:136"
+    ]
+   },
+   {
+    "name": "CryptMemFree",
+    "impl": [
+     "dlls/crypt32/main.c:146"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "strcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:369"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetLastError",
+   "debugstr_a",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

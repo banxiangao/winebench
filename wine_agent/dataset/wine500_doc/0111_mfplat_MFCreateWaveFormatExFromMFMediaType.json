@@ -1,0 +1,146 @@
+{
+ "id": "0111",
+ "function": {
+  "name": "MFCreateWaveFormatExFromMFMediaType",
+  "export_name": "MFCreateWaveFormatExFromMFMediaType",
+  "module": "mfplat",
+  "source_module": "mfplat",
+  "exported_by": [
+   "mfplat"
+  ],
+  "side": "PE",
+  "file": "dlls/mfplat/mediatype.c",
+  "start_line": 3002,
+  "end_line": 3078,
+  "body_lines": 74,
+  "signature": "HRESULT WINAPI MFCreateWaveFormatExFromMFMediaType(IMFMediaType *mediatype, WAVEFORMATEX **ret_format, UINT32 *size, UINT32 flags)",
+  "header_comment": "/***********************************************************************\n *      MFCreateWaveFormatExFromMFMediaType (mfplat.@)\n */",
+  "code": "HRESULT WINAPI MFCreateWaveFormatExFromMFMediaType(IMFMediaType *mediatype, WAVEFORMATEX **ret_format,\n        UINT32 *size, UINT32 flags)\n{\n    UINT32 extra_size = 0, user_size;\n    WAVEFORMATEX *format;\n    GUID major, subtype, basetype = MFAudioFormat_Base;\n    void *user_data;\n    HRESULT hr;\n\n    TRACE(\"%p, %p, %p, %#x.\\n\", mediatype, ret_format, size, flags);\n\n    if (FAILED(hr = IMFMediaType_GetGUID(mediatype, &MF_MT_MAJOR_TYPE, &major)))\n        return hr;\n\n    if (FAILED(hr = IMFMediaType_GetGUID(mediatype, &MF_MT_SUBTYPE, &subtype)))\n        return hr;\n\n    if (!IsEqualGUID(&major, &MFMediaType_Audio))\n        return E_INVALIDARG;\n\n    if (FAILED(hr = IMFMediaType_GetBlobSize(mediatype, &MF_MT_USER_DATA, &user_size)))\n        user_size = 0;\n\n    if (media_type_get_uint32(mediatype, &MF_MT_AUDIO_NUM_CHANNELS) > 2\n            && SUCCEEDED(IMFMediaType_GetItem(mediatype, &MF_MT_AUDIO_CHANNEL_MASK, NULL)))\n    {\n        if (SUCCEEDED(IMFMediaType_GetItem(mediatype, &MF_MT_AUDIO_VALID_BITS_PER_SAMPLE, NULL)))\n            flags = MFWaveFormatExConvertFlag_ForceExtensible;\n        if (SUCCEEDED(IMFMediaType_GetItem(mediatype, &MF_MT_AUDIO_SAMPLES_PER_BLOCK, NULL)))\n            flags = MFWaveFormatExConvertFlag_ForceExtensible;\n    }\n\n    basetype.Data1 = subtype.Data1;\n    if (subtype.Data1 >> 16 || !IsEqualGUID(&subtype, &basetype))\n        flags = MFWaveFormatExConvertFlag_ForceExtensible;\n\n    if (flags == MFWaveFormatExConvertFlag_ForceExtensible)\n        extra_size = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(*format);\n\n    *size = sizeof(*format) + user_size + extra_size;\n    if (!(format = CoTaskMemAlloc(*size)))\n        return E_OUTOFMEMORY;\n\n    memset(format, 0, *size);\n    format->wFormatTag = subtype.Data1;\n    format->cbSize = user_size + extra_size;\n    user_data = format + 1;\n\n    format->nChannels = media_type_get_uint32(mediatype, &MF_MT_AUDIO_NUM_CHANNELS);\n    format->nSamplesPerSec = media_type_get_uint32(mediatype, &MF_MT_AUDIO_SAMPLES_PER_SECOND);\n    format->nAvgBytesPerSec = media_type_get_uint32(mediatype, &MF_MT_AUDIO_AVG_BYTES_PER_SECOND);\n    format->nBlockAlign = media_type_get_uint32(mediatype, &MF_MT_AUDIO_BLOCK_ALIGNMENT);\n    format->wBitsPerSample = media_type_get_uint32(mediatype, &MF_MT_AUDIO_BITS_PER_SAMPLE);\n\n    if (flags == MFWaveFormatExConvertFlag_ForceExtensible)\n    {\n        WAVEFORMATEXTENSIBLE *format_ext = CONTAINING_RECORD(format, WAVEFORMATEXTENSIBLE, Format);\n\n        format_ext->Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;\n        format_ext->SubFormat = subtype;\n        user_data = format_ext + 1;\n\n        format_ext->Samples.wValidBitsPerSample = media_type_get_uint32(mediatype, &MF_MT_AUDIO_VALID_BITS_PER_SAMPLE);\n        format_ext->Samples.wSamplesPerBlock = media_type_get_uint32(mediatype, &MF_MT_AUDIO_SAMPLES_PER_BLOCK);\n\n        if (SUCCEEDED(IMFMediaType_GetItem(mediatype, &MF_MT_AUDIO_CHANNEL_MASK, NULL)))\n            format_ext->dwChannelMask = media_type_get_uint32(mediatype, &MF_MT_AUDIO_CHANNEL_MASK);\n        else if (format_ext->Format.nChannels < ARRAY_SIZE(default_channel_mask))\n            format_ext->dwChannelMask = default_channel_mask[format_ext->Format.nChannels];\n    }\n\n    IMFMediaType_GetBlob(mediatype, &MF_MT_USER_DATA, user_data, user_size, NULL);\n\n    *ret_format = format;\n\n    return S_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"mfplat_private.h\"",
+   "#include <math.h>",
+   "#include \"dxva.h\"",
+   "#include \"dxva2api.h\"",
+   "#include \"uuids.h\"",
+   "#include \"strmif.h\"",
+   "#include \"initguid.h\"",
+   "#include \"dvdmedia.h\"",
+   "#include \"ks.h\"",
+   "#include \"ksmedia.h\"",
+   "#include \"amvideo.h\"",
+   "#include \"wmcodecdsp.h\"",
+   "#include \"wmsdkidl.h\""
+  ],
+  "resolution": [
+   "mfplat!MFCreateWaveFormatExFromMFMediaType [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/mfplat/tests/mfplat.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "mfapi",
+   "path": "sdk-api-src/content/mfapi/nf-mfapi-mfcreatewaveformatexfrommfmediatype.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/mfapi/nf-mfapi-mfcreatewaveformatexfrommfmediatype",
+   "documented_name": "mfcreatewaveformatexfrommfmediatype",
+   "file": "docs/0111_sdk-api_nf-mfapi-mfcreatewaveformatexfrommfmediatype.md",
+   "text": "---\nUID: NF:mfapi.MFCreateWaveFormatExFromMFMediaType\ntitle: MFCreateWaveFormatExFromMFMediaType function (mfapi.h)\ndescription: Converts a Media Foundation audio media type to a WAVEFORMATEX structure.\nhelpviewer_keywords: [\"MFCreateWaveFormatExFromMFMediaType\",\"MFCreateWaveFormatExFromMFMediaType function [Media Foundation]\",\"b124bac2-90de-4358-a079-f509a89c3776\",\"mf.mfcreatewaveformatexfrommfmediatype\",\"mfapi/MFCreateWaveFormatExFromMFMediaType\"]\nold-location: mf\\mfcreatewaveformatexfrommfmediatype.htm\ntech.root: mf\nms.assetid: b124bac2-90de-4358-a079-f509a89c3776\nms.date: 12/05/2018\nms.keywords: MFCreateWaveFormatExFromMFMediaType, MFCreateWaveFormatExFromMFMediaType function [Media Foundation], b124bac2-90de-4358-a079-f509a89c3776, mf.mfcreatewaveformatexfrommfmediatype, mfapi/MFCreateWaveFormatExFromMFMediaType\nreq.header: mfapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Mfplat.lib\nreq.dll: Mfplat.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - MFCreateWaveFormatExFromMFMediaType\n - mfapi/MFCreateWaveFormatExFromMFMediaType\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - mfplat.dll\napi_name:\n - MFCreateWaveFormatExFromMFMediaType\n---\n\n# MFCreateWaveFormatExFromMFMediaType function\n\n\n## -description\n\nConverts a Media Foundation audio media type to a <b>WAVEFORMATEX</b> structure.\n\n## -parameters\n\n### -param pMFType\n\nPointer to the <a href=\"/windows/desktop/api/mfobjects/nn-mfobjects-imfmediatype\">IMFMediaType</a> interface of the media type.\n\n### -param ppWF\n\nReceives a pointer to the <b>WAVEFORMATEX</b> structure. The caller must release the memory allocated for the structure by calling <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-cotaskmemfree\">CoTaskMemFree</a>.\n\n### -param pcbSize\n\nReceives the size of the <b>WAVEFORMATEX</b> structure.\n\n### -param Flags\n\nContains a flag from the <a href=\"/windows/desktop/api/mfapi/ne-mfapi-mfwaveformatexconvertflags\">MFWaveFormatExConvertFlags</a> enumeration.\n\n## -returns\n\nThe function returns an <b>HRESULT</b>. Possible values include, but are not limited to, those in the following table.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>S_OK</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe function succeeded.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nIf the <b>wFormatTag</b> member of the returned structure is <b>WAVE_FORMAT_EXTENSIBLE</b>, you can cast the pointer to a <b>WAVEFORMATEXTENSIBLE</b> structure.\n\n## -see-also\n\n<a href=\"/windows/desktop/medfound/media-foundation-functions\">Media Foundation Functions</a>\n\n\n\n<a href=\"/windows/desktop/medfound/media-type-conversions\">Media Type Conversions</a>\n\n\n\n<a href=\"/windows/desktop/medfound/media-types\">Media Types</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "media_type_get_uint32",
+   "file": "dlls/mfplat/mediatype.c",
+   "start_line": 2993,
+   "end_line": 2997,
+   "static": true,
+   "called_from": [
+    "MFCreateWaveFormatExFromMFMediaType"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/mfplat/mediatype.c:3317",
+    "dlls/mfplat/mediatype.c:3318",
+    "dlls/mfplat/mediatype.c:3319",
+    "dlls/mfplat/mediatype.c:3320",
+    "dlls/mfplat/mediatype.c:3321"
+   ],
+   "signature": "static UINT32 media_type_get_uint32(IMFMediaType *media_type, REFGUID guid)",
+   "code": "static UINT32 media_type_get_uint32(IMFMediaType *media_type, REFGUID guid)\n{\n    UINT32 value;\n    return SUCCEEDED(IMFMediaType_GetUINT32(media_type, guid, &value)) ? value : 0;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(mfplat);"
+   },
+   {
+    "name": "default_channel_mask",
+    "type": "const UINT32[7]",
+    "static": true,
+    "start_line": 53,
+    "end_line": 62,
+    "code": "static const UINT32 default_channel_mask[7] =\n{\n    0,\n    SPEAKER_FRONT_LEFT,\n    SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT,\n    SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER,\n    KSAUDIO_SPEAKER_QUAD,\n    KSAUDIO_SPEAKER_QUAD | SPEAKER_FRONT_CENTER,\n    KSAUDIO_SPEAKER_5POINT1,\n};"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "CoTaskMemAlloc",
+    "module": "ole32",
+    "impl": [
+     "dlls/combase/malloc.c:381"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "IMFMediaType_GetBlob",
+   "IMFMediaType_GetBlobSize",
+   "IMFMediaType_GetGUID",
+   "IMFMediaType_GetItem",
+   "IMFMediaType_GetUINT32",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

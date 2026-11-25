@@ -1,0 +1,119 @@
+{
+ "id": "0361",
+ "function": {
+  "name": "EscapeCommFunction",
+  "export_name": "EscapeCommFunction",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase",
+   "user.exe16"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/file.c",
+  "start_line": 4415,
+  "end_line": 4437,
+  "body_lines": 20,
+  "signature": "BOOL WINAPI DECLSPEC_HOTPATCH EscapeCommFunction( HANDLE handle, DWORD func )",
+  "header_comment": "/*****************************************************************************\n *\tEscapeCommFunction   (kernelbase.@)\n */",
+  "code": "BOOL WINAPI DECLSPEC_HOTPATCH EscapeCommFunction( HANDLE handle, DWORD func )\n{\n    static const DWORD ioctls[] =\n    {\n        0,\n        IOCTL_SERIAL_SET_XOFF,      /* SETXOFF */\n        IOCTL_SERIAL_SET_XON,       /* SETXON */\n        IOCTL_SERIAL_SET_RTS,       /* SETRTS */\n        IOCTL_SERIAL_CLR_RTS,       /* CLRRTS */\n        IOCTL_SERIAL_SET_DTR,       /* SETDTR */\n        IOCTL_SERIAL_CLR_DTR,       /* CLRDTR */\n        IOCTL_SERIAL_RESET_DEVICE,  /* RESETDEV */\n        IOCTL_SERIAL_SET_BREAK_ON,  /* SETBREAK */\n        IOCTL_SERIAL_SET_BREAK_OFF  /* CLRBREAK */\n    };\n\n    if (func >= ARRAY_SIZE(ioctls) || !ioctls[func])\n    {\n        SetLastError( ERROR_INVALID_PARAMETER );\n        return FALSE;\n    }\n    return DeviceIoControl( handle, ioctls[func], NULL, 0, NULL, 0, NULL, NULL );\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include \"winerror.h\"",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"wincon.h\"",
+   "#include \"fileapi.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"ddk/ntddser.h\"",
+   "#include \"ioringapi.h\"",
+   "#include \"ddk/ntifs.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!EscapeCommFunction [stdcall -import] -> import from kernelbase",
+   "kernelbase!EscapeCommFunction [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/comm.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "user.exe16",
+   "source_module": "user.exe16",
+   "exported_by": [
+    "user.exe16"
+   ],
+   "file": "dlls/user.exe16/comm.c",
+   "start_line": 602,
+   "resolution": [
+    "user.exe16!EscapeCommFunction [pascal] -> internal symbol EscapeCommFunction16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 658,
+   "signature": "LONG WINAPI EscapeCommFunction16(UINT16 cid,UINT16 nFunction)",
+   "code": "LONG WINAPI EscapeCommFunction16(UINT16 cid,UINT16 nFunction)\n{\n\tstruct  DosDeviceStruct *ptr;\n\n\tTRACE(\"cid=%d, function=%d\\n\", cid, nFunction);\n\n\tswitch(nFunction) {\n\tcase GETMAXCOM:\n\t        TRACE(\"GETMAXCOM\\n\");\n                return 4;  /* FIXME */\n\n\tcase GETMAXLPT:\n\t\tTRACE(\"GETMAXLPT\\n\");\n                return FLAG_LPT + 3;  /* FIXME */\n\n\tcase GETBASEIRQ:\n\t\tTRACE(\"GETBASEIRQ\\n\");\n\t\t/* FIXME: use tables */\n\t\t/* just fake something for now */\n\t\tif (cid & FLAG_LPT) {\n\t\t\t/* LPT1: irq 7, LPT2: irq 5 */\n\t\t\treturn (cid & 0x7f) ? 5 : 7;\n\t\t} else {\n\t\t\t/* COM1: irq 4, COM2: irq 3,\n\t\t\t   COM3: irq 4, COM4: irq 3 */\n\t\t\treturn 4 - (cid & 1);\n\t\t}\n\t}\n\n\tif ((ptr = GetDeviceStruct(cid)) == NULL) {\n\t\tFIXME(\"no cid=%d found!\\n\", cid);\n\t\treturn -1;\n\t}\n\n\tswitch (nFunction) {\n\tcase RESETDEV:\n\tcase CLRDTR:\n\tcase CLRRTS:\n\tcase SETDTR:\n\tcase SETRTS:\n\tcase SETXOFF:\n\tcase SETXON:\n\t\tif(EscapeCommFunction(ptr->handle,nFunction))\n\t\t\treturn 0;\n\t\telse {\n\t\t\tptr->commerror = WinError();\n\t\t\treturn -1;\n\t\t}\n\n\tcase CLRBREAK:\n\tcase SETBREAK:\n\tdefault:\n\t\tWARN(\"(cid=%d,nFunction=%d): Unknown function\\n\",\n\t\t\tcid, nFunction);\n\t}\n\treturn -1;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winbase",
+   "path": "sdk-api-src/content/winbase/nf-winbase-escapecommfunction.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-escapecommfunction",
+   "documented_name": "escapecommfunction",
+   "file": "docs/0361_sdk-api_nf-winbase-escapecommfunction.md",
+   "text": "---\nUID: NF:winbase.EscapeCommFunction\ntitle: EscapeCommFunction function (winbase.h)\ndescription: Directs the specified communications device to perform an extended function.\nhelpviewer_keywords: [\"CLRBREAK\",\"CLRDTR\",\"CLRRTS\",\"EscapeCommFunction\",\"EscapeCommFunction function\",\"SETBREAK\",\"SETDTR\",\"SETRTS\",\"SETXOFF\",\"SETXON\",\"_win32_escapecommfunction\",\"base.escapecommfunction\",\"winbase/EscapeCommFunction\"]\nold-location: base\\escapecommfunction.htm\ntech.root: base\nms.assetid: 27c4ebdf-1c06-4a60-8e49-dcccba10789c\nms.date: 12/05/2018\nms.keywords: CLRBREAK, CLRDTR, CLRRTS, EscapeCommFunction, EscapeCommFunction function, SETBREAK, SETDTR, SETRTS, SETXOFF, SETXON, _win32_escapecommfunction, base.escapecommfunction, winbase/EscapeCommFunction\nreq.header: winbase.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - EscapeCommFunction\n - winbase/EscapeCommFunction\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-comm-l1-1-2.dll\n - api-ms-win-core-comm-l1-1-1.dll\n - Kernel32.dll\n - API-MS-Win-Core-comm-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\napi_name:\n - EscapeCommFunction\n---\n\n# EscapeCommFunction function\n\n\n## -description\n\nDirects the specified communications device to perform an extended function.\n\n## -parameters\n\n### -param hFile [in]\n\nA handle to the communications device. The \n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-createfilea\">CreateFile</a> function returns this handle.\n\n### -param dwFunc [in]\n\nThe extended function to be performed. This parameter can be one of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"CLRBREAK\"></a><a id=\"clrbreak\"></a><dl>\n<dt><b>CLRBREAK</b></dt>\n<dt>9</dt>\n</dl>\n</td>\n<td width=\"60%\">\nRestores character transmission and places the transmission line in a nonbreak state. The CLRBREAK extended function code is identical to the \n<a href=\"/windows/desktop/api/winbase/nf-winbase-clearcommbreak\">ClearCommBreak</a> function.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"CLRDTR\"></a><a id=\"clrdtr\"></a><dl>\n<dt><b>CLRDTR</b></dt>\n<dt>6</dt>\n</dl>\n</td>\n<td width=\"60%\">\nClears the DTR (data-terminal-ready) signal.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"CLRRTS\"></a><a id=\"clrrts\"></a><dl>\n<dt><b>CLRRTS</b></dt>\n<dt>4</dt>\n</dl>\n</td>\n<td width=\"60%\">\nClears the RTS (request-to-send) signal.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SETBREAK\"></a><a id=\"setbreak\"></a><dl>\n<dt><b>SETBREAK</b></dt>\n<dt>8</dt>\n</dl>\n</td>\n<td width=\"60%\">\nSuspends character transmission and places the transmission line in a break state until the \n<a href=\"/windows/desktop/api/winbase/nf-winbase-clearcommbreak\">ClearCommBreak</a> function is called (or \n<b>EscapeCommFunction</b> is called with the CLRBREAK extended function code). The SETBREAK extended function code is identical to the \n<a href=\"/windows/desktop/api/winbase/nf-winbase-setcommbreak\">SetCommBreak</a> function. Note that this extended function does not flush data that has not been transmitted.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SETDTR\"></a><a id=\"setdtr\"></a><dl>\n<dt><b>SETDTR</b></dt>\n<dt>5</dt>\n</dl>\n</td>\n<td width=\"60%\">\nSends the DTR (data-terminal-ready) signal.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SETRTS\"></a><a id=\"setrts\"></a><dl>\n<dt><b>SETRTS</b></dt>\n<dt>3</dt>\n</dl>\n</td>\n<td width=\"60%\">\nSends the RTS (request-to-send) signal.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SETXOFF\"></a><a id=\"setxoff\"></a><dl>\n<dt><b>SETXOFF</b></dt>\n<dt>1</dt>\n</dl>\n</td>\n<td width=\"60%\">\nCauses transmission to act as if an XOFF character has been received.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SETXON\"></a><a id=\"setxon\"></a><dl>\n<dt><b>SETXON</b></dt>\n<dt>2</dt>\n</dl>\n</td>\n<td width=\"60%\">\nCauses transmission to act as if an XON character has been received.\n\n</td>\n</tr>\n</table>\n\n## -returns\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-clearcommbreak\">ClearCommBreak</a>\n\n\n\n<a href=\"/windows/desktop/DevIO/communications-functions\">Communications Functions</a>\n\n\n\n<a href=\"/windows/desktop/DevIO/communications-resources\">Communications Resources</a>\n\n\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-createfilea\">CreateFile</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-setcommbreak\">SetCommBreak</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "DeviceIoControl",
+    "impl": [
+     "dlls/kernelbase/file.c:4378"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

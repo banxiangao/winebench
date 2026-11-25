@@ -1,0 +1,158 @@
+{
+ "id": "0190",
+ "function": {
+  "name": "WsFreeHeap",
+  "export_name": "WsFreeHeap",
+  "module": "webservices",
+  "source_module": "webservices",
+  "exported_by": [
+   "webservices"
+  ],
+  "side": "PE",
+  "file": "dlls/webservices/heap.c",
+  "start_line": 227,
+  "end_line": 251,
+  "body_lines": 22,
+  "signature": "void WINAPI WsFreeHeap( WS_HEAP *handle )",
+  "header_comment": "/**************************************************************************\n *          WsFreeHeap\t\t[webservices.@]\n */",
+  "code": "void WINAPI WsFreeHeap( WS_HEAP *handle )\n{\n    struct heap *heap = (struct heap *)handle;\n\n    TRACE( \"%p\\n\", handle );\n\n    if (!heap) return;\n\n    EnterCriticalSection( &heap->cs );\n\n    if (heap->magic != HEAP_MAGIC)\n    {\n        LeaveCriticalSection( &heap->cs );\n        return;\n    }\n\n    reset_heap( heap );\n    heap->magic = 0;\n\n    LeaveCriticalSection( &heap->cs );\n\n    heap->cs.DebugInfo->Spare[0] = 0;\n    DeleteCriticalSection( &heap->cs );\n    free( heap );\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"webservices.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"webservices_private.h\""
+  ],
+  "resolution": [
+   "webservices!WsFreeHeap [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/webservices/tests/msg.c",
+   "dlls/webservices/tests/proxy.c",
+   "dlls/webservices/tests/reader.c",
+   "dlls/webservices/tests/url.c",
+   "dlls/webservices/tests/writer.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "webservices",
+   "path": "sdk-api-src/content/webservices/nf-webservices-wsfreeheap.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/webservices/nf-webservices-wsfreeheap",
+   "documented_name": "wsfreeheap",
+   "file": "docs/0190_sdk-api_nf-webservices-wsfreeheap.md",
+   "text": "---\nUID: NF:webservices.WsFreeHeap\ntitle: WsFreeHeap function (webservices.h)\ndescription: This frees the heap object, and the memory associated with any allocations made on it using WsAlloc.\nhelpviewer_keywords: [\"WsFreeHeap\",\"WsFreeHeap function [Web Services for Windows]\",\"webservices/WsFreeHeap\",\"wsw.wsfreeheap\"]\nold-location: wsw\\wsfreeheap.htm\ntech.root: wsw\nms.assetid: ec643915-8c4b-4916-b390-d6ca043350db\nms.date: 12/05/2018\nms.keywords: WsFreeHeap, WsFreeHeap function [Web Services for Windows], webservices/WsFreeHeap, wsw.wsfreeheap\nreq.header: webservices.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 7 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 R2 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: WebServices.lib\nreq.dll: WebServices.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - WsFreeHeap\n - webservices/WsFreeHeap\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - WebServices.dll\napi_name:\n - WsFreeHeap\n---\n\n# WsFreeHeap function\n\n\n## -description\n\nThis frees the heap object, and the memory associated with any allocations \n                made on it using <a href=\"/windows/desktop/api/webservices/nf-webservices-wsalloc\">WsAlloc</a>.\n\n## -parameters\n\n### -param heap [in]\n\nThe heap to free.  This must be a valid heap object that was returned\n                    from <a href=\"/windows/desktop/api/webservices/nf-webservices-wscreateheap\">WsCreateHeap</a>.  This parameter may not be <b>NULL</b>."
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "reset_heap",
+   "file": "dlls/webservices/heap.c",
+   "start_line": 217,
+   "end_line": 222,
+   "static": true,
+   "called_from": [
+    "WsFreeHeap"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/heap.c:274"
+   ],
+   "signature": "static void reset_heap( struct heap *heap )",
+   "code": "static void reset_heap( struct heap *heap )\n{\n    if (heap->handle) HeapDestroy( heap->handle );\n    heap->handle   = NULL;\n    heap->max_size = heap->allocated = 0;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "heap",
+    "kind": "struct_decl",
+    "start_line": 41,
+    "end_line": 50,
+    "code": "struct heap\n{\n    ULONG            magic;\n    CRITICAL_SECTION cs;\n    HANDLE           handle;\n    SIZE_T           max_size;\n    SIZE_T           allocated;\n    ULONG            prop_count;\n    struct prop      prop[ARRAY_SIZE( heap_props )];\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 31,
+    "end_line": 31,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(webservices);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "HEAP_MAGIC",
+    "start_line": 52,
+    "end_line": 52,
+    "code": "#define HEAP_MAGIC (('H' << 24) | ('E' << 16) | ('A' << 8) | 'P')"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "DeleteCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:271"
+    ]
+   },
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "HeapDestroy",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:751"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

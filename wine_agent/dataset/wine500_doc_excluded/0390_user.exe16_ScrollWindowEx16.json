@@ -1,0 +1,103 @@
+{
+ "id": "0390",
+ "function": {
+  "name": "ScrollWindowEx16",
+  "export_name": "ScrollWindowEx",
+  "module": "user.exe16",
+  "source_module": "user.exe16",
+  "exported_by": [
+   "user.exe16",
+   "user32"
+  ],
+  "side": "PE",
+  "file": "dlls/user.exe16/window.c",
+  "start_line": 1457,
+  "end_line": 1490,
+  "body_lines": 31,
+  "signature": "INT16 WINAPI ScrollWindowEx16( HWND16 hwnd, INT16 dx, INT16 dy, const RECT16 *rect, const RECT16 *clipRect, HRGN16 hrgnUpdate, LPRECT16 rcUpdate, UINT16 flags )",
+  "header_comment": "/**************************************************************************\n *              ScrollWindowEx   (USER.319)\n */",
+  "code": "INT16 WINAPI ScrollWindowEx16( HWND16 hwnd, INT16 dx, INT16 dy,\n                               const RECT16 *rect, const RECT16 *clipRect,\n                               HRGN16 hrgnUpdate, LPRECT16 rcUpdate,\n                               UINT16 flags )\n{\n    RECT rect32, clipRect32, rcUpdate32;\n    BOOL16 ret;\n\n    if (rect)\n    {\n        rect32.left   = rect->left;\n        rect32.top    = rect->top;\n        rect32.right  = rect->right;\n        rect32.bottom = rect->bottom;\n    }\n    if (clipRect)\n    {\n        clipRect32.left   = clipRect->left;\n        clipRect32.top    = clipRect->top;\n        clipRect32.right  = clipRect->right;\n        clipRect32.bottom = clipRect->bottom;\n    }\n    ret = ScrollWindowEx( WIN_Handle32(hwnd), dx, dy, rect ? &rect32 : NULL,\n                          clipRect ? &clipRect32 : NULL, HRGN_32(hrgnUpdate),\n                          (rcUpdate) ? &rcUpdate32 : NULL, flags );\n    if (rcUpdate)\n    {\n        rcUpdate->left   = rcUpdate32.left;\n        rcUpdate->top    = rcUpdate32.top;\n        rcUpdate->right  = rcUpdate32.right;\n        rcUpdate->bottom = rcUpdate32.bottom;\n    }\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"wine/winuser16.h\"",
+   "#include \"wownt32.h\"",
+   "#include \"user_private.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "user.exe16!ScrollWindowEx [pascal -ret16] -> internal symbol ScrollWindowEx16"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/dce.c",
+   "dlls/user32/tests/msg.c",
+   "dlls/user32/tests/win.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "user32",
+   "source_module": "win32u",
+   "exported_by": [
+    "user32"
+   ],
+   "file": "dlls/win32u/dce.c",
+   "start_line": 2085,
+   "resolution": [
+    "user32!ScrollWindowEx [stdcall] -> NtUserScrollWindowEx implicitly imported from win32u",
+    "win32u!NtUserScrollWindowEx [stdcall -syscall]"
+   ],
+   "macro_generated": false,
+   "win16": false,
+   "end_line": 2233,
+   "signature": "INT WINAPI NtUserScrollWindowEx( HWND hwnd, INT dx, INT dy, const RECT *rect, const RECT *clip_rect, HRGN update_rgn, RECT *update_rect, UINT flags )",
+   "code": "INT WINAPI NtUserScrollWindowEx( HWND hwnd, INT dx, INT dy, const RECT *rect,\n                                 const RECT *clip_rect, HRGN update_rgn,\n                                 RECT *update_rect, UINT flags )\n{\n    BOOL update = update_rect || update_rgn || flags & (SW_INVALIDATE | SW_ERASE);\n    BOOL own_rgn = TRUE, move_caret = FALSE;\n    HRGN temp_rgn, winupd_rgn = 0;\n    INT retval = NULLREGION;\n    HWND caret_hwnd = NULL;\n    POINT new_caret_pos;\n    RECT rc, cliprc;\n    int rdw_flags;\n    HDC hdc;\n\n    TRACE( \"%p, %d,%d update_rgn=%p update_rect = %p %s %04x\\n\",\n           hwnd, dx, dy, update_rgn, update_rect, wine_dbgstr_rect(rect), flags );\n    TRACE( \"clip_rect = %s\\n\", wine_dbgstr_rect(clip_rect) );\n    if (flags & ~(SW_SCROLLCHILDREN | SW_INVALIDATE | SW_ERASE | SW_NODCCACHE))\n        FIXME( \"some flags (%04x) are unhandled\\n\", flags );\n\n    rdw_flags = (flags & SW_ERASE) && (flags & SW_INVALIDATE) ?\n        RDW_INVALIDATE | RDW_ERASE  : RDW_INVALIDATE;\n\n    hwnd = get_full_window_handle( hwnd );\n\n    if (!is_window_drawable( hwnd, TRUE ))\n        SetRectEmpty( &rc );\n    else\n        get_client_rect( hwnd, &rc, get_thread_dpi() );\n\n    if (clip_rect) intersect_rect( &cliprc, &rc, clip_rect );\n    else cliprc = rc;\n\n    if (rect) intersect_rect( &rc, &rc, rect );\n    if (update_rgn) own_rgn = FALSE;\n    else if (update) update_rgn = NtGdiCreateRectRgn( 0, 0, 0, 0 );\n\n    new_caret_pos.x = new_caret_pos.y = 0;\n\n    if (!IsRectEmpty( &cliprc ) && (dx || dy))\n    {\n        DWORD style = get_window_long( hwnd, GWL_STYLE );\n        DWORD dcxflags = 0;\n\n        caret_hwnd = fix_caret( hwnd, &rc, dx, dy, flags, &move_caret, &new_caret_pos );\n        if (caret_hwnd) NtUserHideCaret( caret_hwnd );\n\n        if (!(flags & SW_NODCCACHE)) dcxflags |= DCX_CACHE;\n        if (style & WS_CLIPSIBLINGS) dcxflags |= DCX_CLIPSIBLINGS;\n        if (get_class_long( hwnd, GCL_STYLE, FALSE ) & CS_PARENTDC) dcxflags |= DCX_PARENTCLIP;\n        if (!(flags & SW_SCROLLCHILDREN) && (style & WS_CLIPCHILDREN))\n            dcxflags |= DCX_CLIPCHILDREN;\n        hdc = NtUserGetDCEx( hwnd, 0, dcxflags);\n        if (hdc)\n        {\n            NtUserScrollDC( hdc, dx, dy, &rc, &cliprc, update_rgn, update_rect );\n            NtUserReleaseDC( hwnd, hdc );\n            if (!update) NtUserRedrawWindow( hwnd, NULL, update_rgn, rdw_flags );\n        }\n\n        /* If the windows has an update region, this must be scrolled as well.\n         * Keep a copy in winupd_rgn to be added to hrngUpdate at the end. */\n        temp_rgn = NtGdiCreateRectRgn( 0, 0, 0, 0 );\n        retval = NtUserGetUpdateRgn( hwnd, temp_rgn, FALSE );\n        if (retval != NULLREGION)\n        {\n            HRGN clip_rgn = NtGdiCreateRectRgn( cliprc.left, cliprc.top,\n                                                cliprc.right, cliprc.bottom );\n            if (!own_rgn)\n            {\n                winupd_rgn = NtGdiCreateRectRgn( 0, 0, 0, 0);\n                NtGdiCombineRgn( winupd_rgn, temp_rgn, 0, RGN_COPY);\n            }\n            NtGdiOffsetRgn( temp_rgn, dx, dy );\n            NtGdiCombineRgn( temp_rgn, temp_rgn, clip_rgn, RGN_AND );\n            if (!own_rgn) NtGdiCombineRgn( winupd_rgn, winupd_rgn, temp_rgn, RGN_OR );\n            NtUserRedrawWindow( hwnd, NULL, temp_rgn, rdw_flags );\n\n           /*\n            * Catch the case where the scrolling amount exceeds the size of the\n            * original window. This generated a second update area that is the\n            * location where the original scrolled content would end up.\n            * This second region is not returned by the ScrollDC and sets\n            * ScrollWindowEx apart from just a ScrollDC.\n            *\n            * This has been verified with testing on windows.\n            */\n            if (abs( dx ) > abs( rc.right - rc.left ) || abs( dy ) > abs( rc.bottom - rc.top ))\n            {\n                NtGdiSetRectRgn( temp_rgn, rc.left + dx, rc.top + dy, rc.right+dx, rc.bottom + dy );\n                NtGdiCombineRgn( temp_rgn, temp_rgn, clip_rgn, RGN_AND );\n                NtGdiCombineRgn( update_rgn, update_rgn, temp_rgn, RGN_OR );\n\n                if (update_rect)\n                {\n                    RECT temp_rect;\n                    NtGdiGetRgnBox( temp_rgn, &temp_rect );\n                    union_rect( update_rect, update_rect, &temp_rect );\n                }\n\n                if (!own_rgn) NtGdiCombineRgn( winupd_rgn, winupd_rgn, temp_rgn, RGN_OR );\n            }\n            NtGdiDeleteObjectApp( clip_rgn );\n        }\n        NtGdiDeleteObjectApp( temp_rgn );\n    }\n    else\n    {\n        /* nothing was scrolled */\n        if (!own_rgn) NtGdiSetRectRgn( update_rgn, 0, 0, 0, 0 );\n        SetRectEmpty( update_rect );\n    }\n\n    if (flags & SW_SCROLLCHILDREN)\n    {\n        HWND *list = list_window_children( hwnd );\n        if (list)\n        {\n            RECT r, dummy;\n            int i;\n\n            for (i = 0; list[i]; i++)\n            {\n                get_window_rect_rel( list[i], COORDS_PARENT, &r, get_thread_dpi() );\n                if (!rect || intersect_rect( &dummy, &r, rect ))\n                    NtUserSetWindowPos( list[i], 0, r.left + dx, r.top  + dy, 0, 0,\n                                        SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE |\n                                        SWP_NOREDRAW | SWP_DEFERERASE );\n            }\n            free( list );\n        }\n    }\n\n    if (flags & (SW_INVALIDATE | SW_ERASE))\n        NtUserRedrawWindow( hwnd, NULL, update_rgn, rdw_flags |\n                            ((flags & SW_SCROLLCHILDREN) ? RDW_ALLCHILDREN : 0 ) );\n\n    if (winupd_rgn)\n    {\n        NtGdiCombineRgn( update_rgn, update_rgn, winupd_rgn, RGN_OR );\n        NtGdiDeleteObjectApp( winupd_rgn );\n    }\n\n    if (move_caret) NtUserSetCaretPos( new_caret_pos.x, new_caret_pos.y );\n    if (caret_hwnd) NtUserShowCaret( caret_hwnd );\n    if (own_rgn && update_rgn) NtGdiDeleteObjectApp( update_rgn );\n\n    return retval;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-scrollwindowex.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-scrollwindowex",
+   "documented_name": "scrollwindowex",
+   "file": "docs/0390_sdk-api_nf-winuser-scrollwindowex.md",
+   "text": "---\nUID: NF:winuser.ScrollWindowEx\ntitle: ScrollWindowEx function (winuser.h)\ndescription: The ScrollWindowEx function scrolls the contents of the specified window's client area.\nhelpviewer_keywords: [\"SW_ERASE\",\"SW_INVALIDATE\",\"SW_SCROLLCHILDREN\",\"SW_SMOOTHSCROLL\",\"ScrollWindowEx\",\"ScrollWindowEx function [Windows Controls]\",\"_win32_ScrollWindowEx\",\"_win32_ScrollWindowEx_cpp\",\"controls.ScrollWindowEx\",\"controls._win32_ScrollWindowEx\",\"winuser/ScrollWindowEx\"]\nold-location: controls\\ScrollWindowEx.htm\ntech.root: Controls\nms.assetid: VS|Controls|~\\controls\\scrollbars\\scrollbarreference\\scrollbarfunctions\\scrollwindowex.htm\nms.date: 12/05/2018\nms.keywords: SW_ERASE, SW_INVALIDATE, SW_SCROLLCHILDREN, SW_SMOOTHSCROLL, ScrollWindowEx, ScrollWindowEx function [Windows Controls], _win32_ScrollWindowEx, _win32_ScrollWindowEx_cpp, controls.ScrollWindowEx, controls._win32_ScrollWindowEx, winuser/ScrollWindowEx\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ScrollWindowEx\n - winuser/ScrollWindowEx\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-ntuser-misc-l1-7-0.dll\n - ext-ms-win-ntuser-misc-l1-6-0.dll\n - User32.dll\n - Ext-MS-Win-NTUser-Misc-l1-2-0.dll\n - Ext-MS-Win-NTUser-Misc-l1-3-0.dll\n - ext-ms-win-ntuser-misc-l1-3-1.dll\n - Ext-MS-Win-NTUser-Misc-L1-4-0.dll\n - Ext-Ms-Win-NTUser-Misc-L1-5-0.dll\n - Ext-MS-Win-NTUser-Misc-L1-5-1.dll\napi_name:\n - ScrollWindowEx\nreq.apiset: ext-ms-win-ntuser-misc-l1-2-0 (introduced in Windows 8.1)\n---\n\n# ScrollWindowEx function\n\n\n## -description\n\nThe <b>ScrollWindowEx</b> function scrolls the contents of the specified window's client area.\n\n## -parameters\n\n### -param hWnd [in]\n\nType: <b><a href=\"/windows/desktop/WinProg/windows-data-types\">HWND</a></b>\n\nHandle to the window where the client area is to be scrolled.\n\n### -param dx [in]\n\nType: <b>int</b>\n\nSpecifies the amount, in device units, of horizontal scrolling. This parameter must be a negative value to scroll to the left.\n\n### -param dy [in]\n\nType: <b>int</b>\n\nSpecifies the amount, in device units, of vertical scrolling. This parameter must be a negative value to scroll up.\n\n### -param prcScroll [in]\n\nType: <b>const <a href=\"/windows/desktop/api/windef/ns-windef-rect\">RECT</a>*</b>\n\nPointer to a <a href=\"/windows/desktop/api/windef/ns-windef-rect\">RECT</a> structure that specifies the portion of the client area to be scrolled. If this parameter is <b>NULL</b>, the entire client area is scrolled.\n\n### -param prcClip [in]\n\nType: <b>const <a href=\"/windows/desktop/api/windef/ns-windef-rect\">RECT</a>*</b>\n\nPointer to a \n\t\t\t\t\t<a href=\"/windows/desktop/api/windef/ns-windef-rect\">RECT</a> structure that contains the coordinates of the clipping rectangle. Only device bits within the clipping rectangle are affected. Bits scrolled from the outside of the rectangle to the inside are painted; bits scrolled from the inside of the rectangle to the outside are not painted. This parameter may be <b>NULL</b>.\n\n### -param hrgnUpdate [in]\n\nType: <b><a href=\"/windows/desktop/WinProg/windows-data-types\">HRGN</a></b>\n\nHandle to the region that is modified to hold the region invalidated by scrolling. This parameter may be <b>NULL</b>.\n\n### -param prcUpdate [out]\n\nType: <b>LPRECT</b>\n\nPointer to a <a href=\"/windows/desktop/api/windef/ns-windef-rect\">RECT</a> structure that receives the boundaries of the rectangle invalidated by scrolling. This parameter may be <b>NULL</b>.\n\n### -param flags [in]\n\nType: <b><a href=\"/windows/desktop/WinProg/windows-data-types\">UINT</a></b>\n\nSpecifies flags that control scrolling. This parameter can be a combination of the following values. \n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SW_ERASE\"></a><a id=\"sw_erase\"></a><dl>\n<dt><b>SW_ERASE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nErases the newly invalidated region by sending a \n\t\t\t\t\t\t<a href=\"/windows/desktop/winmsg/wm-erasebkgnd\">WM_ERASEBKGND</a> message to the window when specified with the SW_INVALIDATE flag.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SW_INVALIDATE\"></a><a id=\"sw_invalidate\"></a><dl>\n<dt><b>SW_INVALIDATE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nInvalidates the region identified by the \n\t\t\t\t\t\t<i>hrgnUpdate</i> parameter after scrolling.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SW_SCROLLCHILDREN\"></a><a id=\"sw_scrollchildren\"></a><dl>\n<dt><b>SW_SCROLLCHILDREN</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nScrolls all child windows that intersect the rectangle pointed to by the \n\t\t\t\t\t\t<i>prcScroll</i> parameter. The child windows are scrolled by the number of pixels specified by the \n\t\t\t\t\t\t<i>dx</i> and \n\t\t\t\t\t\t<i>dy</i> parameters. The system sends a \n\t\t\t\t\t\t<a href=\"/windows/desktop/winmsg/wm-move\">WM_MOVE</a> message to all child windows that intersect the \n\t\t\t\t\t\t<i>prcScroll</i> rectangle, even if they do not move.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SW_SMOOTHSCROLL\"></a><a id=\"sw_smoothscroll\"></a><dl>\n<dt><b>SW_SMOOTHSCROLL</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nScrolls using smooth scrolling. Use the \n\t\t\t\t\t\t<a href=\"/previous-versions/windows/desktop/legacy/ms632657(v=vs.85)\">HIWORD</a> portion of the \n\t\t\t\t\t\t<i>flags</i> parameter to indicate how much time, in milliseconds, the smooth-scrolling operation should take.\n\n</td>\n</tr>\n</table>\n\n## -returns\n\nType: <b>int</b>\n\nIf the function succeeds, the return value is SIMPLEREGION (rectangular invalidated region), COMPLEXREGION (nonrectangular invalidated region; overlapping rectangles), or NULLREGION (no invalidated region). \n\nIf the function fails, the return value is ERROR. To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nIf the SW_INVALIDATE and SW_ERASE flags are not specified, <b>ScrollWindowEx</b> does not invalidate the area that is scrolled from. If either of these flags is set, <b>ScrollWindowEx</b> invalidates this area. The area is not updated until the application calls the <a href=\"/windows/desktop/api/winuser/nf-winuser-updatewindow\">UpdateWindow</a> function, calls the  <a href=\"/windows/desktop/api/winuser/nf-winuser-redrawwindow\">RedrawWindow</a> function (specifying the RDW_UPDATENOW or RDW_ERASENOW flag), or retrieves the \n\t\t\t\t<a href=\"/windows/desktop/gdi/wm-paint\">WM_PAINT</a> message from the application queue. \n\nIf the window has the <a href=\"/windows/desktop/winmsg/window-styles\">WS_CLIPCHILDREN</a> style, the returned areas specified by \n\t\t\t\t<i>hrgnUpdate</i> and \n\t\t\t\t<i>prcUpdate</i> represent the total area of the scrolled window that must be updated, including any areas in child windows that need updating. \n\nIf the SW_SCROLLCHILDREN flag is specified, the system does not properly update the screen if part of a child window is scrolled. The part of the scrolled child window that lies outside the source rectangle is not erased and is not properly redrawn in its new destination. To move child windows that do not lie completely within the rectangle specified by \n\t\t\t\t<i>prcScroll</i>, use the <a href=\"/windows/desktop/api/winuser/nf-winuser-deferwindowpos\">DeferWindowPos</a> function. The cursor is repositioned if the SW_SCROLLCHILDREN flag is set and the caret rectangle intersects the scroll rectangle. \n\nAll input and output coordinates (for \n\t\t\t\t<i>prcScroll</i>, \n\t\t\t\t<i>prcClip</i>, \n\t\t\t\t<i>prcUpdate</i>, and \n\t\t\t\t<i>hrgnUpdate</i>) are determined as client coordinates, regardless of whether the window has the <a href=\"/windows/desktop/winmsg/window-class-styles\">CS_OWNDC</a> or <a href=\"/windows/desktop/winmsg/window-class-styles\">CS_CLASSDC</a> class style. Use the \n\t\t\t\t<a href=\"/windows/desktop/api/wingdi/nf-wingdi-lptodp\">LPtoDP</a> and \n\t\t\t\t<a href=\"/windows/desktop/api/wingdi/nf-wingdi-dptolp\">DPtoLP</a> functions to convert to and from logical coordinates, if necessary. \n\n\n#### Examples\n\nFor an example, see <a href=\"/windows/desktop/Controls/using-scroll-bars\">Scrolling Text with the WM_PAINT Message</a>.\n\n<div class=\"code\"></div>\n\n## -see-also\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-dptolp\">DPtoLP</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-deferwindowpos\">DeferWindowPos</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-lptodp\">LPtoDP</a>\n\n\n\n<b>Other Resources</b>\n\n\n\n<a href=\"/windows/desktop/api/windef/ns-windef-rect\">RECT</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-redrawwindow\">RedrawWindow</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-updatewindow\">UpdateWindow</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "ScrollWindowEx",
+    "impl": [
+     "dlls/user.exe16/window.c:1457"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [
+   "WIN_Handle32"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

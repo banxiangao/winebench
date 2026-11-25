@@ -1,0 +1,227 @@
+{
+ "id": "0019",
+ "function": {
+  "name": "GdipCreateFont",
+  "export_name": "GdipCreateFont",
+  "module": "gdiplus",
+  "source_module": "gdiplus",
+  "exported_by": [
+   "gdiplus"
+  ],
+  "side": "PE",
+  "file": "dlls/gdiplus/font.c",
+  "start_line": 150,
+  "end_line": 199,
+  "body_lines": 47,
+  "signature": "GpStatus WINGDIPAPI GdipCreateFont(GDIPCONST GpFontFamily *fontFamily, REAL emSize, INT style, Unit unit, GpFont **font)",
+  "header_comment": "/*******************************************************************************\n * GdipCreateFont [GDIPLUS.@]\n *\n * Create a new font based off of a FontFamily\n *\n * PARAMS\n *  *fontFamily     [I] Family to base the font off of\n *  emSize          [I] Size of the font\n *  style           [I] Bitwise OR of FontStyle enumeration\n *  unit            [I] Unit emSize is measured in\n *  **font          [I] the resulting Font object\n *\n * RETURNS\n *  SUCCESS: Ok\n *  FAILURE: InvalidParameter if fontfamily or font is NULL.\n *  FAILURE: FontFamilyNotFound if an invalid FontFamily is given\n *\n * NOTES\n *  UnitDisplay is unsupported.\n *  emSize is stored separately from lfHeight, to hold the fraction.\n */",
+  "code": "GpStatus WINGDIPAPI GdipCreateFont(GDIPCONST GpFontFamily *fontFamily,\n                        REAL emSize, INT style, Unit unit, GpFont **font)\n{\n    HFONT hfont;\n    OUTLINETEXTMETRICW otm;\n    LOGFONTW lfw;\n    HDC hdc;\n    GpStatus stat;\n    int ret;\n\n    if (!fontFamily || !font || emSize < 0.0)\n        return InvalidParameter;\n\n    TRACE(\"%p (%s), %f, %d, %d, %p\\n\", fontFamily,\n            debugstr_w(fontFamily->FamilyName), emSize, style, unit, font);\n\n    memset(&lfw, 0, sizeof(lfw));\n\n    stat = GdipGetFamilyName(fontFamily, lfw.lfFaceName, LANG_NEUTRAL);\n    if (stat != Ok) return stat;\n\n    lfw.lfHeight = -units_to_pixels(emSize, unit, fontFamily->dpi, FALSE);\n    lfw.lfWeight = style & FontStyleBold ? FW_BOLD : FW_REGULAR;\n    lfw.lfItalic = style & FontStyleItalic;\n    lfw.lfUnderline = style & FontStyleUnderline;\n    lfw.lfStrikeOut = style & FontStyleStrikeout;\n    lfw.lfCharSet = DEFAULT_CHARSET;\n\n    hfont = CreateFontIndirectW(&lfw);\n    hdc = CreateCompatibleDC(0);\n    SelectObject(hdc, hfont);\n    otm.otmSize = sizeof(otm);\n    ret = GetOutlineTextMetricsW(hdc, otm.otmSize, &otm);\n    DeleteDC(hdc);\n    DeleteObject(hfont);\n\n    if (!ret) return NotTrueTypeFont;\n\n    *font = calloc(1, sizeof(GpFont));\n    if (!*font) return OutOfMemory;\n\n    (*font)->unit = unit;\n    (*font)->emSize = emSize;\n    (*font)->otm = otm;\n    GdipCloneFontFamily((GpFontFamily*)fontFamily, &(*font)->family);\n\n    TRACE(\"<-- %p\\n\", *font);\n\n    return Ok;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winreg.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"objbase.h\"",
+   "#include \"gdiplus.h\"",
+   "#include \"gdiplus_private.h\""
+  ],
+  "resolution": [
+   "gdiplus!GdipCreateFont [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdiplus/tests/font.c",
+   "dlls/gdiplus/tests/graphics.c",
+   "dlls/gdiplus/tests/metafile.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 15
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "gdiplusflat",
+   "path": "desktop-src/gdiplus/-gdiplus-font-flat.md",
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-font-flat",
+   "documented_name": "gdipcreatefont",
+   "excerpt": {
+    "note": "GDI+ flat API page: one table row per function; only the page introduction, the table header and this function's row are kept",
+    "full_page_chars": 18170
+   },
+   "file": "docs/0019_win32_-gdiplus-font-flat.md",
+   "text": "---\ndescription: Windows GDI+ exposes a flat API that consists of about 600 functions. These flat API functions are wrapped by the Font C++ class.\nms.assetid: fcc37af2-cd90-42e6-9b7f-20b123f8ab1f\ntitle: Font Functions\nms.topic: reference\nms.date: 05/31/2018\n---\n\n# Font Functions\n\nWindows GDI+ exposes a flat API that consists of about 600 functions, which are implemented in Gdiplus.dll and declared in Gdiplusflat.h. The functions in the GDI+ flat API are wrapped by a collection of about 40 C++ classes. It is recommended that you do not directly call the functions in the flat API. Whenever you make calls to GDI+, you should do so by calling the methods and functions provided by the C++ wrappers. Microsoft Product Support Services will not provide support for code that calls the flat API directly. For more information on using these wrapper methods, see [GDI+ Flat API](-gdiplus-flatapi-flat.md).\n\nThe following flat API functions are wrapped by the [**Font**](/windows/desktop/api/gdiplusheaders/nl-gdiplusheaders-font) C++ class.\n\n## Font Functions and Corresponding Wrapper Methods\n\n\n\n| Flat function                                                                                                                                                     | Wrapper method                                                                                                                                                           | Remarks                                                                                                                                                                                                                                                                                                                                         |\n|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|\n| GpStatus WINGDIPAPI GdipCreateFont( GDIPCONST GpFontFamily \\*fontFamily, REAL emSize, INT style, Unit unit, GpFont \\*\\*font )<br/>                          | [**Font::Font( IN const FontFamily \\* family, IN REAL emSize, IN INT style, IN Unit unit )**](/windows/win32/api/gdiplusheaders/nf-gdiplusheaders-font-font(inconstwchar_inreal_inint_inunit_inconstfontcollection)) | Creates a [**Font**](/windows/desktop/api/gdiplusheaders/nl-gdiplusheaders-font) object based on a font family, a size, a font style, a unit of measurement, and a [**FontCollection**](/windows/desktop/api/gdiplusheaders/nl-gdiplusheaders-fontcollection) object.                                                                                                                                     |\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 29,
+    "end_line": 29,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL (gdiplus);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "units_to_pixels",
+    "file": "dlls/gdiplus/gdiplus.c",
+    "start_line": 329
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "GdipCloneFontFamily",
+    "impl": [
+     "dlls/gdiplus/font.c:808"
+    ]
+   },
+   {
+    "name": "GdipGetFamilyName",
+    "impl": [
+     "dlls/gdiplus/font.c:840"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CreateCompatibleDC",
+    "module": "gdi32",
+    "impl": [
+     "dlls/win32u/dc.c:792"
+    ]
+   },
+   {
+    "name": "CreateFontIndirectW",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/text.c:876"
+    ]
+   },
+   {
+    "name": "DeleteDC",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:532"
+    ]
+   },
+   {
+    "name": "DeleteObject",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:194"
+    ]
+   },
+   {
+    "name": "GetOutlineTextMetricsW",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/text.c:1731"
+    ]
+   },
+   {
+    "name": "SelectObject",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:324"
+    ]
+   },
+   {
+    "name": "calloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_w",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "gdiplus.GdipCreateFont",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI+",
+   "header": "gdiplusflat.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 50,
+   "body": 48,
+   "code": 35
+  },
+  "cyclomatic": 8,
+  "return_type": "GpStatus",
+  "n_params": 5,
+  "tests": {
+   "n_tests_own": 15,
+   "n_tests": 15,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/gdiplus/tests/font.c::check_family",
+    "dlls/gdiplus/tests/font.c::test_CloneFont",
+    "dlls/gdiplus/tests/font.c::test_createfont",
+    "dlls/gdiplus/tests/font.c::test_createfont_charset",
+    "dlls/gdiplus/tests/font.c::test_font_metrics",
+    "dlls/gdiplus/tests/font.c::test_font_substitution",
+    "dlls/gdiplus/tests/font.c::test_heightgivendpi",
+    "dlls/gdiplus/tests/font.c::test_long_name",
+    "dlls/gdiplus/tests/graphics.c::test_GdipMeasureString",
+    "dlls/gdiplus/tests/graphics.c::test_font_height_scaling",
+    "dlls/gdiplus/tests/graphics.c::test_measure_string",
+    "dlls/gdiplus/tests/graphics.c::test_measure_string_vertical",
+    "dlls/gdiplus/tests/graphics.c::test_measured_extra_space",
+    "dlls/gdiplus/tests/graphics.c::test_string_functions",
+    "dlls/gdiplus/tests/metafile.c::test_unknownfontdecode"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-font-flat",
+   "source": "win32-gdiplus-flat",
+   "description": "",
+   "min_windows": "",
+   "documented_dll": "gdiplus.dll"
+  },
+  "exports": [
+   "gdiplus.GdipCreateFont"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

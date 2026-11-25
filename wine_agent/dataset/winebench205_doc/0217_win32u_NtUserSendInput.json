@@ -1,0 +1,188 @@
+{
+ "id": "0217",
+ "function": {
+  "name": "NtUserSendInput",
+  "export_name": "SendInput",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/input.c",
+  "start_line": 759,
+  "end_line": 807,
+  "body_lines": 46,
+  "signature": "UINT WINAPI NtUserSendInput( UINT count, INPUT *inputs, int size )",
+  "header_comment": "/***********************************************************************\n *           NtUserSendInput  (win32u.@)\n */",
+  "code": "UINT WINAPI NtUserSendInput( UINT count, INPUT *inputs, int size )\n{\n    UINT i;\n    NTSTATUS status = STATUS_SUCCESS;\n\n    if (size != sizeof(INPUT))\n    {\n        RtlSetLastWin32Error( ERROR_INVALID_PARAMETER );\n        return 0;\n    }\n\n    if (!count)\n    {\n        RtlSetLastWin32Error( ERROR_INVALID_PARAMETER );\n        return 0;\n    }\n\n    if (!inputs)\n    {\n        RtlSetLastWin32Error( ERROR_NOACCESS );\n        return 0;\n    }\n\n    for (i = 0; i < count; i++)\n    {\n        INPUT input = inputs[i];\n        switch (input.type)\n        {\n        case INPUT_MOUSE:\n            /* we need to update the coordinates to what the server expects */\n            update_mouse_coords( &input );\n            /* fallthrough */\n        case INPUT_KEYBOARD:\n            status = server_send_hardware_message( 0, SEND_HWMSG_INJECTED, &input, 0 );\n            break;\n        case INPUT_HARDWARE:\n            RtlSetLastWin32Error( ERROR_CALL_NOT_IMPLEMENTED );\n            return 0;\n        }\n\n        if (status)\n        {\n            RtlSetLastWin32Error( RtlNtStatusToDosError(status) );\n            break;\n        }\n    }\n\n    return i;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"win32u_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"kbd.h\""
+  ],
+  "resolution": [
+   "user32!SendInput [stdcall] -> NtUserSendInput implicitly imported from win32u",
+   "win32u!NtUserSendInput [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/menu.c",
+   "dlls/user32/tests/msg.c",
+   "dlls/user32/tests/win.c",
+   "dlls/user32/tests/winstation.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 7
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-sendinput.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-sendinput",
+   "documented_name": "sendinput",
+   "file": "docs/0217_sdk-api_nf-winuser-sendinput.md",
+   "text": "---\nUID: NF:winuser.SendInput\ntitle: SendInput function (winuser.h)\ndescription: Synthesizes keystrokes, mouse motions, and button clicks.\nhelpviewer_keywords: [\"SendInput\",\"SendInput function [Keyboard and Mouse Input]\",\"_win32_SendInput\",\"_win32_sendinput_cpp\",\"inputdev.sendinput\",\"winui._win32_sendinput\",\"winuser/SendInput\"]\nold-location: inputdev\\sendinput.htm\ntech.root: inputdev\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\userinput\\keyboardinput\\keyboardinputreference\\keyboardinputfunctions\\sendinput.htm\nms.date: 12/05/2018\nms.keywords: SendInput, SendInput function [Keyboard and Mouse Input], _win32_SendInput, _win32_sendinput_cpp, inputdev.sendinput, winui._win32_sendinput, winuser/SendInput\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: snippet-project\nf1_keywords:\n - SendInput\n - winuser/SendInput\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-ntuser-keyboard-l1-3-2.dll\n - ext-ms-win-ntuser-keyboard-l1-3-1.dll\n - User32.dll\n - Ext-MS-Win-NTUser-Keyboard-l1-1-0.dll\n - Ext-MS-Win-NTUser-Keyboard-l1-1-1.dll\n - ext-ms-win-ntuser-keyboard-l1-1-2.dll\n - Ext-MS-Win-NTUser-Keyboard-L1-2-0.dll\n - Ext-MS-Win-NTUser-Keyboard-L1-2-1.dll\n - Ext-MS-Win-NTUser-Keyboard-L1-3-0.dll\napi_name:\n - SendInput\n---\n\n# SendInput function\n\n\n## -description\n\nSynthesizes keystrokes, mouse motions, and button clicks.\n\n## -parameters\n\n### -param cInputs [in]\n\nType: <b>UINT</b>\n\nThe number of structures in the <i>pInputs</i> array.\n\n### -param pInputs [in]\n\nType: <b>LPINPUT</b>\n\nAn array of <a href=\"/windows/desktop/api/winuser/ns-winuser-input\">INPUT</a> structures. Each structure represents an event to be inserted into the keyboard or mouse input stream.\n\n### -param cbSize [in]\n\nType: <b>int</b>\n\nThe size, in bytes, of an <a href=\"/windows/desktop/api/winuser/ns-winuser-input\">INPUT</a> structure. If <i>cbSize</i> is not the size of an <b>INPUT</b> structure, the function fails.\n\n## -returns\n\nType: <b>UINT</b>\n\nThe function returns the number of events that it successfully inserted into the keyboard or mouse input stream. If the function returns zero, the input was already blocked by another thread. To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\nThis function fails when it is blocked by UIPI. Note that neither <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> nor the return value will indicate the failure was caused by UIPI blocking.\n\n## -remarks\n\nThis function is subject to UIPI. Applications are permitted to inject input only into applications that are at an equal or lesser integrity level.\n\nThe <b>SendInput</b> function inserts the events in the <a href=\"/windows/desktop/api/winuser/ns-winuser-input\">INPUT</a> structures serially into the keyboard or mouse input stream. These events are not interspersed with other keyboard or mouse input events inserted either by the user (with the keyboard or mouse) or by calls to <a href=\"/windows/desktop/api/winuser/nf-winuser-keybd_event\">keybd_event</a>, <a href=\"/windows/desktop/api/winuser/nf-winuser-mouse_event\">mouse_event</a>, or other calls to <b>SendInput</b>.\n\nThis function does not reset the keyboard's current state. Any keys that are already pressed when the function is called might interfere with the events that this function generates. To avoid this problem, check the keyboard's state with the <a href=\"/windows/desktop/api/winuser/nf-winuser-getasynckeystate\">GetAsyncKeyState</a> function and correct as necessary.\n\nBecause the touch keyboard uses the surrogate macros defined in winnls.h to send input to the system, a listener on the keyboard event hook must decode input originating from the touch keyboard. For more information, see <a href=\"/windows/desktop/Intl/surrogates-and-supplementary-characters\">Surrogates and Supplementary Characters</a>.\n\nAn accessibility application can use <b>SendInput</b> to inject keystrokes corresponding to application launch shortcut keys that are handled by the shell.  This  functionality is not guaranteed to work for other types of applications.\n\n## Example\n\n```cpp\n//**********************************************************************\n//\n// Sends Win + D to toggle to the desktop\n//\n//**********************************************************************\nvoid ShowDesktop()\n{\n    OutputString(L\"Sending 'Win-D'\\r\\n\");\n    INPUT inputs[4] = {};\n    ZeroMemory(inputs, sizeof(inputs));\n\n    inputs[0].type = INPUT_KEYBOARD;\n    inputs[0].ki.wVk = VK_LWIN;\n   \n    inputs[1].type = INPUT_KEYBOARD;\n    inputs[1].ki.wVk = 'D';\n\n    inputs[2].type = INPUT_KEYBOARD;\n    inputs[2].ki.wVk = 'D';\n    inputs[2].ki.dwFlags = KEYEVENTF_KEYUP;\n\n    inputs[3].type = INPUT_KEYBOARD;\n    inputs[3].ki.wVk = VK_LWIN;\n    inputs[3].ki.dwFlags = KEYEVENTF_KEYUP;\n\n    UINT uSent = SendInput(ARRAYSIZE(inputs), inputs, sizeof(INPUT));\n    if (uSent != ARRAYSIZE(inputs))\n    {\n        OutputString(L\"SendInput failed: 0x%x\\n\", HRESULT_FROM_WIN32(GetLastError()));\n    } \n}\n```\n\n## -see-also\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-getasynckeystate\">GetAsyncKeyState</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/ns-winuser-input\">INPUT</a>\n\n\n\n<a href=\"/windows/desktop/inputdev/keyboard-input\">Keyboard Input</a>\n\n\n\n<b>Reference</b>\n\n\n\n<a href=\"/windows/desktop/Intl/surrogates-and-supplementary-characters\">Surrogates and Supplementary Characters</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-keybd_event\">keybd_event</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-mouse_event\">mouse_event</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "update_mouse_coords",
+   "file": "dlls/win32u/input.c",
+   "start_line": 643,
+   "end_line": 679,
+   "static": true,
+   "called_from": [
+    "NtUserSendInput"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void update_mouse_coords( INPUT *input )",
+   "code": "static void update_mouse_coords( INPUT *input )\n{\n    if (!(input->mi.dwFlags & MOUSEEVENTF_MOVE)) return;\n\n    if (input->mi.dwFlags & MOUSEEVENTF_ABSOLUTE)\n    {\n        RECT rc;\n\n        if (input->mi.dwFlags & MOUSEEVENTF_VIRTUALDESK)\n            rc = get_virtual_screen_rect( no_dpi, MDT_DEFAULT );\n        else\n            rc = get_primary_monitor_rect( no_dpi );\n\n        input->mi.dx = rc.left + ((input->mi.dx * (rc.right - rc.left)) >> 16);\n        input->mi.dy = rc.top  + ((input->mi.dy * (rc.bottom - rc.top)) >> 16);\n    }\n    else\n    {\n        int accel[3];\n\n        /* dx and dy can be negative numbers for relative movements */\n        NtUserSystemParametersInfo( SPI_GETMOUSE, 0, accel, 0 );\n\n        if (!accel[2]) return;\n\n        if (abs( input->mi.dx ) > accel[0])\n        {\n            input->mi.dx *= 2;\n            if (abs( input->mi.dx ) > accel[1] && accel[2] == 2) input->mi.dx *= 2;\n        }\n        if (abs(input->mi.dy) > accel[0])\n        {\n            input->mi.dy *= 2;\n            if (abs( input->mi.dy ) > accel[1] && accel[2] == 2) input->mi.dy *= 2;\n        }\n    }\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "no_dpi",
+    "type": "const struct ratio",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "static const struct ratio no_dpi;"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "get_primary_monitor_rect",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 3482
+   },
+   {
+    "name": "get_virtual_screen_rect",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 3436
+   },
+   {
+    "name": "server_send_hardware_message",
+    "file": "dlls/win32u/message.c",
+    "start_line": 3911
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "NtUserSystemParametersInfo",
+    "impl": [
+     "dlls/win32u/sysparams.c:6180"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "RtlNtStatusToDosError",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:77"
+    ]
+   },
+   {
+    "name": "RtlSetLastWin32Error",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "header_inline": [],
+  "system": [
+   "abs"
+  ],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "win32u.NtUserSendInput",
+  "category": {
+   "l1": "User input and messaging",
+   "l2": "Keyboard and mouse input",
+   "header": "winuser.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 49,
+   "body": 48,
+   "code": 26
+  },
+  "cyclomatic": 9,
+  "return_type": "UINT",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 7,
+   "n_tests": 9,
+   "n_tests_other": 2,
+   "own_test_functions": [
+    "dlls/user32/tests/menu.c::click_menu",
+    "dlls/user32/tests/menu.c::send_key",
+    "dlls/user32/tests/msg.c::simulate_click",
+    "dlls/user32/tests/msg.c::test_recursive_hook",
+    "dlls/user32/tests/msg.c::test_restore_messages",
+    "dlls/user32/tests/win.c::simulate_click",
+    "dlls/user32/tests/winstation.c::test_inputdesktop"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-sendinput",
+   "source": "win32",
+   "description": "Synthesizes keystrokes, mouse motions, and button clicks.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "User32.dll"
+  },
+  "exports": [
+   "user32.SendInput",
+   "win32u.NtUserSendInput"
+  ],
+  "subset": {
+   "selected_by": "added 2026-11-25 to replace the 12 records that cannot be tested on Vulcan",
+   "rule": "not in the 205; loc.total > 10; 5 < n_tests_own <= 50; from the categories with the fewest samples; every candidate built and its tests run on the clean tree first"
+  }
+ }
+}

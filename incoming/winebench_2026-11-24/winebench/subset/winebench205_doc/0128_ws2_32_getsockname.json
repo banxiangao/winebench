@@ -1,0 +1,238 @@
+{
+ "id": "0128",
+ "function": {
+  "name": "getsockname",
+  "export_name": "getsockname",
+  "module": "ws2_32",
+  "source_module": "ws2_32",
+  "exported_by": [
+   "winsock.dll16",
+   "ws2_32",
+   "wsock32"
+  ],
+  "side": "PE",
+  "file": "dlls/ws2_32/socket.c",
+  "start_line": 1698,
+  "end_line": 1717,
+  "body_lines": 17,
+  "signature": "int WINAPI getsockname( SOCKET s, struct sockaddr *addr, int *len )",
+  "header_comment": "/***********************************************************************\n *      getsockname   (ws2_32.6)\n */",
+  "code": "int WINAPI getsockname( SOCKET s, struct sockaddr *addr, int *len )\n{\n    IO_STATUS_BLOCK io;\n    NTSTATUS status;\n\n    TRACE( \"socket %#Ix, addr %p, len %d\\n\", s, addr, len ? *len : 0 );\n\n    if (!addr)\n    {\n        SetLastError( WSAEFAULT );\n        return -1;\n    }\n\n    status = NtDeviceIoControlFile( (HANDLE)s, NULL, NULL, NULL, &io, IOCTL_AFD_GETSOCKNAME, NULL, 0, addr, *len );\n    if (!status)\n        *len = io.Information;\n    WSASetLastError( NtStatusToWSAError( status ) );\n    TRACE( \"status %#lx.\\n\", status );\n    return status ? -1 : 0;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ws2_32_private.h\""
+  ],
+  "resolution": [
+   "ws2_32!getsockname [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ws2_32/tests/afd.c",
+   "dlls/ws2_32/tests/sock.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 35
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "winsock.dll16",
+   "source_module": "winsock.dll16",
+   "exported_by": [
+    "winsock.dll16"
+   ],
+   "file": "dlls/winsock.dll16/socket.c",
+   "start_line": 485,
+   "resolution": [
+    "winsock.dll16!getsockname [pascal -ret16] -> internal symbol getsockname16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 497,
+   "signature": "INT16 WINAPI getsockname16(SOCKET16 s, struct sockaddr *name, INT16 *namelen16)",
+   "code": "INT16 WINAPI getsockname16(SOCKET16 s, struct sockaddr *name, INT16 *namelen16)\n{\n    INT retVal;\n\n    if( namelen16 )\n    {\n        INT namelen32 = *namelen16;\n        retVal = getsockname( s, name, &namelen32 );\n       *namelen16 = namelen32;\n    }\n    else retVal = SOCKET_ERROR;\n    return retVal;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winsock",
+   "path": "sdk-api-src/content/winsock/nf-winsock-getsockname.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winsock/nf-winsock-getsockname",
+   "documented_name": "getsockname",
+   "file": "docs/0128_sdk-api_nf-winsock-getsockname.md",
+   "text": "---\nUID: NF:winsock.getsockname\ntitle: getsockname function (winsock.h)\ndescription: The getsockname function (winsock.h) retrieves the local name for a socket.\nhelpviewer_keywords: [\"_win32_getsockname_2\",\"getsockname\",\"getsockname function [Winsock]\",\"winsock.getsockname_2\",\"winsock/getsockname\"]\nold-location: winsock\\getsockname_2.htm\ntech.root: WinSock\nms.assetid: be20a731-cdfc-48ae-90b2-43f2cf9ecf6d\nms.date: 08/15/2022\nms.keywords: _win32_getsockname_2, getsockname, getsockname function [Winsock], winsock.getsockname_2, winsock/getsockname\nreq.header: winsock.h\nreq.include-header: Winsock2.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 8.1, Windows Vista [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ws2_32.lib\nreq.dll: Ws2_32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - getsockname\n - winsock/getsockname\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Ws2_32.dll\napi_name:\n - getsockname\n---\n\n# getsockname function\n\n\n## -description\n\nThe \n<b>getsockname</b> function retrieves the local name for a socket.\n\n## -parameters\n\n### -param s [in]\n\nDescriptor identifying a socket.\n\n### -param name [out]\n\nPointer to a \n<a href=\"/windows/desktop/WinSock/sockaddr-2\">SOCKADDR</a> structure that receives the address (name) of the socket.\n\n### -param namelen [in, out]\n\nSize of the <i>name</i> buffer, in bytes.\n\n## -returns\n\nIf no error occurs, \n<b>getsockname</b> returns zero. Otherwise, a value of SOCKET_ERROR is returned, and a specific error code can be retrieved by calling \n<a href=\"/windows/desktop/api/winsock/nf-winsock-wsagetlasterror\">WSAGetLastError</a>.\n\n<table>\n<tr>\n<th>Error code</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSANOTINITIALISED</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA successful \n<a href=\"/windows/desktop/api/winsock/nf-winsock-wsastartup\">WSAStartup</a> call must occur before using this API.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAENETDOWN</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe network subsystem has failed.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAEFAULT</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <i>name</i> or the <i>namelen</i> parameter is not a valid part of the user address space, or the <i>namelen</i> parameter is too small.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAEINPROGRESS</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA blocking Windows Sockets 1.1 call is in progress, or the service provider is still processing a callback function.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAENOTSOCK</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe descriptor is not a socket.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAEINVAL</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe socket has not been bound to an address with \n<a href=\"/windows/desktop/api/winsock/nf-winsock-bind\">bind</a>, or ADDR_ANY is specified in \n<b>bind</b> but connection has not yet occurred.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe \n<b>getsockname</b> function retrieves the current name for the specified socket descriptor in <i>name</i>. It is used on the bound or connected socket specified by the <i>s</i> parameter. The local association is returned. This call is especially useful when a \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-connect\">connect</a> call has been made without doing a \n<a href=\"/windows/desktop/api/winsock/nf-winsock-bind\">bind</a> first; the \n<b>getsockname</b> function provides the only way to determine the local association that has been set by the system.\n\nOn call, the <i>namelen</i> parameter contains the size of the <i>name</i> buffer, in bytes. On return, the <i>namelen</i> parameter contains the actual size in bytes of the <i>name</i> parameter.\n\nThe \n<b>getsockname</b> function does not always return information about the host address when the socket has been bound to an unspecified address, unless the socket has been connected with \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-connect\">connect</a> or \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-accept\">accept</a> (for example, using ADDR_ANY). A Windows Sockets application must not assume that the address will be specified unless the socket is connected. The address that will be used for the socket is unknown unless the socket is connected when used in a multihomed host. If the socket is using a connectionless protocol, the address may not be available until I/O occurs on the socket.\n\n<b>Windows Phone 8:</b> This function is supported for Windows Phone Store apps on Windows Phone 8 and later.\n\n<b>Windows 8.1</b> and <b>Windows Server 2012 R2</b>: This function is supported for Windows Store apps on Windows 8.1, Windows Server 2012 R2, and later.\n\n## -see-also\n\n<a href=\"/windows/desktop/WinSock/sockaddr-2\">SOCKADDR</a>\n\n\n\n<a href=\"/windows/desktop/WinSock/winsock-functions\">Winsock Functions</a>\n\n\n\n<a href=\"/windows/desktop/WinSock/winsock-reference\">Winsock Reference</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock/nf-winsock-bind\">bind</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock/nf-winsock-getpeername\">getpeername</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-socket\">socket</a>\n"
+  },
+  {
+   "repo": "sdk-api",
+   "header": "winsock2",
+   "path": "sdk-api-src/content/winsock2/nf-winsock2-getsockname.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winsock2/nf-winsock2-getsockname",
+   "documented_name": "getsockname",
+   "file": "docs/0128_sdk-api_nf-winsock2-getsockname.md",
+   "text": "---\nUID: NF:winsock2.getsockname\ntitle: getsockname function (winsock2.h)\ndescription: The getsockname function (winsock2.h) retrieves the local name for the specified socket descriptor.  \nhelpviewer_keywords: [\"_win32_getsockname_2\",\"getsockname\",\"getsockname function [Winsock]\",\"winsock.getsockname_2\",\"winsock/getsockname\"]\nold-location: winsock\\getsockname_2.htm\ntech.root: WinSock\nms.assetid: be20a731-cdfc-48ae-90b2-43f2cf9ecf6d\nms.date: 08/03/2022\nms.keywords: _win32_getsockname_2, getsockname, getsockname function [Winsock], winsock.getsockname_2, winsock/getsockname\nreq.header: winsock2.h\nreq.include-header: Winsock2.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 8.1, Windows Vista [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ws2_32.lib\nreq.dll: Ws2_32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - getsockname\n - winsock2/getsockname\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Ws2_32.dll\napi_name:\n - getsockname\n---\n\n# getsockname function\n\n\n## -description\n\nThe \n<b>getsockname</b> function retrieves the local name for a socket.\n\n## -parameters\n\n### -param s [in]\n\nDescriptor identifying a socket.\n\n### -param name [out]\n\nPointer to a \n<a href=\"/windows/desktop/WinSock/sockaddr-2\">SOCKADDR</a> structure that receives the address (name) of the socket.\n\n### -param namelen [in, out]\n\nSize of the <i>name</i> buffer, in bytes.\n\n## -returns\n\nIf no error occurs, \n<b>getsockname</b> returns zero. Otherwise, a value of SOCKET_ERROR is returned, and a specific error code can be retrieved by calling \n<a href=\"/windows/desktop/api/winsock/nf-winsock-wsagetlasterror\">WSAGetLastError</a>.\n\n<table>\n<tr>\n<th>Error code</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSANOTINITIALISED</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA successful \n<a href=\"/windows/desktop/api/winsock/nf-winsock-wsastartup\">WSAStartup</a> call must occur before using this API.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAENETDOWN</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe network subsystem has failed.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAEFAULT</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <i>name</i> or the <i>namelen</i> parameter is not a valid part of the user address space, or the <i>namelen</i> parameter is too small.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAEINPROGRESS</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA blocking Windows Sockets 1.1 call is in progress, or the service provider is still processing a callback function.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAENOTSOCK</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe descriptor is not a socket.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAEINVAL</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe socket has not been bound to an address with \n<a href=\"/windows/desktop/api/winsock/nf-winsock-bind\">bind</a>, or ADDR_ANY is specified in \n<b>bind</b> but connection has not yet occurred.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe \n<b>getsockname</b> function retrieves the current name for the specified socket descriptor in <i>name</i>. It is used on the bound or connected socket specified by the <i>s</i> parameter. The local association is returned. This call is especially useful when a \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-connect\">connect</a> call has been made without doing a \n<a href=\"/windows/desktop/api/winsock/nf-winsock-bind\">bind</a> first; the \n<b>getsockname</b> function provides the only way to determine the local association that has been set by the system.\n\nOn call, the <i>namelen</i> parameter contains the size of the <i>name</i> buffer, in bytes. On return, the <i>namelen</i> parameter contains the actual size in bytes of the <i>name</i> parameter.\n\nThe \n<b>getsockname</b> function does not always return information about the host address when the socket has been bound to an unspecified address, unless the socket has been connected with \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-connect\">connect</a> or \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-accept\">accept</a> (for example, using ADDR_ANY). A Windows Sockets application must not assume that the address will be specified unless the socket is connected. The address that will be used for the socket is unknown unless the socket is connected when used in a multihomed host. If the socket is using a connectionless protocol, the address may not be available until I/O occurs on the socket.\n\n<b>Windows Phone 8:</b> This function is supported for Windows Phone Store apps on Windows Phone 8 and later.\n\n<b>Windows 8.1</b> and <b>Windows Server 2012 R2</b>: This function is supported for Windows Store apps on Windows 8.1, Windows Server 2012 R2, and later.\n\n## -see-also\n\n<a href=\"/windows/desktop/WinSock/sockaddr-2\">SOCKADDR</a>\n\n\n\n<a href=\"/windows/desktop/WinSock/winsock-functions\">Winsock Functions</a>\n\n\n\n<a href=\"/windows/desktop/WinSock/winsock-reference\">Winsock Reference</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock/nf-winsock-bind\">bind</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock/nf-winsock-getpeername\">getpeername</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-socket\">socket</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "NtStatusToWSAError",
+   "file": "dlls/ws2_32/socket.c",
+   "start_line": 593,
+   "end_line": 675,
+   "static": true,
+   "called_from": [
+    "getsockname"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ws2_32/socket.c:864",
+    "dlls/ws2_32/socket.c:921",
+    "dlls/ws2_32/socket.c:986",
+    "dlls/ws2_32/socket.c:1040",
+    "dlls/ws2_32/socket.c:1075"
+   ],
+   "signature": "static DWORD NtStatusToWSAError( NTSTATUS status )",
+   "code": "static DWORD NtStatusToWSAError( NTSTATUS status )\n{\n    static const struct\n    {\n        NTSTATUS status;\n        DWORD error;\n    }\n    errors[] =\n    {\n        {STATUS_PENDING,                    ERROR_IO_PENDING},\n\n        {STATUS_BUFFER_OVERFLOW,            WSAEMSGSIZE},\n\n        {STATUS_NOT_IMPLEMENTED,            WSAEOPNOTSUPP},\n        {STATUS_ACCESS_VIOLATION,           WSAEFAULT},\n        {STATUS_PAGEFILE_QUOTA,             WSAENOBUFS},\n        {STATUS_INVALID_HANDLE,             WSAENOTSOCK},\n        {STATUS_NO_SUCH_DEVICE,             WSAENETDOWN},\n        {STATUS_NO_SUCH_FILE,               WSAENETDOWN},\n        {STATUS_NO_MEMORY,                  WSAENOBUFS},\n        {STATUS_CONFLICTING_ADDRESSES,      WSAENOBUFS},\n        {STATUS_ACCESS_DENIED,              WSAEACCES},\n        {STATUS_BUFFER_TOO_SMALL,           WSAEFAULT},\n        {STATUS_OBJECT_TYPE_MISMATCH,       WSAENOTSOCK},\n        {STATUS_OBJECT_NAME_NOT_FOUND,      WSAENETDOWN},\n        {STATUS_OBJECT_PATH_NOT_FOUND,      WSAENETDOWN},\n        {STATUS_SHARING_VIOLATION,          WSAEADDRINUSE},\n        {STATUS_QUOTA_EXCEEDED,             WSAENOBUFS},\n        {STATUS_TOO_MANY_PAGING_FILES,      WSAENOBUFS},\n        {STATUS_INSUFFICIENT_RESOURCES,     WSAENOBUFS},\n        {STATUS_WORKING_SET_QUOTA,          WSAENOBUFS},\n        {STATUS_DEVICE_NOT_READY,           WSAEWOULDBLOCK},\n        {STATUS_PIPE_DISCONNECTED,          WSAESHUTDOWN},\n        {STATUS_IO_TIMEOUT,                 WSAETIMEDOUT},\n        {STATUS_NOT_SUPPORTED,              WSAEOPNOTSUPP},\n        {STATUS_REMOTE_NOT_LISTENING,       WSAECONNREFUSED},\n        {STATUS_BAD_NETWORK_PATH,           WSAENETUNREACH},\n        {STATUS_NETWORK_BUSY,               WSAENETDOWN},\n        {STATUS_INVALID_NETWORK_RESPONSE,   WSAENETDOWN},\n        {STATUS_UNEXPECTED_NETWORK_ERROR,   WSAENETDOWN},\n        {STATUS_REQUEST_NOT_ACCEPTED,       WSAEWOULDBLOCK},\n        {STATUS_CANCELLED,                  ERROR_OPERATION_ABORTED},\n        {STATUS_COMMITMENT_LIMIT,           WSAENOBUFS},\n        {STATUS_LOCAL_DISCONNECT,           WSAECONNABORTED},\n        {STATUS_REMOTE_DISCONNECT,          WSAECONNRESET},\n        {STATUS_REMOTE_RESOURCES,           WSAENOBUFS},\n        {STATUS_LINK_FAILED,                WSAECONNRESET},\n        {STATUS_LINK_TIMEOUT,               WSAETIMEDOUT},\n        {STATUS_INVALID_CONNECTION,         WSAENOTCONN},\n        {STATUS_INVALID_ADDRESS,            WSAEADDRNOTAVAIL},\n        {STATUS_INVALID_BUFFER_SIZE,        WSAEMSGSIZE},\n        {STATUS_INVALID_ADDRESS_COMPONENT,  WSAEADDRNOTAVAIL},\n        {STATUS_TOO_MANY_ADDRESSES,         WSAENOBUFS},\n        {STATUS_ADDRESS_ALREADY_EXISTS,     WSAEADDRINUSE},\n        {STATUS_CONNECTION_DISCONNECTED,    WSAECONNRESET},\n        {STATUS_CONNECTION_RESET,           WSAECONNRESET},\n        {STATUS_TRANSACTION_ABORTED,        WSAECONNABORTED},\n        {STATUS_CONNECTION_REFUSED,         WSAECONNREFUSED},\n        {STATUS_GRACEFUL_DISCONNECT,        WSAEDISCON},\n        {STATUS_CONNECTION_ACTIVE,          WSAEISCONN},\n        {STATUS_NETWORK_UNREACHABLE,        WSAENETUNREACH},\n        {STATUS_HOST_UNREACHABLE,           WSAEHOSTUNREACH},\n        {STATUS_PROTOCOL_UNREACHABLE,       WSAENETUNREACH},\n        {STATUS_PORT_UNREACHABLE,           WSAECONNRESET},\n        {STATUS_REQUEST_ABORTED,            WSAEINTR},\n        {STATUS_CONNECTION_ABORTED,         WSAECONNABORTED},\n        {STATUS_DATATYPE_MISALIGNMENT_ERROR,WSAEFAULT},\n        {STATUS_HOST_DOWN,                  WSAEHOSTDOWN},\n        {0x80070000 | ERROR_IO_INCOMPLETE,  ERROR_IO_INCOMPLETE},\n        {0xc0010000 | ERROR_IO_INCOMPLETE,  ERROR_IO_INCOMPLETE},\n        {0xc0070000 | ERROR_IO_INCOMPLETE,  ERROR_IO_INCOMPLETE},\n    };\n\n    unsigned int i;\n\n    for (i = 0; i < ARRAY_SIZE(errors); ++i)\n    {\n        if (errors[i].status == status)\n            return errors[i].error;\n    }\n\n    return NT_SUCCESS(status) ? RtlNtStatusToDosErrorNoTeb(status) : WSAEINVAL;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "struct (unnamed at /home/claude/wine_src/dlls/ws2_32/socket.c:595:18)",
+    "kind": "struct_decl",
+    "start_line": 595,
+    "end_line": 599,
+    "code": "    static const struct\n    {\n        NTSTATUS status;\n        DWORD error;\n    }"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 33,
+    "end_line": 33,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(winsock);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "WSASetLastError",
+    "impl": [
+     "dlls/ws2_32/socket.c:809"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtDeviceIoControlFile",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/file.c:6669"
+    ]
+   },
+   {
+    "name": "RtlNtStatusToDosErrorNoTeb",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:46"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ws2_32.getsockname",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "Windows Sockets",
+   "header": "winsock.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 20,
+   "body": 19,
+   "code": 12
+  },
+  "cyclomatic": 5,
+  "return_type": "int",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 35,
+   "n_tests": 40,
+   "n_tests_other": 5,
+   "own_test_functions": [
+    "dlls/ws2_32/tests/afd.c::tcp_socketpair_flags",
+    "dlls/ws2_32/tests/afd.c::test_getsockname",
+    "dlls/ws2_32/tests/afd.c::test_poll",
+    "dlls/ws2_32/tests/afd.c::test_recv",
+    "dlls/ws2_32/tests/sock.c::setup_iocp_src",
+    "dlls/ws2_32/tests/sock.c::setup_server_socket",
+    "dlls/ws2_32/tests/sock.c::tcp_socketpair_flags",
+    "dlls/ws2_32/tests/sock.c::test_AcceptEx",
+    "dlls/ws2_32/tests/sock.c::test_DisconnectEx",
+    "dlls/ws2_32/tests/sock.c::test_UDP",
+    "dlls/ws2_32/tests/sock.c::test_WSAConnectByName",
+    "dlls/ws2_32/tests/sock.c::test_WSADuplicateSocket",
+    "dlls/ws2_32/tests/sock.c::test_WSAPoll",
+    "dlls/ws2_32/tests/sock.c::test_WSARecv",
+    "dlls/ws2_32/tests/sock.c::test_WSASendMsg",
+    "dlls/ws2_32/tests/sock.c::test_WSASendTo",
+    "dlls/ws2_32/tests/sock.c::test_WithWSAStartup",
+    "dlls/ws2_32/tests/sock.c::test_accept_events",
+    "dlls/ws2_32/tests/sock.c::test_accept_inheritance",
+    "dlls/ws2_32/tests/sock.c::test_afunix",
+    "dlls/ws2_32/tests/sock.c::test_afunix_path",
+    "dlls/ws2_32/tests/sock.c::test_backlog_query",
+    "dlls/ws2_32/tests/sock.c::test_bind",
+    "dlls/ws2_32/tests/sock.c::test_connect",
+    "dlls/ws2_32/tests/sock.c::test_connect_completion_port",
+    "dlls/ws2_32/tests/sock.c::test_connect_events",
+    "dlls/ws2_32/tests/sock.c::test_connect_time",
+    "dlls/ws2_32/tests/sock.c::test_connect_udp",
+    "dlls/ws2_32/tests/sock.c::test_connecting_socket",
+    "dlls/ws2_32/tests/sock.c::test_getsockname",
+    "dlls/ws2_32/tests/sock.c::test_ip_pktinfo",
+    "dlls/ws2_32/tests/sock.c::test_select",
+    "dlls/ws2_32/tests/sock.c::test_set_getsockopt",
+    "dlls/ws2_32/tests/sock.c::test_shutdown",
+    "dlls/ws2_32/tests/sock.c::test_shutdown_completion_port"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winsock/nf-winsock-getsockname",
+   "source": "win32",
+   "description": "The getsockname function (winsock.h) retrieves the local name for a socket.",
+   "min_windows": "Windows 8.1, Windows Vista [desktop apps \\| UWP apps]",
+   "documented_dll": "Ws2_32.dll"
+  },
+  "exports": [
+   "ws2_32.getsockname",
+   "wsock32.getsockname"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

@@ -1,0 +1,199 @@
+{
+ "id": "0020",
+ "function": {
+  "name": "InsertMenuItemA",
+  "export_name": "InsertMenuItemA",
+  "module": "user32",
+  "source_module": "user32",
+  "exported_by": [
+   "user32"
+  ],
+  "side": "PE",
+  "file": "dlls/user32/menu.c",
+  "start_line": 785,
+  "end_line": 810,
+  "body_lines": 23,
+  "signature": "BOOL WINAPI InsertMenuItemA(HMENU hMenu, UINT uItem, BOOL bypos, const MENUITEMINFOA *lpmii)",
+  "header_comment": "/**********************************************************************\n *\t\tInsertMenuItemA    (USER32.@)\n */",
+  "code": "BOOL WINAPI InsertMenuItemA(HMENU hMenu, UINT uItem, BOOL bypos,\n                                const MENUITEMINFOA *lpmii)\n{\n    WCHAR *strW = NULL;\n    MENUITEMINFOW mii;\n    BOOL ret;\n\n    TRACE(\"hmenu %p, item %04x, by pos %d, info %p\\n\", hMenu, uItem, bypos, lpmii);\n\n    if (!MENU_NormalizeMenuItemInfoStruct( (const MENUITEMINFOW *)lpmii, &mii )) return FALSE;\n\n    if ((mii.fMask & MIIM_STRING) && mii.dwTypeData)\n    {\n        const char *str = (const char *)mii.dwTypeData;\n        UINT len = MultiByteToWideChar( CP_ACP, 0, str, -1, NULL, 0 );\n        if (!(strW = HeapAlloc( GetProcessHeap(), 0, len * sizeof(WCHAR) ))) return FALSE;\n        MultiByteToWideChar( CP_ACP, 0, str, -1, strW, len );\n        mii.dwTypeData = strW;\n    }\n\n    ret = NtUserThunkedMenuItemInfo( hMenu, uItem, bypos ? MF_BYPOSITION : 0,\n                                     NtUserInsertMenuItem, &mii, NULL );\n\n    HeapFree( GetProcessHeap(), 0, strW );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winnls.h\"",
+   "#include \"controls.h\"",
+   "#include \"user_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "user32!InsertMenuItemA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/menu.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 8
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-insertmenuitema.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-insertmenuitema",
+   "documented_name": "insertmenuitema",
+   "file": "docs/0020_sdk-api_nf-winuser-insertmenuitema.md",
+   "text": "---\nUID: NF:winuser.InsertMenuItemA\ntitle: InsertMenuItemA function (winuser.h)\ndescription: Inserts a new menu item at the specified position in a menu. (ANSI)\nhelpviewer_keywords: [\"InsertMenuItemA\", \"winuser/InsertMenuItemA\"]\nold-location: menurc\\insertmenuitem.htm\ntech.root: menurc\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\resources\\menus\\menureference\\menufunctions\\insertmenuitem.htm\nms.date: 12/05/2018\nms.keywords: InsertMenuItem, InsertMenuItem function [Menus and Other Resources], InsertMenuItemA, InsertMenuItemW, _win32_InsertMenuItem, _win32_insertmenuitem_cpp, menurc.insertmenuitem, winui._win32_insertmenuitem, winuser/InsertMenuItem, winuser/InsertMenuItemA, winuser/InsertMenuItemW\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: InsertMenuItemW (Unicode) and InsertMenuItemA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - InsertMenuItemA\n - winuser/InsertMenuItemA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - User32.dll\n - Ext-MS-Win-NTUser-Menu-l1-1-1.dll\n - ext-ms-win-ntuser-menu-l1-1-2.dll\n - Ext-MS-Win-NTUser-Menu-L1-1-3.dll\napi_name:\n - InsertMenuItem\n - InsertMenuItemA\n - InsertMenuItemW\nreq.apiset: ext-ms-win-ntuser-menu-l1-1-1 (introduced in Windows 8.1)\n---\n\n# InsertMenuItemA function\n\n\n## -description\n\nInserts a new menu item at the specified position in a menu.\n\n## -parameters\n\n### -param hmenu [in]\n\nType: <b>HMENU</b>\n\nA handle to the menu in which the new menu item is inserted.\n\n### -param item [in]\n\nType: <b>UINT</b>\n\nThe identifier or position of the menu item before which to insert the new item. The meaning of this parameter depends on the value of <i>fByPosition</i>.\n\n### -param fByPosition [in]\n\nType: <b>BOOL</b>\n\nControls the meaning of <i>item</i>. If this parameter is <b>FALSE</b>, <i>item</i> is a menu item identifier. Otherwise, it is a menu item position. See <a href=\"/windows/desktop/menurc/about-menus\">Accessing Menu Items Programmatically</a> for more information.\n\n### -param lpmi [in]\n\nType: <b>LPCMENUITEMINFO</b>\n\nA pointer to a <a href=\"/windows/desktop/api/winuser/ns-winuser-menuiteminfoa\">MENUITEMINFO</a> structure that contains information about the new menu item.\n\n## -returns\n\nType: <b>BOOL</b>\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero. To get extended error information, use the <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> function.\n\n## -remarks\n\nThe application must call the <a href=\"/windows/desktop/api/winuser/nf-winuser-drawmenubar\">DrawMenuBar</a> function whenever a menu changes, whether the menu is in a displayed window.\n\nIn order for keyboard accelerators to work with bitmap or owner-drawn menu items, the owner of the menu must process the <a href=\"/windows/desktop/menurc/wm-menuchar\">WM_MENUCHAR</a> message. See <a href=\"/windows/desktop/menurc/using-menus\">Owner-Drawn Menus and the WM_MENUCHAR Message</a> for more information.\n\n\n#### Examples\n\nFor an example, see <a href=\"/windows/desktop/menurc/using-menus\">Example of Menu-Item Bitmaps</a>.\n\n<div class=\"code\"></div>\n\n\n\n\n> [!NOTE]\n> The winuser.h header defines InsertMenuItem as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-drawmenubar\">DrawMenuBar</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/ns-winuser-menuiteminfoa\">MENUITEMINFO</a>\n\n\n\n<a href=\"/windows/desktop/menurc/menus\">Menus</a>\n\n\n\n<b>Reference</b>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "MENU_NormalizeMenuItemInfoStruct",
+   "file": "dlls/user32/menu.c",
+   "start_line": 689,
+   "end_line": 725,
+   "static": true,
+   "called_from": [
+    "InsertMenuItemA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/user32/menu.c:739",
+    "dlls/user32/menu.c:767",
+    "dlls/user32/menu.c:823"
+   ],
+   "signature": "static BOOL MENU_NormalizeMenuItemInfoStruct( const MENUITEMINFOW *pmii_in, MENUITEMINFOW *pmii_out )",
+   "code": "static BOOL MENU_NormalizeMenuItemInfoStruct( const MENUITEMINFOW *pmii_in,\n                                              MENUITEMINFOW *pmii_out )\n{\n    /* do we recognize the size? */\n    if( !pmii_in || (pmii_in->cbSize != sizeof( MENUITEMINFOW) &&\n            pmii_in->cbSize != sizeof( MENUITEMINFOW) - sizeof( pmii_in->hbmpItem)) ) {\n        SetLastError( ERROR_INVALID_PARAMETER);\n        return FALSE;\n    }\n    /* copy the fields that we have */\n    memcpy( pmii_out, pmii_in, pmii_in->cbSize);\n    /* if the hbmpItem member is missing then extend */\n    if( pmii_in->cbSize != sizeof( MENUITEMINFOW)) {\n        pmii_out->cbSize = sizeof( MENUITEMINFOW);\n        pmii_out->hbmpItem = NULL;\n    }\n    /* test for invalid bit combinations */\n    if( (pmii_out->fMask & MIIM_TYPE &&\n         pmii_out->fMask & (MIIM_STRING | MIIM_FTYPE | MIIM_BITMAP)) ||\n        (pmii_out->fMask & MIIM_FTYPE && pmii_out->fType & MFT_BITMAP)) {\n        WARN(\"invalid combination of fMask bits used\\n\");\n        /* this does not happen on Win9x/ME */\n        SetLastError( ERROR_INVALID_PARAMETER);\n        return FALSE;\n    }\n    /* convert old style (MIIM_TYPE) to the new */\n    if( pmii_out->fMask & MIIM_TYPE){\n        pmii_out->fMask |= MIIM_FTYPE;\n        if( IS_STRING_ITEM(pmii_out->fType)){\n            pmii_out->fMask |= MIIM_STRING;\n        } else if( (pmii_out->fType) & MFT_BITMAP){\n            pmii_out->fMask |= MIIM_BITMAP;\n            pmii_out->hbmpItem = UlongToHandle(LOWORD(pmii_out->dwTypeData));\n        }\n    }\n    return TRUE;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 53,
+    "end_line": 53,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(menu);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "IS_STRING_ITEM",
+    "start_line": 60,
+    "end_line": 60,
+    "code": "#define IS_STRING_ITEM(flags) (MENU_ITEM_TYPE ((flags)) == MF_STRING)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "HeapAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "MultiByteToWideChar",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7070"
+    ]
+   },
+   {
+    "name": "NtUserThunkedMenuItemInfo",
+    "module": "win32u",
+    "impl": [
+     "dlls/win32u/menu.c:1289"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "SetLastError",
+   "ULongToHandle",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "user32.InsertMenuItemA",
+  "category": {
+   "l1": "User interface",
+   "l2": "Resources (menus, icons, cursors, strings)",
+   "header": "winuser.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 26,
+   "body": 24,
+   "code": 15
+  },
+  "cyclomatic": 6,
+  "return_type": "BOOL",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 8,
+   "n_tests": 8,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/user32/tests/menu.c::create_menuitem_from_data",
+    "dlls/user32/tests/menu.c::insert_menu_item",
+    "dlls/user32/tests/menu.c::test_AppendMenu",
+    "dlls/user32/tests/menu.c::test_mbs_help",
+    "dlls/user32/tests/menu.c::test_menu_add_string",
+    "dlls/user32/tests/menu.c::test_menu_search_bycommand",
+    "dlls/user32/tests/menu.c::test_menu_setmenuinfo",
+    "dlls/user32/tests/menu.c::test_menualign"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-insertmenuitema",
+   "source": "win32",
+   "description": "Inserts a new menu item at the specified position in a menu. (ANSI)",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "User32.dll"
+  },
+  "exports": [
+   "user32.InsertMenuItemA"
+  ],
+  "subset": {
+   "selected_by": "extra candidate 2026-11-25: loc.total > 10, 5 < n_tests_own <= 50, category with few samples"
+  }
+ }
+}

@@ -1,0 +1,236 @@
+{
+ "id": "0470",
+ "function": {
+  "name": "ZwUnloadDriver",
+  "export_name": "ZwUnloadDriver",
+  "module": "ntoskrnl.exe",
+  "source_module": "ntoskrnl.exe",
+  "exported_by": [
+   "ntdll",
+   "ntoskrnl.exe"
+  ],
+  "side": "PE",
+  "file": "dlls/ntoskrnl.exe/ntoskrnl.c",
+  "start_line": 4492,
+  "end_line": 4521,
+  "body_lines": 27,
+  "signature": "NTSTATUS WINAPI ZwUnloadDriver( const UNICODE_STRING *service_name )",
+  "header_comment": "/***********************************************************************\n *           ZwUnloadDriver (NTOSKRNL.EXE.@)\n */",
+  "code": "NTSTATUS WINAPI ZwUnloadDriver( const UNICODE_STRING *service_name )\n{\n    struct wine_rb_entry *entry;\n    struct wine_driver *driver;\n    UNICODE_STRING drv_name;\n\n    TRACE( \"(%s)\\n\", debugstr_us(service_name) );\n\n    if (!get_drv_name( &drv_name, service_name ))\n        return STATUS_NO_MEMORY;\n\n    entry = wine_rb_get( &wine_drivers, &drv_name );\n    RtlFreeUnicodeString( &drv_name );\n    if (!entry)\n    {\n        ERR( \"failed to locate driver %s\\n\", debugstr_us(service_name) );\n        return STATUS_OBJECT_NAME_NOT_FOUND;\n    }\n    driver = WINE_RB_ENTRY_VALUE( entry, struct wine_driver, entry );\n\n    if (!list_empty( &driver->root_pnp_devices ))\n    {\n        ERR( \"cannot unload driver %s which still has running PnP devices\\n\", debugstr_us(service_name) );\n        return STATUS_UNSUCCESSFUL;\n    }\n\n    unload_driver( entry, NULL );\n\n    return STATUS_SUCCESS;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"ntoskrnl_private.h\"",
+   "#include \"excpt.h\"",
+   "#include \"winreg.h\"",
+   "#include \"ntsecapi.h\"",
+   "#include \"evntprov.h\"",
+   "#include \"ddk/csq.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/svcctl.h\""
+  ],
+  "resolution": [
+   "ntoskrnl.exe!ZwUnloadDriver [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntoskrnl.exe/tests/driver.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "ntdll",
+   "source_module": "ntdll",
+   "exported_by": [
+    "ntdll"
+   ],
+   "file": "dlls/ntdll/unix/system.c",
+   "start_line": 4816,
+   "resolution": [
+    "ntdll!ZwUnloadDriver [stdcall -private] -> alias of ntdll!NtUnloadDriver",
+    "ntdll!NtUnloadDriver [stdcall -syscall]"
+   ],
+   "macro_generated": false,
+   "win16": false,
+   "end_line": 4820,
+   "signature": "NTSTATUS WINAPI NtUnloadDriver( const UNICODE_STRING *name )",
+   "code": "NTSTATUS WINAPI NtUnloadDriver( const UNICODE_STRING *name )\n{\n    FIXME( \"(%s), stub!\\n\", debugstr_us(name) );\n    return STATUS_NOT_IMPLEMENTED;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "wdm",
+   "path": "wdk-ddi-src/content/wdm/nf-wdm-zwunloaddriver.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-zwunloaddriver",
+   "documented_name": "zwunloaddriver",
+   "file": "docs/0470_windows-driver-docs-ddi_nf-wdm-zwunloaddriver.md",
+   "text": "---\nUID: NF:wdm.ZwUnloadDriver\ntitle: ZwUnloadDriver function (wdm.h)\ndescription: The ZwUnloadDriver routine unloads a driver from the system.\ntech.root: kernel\nms.date: 12/15/2022\nkeywords: [\"ZwUnloadDriver function\"]\nms.keywords: NtUnloadDriver, ZwUnloadDriver, ZwUnloadDriver routine [Kernel-Mode Driver Architecture], k111_72ac4415-d46c-4ea2-9d6c-d66903082808.xml, kernel.zwunloaddriver, wdm/NtUnloadDriver, wdm/ZwUnloadDriver\nreq.header: wdm.h\nreq.include-header: Wdm.h, Ntddk.h, Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt:\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: PowerIrpDDis, HwStorPortProhibitedDDIs\nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: PASSIVE_LEVEL\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - ZwUnloadDriver\n - wdm/ZwUnloadDriver\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - ZwUnloadDriver\n---\n\n## -description\n\nThe **ZwUnloadDriver** routine unloads a driver from the system. Use this routine with extreme caution (see the **Remarks** section below).\n\n## -parameters\n\n### -param DriverServiceName [in]\n\nPointer to a counted Unicode string that specifies a path to the driver's registry key, `\\Registry\\Machine\\System\\CurrentControlSet\\Services\\<DriverName>`, where *DriverName* is the name of the driver.\n\n## -returns\n\n**ZwUnloadDriver** returns STATUS_SUCCESS or an error NTSTATUS value such as STATUS_INVALID_DEVICE_REQUEST.\n\nIf the driver specified in *DriverServiceName* has no *DriverUnload* callback routine set in its [**DRIVER_OBJECT**](./ns-wdm-_driver_object.md) structure, **ZwUnloadDriver** returns STATUS_INVALID_DEVICE_REQUEST.\n\n## -remarks\n\n**ZwUnloadDriver** dynamically unloads a device or file system driver from the currently running system. It is not recommended that a driver call **ZwUnloadDriver** on itself.\n\nA file system filter driver cannot safely be unloaded from a running system. Thus a filter should only use **ZwUnloadDriver** for debugging purposes. It should not call this routine in a retail version of the filter.\n\nIf *DriverName* is the name of a PnP device driver, **ZwUnloadDriver** returns STATUS_INVALID_DEVICE_REQUEST and does not unload the driver.\n\nA minifilter should use [FltUnloadFilter](../fltkernel/nf-fltkernel-fltunloadfilter.md) instead of **ZwUnloadDriver** to unload a supporting minifilter.\n\nIf the call to the **ZwUnloadDriver** function occurs in user mode, you should use the name \"NtUnloadDriver\" instead of \"**ZwUnloadDriver**\".\n\nFor calls from kernel-mode drivers, the **Nt*Xxx*** and **Zw*Xxx*** versions of a Windows Native System Services routine can behave differently in the way that they handle and interpret input parameters. For more information about the relationship between the **Nt*Xxx*** and **Zw*Xxx*** versions of a routine, see [Using Nt and Zw Versions of the Native System Services Routines](/windows-hardware/drivers/kernel/using-nt-and-zw-versions-of-the-native-system-services-routines).\n\n## -see-also\n\n[FltUnloadFilter](../fltkernel/nf-fltkernel-fltunloadfilter.md)\n\n[RtlInitUnicodeString](./nf-wdm-rtlinitunicodestring.md)\n\n[**UNICODE_STRING**](/windows/win32/api/ntdef/ns-ntdef-_unicode_string)\n\n[Using Nt and Zw Versions of the Native System Services Routines](/windows-hardware/drivers/kernel/using-nt-and-zw-versions-of-the-native-system-services-routines)"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_drv_name",
+   "file": "dlls/ntoskrnl.exe/ntoskrnl.c",
+   "start_line": 4418,
+   "end_line": 4431,
+   "static": true,
+   "called_from": [
+    "ZwUnloadDriver"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntoskrnl.exe/ntoskrnl.c:4449"
+   ],
+   "signature": "static BOOLEAN get_drv_name( UNICODE_STRING *drv_name, const UNICODE_STRING *service_name )",
+   "code": "static BOOLEAN get_drv_name( UNICODE_STRING *drv_name, const UNICODE_STRING *service_name )\n{\n    static const WCHAR driverW[] = {'\\\\','D','r','i','v','e','r','\\\\',0};\n    WCHAR *str;\n\n    if (!(str = HeapAlloc( GetProcessHeap(), 0, sizeof(driverW) + service_name->Length - lstrlenW(servicesW)*sizeof(WCHAR) )))\n        return FALSE;\n\n    lstrcpyW( str, driverW );\n    lstrcpynW( str + lstrlenW(driverW), service_name->Buffer + lstrlenW(servicesW),\n            service_name->Length/sizeof(WCHAR) - lstrlenW(servicesW) + 1 );\n    RtlInitUnicodeString( drv_name, str );\n    return TRUE;\n}"
+  },
+  {
+   "name": "unload_driver",
+   "file": "dlls/ntoskrnl.exe/ntoskrnl.c",
+   "start_line": 906,
+   "end_line": 937,
+   "static": true,
+   "called_from": [
+    "ZwUnloadDriver"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntoskrnl.exe/ntoskrnl.c:1088"
+   ],
+   "signature": "static void unload_driver( struct wine_rb_entry *entry, void *context )",
+   "code": "static void unload_driver( struct wine_rb_entry *entry, void *context )\n{\n    struct wine_driver *driver = WINE_RB_ENTRY_VALUE( entry, struct wine_driver, entry );\n    SERVICE_STATUS_HANDLE service_handle = driver->service_handle;\n    LDR_DATA_TABLE_ENTRY *ldr;\n\n    if (!service_handle) return;    /* not a service */\n\n    TRACE(\"%s\\n\", debugstr_us(&driver->driver_obj.DriverName));\n\n    if (!driver->driver_obj.DriverUnload)\n    {\n        TRACE( \"driver %s does not support unloading\\n\", debugstr_us(&driver->driver_obj.DriverName) );\n        return;\n    }\n\n    ldr = driver->driver_obj.DriverSection;\n\n    set_service_status( service_handle, SERVICE_STOP_PENDING, 0 );\n\n    TRACE_(relay)( \"\\1Call driver unload %p (obj=%p)\\n\", driver->driver_obj.DriverUnload, &driver->driver_obj );\n\n    driver->driver_obj.DriverUnload( &driver->driver_obj );\n\n    TRACE_(relay)( \"\\1Ret  driver unload %p (obj=%p)\\n\", driver->driver_obj.DriverUnload, &driver->driver_obj );\n\n    FreeLibrary( ldr->DllBase );\n    IoDeleteDriver( &driver->driver_obj );\n\n    set_service_status( service_handle, SERVICE_STOPPED, 0 );\n    CloseServiceHandle( (void *)service_handle );\n}"
+  },
+  {
+   "name": "set_service_status",
+   "file": "dlls/ntoskrnl.exe/ntoskrnl.c",
+   "start_line": 893,
+   "end_line": 904,
+   "static": true,
+   "called_from": [
+    "unload_driver"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntoskrnl.exe/ntoskrnl.c:4463",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:4479",
+    "dlls/ntoskrnl.exe/ntoskrnl.c:4484"
+   ],
+   "signature": "static void set_service_status( SERVICE_STATUS_HANDLE handle, DWORD state, DWORD accepted )",
+   "code": "static void set_service_status( SERVICE_STATUS_HANDLE handle, DWORD state, DWORD accepted )\n{\n    SERVICE_STATUS status;\n    status.dwServiceType             = SERVICE_WIN32;\n    status.dwCurrentState            = state;\n    status.dwControlsAccepted        = accepted;\n    status.dwWin32ExitCode           = 0;\n    status.dwServiceSpecificExitCode = 0;\n    status.dwCheckPoint              = 0;\n    status.dwWaitHint                = (state == SERVICE_START_PENDING) ? 10000 : 0;\n    SetServiceStatus( handle, &status );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 35,
+    "end_line": 35,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ntoskrnl);"
+   },
+   {
+    "name": "__wine_dbch_relay",
+    "type": "struct __wine_debug_channel",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DECLARE_DEBUG_CHANNEL(relay);"
+   },
+   {
+    "name": "wine_drivers",
+    "type": "struct rb_tree",
+    "static": true,
+    "start_line": 92,
+    "end_line": 92,
+    "code": "static struct wine_rb_tree wine_drivers = { wine_drivers_rb_compare };"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "IoDeleteDriver",
+    "impl": [
+     "dlls/ntoskrnl.exe/ntoskrnl.c:1620"
+    ]
+   },
+   {
+    "name": "RtlFreeUnicodeString",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:272"
+    ]
+   },
+   {
+    "name": "RtlInitUnicodeString",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:173"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CloseServiceHandle",
+    "module": "advapi32",
+    "impl": [
+     "dlls/sechost/service.c:448"
+    ]
+   },
+   {
+    "name": "FreeLibrary",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/loader.c:232"
+    ]
+   },
+   {
+    "name": "HeapAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "SetServiceStatus",
+    "module": "advapi32",
+    "impl": [
+     "dlls/sechost/service.c:1492"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "list_empty",
+   "lstrcpyW",
+   "lstrcpynW",
+   "lstrlenW",
+   "rb_get",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "debugstr_us"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "driver->driver_obj.DriverUnload",
+    "in_function": "unload_driver",
+    "at": "dlls/ntoskrnl.exe/ntoskrnl.c:928",
+    "candidates": []
+   }
+  ]
+ }
+}

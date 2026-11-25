@@ -1,0 +1,373 @@
+{
+ "id": "0408",
+ "function": {
+  "name": "SetupDiCallClassInstaller",
+  "export_name": "SetupDiCallClassInstaller",
+  "module": "setupapi",
+  "source_module": "setupapi",
+  "exported_by": [
+   "setupapi"
+  ],
+  "side": "PE",
+  "file": "dlls/setupapi/devinst.c",
+  "start_line": 3745,
+  "end_line": 3855,
+  "body_lines": 108,
+  "signature": "BOOL WINAPI SetupDiCallClassInstaller(DI_FUNCTION function, HDEVINFO devinfo, SP_DEVINFO_DATA *device_data)",
+  "header_comment": "/***********************************************************************\n *              SetupDiCallClassInstaller (SETUPAPI.@)\n */",
+  "code": "BOOL WINAPI SetupDiCallClassInstaller(DI_FUNCTION function, HDEVINFO devinfo, SP_DEVINFO_DATA *device_data)\n{\n    static const WCHAR class_coinst_pathW[] = L\"System\\\\CurrentControlSet\\\\Control\\\\CoDeviceInstallers\";\n    DWORD (CALLBACK *classinst_proc)(DI_FUNCTION, HDEVINFO, SP_DEVINFO_DATA *);\n    DWORD ret = ERROR_DI_DO_DEFAULT;\n    HKEY class_key, coinst_key;\n    WCHAR *path, *procnameW;\n    struct device *device;\n    WCHAR guidstr[39];\n    BOOL coret = TRUE;\n    HMODULE module;\n    char *procname;\n    DWORD size;\n\n    TRACE(\"function %#x, devinfo %p, device_data %p.\\n\", function, devinfo, device_data);\n\n    if (!(device = get_device(devinfo, device_data)))\n        return FALSE;\n\n    if (!RegOpenKeyExW(HKEY_LOCAL_MACHINE, class_coinst_pathW, 0, KEY_READ, &coinst_key))\n    {\n        SETUPDI_GuidToString(&device->class, guidstr);\n        if (!RegGetValueW(coinst_key, NULL, guidstr, RRF_RT_REG_MULTI_SZ, NULL, NULL, &size))\n        {\n            path = malloc(size);\n            if (!RegGetValueW(coinst_key, NULL, guidstr, RRF_RT_REG_MULTI_SZ, NULL, path, &size))\n                coret = call_coinstallers(path, function, devinfo, device_data);\n            free(path);\n        }\n        RegCloseKey(coinst_key);\n    }\n\n    if (!coret)\n        return FALSE;\n\n    if (!open_driver_key(device, KEY_READ, &coinst_key))\n    {\n        if (!RegGetValueW(coinst_key, NULL, L\"CoInstallers32\", RRF_RT_REG_MULTI_SZ, NULL, NULL, &size))\n        {\n            path = malloc(size);\n            if (!RegGetValueW(coinst_key, NULL, L\"CoInstallers32\", RRF_RT_REG_MULTI_SZ, NULL, path, &size))\n                coret = call_coinstallers(path, function, devinfo, device_data);\n            free(path);\n        }\n        RegCloseKey(coinst_key);\n    }\n\n    if ((class_key = SetupDiOpenClassRegKey(&device->class, KEY_READ)) != INVALID_HANDLE_VALUE)\n    {\n        if (!RegGetValueW(class_key, NULL, L\"Installer32\", RRF_RT_REG_SZ, NULL, NULL, &size))\n        {\n            path = malloc(size);\n            if (!RegGetValueW(class_key, NULL, L\"Installer32\", RRF_RT_REG_SZ, NULL, path, &size))\n            {\n                TRACE(\"Found class installer %s.\\n\", debugstr_w(path));\n                if ((procnameW = wcschr(path, ',')))\n                    *procnameW = 0;\n\n                if ((module = LoadLibraryExW(path, NULL, LOAD_LIBRARY_SEARCH_SYSTEM32)))\n                {\n                    if (procnameW)\n                    {\n                        procname = strdupWtoA(procnameW + 1);\n                        classinst_proc = (void *)GetProcAddress(module, procname);\n                        free(procname);\n                    }\n                    else\n                        classinst_proc = (void *)GetProcAddress(module, \"ClassInstall\");\n                    if (classinst_proc)\n                    {\n                        TRACE(\"Calling class installer %p.\\n\", classinst_proc);\n                        ret = classinst_proc(function, devinfo, device_data);\n                        TRACE(\"Class installer %p returned %#lx.\\n\", classinst_proc, ret);\n                    }\n                    FreeLibrary(module);\n                }\n            }\n            free(path);\n        }\n        RegCloseKey(class_key);\n    }\n\n    if (ret == ERROR_DI_DO_DEFAULT)\n    {\n        switch (function)\n        {\n        case DIF_REGISTERDEVICE:\n            return SetupDiRegisterDeviceInfo(devinfo, device_data, 0, NULL, NULL, NULL);\n        case DIF_REMOVE:\n            return SetupDiRemoveDevice(devinfo, device_data);\n        case DIF_SELECTBESTCOMPATDRV:\n            return SetupDiSelectBestCompatDrv(devinfo, device_data);\n        case DIF_REGISTER_COINSTALLERS:\n            return SetupDiRegisterCoDeviceInstallers(devinfo, device_data);\n        case DIF_INSTALLDEVICEFILES:\n            return SetupDiInstallDriverFiles(devinfo, device_data);\n        case DIF_INSTALLINTERFACES:\n            return SetupDiInstallDeviceInterfaces(devinfo, device_data);\n        case DIF_INSTALLDEVICE:\n            return SetupDiInstallDevice(devinfo, device_data);\n        case DIF_FINISHINSTALL_ACTION:\n        case DIF_PROPERTYCHANGE:\n        case DIF_SELECTDEVICE:\n        case DIF_UNREMOVE:\n            FIXME(\"Unhandled function %#x.\\n\", function);\n        }\n    }\n\n    if (ret) SetLastError(ret);\n    return !ret;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdbool.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnt.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winternl.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winsvc.h\"",
+   "#include \"setupapi.h\"",
+   "#include \"softpub.h\"",
+   "#include \"mscat.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"cfgmgr32.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"rpc.h\"",
+   "#include \"rpcdce.h\"",
+   "#include \"cguid.h\"",
+   "#include \"setupapi_private.h\"",
+   "#include \"initguid.h\"",
+   "#include \"devpkey.h\""
+  ],
+  "resolution": [
+   "setupapi!SetupDiCallClassInstaller [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/setupapi/tests/devinst.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "setupapi",
+   "path": "sdk-api-src/content/setupapi/nf-setupapi-setupdicallclassinstaller.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/setupapi/nf-setupapi-setupdicallclassinstaller",
+   "documented_name": "setupdicallclassinstaller",
+   "file": "docs/0408_sdk-api_nf-setupapi-setupdicallclassinstaller.md",
+   "text": "---\nUID: NF:setupapi.SetupDiCallClassInstaller\ntitle: SetupDiCallClassInstaller function (setupapi.h)\ndescription: The SetupDiCallClassInstaller function calls the appropriate class installer, and any registered co-installers, with the specified installation request (DIF code).\nhelpviewer_keywords: [\"SetupDiCallClassInstaller\",\"SetupDiCallClassInstaller function [Device and Driver Installation]\",\"devinst.setupdicallclassinstaller\",\"di-rtns_eff914b0-a2db-4eb5-a9b8-f2990efcf252.xml\",\"setupapi/SetupDiCallClassInstaller\"]\nold-location: devinst\\setupdicallclassinstaller.htm\ntech.root: devinst\nms.assetid: 2aa631c3-8d00-4309-a37c-efaa7eda3efa\nms.date: 12/05/2018\nms.keywords: SetupDiCallClassInstaller, SetupDiCallClassInstaller function [Device and Driver Installation], devinst.setupdicallclassinstaller, di-rtns_eff914b0-a2db-4eb5-a9b8-f2990efcf252.xml, setupapi/SetupDiCallClassInstaller\nreq.header: setupapi.h\nreq.include-header: Setupapi.h\nreq.target-type: Desktop\nreq.target-min-winverclnt: Available in Microsoft Windows 2000 and later versions of Windows.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Setupapi.lib\nreq.dll: Setupapi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SetupDiCallClassInstaller\n - setupapi/SetupDiCallClassInstaller\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Setupapi.dll\n - Ext-MS-Win-SetupAPI-ClassInstallers-l1-1-0.dll\n - Ext-MS-Win-SetupAPI-ClassInstallers-l1-1-1.dll\n - Ext-MS-Win-SetupAPI-ClassInstallers-L1-1-2.dll\napi_name:\n - SetupDiCallClassInstaller\nreq.apiset: ext-ms-win-setupapi-classinstallers-l1-1-0 (introduced in Windows 8)\n---\n\n# SetupDiCallClassInstaller function\n\n\n## -description\n\nThe <b>SetupDiCallClassInstaller</b> function calls the appropriate class installer, and any registered co-installers, with the specified installation request (DIF code).\n\n## -parameters\n\n### -param InstallFunction [in]\n\nThe device installation request (DIF request) to pass to the co-installers and class installer. DIF codes have the format <b>DIF_<i>XXX</i></b> and are defined in Setupapi.h. See <a href=\"/windows-hardware/drivers/install/handling-dif-codes\">Device Installation Function Codes</a> for more information.\n\n<div class=\"alert\"><b>Note</b>  For certain DIF requests, the caller must be a member of the Administrators group. For such DIF requests, this requirement is listed on the reference page for the associated default handler.</div>\n<div> </div>\n\n### -param DeviceInfoSet [in]\n\nA handle to a <a href=\"/windows-hardware/drivers/install/device-information-sets\">device information set</a> for the local computer. This set contains a device installation element which represents the device for which to perform the specified installation function.\n\n### -param DeviceInfoData [in, optional]\n\nA pointer to an <a href=\"/windows/desktop/api/setupapi/ns-setupapi-sp_devinfo_data\">SP_DEVINFO_DATA</a> structure that specifies the device information element in the <i>DeviceInfoSet</i> that represents the device for which to perform the specified installation function. This parameter is optional and can be set to <b>NULL</b>. If this parameter is specified, <b>SetupDiCallClassInstaller</b> performs the specified function on the <i>DeviceInfoData</i> element. If <i>DeviceInfoData</i> is <b>NULL</b>, <b>SetupDiCallClassInstaller</b> calls the installers for the setup class that is associated with <i>DeviceInfoSet</i>.\n\n## -returns\n\nThe function returns <b>TRUE</b> if it is successful. Otherwise, it returns <b>FALSE</b> and the logged error can be retrieved by making a call to <a href=\"/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n\nWhen GetLastError returns <b>ERROR_IN_WOW64</b>, this means that the calling application is a 32-bit application attempting to execute in a 64-bit environment, which is not allowed.\n\n## -remarks\n\n<b>SetupDiCallClassInstaller</b> calls the class installer and any co-installers that are registered for a device or a <a href=\"/windows-hardware/drivers/install/overview-of-device-setup-classes\">device setup class</a>. This function loads the installers if they are not yet loaded. The function also calls the default handler for the DIF request, if there is a default handler and if the installers return a status indicating that the default handler should be called.\n\n<a href=\"/windows-hardware/drivers/\">Device installation applications</a> call this function with a variety of <a href=\"/windows-hardware/drivers/install/handling-dif-codes\">device installation function codes</a> (DIF codes). The function ensures that all the appropriate installers and default handlers are called, in the correct order, for a given DIF request. For more information, see <a href=\"/windows-hardware/drivers/install/handling-dif-codes\">Handling DIF Codes</a>.\n\nAfter <b>SetupDiCallClassInstaller</b> returns <b>TRUE</b>, the device installation application must call <a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupdigetdeviceinstallparamsa\">SetupDiGetDeviceInstallParams</a> to obtain an <a href=\"/windows/desktop/api/setupapi/ns-setupapi-sp_devinstall_params_a\">SP_DEVINSTALL_PARAMS</a> structure. If the structure's <b>DI_NEEDREBOOT</b> or <b>DI_NEEDRESTART</b> flag is set, the caller must prompt the user to restart the system. For example, the caller can do this by calling <a href=\"/windows/desktop/api/setupapi/nf-setupapi-setuppromptreboot\">SetupPromptReboot</a>. \n\nHowever, be aware that a device installation application should request a system restart one time at most. Therefore, any device installation application that creates multiple calls to <b>SetupDiCallClassInstaller</b> and <a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupdigetdeviceinstallparamsa\">SetupDiGetDeviceInstallParams</a> should save the <b>DI_NEEDREBOOT</b> and <b>DI_NEEDRESTART</b> flags after each call. However, it should prompt the user only after the last call returns. \n\nIn response to a DIF code supplied by <b>SetupDiCallClassInstaller</b>, class installers and co-installers might perform operations that require the system to be restarted. In such situations, the installer or co-installer should do the following: \n\n<ol>\n<li>\nCall <a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupdigetdeviceinstallparamsa\">SetupDiGetDeviceInstallParams</a> to obtain the <a href=\"/windows/desktop/api/setupapi/ns-setupapi-sp_devinstall_params_a\">SP_DEVINSTALL_PARAMS</a> structure. \n\n</li>\n<li>\nSet the <b>DI_NEEDREBOOT</b> or <b>DI_NEEDRESTART</b> flag in the structure's <i>Flags</i> member.\n\n</li>\n<li>\nCall <a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupdisetdeviceinstallparamsa\">SetupDiSetDeviceInstallParams</a>, supplying the updated <a href=\"/windows/desktop/api/setupapi/ns-setupapi-sp_devinstall_params_a\">SP_DEVINSTALL_PARAMS</a> structure, to save the revised <i>Flags</i> member.\n\n</li>\n</ol>\nAfter <b>SetupDiCallClassInstaller</b> returns, the device installation application that called it should call <a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupdigetdeviceinstallparamsa\">SetupDiGetDeviceInstallParams</a>, check the flags, and request a restart if necessary.\n\nThe device information set specified by <i>DeviceInfoSet</i> must only contain elements for devices on the local computer.\n\nFor information about the design and operation of co-installers, see <a href=\"/windows-hardware/drivers/install/writing-a-co-installer\">Writing a Co-installer</a>.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/setupapi/ns-setupapi-sp_devinfo_data\">SP_DEVINFO_DATA</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_device",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 200,
+   "end_line": 229,
+   "static": true,
+   "called_from": [
+    "SetupDiCallClassInstaller"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:1261",
+    "dlls/setupapi/devinst.c:1457",
+    "dlls/setupapi/devinst.c:1480",
+    "dlls/setupapi/devinst.c:1520",
+    "dlls/setupapi/devinst.c:1636"
+   ],
+   "signature": "static struct device *get_device(HDEVINFO devinfo, const SP_DEVINFO_DATA *data)",
+   "code": "static struct device *get_device(HDEVINFO devinfo, const SP_DEVINFO_DATA *data)\n{\n    struct DeviceInfoSet *set;\n    struct device *device;\n\n    if (!(set = get_device_set(devinfo)))\n        return FALSE;\n\n    if (!data || data->cbSize != sizeof(*data) || !data->Reserved)\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return NULL;\n    }\n\n    device = (struct device *)data->Reserved;\n\n    if (device->set != set)\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return NULL;\n    }\n\n    if (device->removed)\n    {\n        SetLastError(ERROR_NO_SUCH_DEVINST);\n        return NULL;\n    }\n\n    return device;\n}"
+  },
+  {
+   "name": "SETUPDI_GuidToString",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 260,
+   "end_line": 266,
+   "static": true,
+   "called_from": [
+    "SetupDiCallClassInstaller"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:281",
+    "dlls/setupapi/devinst.c:310",
+    "dlls/setupapi/devinst.c:358",
+    "dlls/setupapi/devinst.c:553",
+    "dlls/setupapi/devinst.c:687"
+   ],
+   "signature": "static void SETUPDI_GuidToString(const GUID *guid, LPWSTR guidStr)",
+   "code": "static void SETUPDI_GuidToString(const GUID *guid, LPWSTR guidStr)\n{\n    swprintf(guidStr, 39, L\"{%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}\",\n        guid->Data1, guid->Data2, guid->Data3,\n        guid->Data4[0], guid->Data4[1], guid->Data4[2], guid->Data4[3],\n        guid->Data4[4], guid->Data4[5], guid->Data4[6], guid->Data4[7]);\n}"
+  },
+  {
+   "name": "call_coinstallers",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 3694,
+   "end_line": 3740,
+   "static": true,
+   "called_from": [
+    "SetupDiCallClassInstaller"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL call_coinstallers(WCHAR *list, DI_FUNCTION function, HDEVINFO devinfo, SP_DEVINFO_DATA *device_data)",
+   "code": "static BOOL call_coinstallers(WCHAR *list, DI_FUNCTION function, HDEVINFO devinfo, SP_DEVINFO_DATA *device_data)\n{\n    DWORD (CALLBACK *coinst_proc)(DI_FUNCTION, HDEVINFO, SP_DEVINFO_DATA *, COINSTALLER_CONTEXT_DATA *);\n    COINSTALLER_CONTEXT_DATA coinst_ctx;\n    WCHAR *p, *procnameW;\n    HMODULE module;\n    char *procname;\n    DWORD ret;\n\n    for (p = list; *p; p += lstrlenW(p) + 1)\n    {\n        TRACE(\"Found co-installer %s.\\n\", debugstr_w(p));\n        if ((procnameW = wcschr(p, ',')))\n            *procnameW = 0;\n\n        if ((module = LoadLibraryExW(p, NULL, LOAD_LIBRARY_SEARCH_SYSTEM32)))\n        {\n            if (procnameW)\n            {\n                procname = strdupWtoA(procnameW + 1);\n                coinst_proc = (void *)GetProcAddress(module, procname);\n                free(procname);\n            }\n            else\n                coinst_proc = (void *)GetProcAddress(module, \"CoDeviceInstall\");\n            if (coinst_proc)\n            {\n                memset(&coinst_ctx, 0, sizeof(coinst_ctx));\n                TRACE(\"Calling co-installer %p.\\n\", coinst_proc);\n                ret = coinst_proc(function, devinfo, device_data, &coinst_ctx);\n                TRACE(\"Co-installer %p returned %#lx.\\n\", coinst_proc, ret);\n                if (ret == ERROR_DI_POSTPROCESSING_REQUIRED)\n                    FIXME(\"Co-installer postprocessing not implemented.\\n\");\n                else if (ret)\n                {\n                    ERR(\"Co-installer returned error %#lx.\\n\", ret);\n                    FreeLibrary(module);\n                    SetLastError(ret);\n                    return FALSE;\n                }\n            }\n            FreeLibrary(module);\n        }\n    }\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "open_driver_key",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 507,
+   "end_line": 533,
+   "static": true,
+   "called_from": [
+    "SetupDiCallClassInstaller"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:543",
+    "dlls/setupapi/devinst.c:580",
+    "dlls/setupapi/devinst.c:4039"
+   ],
+   "signature": "static LONG open_driver_key(struct device *device, REGSAM access, HKEY *key)",
+   "code": "static LONG open_driver_key(struct device *device, REGSAM access, HKEY *key)\n{\n    HKEY class_key;\n    WCHAR path[50];\n    DWORD size = sizeof(path);\n    LONG l;\n\n    if ((l = RegCreateKeyExW(HKEY_LOCAL_MACHINE, ControlClass, 0, NULL, 0,\n            KEY_CREATE_SUB_KEY, NULL, &class_key, NULL)))\n    {\n        ERR(\"Failed to open driver class root key, error %lu.\\n\", l);\n        return l;\n    }\n\n    if (!(l = RegGetValueW(device->key, NULL, L\"Driver\", RRF_RT_REG_SZ, NULL, path, &size)))\n    {\n        if (!(l = RegOpenKeyExW(class_key, path, 0, access, key)))\n        {\n            RegCloseKey(class_key);\n            return l;\n        }\n        TRACE(\"Failed to open driver key, error %lu.\\n\", l);\n    }\n\n    RegCloseKey(class_key);\n    return l;\n}"
+  },
+  {
+   "name": "get_device_set",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 187,
+   "end_line": 198,
+   "static": true,
+   "called_from": [
+    "get_device"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:233",
+    "dlls/setupapi/devinst.c:1358",
+    "dlls/setupapi/devinst.c:1573",
+    "dlls/setupapi/devinst.c:2169",
+    "dlls/setupapi/devinst.c:2193"
+   ],
+   "signature": "static struct DeviceInfoSet *get_device_set(HDEVINFO devinfo)",
+   "code": "static struct DeviceInfoSet *get_device_set(HDEVINFO devinfo)\n{\n    struct DeviceInfoSet *set = devinfo;\n\n    if (!devinfo || devinfo == INVALID_HANDLE_VALUE || set->magic != SETUP_DEVICE_INFO_SET_MAGIC)\n    {\n        SetLastError(ERROR_INVALID_HANDLE);\n        return NULL;\n    }\n\n    return set;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "DeviceInfoSet",
+    "kind": "struct_decl",
+    "start_line": 86,
+    "end_line": 92,
+    "code": "struct DeviceInfoSet\n{\n    DWORD magic;        /* if is equal to SETUP_DEVICE_INFO_SET_MAGIC struct is okay */\n    GUID ClassGuid;\n    HWND hwndParent;\n    struct list devices;\n};"
+   },
+   {
+    "name": "device",
+    "kind": "struct_decl",
+    "start_line": 94,
+    "end_line": 109,
+    "code": "struct device\n{\n    struct DeviceInfoSet *set;\n    HKEY                  key;\n    BOOL                  phantom;\n    WCHAR                *instanceId;\n    struct list           interfaces;\n    GUID                  class;\n    DEVINST               devnode;\n    struct list           entry;\n    BOOL                  removed;\n    SP_DEVINSTALL_PARAMS_W params;\n    struct driver        *drivers;\n    unsigned int          driver_count;\n    struct driver        *selected_driver;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "ControlClass",
+    "type": "const WCHAR[39]",
+    "static": true,
+    "start_line": 66,
+    "end_line": 66,
+    "code": "static const WCHAR ControlClass[] = L\"System\\\\CurrentControlSet\\\\Control\\\\Class\";"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 52,
+    "end_line": 52,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(setupapi);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "SETUP_DEVICE_INFO_SET_MAGIC",
+    "start_line": 84,
+    "end_line": 84,
+    "code": "#define SETUP_DEVICE_INFO_SET_MAGIC 0xd00ff056"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "SetupDiInstallDevice",
+    "impl": [
+     "dlls/setupapi/devinst.c:5069"
+    ]
+   },
+   {
+    "name": "SetupDiInstallDeviceInterfaces",
+    "impl": [
+     "dlls/setupapi/devinst.c:4392"
+    ]
+   },
+   {
+    "name": "SetupDiInstallDriverFiles",
+    "impl": [
+     "dlls/setupapi/devinst.c:5017"
+    ]
+   },
+   {
+    "name": "SetupDiOpenClassRegKey",
+    "impl": [
+     "dlls/setupapi/devinst.c:3381"
+    ]
+   },
+   {
+    "name": "SetupDiRegisterCoDeviceInstallers",
+    "impl": [
+     "dlls/setupapi/devinst.c:4466"
+    ]
+   },
+   {
+    "name": "SetupDiRegisterDeviceInfo",
+    "impl": [
+     "dlls/setupapi/devinst.c:1449"
+    ]
+   },
+   {
+    "name": "SetupDiRemoveDevice",
+    "impl": [
+     "dlls/setupapi/devinst.c:1471"
+    ]
+   },
+   {
+    "name": "SetupDiSelectBestCompatDrv",
+    "impl": [
+     "dlls/setupapi/devinst.c:4795"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "FreeLibrary",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/loader.c:232"
+    ]
+   },
+   {
+    "name": "GetProcAddress",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/loader.c:453",
+     "dlls/kernelbase/loader.c:498"
+    ]
+   },
+   {
+    "name": "LoadLibraryExW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/loader.c:562"
+    ]
+   },
+   {
+    "name": "RegCloseKey",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1129"
+    ]
+   },
+   {
+    "name": "RegCreateKeyExW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:566"
+    ]
+   },
+   {
+    "name": "RegGetValueW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1900"
+    ]
+   },
+   {
+    "name": "RegOpenKeyExW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:644"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   },
+   {
+    "name": "wcschr",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:256"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "debugstr_w",
+   "lstrlenW",
+   "swprintf",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "strdupWtoA"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "classinst_proc",
+    "in_function": "SetupDiCallClassInstaller",
+    "at": "dlls/setupapi/devinst.c:3816",
+    "candidates": []
+   },
+   {
+    "expr": "coinst_proc",
+    "in_function": "call_coinstallers",
+    "at": "dlls/setupapi/devinst.c:3723",
+    "candidates": []
+   }
+  ]
+ }
+}

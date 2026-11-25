@@ -1,0 +1,417 @@
+# Shared model list for every scenario (scenario configs include it via [paths].models).
+# A model is queried only if  enabled = true  AND its key is in secrets.toml (or the environment).
+#
+#   name        - folder name for the results (responses/<name>/).  Convention: <vendor>-<model>, e.g.
+#                 "deepseek-v4-flash", "openai-gpt-6-luna", "claude-haiku-5-5", so that several models of one
+#                 vendor can live side by side and the folder says which model it was.  One [[models]]
+#                 block per model; copy a block to add another model of the same vendor.
+#   provider    - "openai"    : any OpenAI-compatible /chat/completions endpoint
+#                 "anthropic" : Anthropic /v1/messages
+#   base_url    - endpoint root (the script appends /chat/completions or /v1/messages)
+#   model       - the exact string sent in the "model" field.  Model IDs change every few
+#                 months: check the provider's model page (links below) before a big run.
+#                 Some ids are aliases ("deepseek-chat" = whatever DeepSeek currently serves): run
+#                   python3 scripts/run_llm.py --scenario 1.1 --probe
+#                 to see the id the API actually serves, and prefer pinning that explicit id.
+#                 Every reply records model (this name), model_id (this field) and served_model (API-reported).
+#   extra       - optional, merged into the request body, e.g. force JSON output:
+#                 extra = { response_format = { type = "json_object" } }
+#   temperature / max_tokens / timeout_s can also be overridden per model.
+#   send_temperature = false   - omit the temperature field (APIs that reject it); also switched on automatically
+#   max_tokens_field = "..."   - name of the output-cap field ("max_completion_tokens" for OpenAI); likewise automatic
+#
+# Layout: one "cheap" model per vendor (enabled) + that vendor's flagship (disabled, switch on when wanted).
+# Thinking / reasoning is switched OFF for every enabled model (the extra = ... line of each block), so that all of them
+# answer in the same plain generation mode as the first DeepSeek runs.  Models that cannot switch it off (GLM-5.3) are
+# kept as disabled blocks.  Field names differ per vendor: DeepSeek / MiniMax / Claude  thinking = {type = "disabled"},
+# Qwen  enable_thinking = false,  OpenAI  reasoning_effort = "none",  GLM  thinking = {type = "disabled"}.
+# Prices (per 1M tokens, input / output, Oct 2026 list prices; verify on the vendor page before a big run):
+#   deepseek-flash        $0.15-0.30 / $0.60-1.20      deepseek-v4-pro     higher tier
+#   gpt-6-luna            $0.10 / $0.50                 gpt-6.1-sol         flagship
+#   claude-haiku-5-5      $0.10 / $0.50                 claude-sonnet-5-5   flagship
+#   grok-4.3              $1.25 / $2.50                 grok-4.7            flagship
+#   qwen3.8-flash         ¥0.20 / ¥0.80  (<=32K ctx)    qwen3.7-plus        flagship
+#   MiniMax/MiniMax-M3    via DashScope (same key as Qwen; must be 开通 in the 百炼 console first)
+#   glm-4.7-flashx        ¥0.50 / ¥3.00                 (glm-5.3-* cannot switch thinking off, kept disabled)
+#   doubao-seed-2.0-mini  ¥0.20 / ¥2.00  (<=32K ctx)    doubao-seed-2.0-pro flagship
+# Keys go in secrets.toml under [keys]  (DEEPSEEK_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY,
+# DASHSCOPE_API_KEY, ZHIPU_API_KEY, XAI_API_KEY, ARK_API_KEY).
+# ------------------------------------------------------------------------------------------
+
+# ---- DeepSeek   (https://api-docs.deepseek.com/  pricing: https://api-docs.deepseek.com/quick_start/pricing)
+[[models]]
+enabled     = true
+name        = "deepseek-v4-flash"
+provider    = "openai"
+base_url    = "https://api.deepseek.com/v1"
+model       = "deepseek-flash"                  # cheapest model; thinking is ON by default for this id -> switched off below
+api_key_env = "DEEPSEEK_API_KEY"
+extra       = { thinking = { type = "disabled" } }   # non-thinking mode (same as the old "deepseek-chat" alias; the thinking mode spends up to 64K tokens reasoning)
+max_tokens  = 8192                              # DeepSeek's own default in non-thinking mode (the hard limit is 393216)
+
+[[models]]
+enabled     = false
+name        = "deepseek-v4-pro"
+provider    = "openai"
+base_url    = "https://api.deepseek.com/v1"
+model       = "deepseek-v4-pro"                 # flagship
+api_key_env = "DEEPSEEK_API_KEY"
+extra       = { thinking = { type = "disabled" } }
+max_tokens  = 8192
+
+# The first runs were made under the alias "deepseek" (model id "deepseek-chat" = deepseek-flash, non-thinking); they were
+# renamed to deepseek-v4-flash with  scripts/rename_model.py deepseek deepseek-v4-flash --model-id deepseek-chat
+[[models]]
+enabled     = false
+name        = "deepseek"
+provider    = "openai"
+base_url    = "https://api.deepseek.com/v1"
+model       = "deepseek-chat"                   # alias; --probe showed it currently serves V4 flash
+api_key_env = "DEEPSEEK_API_KEY"
+max_tokens  = 8192
+
+# ---- ChatGPT / OpenAI   (https://platform.openai.com/docs/models  pricing: https://openai.com/api/pricing)
+[[models]]
+enabled     = true
+name        = "openai-gpt-6-luna"
+provider    = "openai"
+base_url    = "https://api.openai.com/v1"
+model       = "gpt-6-luna"                      # cheapest current model
+api_key_env = "OPENAI_API_KEY"
+max_tokens_field = "max_completion_tokens"      # OpenAI's current models reject "max_tokens" ...
+send_temperature = false                        # ... and the temperature field (probe confirmed for gpt-6-luna)
+extra       = { reasoning_effort = "none" }     # reasoning is "medium" by default; "none" switches it off
+
+[[models]]
+enabled     = false
+name        = "openai-gpt-6-1-sol"
+provider    = "openai"
+base_url    = "https://api.openai.com/v1"
+model       = "gpt-6.1-sol"                     # flagship
+api_key_env = "OPENAI_API_KEY"
+max_tokens_field = "max_completion_tokens"
+send_temperature = false
+extra       = { reasoning_effort = "none" }
+
+# ---- Claude / Anthropic   (https://docs.claude.com/en/docs/about-claude/models/overview)
+[[models]]
+enabled     = true
+name        = "claude-haiku-5-5"
+provider    = "anthropic"
+base_url    = "https://api.anthropic.com"
+model       = "claude-haiku-5-5"                # cheapest current model
+api_key_env = "ANTHROPIC_API_KEY"
+send_temperature = false                        # Claude 5.5 rejects the temperature field (so temperature = 0 cannot be enforced here)
+extra       = { thinking = { type = "disabled" } }   # "adaptive thinking" is on by default when the field is absent
+
+[[models]]
+enabled     = false
+name        = "claude-sonnet-5-5"
+provider    = "anthropic"
+base_url    = "https://api.anthropic.com"
+model       = "claude-sonnet-5-5"               # flagship (claude-opus-5-5 is above it, much dearer)
+api_key_env = "ANTHROPIC_API_KEY"
+send_temperature = false
+extra       = { thinking = { type = "between_tools" } }   # Sonnet 5.5 rejects "disabled"; "between_tools" = no up-front thinking (we use no tools)
+
+# ---- Grok / xAI   (https://docs.x.ai/developers/models)
+[[models]]
+enabled     = false                             # no XAI_API_KEY yet; set true once the key is in secrets.toml
+name        = "xai-grok-4-3"
+provider    = "openai"
+base_url    = "https://api.x.ai/v1"
+model       = "grok-4.3"                        # cheapest current model
+api_key_env = "XAI_API_KEY"
+
+[[models]]
+enabled     = false
+name        = "xai-grok-4-7"
+provider    = "openai"
+base_url    = "https://api.x.ai/v1"
+model       = "grok-4.7"                        # flagship
+api_key_env = "XAI_API_KEY"
+
+# ---- Qwen / 通义千问 (DashScope OpenAI-compatible mode)
+#      https://help.aliyun.com/zh/model-studio/compatibility-of-openai-with-dashscope
+#      Keys are region-bound; use https://dashscope-intl.aliyuncs.com/compatible-mode/v1 for the Singapore region.
+#      Prices are tiered by input length; our prompts stay far below 32K tokens.
+[[models]]
+enabled     = true
+name        = "qwen3-8-flash"
+provider    = "openai"
+base_url    = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+model       = "qwen3.8-flash"                   # cheapest current model; hybrid model with thinking ON by default -> off below
+api_key_env = "DASHSCOPE_API_KEY"
+extra       = { enable_thinking = false }       # DashScope's switch (top-level field); without it a reply can think for minutes
+
+# ---- MiniMax, served through DashScope (third-party models on 百炼 use the same key and endpoint as Qwen)
+[[models]]
+enabled     = true
+name        = "minimax-m3"
+provider    = "openai"
+base_url    = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+model       = "MiniMax/MiniMax-M3"              # hybrid model, thinking "adaptive" by default -> off below (Beijing-region key only)
+api_key_env = "DASHSCOPE_API_KEY"
+extra       = { thinking = { type = "disabled" } }   # MiniMax uses the "thinking" field, not enable_thinking
+
+[[models]]
+enabled     = false
+name        = "qwen3-7-plus"
+provider    = "openai"
+base_url    = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+model       = "qwen3.7-plus"                    # flagship
+api_key_env = "DASHSCOPE_API_KEY"
+extra       = { enable_thinking = false }
+
+# ---- 豆包 / Volcengine Ark   (model list: https://www.volcengine.com/docs/82379/1330310)
+# `model` is either a model name (doubao-seed-...) or an endpoint id (ep-2025...) created in the Ark console;
+# the console may require you to "开通" (activate) the model before the name is accepted.
+[[models]]
+enabled     = false                             # no ARK_API_KEY yet; set true once the key is in secrets.toml
+name        = "doubao-seed-2-0-mini"
+provider    = "openai"
+base_url    = "https://ark.cn-beijing.volces.com/api/v3"
+model       = "doubao-seed-2.0-mini"            # cheapest current model
+api_key_env = "ARK_API_KEY"
+
+[[models]]
+enabled     = false
+name        = "doubao-seed-2-0-pro"
+provider    = "openai"
+base_url    = "https://ark.cn-beijing.volces.com/api/v3"
+model       = "doubao-seed-2.0-pro"             # flagship
+api_key_env = "ARK_API_KEY"
+
+# ---- Gemini / Google (OpenAI-compatible endpoint)   https://ai.google.dev/gemini-api/docs/openai
+[[models]]
+enabled     = false
+name        = "gemini"
+provider    = "openai"
+base_url    = "https://generativelanguage.googleapis.com/v1beta/openai"
+model       = "gemini-2.5-pro"
+api_key_env = "GEMINI_API_KEY"
+
+# ---- Kimi / Moonshot   https://platform.moonshot.cn/docs
+[[models]]
+enabled     = false
+name        = "kimi"
+provider    = "openai"
+base_url    = "https://api.moonshot.cn/v1"
+model       = "kimi-k2-0905-preview"
+api_key_env = "MOONSHOT_API_KEY"
+
+# ---- GLM / 智谱   (https://docs.bigmodel.cn/cn/guide/start/model-overview  pricing: https://docs.bigmodel.cn/cn/guide/start/pricing)
+# The GLM-5.3 line (glm-5.3-flash ¥0.8/¥2.8, glm-5.3-flashx ¥2/¥7, glm-5.3 ¥8/¥28) always thinks: the API rejects
+# thinking.type = "disabled".  The GLM-4.7 line accepts it, so the no-thinking run uses glm-4.7-flashx (¥0.5 / ¥3).
+[[models]]
+enabled     = true
+name        = "glm-4-7-flashx"
+provider    = "openai"
+base_url    = "https://open.bigmodel.cn/api/paas/v4"
+model       = "glm-4.7-flashx"                  # cheapest GLM whose thinking can be switched off (glm-4.7-flash is free but rate-limited)
+api_key_env = "ZHIPU_API_KEY"
+extra       = { thinking = { type = "disabled" } }
+
+[[models]]
+enabled     = false                             # thinking cannot be switched off -> not part of the no-thinking comparison
+name        = "glm-5-3-flash"
+provider    = "openai"
+base_url    = "https://open.bigmodel.cn/api/paas/v4"
+model       = "glm-5.3-flash"
+api_key_env = "ZHIPU_API_KEY"
+
+[[models]]
+enabled     = false                             # thinking cannot be switched off
+name        = "glm-5-3-flashx"
+provider    = "openai"
+base_url    = "https://open.bigmodel.cn/api/paas/v4"
+model       = "glm-5.3-flashx"
+api_key_env = "ZHIPU_API_KEY"
+
+[[models]]
+enabled     = false
+name        = "glm-5-3"
+provider    = "openai"
+base_url    = "https://open.bigmodel.cn/api/paas/v4"
+model       = "glm-5.3"                         # flagship
+api_key_env = "ZHIPU_API_KEY"
+
+# ---- a local / self-hosted OpenAI-compatible server (vLLM, Ollama, LM Studio ...)
+[[models]]
+enabled     = false
+name        = "local"
+provider    = "openai"
+base_url    = "http://127.0.0.1:8000/v1"
+model       = "Qwen/Qwen3-32B"
+api_key_env = "LOCAL_API_KEY"                    # set to any value, e.g. export LOCAL_API_KEY=none
+
+# ---------------------------------------------------------------- local models served by vLLM on Vulcan (vulcan/generate.sbatch)
+# name = folder under ~/scratch/models = results folder.  The server runs on the job's own node, hence 127.0.0.1.
+# Reasoning is switched off (or set to the minimum) so that, like the API runs, the reply is one plain code answer.
+# The API models in this file are not queried on Vulcan: their keys are not in secrets.toml there.
+
+[[models]]
+enabled     = true
+name        = "qwen3.8-27b"
+provider    = "openai"
+base_url    = "http://127.0.0.1:8000/v1"
+model       = "qwen3.8-27b"
+api_key_env = "LOCAL_API_KEY"
+api_key     = "none"
+max_tokens  = 8192
+timeout_s   = 900
+extra       = { chat_template_kwargs = { enable_thinking = false } }
+
+[[models]]
+enabled     = true
+name        = "glm-4.7-flash"
+provider    = "openai"
+base_url    = "http://127.0.0.1:8000/v1"
+model       = "glm-4.7-flash"
+api_key_env = "LOCAL_API_KEY"
+api_key     = "none"
+max_tokens  = 8192
+timeout_s   = 900
+extra       = { chat_template_kwargs = { enable_thinking = false } }
+
+[[models]]
+enabled     = true
+name        = "gpt-oss-20b"
+provider    = "openai"
+base_url    = "http://127.0.0.1:8000/v1"
+model       = "gpt-oss-20b"
+api_key_env = "LOCAL_API_KEY"
+api_key     = "none"
+max_tokens  = 8192
+timeout_s   = 900
+extra       = { reasoning_effort = "low" }          # gpt-oss always reasons; "low" is the minimum
+
+[[models]]
+enabled     = true
+name        = "gemma-4-31b"
+provider    = "openai"
+base_url    = "http://127.0.0.1:8000/v1"
+model       = "gemma-4-31b"
+api_key_env = "LOCAL_API_KEY"
+api_key     = "none"
+max_tokens  = 8192
+timeout_s   = 900
+
+[[models]]
+enabled     = true
+name        = "devstral-small-2"
+provider    = "openai"
+base_url    = "http://127.0.0.1:8000/v1"
+model       = "devstral-small-2"
+api_key_env = "LOCAL_API_KEY"
+api_key     = "none"
+max_tokens  = 8192
+timeout_s   = 900
+
+# ---------------------------------------------------------------- sampled runs: each model's own recommended sampling
+# send_temperature = false -> the request carries no temperature, so vLLM applies the defaults of the model's
+# generation_config.json.  Two independent samples per model, fixed seeds.
+
+[[models]]
+enabled     = true
+name        = "qwen3.8-27b-s1"
+provider    = "openai"
+base_url    = "http://127.0.0.1:8000/v1"
+model       = "qwen3.8-27b"
+api_key_env = "LOCAL_API_KEY"
+api_key     = "none"
+max_tokens  = 8192
+timeout_s   = 900
+send_temperature = false
+extra       = { seed = 1, chat_template_kwargs = { enable_thinking = false } }
+
+[[models]]
+enabled     = true
+name        = "qwen3.8-27b-s2"
+provider    = "openai"
+base_url    = "http://127.0.0.1:8000/v1"
+model       = "qwen3.8-27b"
+api_key_env = "LOCAL_API_KEY"
+api_key     = "none"
+max_tokens  = 8192
+timeout_s   = 900
+send_temperature = false
+extra       = { seed = 2, chat_template_kwargs = { enable_thinking = false } }
+
+[[models]]
+enabled     = true
+name        = "glm-4.7-flash-s1"
+provider    = "openai"
+base_url    = "http://127.0.0.1:8000/v1"
+model       = "glm-4.7-flash"
+api_key_env = "LOCAL_API_KEY"
+api_key     = "none"
+max_tokens  = 8192
+timeout_s   = 900
+send_temperature = false
+extra       = { seed = 1, chat_template_kwargs = { enable_thinking = false } }
+
+[[models]]
+enabled     = true
+name        = "glm-4.7-flash-s2"
+provider    = "openai"
+base_url    = "http://127.0.0.1:8000/v1"
+model       = "glm-4.7-flash"
+api_key_env = "LOCAL_API_KEY"
+api_key     = "none"
+max_tokens  = 8192
+timeout_s   = 900
+send_temperature = false
+extra       = { seed = 2, chat_template_kwargs = { enable_thinking = false } }
+
+[[models]]
+enabled     = true
+name        = "gpt-oss-20b-s1"
+provider    = "openai"
+base_url    = "http://127.0.0.1:8000/v1"
+model       = "gpt-oss-20b"
+api_key_env = "LOCAL_API_KEY"
+api_key     = "none"
+max_tokens  = 8192
+timeout_s   = 900
+send_temperature = false
+extra       = { seed = 1, reasoning_effort = "low" }
+
+[[models]]
+enabled     = true
+name        = "gpt-oss-20b-s2"
+provider    = "openai"
+base_url    = "http://127.0.0.1:8000/v1"
+model       = "gpt-oss-20b"
+api_key_env = "LOCAL_API_KEY"
+api_key     = "none"
+max_tokens  = 8192
+timeout_s   = 900
+send_temperature = false
+extra       = { seed = 2, reasoning_effort = "low" }
+
+[[models]]
+enabled     = true
+name        = "gemma-3-27b-s1"
+provider    = "openai"
+base_url    = "http://127.0.0.1:8000/v1"
+model       = "gemma-3-27b"
+api_key_env = "LOCAL_API_KEY"
+api_key     = "none"
+max_tokens  = 8192
+timeout_s   = 900
+send_temperature = false
+extra       = { seed = 1 }
+
+[[models]]
+enabled     = true
+name        = "gemma-3-27b-s2"
+provider    = "openai"
+base_url    = "http://127.0.0.1:8000/v1"
+model       = "gemma-3-27b"
+api_key_env = "LOCAL_API_KEY"
+api_key     = "none"
+max_tokens  = 8192
+timeout_s   = 900
+send_temperature = false
+extra       = { seed = 2 }

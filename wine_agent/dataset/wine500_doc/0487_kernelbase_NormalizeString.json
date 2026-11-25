@@ -1,0 +1,102 @@
+{
+ "id": "0487",
+ "function": {
+  "name": "NormalizeString",
+  "export_name": "NormalizeString",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase",
+   "normaliz"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/locale.c",
+  "start_line": 7119,
+  "end_line": 7136,
+  "body_lines": 15,
+  "signature": "INT WINAPI DECLSPEC_HOTPATCH NormalizeString(NORM_FORM form, const WCHAR *src, INT src_len, WCHAR *dst, INT dst_len)",
+  "header_comment": "/******************************************************************************\n *\tNormalizeString   (kernelbase.@)\n */",
+  "code": "INT WINAPI DECLSPEC_HOTPATCH NormalizeString(NORM_FORM form, const WCHAR *src, INT src_len,\n                                             WCHAR *dst, INT dst_len)\n{\n    NTSTATUS status = RtlNormalizeString( form, src, src_len, dst, &dst_len );\n\n    switch (status)\n    {\n    case STATUS_OBJECT_NAME_NOT_FOUND:\n        status = STATUS_INVALID_PARAMETER;\n        break;\n    case STATUS_BUFFER_TOO_SMALL:\n    case STATUS_NO_UNICODE_TRANSLATION:\n        dst_len = -dst_len;\n        break;\n    }\n    SetLastError( RtlNtStatusToDosError( status ));\n    return dst_len;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winternl.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!NormalizeString [stdcall -import] -> import from kernelbase",
+   "kernelbase!NormalizeString [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/locale.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winnls",
+   "path": "sdk-api-src/content/winnls/nf-winnls-normalizestring.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winnls/nf-winnls-normalizestring",
+   "documented_name": "normalizestring",
+   "file": "docs/0487_sdk-api_nf-winnls-normalizestring.md",
+   "text": "---\nUID: NF:winnls.NormalizeString\ntitle: NormalizeString function (winnls.h)\ndescription: Normalizes characters of a text string according to Unicode 4.0 TR#15. For more information, see Using Unicode Normalization to Represent Strings.\nhelpviewer_keywords: [\"NormalizeString\",\"NormalizeString function [Internationalization for Windows Applications]\",\"_win32_NormalizeString\",\"intl.normalizestring\",\"winnls/NormalizeString\"]\nold-location: intl\\normalizestring.htm\ntech.root: Intl\nms.assetid: ef76d0e5-2999-4a21-8522-c698013e3816\nms.date: 12/05/2018\nms.keywords: NormalizeString, NormalizeString function [Internationalization for Windows Applications], _win32_NormalizeString, intl.normalizestring, winnls/NormalizeString\nreq.header: winnls.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: kernel32.Lib\nreq.dll: Normaliz.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: Microsoft Internationalized Domain Name (IDN) Mitigation APIs onWindows XP with SP2 and later, orWindows Server 2003 with SP1\nms.custom: 19H1\nf1_keywords:\n - NormalizeString\n - winnls/NormalizeString\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Normaliz.dll\n - API-MS-Win-Core-normalization-l1-1-0.dll\n - KernelBase.dll\napi_name:\n - NormalizeString\n---\n\n# NormalizeString function\n\n\n## -description\n\nNormalizes characters of a text string according to Unicode 4.0 TR#15. For more information, see <a href=\"/windows/desktop/Intl/using-unicode-normalization-to-represent-strings\">Using Unicode Normalization to Represent Strings</a>.\n\n## -parameters\n\n### -param NormForm [in]\n\nNormalization form to use. <a href=\"/windows/desktop/api/winnls/ne-winnls-norm_form\">NORM_FORM</a> specifies the standard Unicode normalization forms.\n\n### -param lpSrcString [in]\n\nPointer to the non-normalized source string.\n\n### -param cwSrcLength [in]\n\nLength, in characters, of the buffer containing the source string. The application can set this parameter to -1 if the function should assume the string to be null-terminated and calculate the length automatically.\n\n### -param lpDstString [out, optional]\n\nPointer to a buffer in which the function retrieves the destination string. Alternatively, this parameter contains <b>NULL</b> if <i>cwDstLength</i> is set to 0.\n\n<div class=\"alert\"><b>Note</b>  The function does not null-terminate the string if the input string length is explicitly specified without a terminating null character. To null-terminate the output string, the application should specify -1 or explicitly count the terminating null character for the input string.</div>\n<div> </div>\n\n### -param cwDstLength [in]\n\nLength, in characters, of the buffer containing the destination string. Alternatively, the application can set this parameter to 0 to request the function to return the required size for the destination buffer.\n\n## -returns\n\nReturns the length of the normalized string in the destination buffer. If <i>cwDstLength</i> is set to 0, the function returns the estimated buffer length required to do the actual conversion.\n\nIf the string in the input buffer is null-terminated or if <i>cwSrcLength</i> is -1, the string written to the destination buffer is null-terminated and the returned string length includes the terminating null character.\n\nThe function returns a value that is less than or equal to 0 if it does not succeed. To get extended error information, the application can call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>, which can return one of the following error codes:\n\n<ul>\n<li>ERROR_INSUFFICIENT_BUFFER. A supplied buffer size was not large enough, or it was incorrectly set to <b>NULL</b>.</li>\n<li>ERROR_INVALID_PARAMETER. Any of the parameter values was invalid.</li>\n<li>ERROR_NO_UNICODE_TRANSLATION. Invalid Unicode was found in a string. The return value is the negative of the index of the location of the error in the input string.</li>\n<li>ERROR_SUCCESS. The action completed successfully but yielded no results.</li>\n</ul>\n\n## -remarks\n\nSome Unicode characters have multiple equivalent binary representations consisting of sets of combining and/or composite Unicode characters. The Unicode standard defines a process called normalization that returns one binary representation when given any of the equivalent binary representations of a character. Normalization can be performed with several algorithms, called normalization forms, that obey different rules, as described in <a href=\"/windows/desktop/Intl/using-unicode-normalization-to-represent-strings\">Using Unicode Normalization to Represent Strings</a>. The Win32 and the .NET Framework currently support normalization forms C, D, KC, and KD, as defined in <a href=\"https://www.unicode.org/reports/tr15\">Unicode Standard Annex #15: Unicode Normalization Forms</a>. Normalized strings are typically evaluated with an ordinal comparison.\n\nThe following code demonstrates the use of the buffer length estimate:\n\n\n```cpp\nconst int maxIterations = 10;\nLPWSTR strResult = NULL;\nHANDLE hHeap = GetProcessHeap();\n\nint iSizeEstimated = NormalizeString(form, strInput, -1, NULL, 0);\nfor (int i = 0; i < maxIterations; i++)\n{\n    if (strResult)\n        HeapFree(hHeap, 0, strResult);\n    strResult = (LPWSTR)HeapAlloc(hHeap, 0, iSizeEstimated * sizeof (WCHAR));\n    iSizeEstimated = NormalizeString(form, strInput, -1, strResult, iSizeEstimated);\n \n    if (iSizeEstimated > 0)\n        break; // success \n \n    if (iSizeEstimated <= 0)\n    {\n        DWORD dwError = GetLastError();\n        if (dwError != ERROR_INSUFFICIENT_BUFFER) break; // Real error, not buffer error \n \n        // New guess is negative of the return value. \n        iSizeEstimated = -iSizeEstimated;\n    }\n}\n\n```\n\n<b>Windows XP, Windows Server 2003</b>: \n\nNo longer supported.\n\nThe required header file and DLL are part of the Microsoft Internationalized Domain Name (IDN) Mitigation APIs, which are no longer available for download.\n\n\n#### Examples\n\nAn example showing the use of this function can be found in <a href=\"/windows/desktop/Intl/nls--unicode-normalization-sample\">NLS: Unicode Normalization Sample</a>.\n\n\n\n<div class=\"code\"></div>\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winnls/nf-winnls-isnormalizedstring\">IsNormalizedString</a>\n\n\n\n<a href=\"/windows/desktop/api/winnls/ne-winnls-norm_form\">NORM_FORM</a>\n\n\n\n<a href=\"/windows/desktop/Intl/national-language-support\">National Language Support</a>\n\n\n\n<a href=\"/windows/desktop/Intl/national-language-support-functions\">National Language Support Functions</a>\n\n\n\n<a href=\"/windows/desktop/Intl/using-unicode-normalization-to-represent-strings\">Using Unicode Normalization to Represent Strings</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "RtlNormalizeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/locale.c:1316"
+    ]
+   },
+   {
+    "name": "RtlNtStatusToDosError",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:77"
+    ]
+   }
+  ],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

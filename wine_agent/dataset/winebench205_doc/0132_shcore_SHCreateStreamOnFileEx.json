@@ -1,0 +1,194 @@
+{
+ "id": "0132",
+ "function": {
+  "name": "SHCreateStreamOnFileEx",
+  "export_name": "SHCreateStreamOnFileEx",
+  "module": "shcore",
+  "source_module": "shcore",
+  "exported_by": [
+   "shcore",
+   "shlwapi"
+  ],
+  "side": "PE",
+  "file": "dlls/shcore/main.c",
+  "start_line": 1131,
+  "end_line": 1209,
+  "body_lines": 76,
+  "signature": "HRESULT WINAPI SHCreateStreamOnFileEx(const WCHAR *path, DWORD mode, DWORD attributes, BOOL create, IStream *template, IStream **ret)",
+  "header_comment": "/*************************************************************************\n * SHCreateStreamOnFileEx   [SHCORE.@]\n */",
+  "code": "HRESULT WINAPI SHCreateStreamOnFileEx(const WCHAR *path, DWORD mode, DWORD attributes,\n    BOOL create, IStream *template, IStream **ret)\n{\n    DWORD access, share, creation_disposition, len;\n    struct shstream *stream;\n    HANDLE hFile;\n\n    TRACE(\"%s, %ld, %#lx, %d, %p, %p)\\n\", debugstr_w(path), mode, attributes,\n        create, template, ret);\n\n    if (!path || !ret || template)\n        return E_INVALIDARG;\n\n    *ret = NULL;\n\n    /* Access */\n    switch (mode & 0xf)\n    {\n        case STGM_WRITE:\n        case STGM_READWRITE:\n            access = GENERIC_READ | GENERIC_WRITE;\n            break;\n        case STGM_READ:\n            access = GENERIC_READ;\n            break;\n        default:\n            return E_INVALIDARG;\n    }\n\n    /* Sharing */\n    switch (mode & 0xf0)\n    {\n        case 0:\n        case STGM_SHARE_DENY_NONE:\n            share = FILE_SHARE_READ | FILE_SHARE_WRITE;\n            break;\n        case STGM_SHARE_DENY_READ:\n            share = FILE_SHARE_WRITE;\n            break;\n        case STGM_SHARE_DENY_WRITE:\n            share = FILE_SHARE_READ;\n            break;\n        case STGM_SHARE_EXCLUSIVE:\n            share = 0;\n            break;\n        default:\n            return E_INVALIDARG;\n    }\n\n    switch (mode & 0xf000)\n    {\n        case STGM_FAILIFTHERE:\n            creation_disposition = create ? CREATE_NEW : OPEN_EXISTING;\n            break;\n        case STGM_CREATE:\n            creation_disposition = CREATE_ALWAYS;\n            break;\n        default:\n            return E_INVALIDARG;\n    }\n\n    hFile = CreateFileW(path, access, share, NULL, creation_disposition, attributes, 0);\n    if (hFile == INVALID_HANDLE_VALUE)\n        return HRESULT_FROM_WIN32(GetLastError());\n\n    stream = malloc(sizeof(*stream));\n    stream->IStream_iface.lpVtbl = &filestreamvtbl;\n    stream->refcount = 1;\n    stream->u.file.handle = hFile;\n    stream->u.file.mode = mode;\n\n    len = lstrlenW(path);\n    stream->u.file.path = malloc((len + 1) * sizeof(WCHAR));\n    memcpy(stream->u.file.path, path, (len + 1) * sizeof(WCHAR));\n\n    *ret = &stream->IStream_iface;\n\n    return S_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winternl.h\"",
+   "#include \"initguid.h\"",
+   "#include \"ocidl.h\"",
+   "#include \"featurestagingapi.h\"",
+   "#include \"shellscalingapi.h\"",
+   "#include \"shcore.h\"",
+   "#include \"appmodel.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "shlwapi!SHCreateStreamOnFileEx [stdcall] -> forward shcore.SHCreateStreamOnFileEx",
+   "shcore!SHCreateStreamOnFileEx [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/shlwapi/tests/istream.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 2
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "shlwapi",
+   "path": "sdk-api-src/content/shlwapi/nf-shlwapi-shcreatestreamonfileex.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/shlwapi/nf-shlwapi-shcreatestreamonfileex",
+   "documented_name": "shcreatestreamonfileex",
+   "file": "docs/0132_sdk-api_nf-shlwapi-shcreatestreamonfileex.md",
+   "text": "---\nUID: NF:shlwapi.SHCreateStreamOnFileEx\ntitle: SHCreateStreamOnFileEx function (shlwapi.h)\ndescription: Opens or creates a file and retrieves a stream to read or write to that file.\nhelpviewer_keywords: [\"SHCreateStreamOnFileEx\",\"SHCreateStreamOnFileEx function [Windows Shell]\",\"_shell_SHCreateStreamOnFileEx\",\"shell.SHCreateStreamOnFileEx\",\"shlwapi/SHCreateStreamOnFileEx\"]\nold-location: shell\\SHCreateStreamOnFileEx.htm\ntech.root: shell\nms.assetid: f948f7dd-987d-4c2d-b650-62081133c3f4\nms.date: 12/05/2018\nms.keywords: SHCreateStreamOnFileEx, SHCreateStreamOnFileEx function [Windows Shell], _shell_SHCreateStreamOnFileEx, shell.SHCreateStreamOnFileEx, shlwapi/SHCreateStreamOnFileEx\nreq.header: shlwapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Shlwapi.lib\nreq.dll: Shlwapi.dll (version 6.0 or later)\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SHCreateStreamOnFileEx\n - shlwapi/SHCreateStreamOnFileEx\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Shlwapi.dll\n - API-MS-Win-DownLevel-shlwapi-l2-1-0.dll\n - ShCore.dll\n - API-MS-Win-DownLevel-shlwapi-l2-1-1.dll\n - API-MS-Win-ShCore-stream-l1-1-0.dll\napi_name:\n - SHCreateStreamOnFileEx\n---\n\n# SHCreateStreamOnFileEx function\n\n\n## -description\n\nOpens or creates a file and retrieves a stream to read or write to that file.\n\n## -parameters\n\n### -param pszFile [in]\n\nType: <b>LPCWSTR</b>\n\nA pointer to a null-terminated string that specifies the file name.\n\n### -param grfMode [in]\n\nType: <b>DWORD</b>\n\nOne or more <a href=\"/windows/desktop/Stg/stgm-constants\">STGM</a> values that are used to specify the file access mode and how the object that exposes the stream is created and deleted.\n\n### -param dwAttributes [in]\n\nType: <b>DWORD</b>\n\nOne or more flag values that specify file attributes in the case that a new file is created. For a complete list of possible values, see the <i>dwFlagsAndAttributes</i> parameter of the <a href=\"/windows/desktop/api/fileapi/nf-fileapi-createfilea\">CreateFile</a> function.\n\n### -param fCreate [in]\n\nType: <b>BOOL</b>\n\nA <b>BOOL</b> value that helps specify, in conjunction with <i>grfMode</i>, how existing files should be treated when creating the stream. See Remarks for details.\n\n### -param pstmTemplate [in, optional]\n\nType: <b><a href=\"/windows/desktop/api/objidl/nn-objidl-istream\">IStream</a>*</b>\n\nReserved.\n\n### -param ppstm [out]\n\nType: <b><a href=\"/windows/desktop/api/objidl/nn-objidl-istream\">IStream</a>**</b>\n\nReceives an <a href=\"/windows/desktop/api/objidl/nn-objidl-istream\">IStream</a> interface pointer for the stream associated with the file.\n\n## -returns\n\nType: <b>HRESULT</b>\n\nIf this function succeeds, it returns <b>S_OK</b>. Otherwise, it returns an <b>HRESULT</b> error code.\n\n## -remarks\n\nThe <b>SHCreateStreamOnFileEx</b> function extends the semantics of the <a href=\"/windows/desktop/Stg/stgm-constants\">STGM</a> flags and produces the same effect as calling the <a href=\"/windows/desktop/api/fileapi/nf-fileapi-createfilea\">CreateFile</a> function.\n\nThe <i>grfMode</i> and <i>fCreate</i> parameters work together to specify how the function should behave with respect to existing files.\n\n\n\n<table class=\"clsStd\">\n<tr>\n<th><i>grfMode</i></th>\n<th><i>fCreate</i></th>\n<th>File exists?</th>\n<th>Behavior</th>\n</tr>\n<tr>\n<td><b>STGM_CREATE</b></td>\n<td>Ignored</td>\n<td>Yes</td>\n<td>The file is recreated.</td>\n</tr>\n<tr>\n<td><b>STGM_CREATE</b></td>\n<td>Ignored</td>\n<td>No</td>\n<td>The file is created.</td>\n</tr>\n<tr>\n<td><b>STGM_FAILIFTHERE</b></td>\n<td><b>FALSE</b></td>\n<td>Yes</td>\n<td>The file is opened.</td>\n</tr>\n<tr>\n<td><b>STGM_FAILIFTHERE</b></td>\n<td><b>FALSE</b></td>\n<td>No</td>\n<td>The call fails.</td>\n</tr>\n<tr>\n<td><b>STGM_FAILIFTHERE</b></td>\n<td><b>TRUE</b></td>\n<td>Yes</td>\n<td>The call fails.</td>\n</tr>\n<tr>\n<td><b>STGM_FAILIFTHERE</b></td>\n<td><b>TRUE</b></td>\n<td>No</td>\n<td>The file is created.</td>\n</tr>\n</table>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "shstream",
+    "kind": "struct_decl",
+    "start_line": 562,
+    "end_line": 585,
+    "code": "struct shstream\n{\n    IStream IStream_iface;\n    LONG refcount;\n\n    union\n    {\n        struct\n        {\n            BYTE *buffer;\n            DWORD length;\n            DWORD position;\n\n            HKEY hkey;\n            WCHAR *valuename;\n        } mem;\n        struct\n        {\n            HANDLE handle;\n            DWORD mode;\n            WCHAR *path;\n        } file;\n    } u;\n};"
+   },
+   {
+    "name": "struct (unnamed at /w/wine/dlls/shcore/main.c:578:9)",
+    "kind": "struct_decl",
+    "start_line": 578,
+    "end_line": 583,
+    "code": "        struct\n        {\n            HANDLE handle;\n            DWORD mode;\n            WCHAR *path;\n        } file;"
+   },
+   {
+    "name": "union (unnamed at /w/wine/dlls/shcore/main.c:567:5)",
+    "kind": "union_decl",
+    "start_line": 567,
+    "end_line": 584,
+    "code": "    union\n    {\n        struct\n        {\n            BYTE *buffer;\n            DWORD length;\n            DWORD position;\n\n            HKEY hkey;\n            WCHAR *valuename;\n        } mem;\n        struct\n        {\n            HANDLE handle;\n            DWORD mode;\n            WCHAR *path;\n        } file;\n    } u;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(shcore);"
+   },
+   {
+    "name": "filestreamvtbl",
+    "type": "const IStreamVtbl",
+    "static": true,
+    "start_line": 1110,
+    "end_line": 1126,
+    "code": "static const IStreamVtbl filestreamvtbl =\n{\n    shstream_QueryInterface,\n    shstream_AddRef,\n    filestream_Release,\n    filestream_Read,\n    filestream_Write,\n    filestream_Seek,\n    filestream_SetSize,\n    filestream_CopyTo,\n    filestream_Commit,\n    shstream_Revert,\n    shstream_LockRegion,\n    shstream_UnlockRegion,\n    filestream_Stat,\n    shstream_Clone,\n};"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "CreateFileW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:795"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetLastError",
+   "HRESULT_FROM_WIN32",
+   "debugstr_w",
+   "lstrlenW",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "shcore.SHCreateStreamOnFileEx",
+  "category": {
+   "l1": "Windows environment (Shell)",
+   "l2": "Windows Shell",
+   "header": "shlwapi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 79,
+   "body": 77,
+   "code": 56
+  },
+  "cyclomatic": 16,
+  "return_type": "HRESULT",
+  "n_params": 6,
+  "tests": {
+   "n_tests_own": 2,
+   "n_tests": 2,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/shlwapi/tests/istream.c::test_SHCreateStreamOnFileEx",
+    "dlls/shlwapi/tests/istream.c::test_SHCreateStreamOnFileEx_CopyTo"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/shlwapi/nf-shlwapi-shcreatestreamonfileex",
+   "source": "win32",
+   "description": "Opens or creates a file and retrieves a stream to read or write to that file.",
+   "min_windows": "Windows XP [desktop apps only]",
+   "documented_dll": "Shlwapi.dll (version 6.0 or later)"
+  },
+  "exports": [
+   "shcore.SHCreateStreamOnFileEx",
+   "shlwapi.SHCreateStreamOnFileEx"
+  ],
+  "subset": {
+   "selected_by": "topup",
+   "lower_bound_used": 1,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

@@ -1,0 +1,234 @@
+{
+ "id": "0193",
+ "function": {
+  "name": "ClosePrinter",
+  "export_name": "ClosePrinter",
+  "module": "winspool.drv",
+  "source_module": "winspool.drv",
+  "exported_by": [
+   "winspool.drv"
+  ],
+  "side": "PE",
+  "file": "dlls/winspool.drv/info.c",
+  "start_line": 2759,
+  "end_line": 2788,
+  "body_lines": 27,
+  "signature": "BOOL WINAPI ClosePrinter(HANDLE hPrinter)",
+  "header_comment": "/*****************************************************************************\n *          ClosePrinter  [WINSPOOL.@]\n */",
+  "code": "BOOL WINAPI ClosePrinter(HANDLE hPrinter)\n{\n    UINT_PTR i = (UINT_PTR)hPrinter;\n    opened_printer_t *printer = NULL;\n\n    TRACE(\"(%p)\\n\", hPrinter);\n\n    EnterCriticalSection(&printer_handles_cs);\n\n    if ((i > 0) && (i <= nb_printer_handles))\n        printer = printer_handles[i - 1];\n\n\n    if(printer)\n    {\n        TRACE(\"closing %s\\n\", debugstr_w(printer->name));\n        if (printer->backend_printer) {\n            backend->fpClosePrinter(printer->backend_printer);\n        }\n\n        free_printer_entry( printer );\n        printer_handles[i - 1] = NULL;\n        LeaveCriticalSection(&printer_handles_cs);\n        return TRUE;\n    }\n\n    LeaveCriticalSection(&printer_handles_cs);\n    SetLastError(ERROR_INVALID_HANDLE);\n    return FALSE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include <ctype.h>",
+   "#include <stddef.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winreg.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winspool.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wine/windef16.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/rbtree.h\"",
+   "#include <wine/unixlib.h>",
+   "#include \"ddk/compstui.h\"",
+   "#include \"ddk/winsplp.h\"",
+   "#include \"wspool.h\""
+  ],
+  "resolution": [
+   "winspool.drv!ClosePrinter [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/winspool.drv/tests/info.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 11
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "",
+   "path": "desktop-src/printdocs/closeprinter.md",
+   "url": "https://learn.microsoft.com/windows/win32/printdocs/closeprinter",
+   "documented_name": "closeprinter",
+   "file": "docs/0193_win32_closeprinter.md",
+   "text": "---\ndescription: The ClosePrinter function closes the specified printer object.\nms.assetid: 95cc3eca-e65c-4fa6-8975-479e8e728dca\ntitle: ClosePrinter function (Winspool.h)\nms.topic: reference\nms.date: 05/31/2018\ntopic_type: \n- APIRef\n- kbSyntax\napi_name: \n- ClosePrinter\napi_type: \n- DllExport\napi_location: \n- Spoolss.dll\n- Ext-MS-Win-printer-Winspool-l1-1-0.dll\n- winspool.drv\n- Ext-MS-Win-printer-Winspool-l1-1-1.dll\n- Ext-MS-Win-Printer-WinSpool-l1-1-2.dll\n- Ext-MS-Win-Printer-WinSpool-L1-1-3.dll\n---\n\n# ClosePrinter function\n\nThe **ClosePrinter** function closes the specified printer object.\n\n## Syntax\n\n\n```C++\nBOOL ClosePrinter(\n  _In_ HANDLE hPrinter\n);\n```\n\n\n\n## Parameters\n\n<dl> <dt>\n\n*hPrinter* \\[in\\]\n</dt> <dd>\n\nA handle to the printer object to be closed. This handle is returned by the [**OpenPrinter**](openprinter.md) or [**AddPrinter**](addprinter.md) function.\n\n</dd> </dl>\n\n## Return value\n\nIf the function succeeds, the return value is a nonzero value.\n\nIf the function fails, the return value is zero.\n\n## Remarks\n\n> [!Note]  \n> This is a blocking or synchronous function and might not return immediately. How quickly this function returns depends on run-time factors such as network status, print server configuration, and printer driver implementation factors that are difficult to predict when writing an application. Calling this function from a thread that manages interaction with the user interface could make the application appear to be unresponsive.\n\n \n\nWhen the **ClosePrinter** function returns, the handle *hPrinter* is invalid, regardless of whether the function has succeeded or failed.\n\n## Examples\n\nFor a sample program that uses this function, see [How To: Print Using the GDI Print API](how-to--print-using-the-gdi-print-api.md).\n\n## Requirements\n\n\n\n| Requirement | Value |\n|-------------------------------------|-----------------------------------------------------------------------------------------------------------|\n| Minimum supported client<br/> | Windows 2000 Professional \\[desktop apps only\\]<br/>                                                |\n| Minimum supported server<br/> | Windows 2000 Server \\[desktop apps only\\]<br/>                                                      |\n| Header<br/>                   | <dl> <dt>Winspool.h (include Windows.h)</dt> </dl> |\n| Library<br/>                  | <dl> <dt>Winspool.lib</dt> </dl>                   |\n| DLL<br/>                      | <dl> <dt>Spoolss.dll</dt> </dl>                    |\n\n\n\n## See also\n\n<dl> <dt>\n\n[Printing](printdocs-printing.md)\n</dt> <dt>\n\n[Print Spooler API Functions](printing-and-print-spooler-functions.md)\n</dt> <dt>\n\n[**AddPrinter**](addprinter.md)\n</dt> <dt>\n\n[**OpenPrinter**](openprinter.md)\n</dt> </dl>\n\n \n\n \n\n\n\n\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "free_printer_entry",
+   "file": "dlls/winspool.drv/info.c",
+   "start_line": 937,
+   "end_line": 942,
+   "static": true,
+   "called_from": [
+    "ClosePrinter"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winspool.drv/info.c:1031"
+   ],
+   "signature": "static void free_printer_entry( opened_printer_t *printer )",
+   "code": "static void free_printer_entry( opened_printer_t *printer )\n{\n    /* the queue is shared, so don't free that here */\n    free( printer->name );\n    free( printer );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "opened_printer_t",
+    "kind": "typedef_decl",
+    "start_line": 68,
+    "end_line": 71,
+    "code": "typedef struct {\n    LPWSTR name;\n    HANDLE backend_printer;\n} opened_printer_t;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 53,
+    "end_line": 53,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(winspool);"
+   },
+   {
+    "name": "nb_printer_handles",
+    "type": "UINT",
+    "static": true,
+    "start_line": 113,
+    "end_line": 113,
+    "code": "static UINT nb_printer_handles;"
+   },
+   {
+    "name": "printer_handles",
+    "type": "opened_printer_t **",
+    "static": true,
+    "start_line": 112,
+    "end_line": 112,
+    "code": "static opened_printer_t **printer_handles;"
+   },
+   {
+    "name": "printer_handles_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 64,
+    "end_line": 64,
+    "code": "static CRITICAL_SECTION printer_handles_cs = { &printer_handles_cs_debug, -1, 0, 0, 0, 0 };"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "debugstr_w",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "backend->fpClosePrinter",
+    "in_function": "ClosePrinter",
+    "at": "dlls/winspool.drv/info.c:2776",
+    "candidates": []
+   }
+  ]
+ },
+ "winebench": {
+  "id": "winspool.drv.ClosePrinter",
+  "category": {
+   "l1": "Devices",
+   "l2": "Printing",
+   "header": "",
+   "textbook": "Device management",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 30,
+   "body": 29,
+   "code": 17
+  },
+  "cyclomatic": 5,
+  "return_type": "BOOL",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 11,
+   "n_tests": 11,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/winspool.drv/tests/info.c::test_ClosePrinter",
+    "dlls/winspool.drv/tests/info.c::test_DocumentProperties",
+    "dlls/winspool.drv/tests/info.c::test_EnumForms",
+    "dlls/winspool.drv/tests/info.c::test_GetPrinter",
+    "dlls/winspool.drv/tests/info.c::test_GetPrinterData",
+    "dlls/winspool.drv/tests/info.c::test_GetPrinterDataEx",
+    "dlls/winspool.drv/tests/info.c::test_GetPrinterDriver",
+    "dlls/winspool.drv/tests/info.c::test_OpenPrinter",
+    "dlls/winspool.drv/tests/info.c::test_OpenPrinter_defaults",
+    "dlls/winspool.drv/tests/info.c::test_XcvDataW_MonitorUI",
+    "dlls/winspool.drv/tests/info.c::test_XcvDataW_PortIsValid"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/printdocs/closeprinter",
+   "source": "win32-conceptual",
+   "description": "The ClosePrinter function closes the specified printer object.",
+   "min_windows": "",
+   "documented_dll": "Spoolss.dll"
+  },
+  "exports": [
+   "winspool.drv.ClosePrinter"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 6,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

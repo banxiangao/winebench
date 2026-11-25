@@ -1,0 +1,275 @@
+{
+ "id": "0047",
+ "function": {
+  "name": "FreeLibrary",
+  "export_name": "FreeLibrary",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase",
+   "krnl386.exe16"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/loader.c",
+  "start_line": 232,
+  "end_line": 268,
+  "body_lines": 34,
+  "signature": "BOOL WINAPI DECLSPEC_HOTPATCH FreeLibrary( HINSTANCE module )",
+  "header_comment": "/***********************************************************************\n *\tFreeLibrary   (kernelbase.@)\n */",
+  "code": "BOOL WINAPI DECLSPEC_HOTPATCH FreeLibrary( HINSTANCE module )\n{\n    if (!module)\n    {\n        SetLastError( ERROR_INVALID_HANDLE );\n        return FALSE;\n    }\n\n    if ((ULONG_PTR)module & 3) /* this is a datafile module */\n    {\n        void *ptr = (void *)((ULONG_PTR)module & ~3);\n        if (!RtlImageNtHeader( ptr ))\n        {\n            SetLastError( ERROR_BAD_EXE_FORMAT );\n            return FALSE;\n        }\n        if ((ULONG_PTR)module & 1)\n        {\n            struct exclusive_datafile *file;\n\n            RtlEnterCriticalSection( &exclusive_datafile_list_section );\n            LIST_FOR_EACH_ENTRY( file, &exclusive_datafile_list, struct exclusive_datafile, entry )\n            {\n                if (file->module != module) continue;\n                TRACE( \"closing %p for module %p\\n\", file->file, file->module );\n                CloseHandle( file->file );\n                list_remove( &file->entry );\n                HeapFree( GetProcessHeap(), 0, file );\n                break;\n            }\n            RtlLeaveCriticalSection( &exclusive_datafile_list_section );\n        }\n        return UnmapViewOfFile( ptr );\n    }\n\n    return set_ntstatus( LdrUnloadDll( module ));\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/asm.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\""
+  ],
+  "resolution": [
+   "kernel32!FreeLibrary [stdcall -import] -> import from kernelbase",
+   "kernelbase!FreeLibrary [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/actctx.c",
+   "dlls/kernel32/tests/loader.c",
+   "dlls/kernel32/tests/module.c",
+   "dlls/kernel32/tests/resource.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 30
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "krnl386.exe16",
+   "source_module": "krnl386.exe16",
+   "exported_by": [
+    "krnl386.exe16"
+   ],
+   "file": "dlls/krnl386.exe16/ne_module.c",
+   "start_line": 1214,
+   "resolution": [
+    "krnl386.exe16!FreeLibrary [pascal -ret16] -> alias of krnl386.exe16!FreeLibrary16",
+    "krnl386.exe16!FreeLibrary16 [stdcall -arch=win32]"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 1218,
+   "signature": "void WINAPI FreeLibrary16( HINSTANCE16 handle )",
+   "code": "void WINAPI FreeLibrary16( HINSTANCE16 handle )\n{\n    TRACE(\"%04x\\n\", handle );\n    FreeModule16( handle );\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "libloaderapi",
+   "path": "sdk-api-src/content/libloaderapi/nf-libloaderapi-freelibrary.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/libloaderapi/nf-libloaderapi-freelibrary",
+   "documented_name": "freelibrary",
+   "file": "docs/0047_sdk-api_nf-libloaderapi-freelibrary.md",
+   "text": "---\nUID: NF:libloaderapi.FreeLibrary\ntitle: FreeLibrary function (libloaderapi.h)\ndescription: Frees the loaded dynamic-link library (DLL) module and, if necessary, decrements its reference count.\nhelpviewer_keywords: [\"FreeLibrary\",\"FreeLibrary function\",\"_win32_freelibrary\",\"base.freelibrary\",\"libloaderapi/FreeLibrary\",\"winbase/FreeLibrary\"]\nold-location: base\\freelibrary.htm\ntech.root: base\nms.assetid: 823d3147-4ba8-4fe5-ade4-e5604f47eb0a\nms.date: 12/05/2018\nms.keywords: FreeLibrary, FreeLibrary function, _win32_freelibrary, base.freelibrary, libloaderapi/FreeLibrary, winbase/FreeLibrary\nreq.header: libloaderapi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - FreeLibrary\n - libloaderapi/FreeLibrary\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-libraryloader-l1-2-3.dll\n - Kernel32.dll\n - API-MS-Win-Core-LibraryLoader-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-LibraryLoader-l1-1-1.dll\n - API-MS-Win-Core-LibraryLoader-l1-2-0.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\n - API-MS-Win-Core-Libraryloader-l1-2-1.dll\n - API-MS-Win-Core-LibraryLoader-L1-2-2.dll\napi_name:\n - FreeLibrary\n---\n\n# FreeLibrary function\n\n\n## -description\n\nFrees the loaded dynamic-link library (DLL) module and, if necessary, decrements its reference count. When the reference count reaches zero, the module is unloaded from the address space of the calling process and the handle is no longer valid.\n\n## -parameters\n\n### -param hLibModule [in]\n\nA handle to the loaded library module. The \n<a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-loadlibrarya\">LoadLibrary</a>, <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-loadlibraryexa\">LoadLibraryEx</a>,  \n<a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-getmodulehandlea\">GetModuleHandle</a>, or <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-getmodulehandleexa\">GetModuleHandleEx</a> function returns this handle.\n\n## -returns\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero. To get extended error information, call \nthe <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> function.\n\n## -remarks\n\nThe system maintains a per-process reference count for each loaded module. A  module that was loaded at process initialization due to load-time dynamic linking has a reference count of one. The reference count for a module is incremented each time the  module is loaded by a call to \n<a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-loadlibrarya\">LoadLibrary</a>. The reference count is also incremented by a call to <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-loadlibraryexa\">LoadLibraryEx</a> unless the  module  is being loaded for the first time and is being loaded as   a data or image file. \n\nThe reference count is decremented each time \nthe <b>FreeLibrary</b> or <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-freelibraryandexitthread\">FreeLibraryAndExitThread</a> function is called for the module. When a  module's reference count reaches zero or the process terminates, the system unloads the module from the address space of the  process. Before unloading a library module, the system enables the module to detach from the process by calling the module's \n<a href=\"/windows/desktop/Dlls/dllmain\">DllMain</a> function, if it has one, with the DLL_PROCESS_DETACH value. Doing so gives the library module an opportunity to clean up resources allocated on behalf of the current process. After the entry-point function returns, the library module is removed from the address space of the current process.\n\nIt is not safe to call \n<b>FreeLibrary</b> from \n<a href=\"/windows/desktop/Dlls/dllmain\">DllMain</a>. For more information, see the Remarks section in \n<a href=\"/windows/desktop/Dlls/dllmain\">DllMain</a>.\n\nCalling \n<b>FreeLibrary</b> does not affect other processes that are using the same module.\n\nUse caution when calling <b>FreeLibrary</b> with a handle returned by <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-getmodulehandlea\">GetModuleHandle</a>. The <b>GetModuleHandle</b> function does not increment a module's reference count, so passing this handle to <b>FreeLibrary</b> can cause a module to be unloaded prematurely.\n\nA thread that must unload the DLL in which it is executing and then terminate itself should call <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-freelibraryandexitthread\">FreeLibraryAndExitThread</a> instead of calling <b>FreeLibrary</b> and <b>ExitThread</b> separately. Otherwise, a race condition can occur. For details, see the Remarks section of <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-freelibraryandexitthread\">FreeLibraryAndExitThread</a>. \n\n\n#### Examples\n\nFor an example, see \n<a href=\"/windows/desktop/Dlls/using-run-time-dynamic-linking\">Using Run-Time Dynamic Linking</a>.\n\n<div class=\"code\"></div>\n\n## -see-also\n\n<a href=\"/windows/desktop/Dlls/dllmain\">DllMain</a>\n\n\n\n<a href=\"/windows/desktop/Dlls/dynamic-link-library-functions\">Dynamic-Link Library Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-freelibraryandexitthread\">FreeLibraryAndExitThread</a>\n\n\n\n<a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-getmodulehandlea\">GetModuleHandle</a>\n\n\n\n<a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-getmodulehandleexa\">GetModuleHandleEx</a>\n\n\n\n<a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-loadlibrarya\">LoadLibrary</a>\n\n\n\n<a href=\"/windows/desktop/Dlls/run-time-dynamic-linking\">Run-Time Dynamic Linking</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "exclusive_datafile",
+    "kind": "struct_decl",
+    "start_line": 41,
+    "end_line": 46,
+    "code": "struct exclusive_datafile\n{\n    struct list entry;\n    HMODULE     module;\n    HANDLE      file;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 37,
+    "end_line": 37,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(module);"
+   },
+   {
+    "name": "exclusive_datafile_list",
+    "type": "struct list",
+    "static": true,
+    "start_line": 47,
+    "end_line": 47,
+    "code": "static struct list exclusive_datafile_list = LIST_INIT( exclusive_datafile_list );"
+   },
+   {
+    "name": "exclusive_datafile_list_section",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 56,
+    "end_line": 56,
+    "code": "static CRITICAL_SECTION exclusive_datafile_list_section = { &critsect_debug, -1, 0, 0, 0, 0 };"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "CloseHandle",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "GetProcessHeap",
+    "impl": [
+     "dlls/kernelbase/process.c:910"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   },
+   {
+    "name": "UnmapViewOfFile",
+    "impl": [
+     "dlls/kernelbase/memory.c:385"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "LdrUnloadDll",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/loader.c:4137"
+    ]
+   },
+   {
+    "name": "RtlEnterCriticalSection",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "RtlFreeHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "RtlImageNtHeader",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/loader.c:4178"
+    ]
+   },
+   {
+    "name": "RtlLeaveCriticalSection",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   }
+  ],
+  "header_inline": [
+   "list_remove",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "set_ntstatus"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "kernelbase.FreeLibrary",
+  "category": {
+   "l1": "System services",
+   "l2": "Dynamic-link libraries",
+   "header": "libloaderapi.h",
+   "textbook": "Process control",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 37,
+   "body": 36,
+   "code": 21
+  },
+  "cyclomatic": 6,
+  "return_type": "BOOL",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 30,
+   "n_tests": 120,
+   "n_tests_other": 90,
+   "own_test_functions": [
+    "dlls/kernel32/tests/actctx.c::test_builtin_sxs",
+    "dlls/kernel32/tests/actctx.c::test_one_sxs_and_one_local_1",
+    "dlls/kernel32/tests/actctx.c::test_one_sxs_and_one_local_2",
+    "dlls/kernel32/tests/actctx.c::test_one_with_sxs_and_GetModuleHandleA",
+    "dlls/kernel32/tests/actctx.c::test_two_dlls_at_same_time",
+    "dlls/kernel32/tests/loader.c::child_process",
+    "dlls/kernel32/tests/loader.c::dll_entry_point",
+    "dlls/kernel32/tests/loader.c::map_image_section",
+    "dlls/kernel32/tests/loader.c::subtest_export_forwarder_dep_chain",
+    "dlls/kernel32/tests/loader.c::test_Loader",
+    "dlls/kernel32/tests/loader.c::test_ResolveDelayLoadedAPI",
+    "dlls/kernel32/tests/loader.c::test_filenames",
+    "dlls/kernel32/tests/loader.c::test_image_mapping",
+    "dlls/kernel32/tests/loader.c::test_import_resolution",
+    "dlls/kernel32/tests/loader.c::test_section_access",
+    "dlls/kernel32/tests/loader.c::test_security_cookie_readonly",
+    "dlls/kernel32/tests/loader.c::test_wow64_redirection",
+    "dlls/kernel32/tests/loader.c::test_wow64_redirection_for_dll",
+    "dlls/kernel32/tests/module.c::check_refcount",
+    "dlls/kernel32/tests/module.c::testGetModuleHandleEx",
+    "dlls/kernel32/tests/module.c::testLoadLibraryA",
+    "dlls/kernel32/tests/module.c::testLoadLibraryA_Wrong",
+    "dlls/kernel32/tests/module.c::testLoadLibraryEx",
+    "dlls/kernel32/tests/module.c::testNestedLoadLibraryA",
+    "dlls/kernel32/tests/module.c::test_LdrGetDllHandleEx",
+    "dlls/kernel32/tests/module.c::test_LoadLibraryEx_search_flags",
+    "dlls/kernel32/tests/module.c::test_SetDefaultDllDirectories",
+    "dlls/kernel32/tests/module.c::test_dont_resolve_dll_references",
+    "dlls/kernel32/tests/module.c::test_known_dlls_load",
+    "dlls/kernel32/tests/resource.c::update_resources_name"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/libloaderapi/nf-libloaderapi-freelibrary",
+   "source": "win32",
+   "description": "Frees the loaded dynamic-link library (DLL) module and, if necessary, decrements its reference count.",
+   "min_windows": "Windows XP [desktop apps \\| UWP apps]",
+   "documented_dll": "Kernel32.dll"
+  },
+  "exports": [
+   "kernel32.FreeLibrary",
+   "kernelbase.FreeLibrary"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

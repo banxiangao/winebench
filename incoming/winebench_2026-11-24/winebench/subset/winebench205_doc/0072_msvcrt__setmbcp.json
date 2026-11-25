@@ -1,0 +1,351 @@
+{
+ "id": "0072",
+ "function": {
+  "name": "_setmbcp",
+  "export_name": "_setmbcp",
+  "module": "msvcrt",
+  "source_module": "msvcrt",
+  "exported_by": [
+   "msvcr100",
+   "msvcr110",
+   "msvcr120",
+   "msvcr120_app",
+   "msvcr70",
+   "msvcr71",
+   "msvcr80",
+   "msvcr90",
+   "msvcrt",
+   "msvcrt20",
+   "msvcrt40",
+   "msvcrtd",
+   "ucrtbase"
+  ],
+  "side": "PE",
+  "file": "dlls/msvcrt/mbcs.c",
+  "start_line": 400,
+  "end_line": 427,
+  "body_lines": 25,
+  "signature": "int CDECL _setmbcp(int cp)",
+  "header_comment": "/*********************************************************************\n *              _setmbcp (MSVCRT.@)\n */",
+  "code": "int CDECL _setmbcp(int cp)\n{\n    thread_data_t *data = msvcrt_get_thread_data();\n    threadmbcinfo *mbcinfo;\n\n    mbcinfo = create_mbcinfo(cp, -1, get_mbcinfo());\n    if(!mbcinfo)\n    {\n        *_errno() = EINVAL;\n        return -1;\n    }\n\n    if(data->locale_flags & LOCALE_THREAD)\n    {\n        if(data->locale_flags & LOCALE_FREE)\n            free_mbcinfo(data->mbcinfo);\n        data->mbcinfo = mbcinfo;\n    }\n    else\n    {\n        _lock(_MB_CP_LOCK);\n        free_mbcinfo(MSVCRT_locale->mbcinfo);\n        MSVCRT_locale->mbcinfo = mbcinfo;\n        memcpy(MSVCRT_mbctype, MSVCRT_locale->mbcinfo->mbctype, sizeof(MSVCRT_mbctype));\n        _unlock(_MB_CP_LOCK);\n    }\n    return 0;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdio.h>",
+   "#include <limits.h>",
+   "#include <mbctype.h>",
+   "#include <mbstring.h>",
+   "#include \"msvcrt.h\"",
+   "#include \"mtdll.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "msvcrt!_setmbcp [cdecl]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/msvcr80/tests/msvcr80.c",
+   "dlls/msvcr90/tests/msvcr90.c",
+   "dlls/msvcrt/tests/dir.c",
+   "dlls/msvcrt/tests/string.c",
+   "dlls/ucrtbase/tests/string.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 25
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "cpp-docs",
+   "header": "",
+   "path": "docs/c-runtime-library/reference/setmbcp.md",
+   "url": "https://learn.microsoft.com/cpp/c-runtime-library/reference/setmbcp",
+   "documented_name": "_setmbcp",
+   "file": "docs/0072_cpp-docs_setmbcp.md",
+   "text": "---\ndescription: \"Learn more about: _setmbcp\"\ntitle: \"_setmbcp\"\nms.date: \"4/2/2020\"\napi_name: [\"_setmbcp\", \"_o__setmbcp\"]\napi_location: [\"msvcrt.dll\", \"msvcr80.dll\", \"msvcr90.dll\", \"msvcr100.dll\", \"msvcr100_clr0400.dll\", \"msvcr110.dll\", \"msvcr110_clr0400.dll\", \"msvcr120.dll\", \"msvcr120_clr0400.dll\", \"ucrtbase.dll\", \"api-ms-win-crt-locale-l1-1-0.dll\"]\napi_type: [\"DLLExport\"]\ntopic_type: [\"apiref\"]\nf1_keywords: [\"_setmbcp\", \"setmbcp\"]\nhelpviewer_keywords: [\"setmbcp function\", \"_setmbcp function\", \"multibyte code pages\"]\nms.assetid: cfde53b5-0b73-4684-81b1-a8d3aafc85de\n---\n# `_setmbcp`\n\nSets a new multibyte code page.\n\n## Syntax\n\n```C\nint _setmbcp(\n   int codepage\n);\n```\n\n### Parameters\n\n*`codepage`*\\\nNew code page setting for locale-independent multibyte routines.\n\n## Return value\n\nReturns 0 if the code page is set successfully. If an invalid code page value is supplied for *`codepage`*, returns -1 and the code page setting is unchanged. Sets `errno` to `EINVAL` if a memory allocation failure occurs.\n\n## Remarks\n\nThe **`_setmbcp`** function specifies a new multibyte code page. By default, the run-time system automatically sets the multibyte code page to the system-default ANSI code page. The multibyte code page setting affects all multibyte routines that aren't locale dependent. However, it's possible to instruct **`_setmbcp`** to use the code page defined for the current locale (see the following list of manifest constants and associated behavior results). For a list of the multibyte routines that are dependent on the locale code page rather than the multibyte code page, see [Interpretation of multibyte-character sequences](../interpretation-of-multibyte-character-sequences.md).\n\nThe *`codepage`* argument can be set to any of the following values:\n\n- `_MB_CP_ANSI` Use ANSI code page obtained from operating system at program startup.\n\n- `_MB_CP_LOCALE` Use the current locale's code page obtained from a previous call to [`setlocale`](setlocale-wsetlocale.md).\n\n- `_MB_CP_OEM` Use OEM code page obtained from operating system at program startup.\n\n- `_MB_CP_SBCS` Use single-byte code page. When the code page is set to `_MB_CP_SBCS`, a routine such as [`_ismbblead`](ismbblead-ismbblead-l.md) always returns false.\n\n- `_MB_CP_UTF8` Use UTF-8.  When the code page is set to `_MB_CP_UTF8`, a routine such as [`_ismbblead`](ismbblead-ismbblead-l.md) always returns false.\n\n- Any other valid code page value, regardless of whether the value is an ANSI, OEM, or other operating-system-supported code page (except UTF-7, which isn't supported).\n\nBy default, this function's global state is scoped to the application. To change this behavior, see [Global state in the CRT](../global-state.md).\n\n## Requirements\n\n| Routine | Required header |\n|---|---|\n| **`_setmbcp`** | \\<mbctype.h> |\n\nFor more compatibility information, see [Compatibility](../compatibility.md).\n\n## See also\n\n[`_getmbcp`](getmbcp.md)\\\n[`setlocale`, `_wsetlocale`](setlocale-wsetlocale.md)\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "create_mbcinfo",
+   "file": "dlls/msvcrt/mbcs.c",
+   "start_line": 219,
+   "end_line": 395,
+   "static": false,
+   "called_from": [
+    "_setmbcp"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/locale.c:1975"
+   ],
+   "signature": "threadmbcinfo* create_mbcinfo(int cp, LCID lcid, threadmbcinfo *old_mbcinfo)",
+   "code": "threadmbcinfo* create_mbcinfo(int cp, LCID lcid, threadmbcinfo *old_mbcinfo)\n{\n  threadmbcinfo *mbcinfo;\n  int newcp;\n  CPINFO cpi;\n  BYTE *bytes;\n  WORD chartypes[256];\n  char bufA[256];\n  WCHAR bufW[256], lowW[256], upW[256];\n  int charcount, maxchar;\n  int ret;\n  int i;\n\n  if(old_mbcinfo && cp==old_mbcinfo->mbcodepage\n          && (lcid==-1 || lcid==old_mbcinfo->mblcid)) {\n    InterlockedIncrement(&old_mbcinfo->refcount);\n    return old_mbcinfo;\n  }\n\n  mbcinfo = malloc(sizeof(threadmbcinfo));\n  if(!mbcinfo)\n    return NULL;\n  mbcinfo->refcount = 1;\n\n  switch (cp)\n  {\n    case _MB_CP_ANSI:\n      newcp = GetACP();\n      break;\n    case _MB_CP_OEM:\n      newcp = GetOEMCP();\n      break;\n    case _MB_CP_LOCALE:\n      newcp = get_locinfo()->lc_codepage;\n      if(newcp)\n          break;\n      /* fall through (C locale) */\n    case _MB_CP_SBCS:\n      newcp = 20127;   /* ASCII */\n      break;\n    default:\n      newcp = cp;\n      break;\n  }\n\n  if(lcid == -1) {\n    WCHAR wbuf[LOCALE_NAME_MAX_LENGTH];\n    sprintf(bufA, \".%d\", newcp);\n    mbcinfo->mblcid = locale_to_sname(bufA, NULL, NULL, wbuf) ? LocaleNameToLCID(wbuf, LOCALE_ALLOW_NEUTRAL_NAMES) : -1;\n  } else {\n    mbcinfo->mblcid = lcid;\n  }\n\n  if(mbcinfo->mblcid == -1)\n  {\n    WARN(\"Can't assign LCID to codepage (%d)\\n\", mbcinfo->mblcid);\n    mbcinfo->mblcid = 0;\n  }\n\n  if (!GetCPInfo(newcp, &cpi))\n  {\n    WARN(\"Codepage %d not found\\n\", newcp);\n    free(mbcinfo);\n    return NULL;\n  }\n\n  /* setup the _mbctype */\n  memset(mbcinfo->mbctype, 0, sizeof(unsigned char[257]));\n  memset(mbcinfo->mbcasemap, 0, sizeof(unsigned char[256]));\n\n  bytes = cpi.LeadByte;\n  while (bytes[0] || bytes[1])\n  {\n    for (i = bytes[0]; i <= bytes[1]; i++)\n      mbcinfo->mbctype[i + 1] |= _M1;\n    bytes += 2;\n  }\n\n  if (cpi.MaxCharSize == 2)\n  {\n    /* trail bytes not available through kernel32 but stored in a structure in msvcrt */\n    struct cp_extra_info_t *cpextra = g_cpextrainfo;\n\n    mbcinfo->ismbcodepage = 1;\n    while (TRUE)\n    {\n      if (cpextra->cp == 0 || cpextra->cp == newcp)\n      {\n        if (cpextra->cp == 0)\n          FIXME(\"trail bytes data not available for DBCS codepage %d - assuming all bytes\\n\", newcp);\n\n        bytes = cpextra->TrailBytes;\n        while (bytes[0] || bytes[1])\n        {\n          for (i = bytes[0]; i <= bytes[1]; i++)\n            mbcinfo->mbctype[i + 1] |= _M2;\n          bytes += 2;\n        }\n        break;\n      }\n      cpextra++;\n    }\n  }\n  else\n    mbcinfo->ismbcodepage = 0;\n\n  maxchar = (newcp == CP_UTF8) ? 128 : 256;\n\n  /* we can't use GetStringTypeA directly because we don't have a locale - only a code page\n   */\n  charcount = 0;\n  for (i = 0; i < maxchar; i++)\n    if (!(mbcinfo->mbctype[i + 1] & _M1))\n      bufA[charcount++] = i;\n\n  ret = MultiByteToWideChar(newcp, 0, bufA, charcount, bufW, charcount);\n  if (ret != charcount)\n  {\n    ERR(\"MultiByteToWideChar of chars failed for cp %d, ret=%d (exp %d), error=%ld\\n\",\n            newcp, ret, charcount, GetLastError());\n  }\n\n  GetStringTypeW(CT_CTYPE1, bufW, charcount, chartypes);\n  LCMapStringW(mbcinfo->mblcid, LCMAP_LOWERCASE, bufW, charcount, lowW, charcount);\n  LCMapStringW(mbcinfo->mblcid, LCMAP_UPPERCASE, bufW, charcount, upW, charcount);\n\n  charcount = 0;\n  for (i = 0; i < maxchar; i++)\n    if (!(mbcinfo->mbctype[i + 1] & _M1))\n    {\n      if (chartypes[charcount] & C1_UPPER)\n      {\n        mbcinfo->mbctype[i + 1] |= _SBUP;\n        bufW[charcount] = lowW[charcount];\n      }\n      else if (chartypes[charcount] & C1_LOWER)\n      {\n\tmbcinfo->mbctype[i + 1] |= _SBLOW;\n        bufW[charcount] = upW[charcount];\n      }\n      charcount++;\n    }\n\n  ret = WideCharToMultiByte(newcp, 0, bufW, charcount, bufA, charcount, NULL, NULL);\n  if (ret != charcount)\n  {\n    ERR(\"WideCharToMultiByte failed for cp %d, ret=%d (exp %d), error=%ld\\n\",\n            newcp, ret, charcount, GetLastError());\n  }\n\n  charcount = 0;\n  for (i = 0; i < maxchar; i++)\n  {\n    if(!(mbcinfo->mbctype[i + 1] & _M1))\n    {\n      if(mbcinfo->mbctype[i + 1] & (_SBUP | _SBLOW))\n        mbcinfo->mbcasemap[i] = bufA[charcount];\n      charcount++;\n    }\n  }\n\n  if (newcp == 932)   /* CP932 only - set _MP and _MS */\n  {\n    /* On Windows it's possible to calculate the _MP and _MS from CT_CTYPE1\n     * and CT_CTYPE3. But as of Wine 0.9.43 we return wrong values what makes\n     * it hard. As this is set only for codepage 932 we hardcode it what gives\n     * also faster execution.\n     */\n    for (i = 161; i <= 165; i++)\n      mbcinfo->mbctype[i + 1] |= _MP;\n    for (i = 166; i <= 223; i++)\n      mbcinfo->mbctype[i + 1] |= _MS;\n  }\n\n  mbcinfo->mbcodepage = newcp;\n  return mbcinfo;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "cp_extra_info_t",
+    "kind": "struct_decl",
+    "start_line": 42,
+    "end_line": 46,
+    "code": "struct cp_extra_info_t\n{\n    int cp;\n    BYTE TrailBytes[MAX_LEADBYTES];\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "MSVCRT_mbctype",
+    "type": "unsigned char[257]",
+    "static": false,
+    "start_line": 38,
+    "end_line": 38,
+    "code": "unsigned char MSVCRT_mbctype[257] = { 0 };"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(msvcrt);"
+   },
+   {
+    "name": "g_cpextrainfo",
+    "type": "struct cp_extra_info_t[7]",
+    "static": true,
+    "start_line": 48,
+    "end_line": 57,
+    "code": "static struct cp_extra_info_t g_cpextrainfo[] =\n{\n    {932, {0x40, 0x7e, 0x80, 0xfc, 0, 0}},\n    {936, {0x40, 0xfe, 0, 0}},\n    {949, {0x41, 0xfe, 0, 0}},\n    {950, {0x40, 0x7e, 0xa1, 0xfe, 0, 0}},\n    {1361, {0x31, 0x7e, 0x81, 0xfe, 0, 0}},\n    {20932, {1, 255, 0, 0}},  /* seems to give different results on different systems */\n    {0, {1, 255, 0, 0}}       /* match all with FIXME */\n};"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "free_mbcinfo",
+    "file": "dlls/msvcrt/locale.c",
+    "start_line": 1138
+   },
+   {
+    "name": "get_locinfo",
+    "file": "dlls/msvcrt/locale.c",
+    "start_line": 635
+   },
+   {
+    "name": "get_mbcinfo",
+    "file": "dlls/msvcrt/locale.c",
+    "start_line": 642
+   },
+   {
+    "name": "locale_to_sname",
+    "file": "dlls/msvcrt/locale.c",
+    "start_line": 335
+   },
+   {
+    "name": "msvcrt_get_thread_data",
+    "file": "dlls/msvcrt/thread.c",
+    "start_line": 45
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "_errno",
+    "impl": [
+     "dlls/msvcrt/errno.c:214"
+    ]
+   },
+   {
+    "name": "_lock",
+    "impl": [
+     "dlls/msvcrt/lock.c:85"
+    ]
+   },
+   {
+    "name": "_unlock",
+    "impl": [
+     "dlls/msvcrt/lock.c:114"
+    ]
+   },
+   {
+    "name": "free",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "impl": [
+     "dlls/msvcrt/string.c:3161"
+    ]
+   },
+   {
+    "name": "memset",
+    "impl": [
+     "dlls/msvcrt/string.c:3194"
+    ]
+   },
+   {
+    "name": "sprintf",
+    "impl": [
+     "dlls/msvcrt/wcs.c:1598"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "GetACP",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:5580"
+    ]
+   },
+   {
+    "name": "GetCPInfo",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:5589"
+    ]
+   },
+   {
+    "name": "GetOEMCP",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:6187"
+    ]
+   },
+   {
+    "name": "GetStringTypeW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:6236"
+    ]
+   },
+   {
+    "name": "LCMapStringW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7038"
+    ]
+   },
+   {
+    "name": "LocaleNameToLCID",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7051"
+    ]
+   },
+   {
+    "name": "MultiByteToWideChar",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7070"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetLastError",
+   "_InterlockedIncrement",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "msvcrt._setmbcp",
+  "category": {
+   "l1": "C runtime library",
+   "l2": "Other CRT routines",
+   "header": "",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "default"
+  },
+  "loc": {
+   "total": 28,
+   "body": 27,
+   "code": 17
+  },
+  "cyclomatic": 4,
+  "return_type": "int",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 25,
+   "n_tests": 26,
+   "n_tests_other": 1,
+   "own_test_functions": [
+    "dlls/msvcr80/tests/msvcr80.c::test__mbsncpy_s",
+    "dlls/msvcr90/tests/msvcr90.c::test__get_current_locale",
+    "dlls/msvcrt/tests/dir.c::test_splitpath",
+    "dlls/msvcrt/tests/string.c::test__ismbclx",
+    "dlls/msvcrt/tests/string.c::test__mbbtype",
+    "dlls/msvcrt/tests/string.c::test__mbscat_s",
+    "dlls/msvcrt/tests/string.c::test__mbslwr_s",
+    "dlls/msvcrt/tests/string.c::test__mbsupr_s",
+    "dlls/msvcrt/tests/string.c::test_btowc",
+    "dlls/msvcrt/tests/string.c::test_codepage",
+    "dlls/msvcrt/tests/string.c::test_cp_table",
+    "dlls/msvcrt/tests/string.c::test_mbbtombc",
+    "dlls/msvcrt/tests/string.c::test_mbcjisjms",
+    "dlls/msvcrt/tests/string.c::test_mbcjmsjis",
+    "dlls/msvcrt/tests/string.c::test_mbcp",
+    "dlls/msvcrt/tests/string.c::test_mbctohira",
+    "dlls/msvcrt/tests/string.c::test_mbctokata",
+    "dlls/msvcrt/tests/string.c::test_mbctombb",
+    "dlls/msvcrt/tests/string.c::test_mbsrev",
+    "dlls/msvcrt/tests/string.c::test_mbsspn",
+    "dlls/msvcrt/tests/string.c::test_mbsspnp",
+    "dlls/msvcrt/tests/string.c::test_wctob",
+    "dlls/ucrtbase/tests/string.c::test__mbbtype_l",
+    "dlls/ucrtbase/tests/string.c::test__mbsncpy_s",
+    "dlls/ucrtbase/tests/string.c::test_mbsspn"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/cpp/c-runtime-library/reference/setmbcp",
+   "source": "crt",
+   "description": "Learn more about: _setmbcp",
+   "min_windows": "",
+   "documented_dll": ""
+  },
+  "exports": [
+   "msvcr120._setmbcp",
+   "msvcr120_app._setmbcp",
+   "msvcr80._setmbcp",
+   "msvcr90._setmbcp",
+   "msvcrt._setmbcp",
+   "msvcrt20._setmbcp",
+   "msvcrt40._setmbcp",
+   "ucrtbase._o__setmbcp",
+   "ucrtbase._setmbcp"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 6,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

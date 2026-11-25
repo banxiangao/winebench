@@ -1,0 +1,220 @@
+{
+ "id": "0146",
+ "function": {
+  "name": "GetTempPathW",
+  "export_name": "GetTempPathW",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase",
+   "unicows"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/file.c",
+  "start_line": 2549,
+  "end_line": 2596,
+  "body_lines": 45,
+  "signature": "DWORD WINAPI DECLSPEC_HOTPATCH GetTempPathW( DWORD count, LPWSTR path )",
+  "header_comment": "/***********************************************************************\n *\tGetTempPathW   (kernelbase.@)\n */",
+  "code": "DWORD WINAPI DECLSPEC_HOTPATCH GetTempPathW( DWORD count, LPWSTR path )\n{\n    WCHAR tmp_path[MAX_PATH];\n    UINT ret;\n\n    if (!(ret = GetEnvironmentVariableW( L\"TMP\", tmp_path, MAX_PATH )) &&\n        !(ret = GetEnvironmentVariableW( L\"TEMP\", tmp_path, MAX_PATH )) &&\n        !(ret = GetEnvironmentVariableW( L\"USERPROFILE\", tmp_path, MAX_PATH )) &&\n        !(ret = GetWindowsDirectoryW( tmp_path, MAX_PATH )))\n        return 0;\n\n    if (ret > MAX_PATH)\n    {\n        SetLastError( ERROR_FILENAME_EXCED_RANGE );\n        return 0;\n    }\n    ret = GetFullPathNameW( tmp_path, MAX_PATH, tmp_path, NULL );\n    if (!ret) return 0;\n\n    if (ret > MAX_PATH - 2)\n    {\n        SetLastError( ERROR_FILENAME_EXCED_RANGE );\n        return 0;\n    }\n    if (tmp_path[ret-1] != '\\\\')\n    {\n        tmp_path[ret++] = '\\\\';\n        tmp_path[ret]   = '\\0';\n    }\n\n    ret++; /* add space for terminating 0 */\n    if (count >= ret)\n    {\n        lstrcpynW( path, tmp_path, count );\n        /* the remaining buffer must be zeroed up to 32766 bytes in XP or 32767\n         * bytes after it, we will assume the > XP behavior for now */\n        memset( path + ret, 0, (min(count, 32767) - ret) * sizeof(WCHAR) );\n        ret--; /* return length without 0 */\n    }\n    else if (count)\n    {\n        /* the buffer must be cleared if contents will not fit */\n        memset( path, 0, count * sizeof(WCHAR) );\n    }\n\n    TRACE( \"returning %u, %s\\n\", ret, debugstr_w( path ));\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include \"winerror.h\"",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"wincon.h\"",
+   "#include \"fileapi.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"ddk/ntddser.h\"",
+   "#include \"ioringapi.h\"",
+   "#include \"ddk/ntifs.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!GetTempPathW [stdcall -import] -> import from kernelbase",
+   "kernelbase!GetTempPathW [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/actctx.c",
+   "dlls/kernel32/tests/change.c",
+   "dlls/kernel32/tests/directory.c",
+   "dlls/kernel32/tests/file.c",
+   "dlls/kernel32/tests/loader.c",
+   "dlls/kernel32/tests/module.c",
+   "dlls/kernel32/tests/path.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 30
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "fileapi",
+   "path": "sdk-api-src/content/fileapi/nf-fileapi-gettemppathw.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/fileapi/nf-fileapi-gettemppathw",
+   "documented_name": "gettemppathw",
+   "file": "docs/0146_sdk-api_nf-fileapi-gettemppathw.md",
+   "text": "---\nUID: NF:fileapi.GetTempPathW\ntitle: GetTempPathW function (fileapi.h)\ndescription: Retrieves the path of the directory designated for temporary files. (Unicode)\nhelpviewer_keywords: [\"GetTempPath\", \"GetTempPath function [Files]\", \"GetTempPathW\", \"_win32_gettemppath\", \"base.gettemppath\", \"fileapi/GetTempPath\", \"fileapi/GetTempPathW\", \"fs.gettemppath\"]\nold-location: fs\\gettemppath.htm\ntech.root: fs\nms.assetid: fb366f0d-df6b-44c2-92c9-b7a8e2583054\nms.date: 12/05/2018\nms.keywords: GetTempPath, GetTempPath function [Files], GetTempPathA, GetTempPathW, _win32_gettemppath, base.gettemppath, fileapi/GetTempPath, fileapi/GetTempPathA, fileapi/GetTempPathW, fs.gettemppath, winbase/GetTempPath, winbase/GetTempPathA, winbase/GetTempPathW\nreq.header: fileapi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: GetTempPathW (Unicode) and GetTempPathA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetTempPathW\n - fileapi/GetTempPathW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-file-l1-2-5.dll\n - api-ms-win-core-file-l1-2-4.dll\n - api-ms-win-core-file-l1-2-3.dll\n - Kernel32.dll\n - API-MS-Win-Core-Kernel32-Legacy-l1-1-0.dll\n - kernel32legacy.dll\n - API-MS-Win-Core-Kernel32-Legacy-l1-1-1.dll\n - API-MS-Win-Core-Kernel32-Legacy-l1-1-2.dll\n - API-MS-Win-DownLevel-Kernel32-l2-1-0.dll\n - API-MS-Win-Core-File-l1-2-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-File-l1-2-1.dll\n - API-MS-Win-Core-File-l1-2-2.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\n - API-MS-Win-Core-Kernel32-Legacy-L1-1-3.dll\n - API-MS-Win-Core-Kernel32-Legacy-L1-1-4.dll\n - API-MS-Win-Core-Kernel32-Legacy-L1-1-5.dll\napi_name:\n - GetTempPath\n - GetTempPathA\n - GetTempPathW\n---\n\n# GetTempPathW function\n\n\n## -description\n\nRetrieves the path of the directory designated for temporary files.\n\n## -parameters\n\n### -param nBufferLength [in]\n\nThe size of the string buffer identified by <i>lpBuffer</i>, in \n      <b>TCHARs</b>.\n\n### -param lpBuffer [out]\n\nA pointer to a string buffer that receives the null-terminated string specifying the temporary file path. \n      The returned string ends with a backslash, for example, \"C:\\\\TEMP\\\\\".\n\n## -returns\n\nIf the function succeeds, the return value is the length, in <b>TCHARs</b>, of the \n       string copied to <i>lpBuffer</i>, not including the terminating null character. If the \n       return value is greater than <i>nBufferLength</i>, the return value is the length, in \n       <b>TCHARs</b>, of the buffer required to hold the path.\n\nIf the function fails, the return value is zero. To get extended error information, call \n       <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\nThe maximum possible return value is <b>MAX_PATH</b>+1 (261).\n\n## -remarks\n\n> [!NOTE]\n> Apps should call [GetTempPath2](/windows/win32/api/fileapi/nf-fileapi-gettemppath2w) instead of **GetTempPath**. \n\nThe <b>GetTempPath</b> function checks for the existence of \n    environment variables in the following order and uses the first path found:\n\n<ol>\n<li>The path specified by the TMP environment variable.</li>\n<li>The path specified by the TEMP environment variable.</li>\n<li>The path specified by the USERPROFILE environment variable.</li>\n<li>The Windows directory.</li>\n</ol>\nNote that the function does not verify that the path exists, nor does it test to see if the current process has \n     any kind of access rights to the path. The <b>GetTempPath</b> \n     function returns the properly formatted string that specifies the fully qualified path based on the environment \n     variable search order as previously specified. The application should verify the existence of the path and \n     adequate access rights to the path prior to any use for file I/O operations.\n\nSymbolic link behavior—If the path points to a symbolic link, the temp path name \n    maintains any symbolic links.\n\nIn Windows 8 and Windows Server 2012, this function is supported by the following technologies.\n\n<table>\n<tr>\n<th>Technology</th>\n<th>Supported</th>\n</tr>\n<tr>\n<td>\nServer Message Block (SMB) 3.0 protocol\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nSMB 3.0 Transparent Failover (TFO)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nSMB 3.0 with Scale-out File Shares (SO)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nCluster Shared Volume File System (CsvFS)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nResilient File System (ReFS)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n</table>\n \n\n\n#### Examples\n\nFor an example, see \n     <a href=\"/windows/desktop/FileIO/creating-and-using-a-temporary-file\">Creating and Using a Temporary File</a>.\n\n<div class=\"code\"></div>\n\n\n\n\n> [!NOTE]\n> The fileapi.h header defines GetTempPath as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/FileIO/file-management-functions\">File Management Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-gettempfilenamea\">GetTempFileName</a>\n\n\n\n<a href=\"/windows/desktop/FileIO/symbolic-links\">Symbolic Links</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(file);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetEnvironmentVariableW",
+    "impl": [
+     "dlls/kernelbase/process.c:1693"
+    ]
+   },
+   {
+    "name": "GetFullPathNameW",
+    "impl": [
+     "dlls/kernelbase/file.c:2091"
+    ]
+   },
+   {
+    "name": "GetWindowsDirectoryW",
+    "impl": [
+     "dlls/kernelbase/file.c:2633"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   },
+   {
+    "name": "lstrcpynW",
+    "impl": [
+     "dlls/kernelbase/string.c:120"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_w",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "kernelbase.GetTempPathW",
+  "category": {
+   "l1": "Data access and storage",
+   "l2": "Files and I/O",
+   "header": "fileapi.h",
+   "textbook": "File management",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 48,
+   "body": 47,
+   "code": 27
+  },
+  "cyclomatic": 11,
+  "return_type": "DWORD",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 30,
+   "n_tests": 148,
+   "n_tests_other": 118,
+   "own_test_functions": [
+    "dlls/kernel32/tests/actctx.c::create_temp_manifest_file",
+    "dlls/kernel32/tests/actctx.c::test_CreateActCtx",
+    "dlls/kernel32/tests/change.c::test_ffcn",
+    "dlls/kernel32/tests/change.c::test_readdirectorychanges",
+    "dlls/kernel32/tests/change.c::test_readdirectorychanges_cr",
+    "dlls/kernel32/tests/change.c::test_readdirectorychanges_filedir",
+    "dlls/kernel32/tests/change.c::test_readdirectorychanges_null",
+    "dlls/kernel32/tests/directory.c::test_CreateDirectoryW",
+    "dlls/kernel32/tests/directory.c::test_RemoveDirectoryW",
+    "dlls/kernel32/tests/file.c::test_CopyFile2",
+    "dlls/kernel32/tests/file.c::test_CopyFileW",
+    "dlls/kernel32/tests/file.c::test_CreateFile2",
+    "dlls/kernel32/tests/file.c::test_CreateFileW",
+    "dlls/kernel32/tests/file.c::test_DeleteFileW",
+    "dlls/kernel32/tests/file.c::test_GetFinalPathNameByHandleW",
+    "dlls/kernel32/tests/file.c::test_MoveFileW",
+    "dlls/kernel32/tests/file.c::test_ReplaceFileW",
+    "dlls/kernel32/tests/file.c::test_SetFileRenameInfo",
+    "dlls/kernel32/tests/file.c::test_SetFileTime",
+    "dlls/kernel32/tests/file.c::test_posix_semantics",
+    "dlls/kernel32/tests/file.c::test_symbolic_link",
+    "dlls/kernel32/tests/loader.c::init_load_path",
+    "dlls/kernel32/tests/loader.c::test_import_resolution",
+    "dlls/kernel32/tests/module.c::test_AddDllDirectory",
+    "dlls/kernel32/tests/path.c::create_manifest_file",
+    "dlls/kernel32/tests/path.c::test_GetLongPathNameW",
+    "dlls/kernel32/tests/path.c::test_GetShortPathNameW",
+    "dlls/kernel32/tests/path.c::test_GetTempPathW",
+    "dlls/kernel32/tests/path.c::test_SearchPathW",
+    "dlls/kernel32/tests/path.c::test_create"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/fileapi/nf-fileapi-gettemppathw",
+   "source": "win32",
+   "description": "Retrieves the path of the directory designated for temporary files. (Unicode)",
+   "min_windows": "Windows XP [desktop apps \\| UWP apps]",
+   "documented_dll": "Kernel32.dll"
+  },
+  "exports": [
+   "kernel32.GetTempPathW",
+   "kernelbase.GetTempPathW",
+   "shlwapi.GetTempPathWrapW",
+   "unicows.GetTempPathW"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

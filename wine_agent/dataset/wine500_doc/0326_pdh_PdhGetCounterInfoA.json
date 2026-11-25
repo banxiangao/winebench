@@ -1,0 +1,132 @@
+{
+ "id": "0326",
+ "function": {
+  "name": "PdhGetCounterInfoA",
+  "export_name": "PdhGetCounterInfoA",
+  "module": "pdh",
+  "source_module": "pdh",
+  "exported_by": [
+   "pdh"
+  ],
+  "side": "PE",
+  "file": "dlls/pdh/pdh_main.c",
+  "start_line": 612,
+  "end_line": 649,
+  "body_lines": 35,
+  "signature": "PDH_STATUS WINAPI PdhGetCounterInfoA( PDH_HCOUNTER handle, BOOLEAN text, LPDWORD size, PPDH_COUNTER_INFO_A info )",
+  "header_comment": "/***********************************************************************\n *              PdhGetCounterInfoA   (PDH.@)\n */",
+  "code": "PDH_STATUS WINAPI PdhGetCounterInfoA( PDH_HCOUNTER handle, BOOLEAN text, LPDWORD size, PPDH_COUNTER_INFO_A info )\n{\n    struct counter *counter = handle;\n\n    TRACE(\"%p %d %p %p\\n\", handle, text, size, info);\n\n    EnterCriticalSection( &pdh_handle_cs );\n    if (!counter || counter->magic != PDH_MAGIC_COUNTER)\n    {\n        LeaveCriticalSection( &pdh_handle_cs );\n        return PDH_INVALID_HANDLE;\n    }\n    if (!size)\n    {\n        LeaveCriticalSection( &pdh_handle_cs );\n        return PDH_INVALID_ARGUMENT;\n    }\n    if (*size < sizeof(PDH_COUNTER_INFO_A))\n    {\n        *size = sizeof(PDH_COUNTER_INFO_A);\n        LeaveCriticalSection( &pdh_handle_cs );\n        return PDH_MORE_DATA;\n    }\n\n    memset( info, 0, sizeof(PDH_COUNTER_INFO_A) );\n\n    info->dwType          = counter->type;\n    info->CStatus         = counter->status;\n    info->lScale          = counter->scale;\n    info->lDefaultScale   = counter->defaultscale;\n    info->dwUserData      = counter->user;\n    info->dwQueryUserData = counter->queryuser;\n\n    *size = sizeof(PDH_COUNTER_INFO_A);\n\n    LeaveCriticalSection( &pdh_handle_cs );\n    return ERROR_SUCCESS;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <math.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"pdh.h\"",
+   "#include \"pdhmsg.h\"",
+   "#include \"winperf.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\""
+  ],
+  "resolution": [
+   "pdh!PdhGetCounterInfoA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/pdh/tests/pdh.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "pdh",
+   "path": "sdk-api-src/content/pdh/nf-pdh-pdhgetcounterinfoa.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/pdh/nf-pdh-pdhgetcounterinfoa",
+   "documented_name": "pdhgetcounterinfoa",
+   "file": "docs/0326_sdk-api_nf-pdh-pdhgetcounterinfoa.md",
+   "text": "---\nUID: NF:pdh.PdhGetCounterInfoA\ntitle: PdhGetCounterInfoA function (pdh.h)\ndescription: Retrieves information about a counter, such as data size, counter type, path, and user-supplied data values. (ANSI)\nhelpviewer_keywords: [\"PdhGetCounterInfoA\", \"pdh/PdhGetCounterInfoA\"]\nold-location: perf\\pdhgetcounterinfo.htm\ntech.root: perf\nms.assetid: 12e1a194-5418-4c2a-9853-ef2d2c666893\nms.date: 12/05/2018\nms.keywords: PdhGetCounterInfo, PdhGetCounterInfo function [Perf], PdhGetCounterInfoA, PdhGetCounterInfoW, _win32_pdhgetcounterinfo, base.pdhgetcounterinfo, pdh/PdhGetCounterInfo, pdh/PdhGetCounterInfoA, pdh/PdhGetCounterInfoW, perf.pdhgetcounterinfo\nreq.header: pdh.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: PdhGetCounterInfoW (Unicode) and PdhGetCounterInfoA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Pdh.lib\nreq.dll: Pdh.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - PdhGetCounterInfoA\n - pdh/PdhGetCounterInfoA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Pdh.dll\napi_name:\n - PdhGetCounterInfo\n - PdhGetCounterInfoA\n - PdhGetCounterInfoW\n---\n\n# PdhGetCounterInfoA function\n\n\n## -description\n\nRetrieves information about a counter, such as data size, counter type, path, and user-supplied data values.\n\n## -parameters\n\n### -param hCounter [in]\n\nHandle of the counter from which you want to retrieve information. The \n<a href=\"/windows/desktop/api/pdh/nf-pdh-pdhaddcountera\">PdhAddCounter</a> function returns this handle.\n\n### -param bRetrieveExplainText [in]\n\nDetermines whether explain text is retrieved. If you set this parameter to <b>TRUE</b>, the explain text for the counter is retrieved. If you set this parameter to <b>FALSE</b>, the field in the returned buffer is <b>NULL</b>.\n\n### -param pdwBufferSize [in, out]\n\nSize of the <i>lpBuffer</i> buffer, in bytes. If zero on input, the function returns PDH_MORE_DATA and sets this parameter to the required buffer size. If the buffer is larger than the required size, the function sets this parameter to the actual size of the buffer that was used. If the specified size on input is greater than zero but less than the required size, you should not rely on the returned size to reallocate the buffer.\n\n### -param lpBuffer [out]\n\nCaller-allocated buffer that receives a \n<a href=\"/windows/desktop/api/pdh/ns-pdh-pdh_counter_info_a\">PDH_COUNTER_INFO</a> structure. The structure is variable-length, because the string data is appended to the end of the fixed-format portion of the structure. This is done so that all data is returned in a single buffer allocated by the caller. Set to <b>NULL</b> if <i>pdwBufferSize</i> is zero.\n\n## -returns\n\nIf the function succeeds, it returns ERROR_SUCCESS.\n\t\t\t\t\t\t\n\nIf the function fails, the return value is a \n<a href=\"/windows/desktop/Debug/system-error-codes\">system error code</a> or a \n<a href=\"/windows/desktop/PerfCtrs/pdh-error-codes\">PDH error code</a>. The following are possible values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>PDH_INVALID_ARGUMENT</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA parameter is not valid or is incorrectly formatted. For example, on some releases you could receive this error if the specified size on input is greater than zero but less than the required size.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>PDH_INVALID_HANDLE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe counter handle is not valid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>PDH_MORE_DATA</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <i>lpBuffer</i> buffer is too small to hold the counter information. This return value is expected if <i>pdwBufferSize</i> is zero on input. If the specified size on input is greater than zero but less than the required size, you should not rely on the returned size to reallocate the buffer.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nYou should call this function twice, the first time to get the required buffer size (set <i>lpBuffer</i> to <b>NULL</b> and <i>pdwBufferSize</i> to 0), and the second time to get the data.\n\n\n\n\n\n> [!NOTE]\n> The pdh.h header defines PdhGetCounterInfo as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/api/pdh/ns-pdh-pdh_counter_info_a\">PDH_COUNTER_INFO</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "counter",
+    "kind": "struct_decl",
+    "start_line": 66,
+    "end_line": 82,
+    "code": "struct counter\n{\n    DWORD           magic;                          /* signature */\n    struct list     entry;                          /* list entry */\n    WCHAR          *path;                           /* identifier */\n    DWORD           type;                           /* counter type */\n    DWORD           status;                         /* update status */\n    LONG            scale;                          /* scale factor */\n    LONG            defaultscale;                   /* default scale factor */\n    DWORD_PTR       user;                           /* user data */\n    DWORD_PTR       queryuser;                      /* query user data */\n    LONGLONG        base;                           /* samples per second */\n    FILETIME        stamp;                          /* time stamp */\n    void (CALLBACK *collect)( struct counter * );   /* collect callback */\n    union value     one;                            /* first value */\n    union value     two;                            /* second value */\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(pdh);"
+   },
+   {
+    "name": "pdh_handle_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 46,
+    "end_line": 46,
+    "code": "static CRITICAL_SECTION pdh_handle_cs = { &pdh_handle_cs_debug, -1, 0, 0, 0, 0 };"
+   }
+  ],
+  "macros": [
+   {
+    "name": "PDH_MAGIC_COUNTER",
+    "start_line": 84,
+    "end_line": 84,
+    "code": "#define PDH_MAGIC_COUNTER   0x50444831 /* 'PDH1' */"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

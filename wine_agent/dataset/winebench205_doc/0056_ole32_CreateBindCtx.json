@@ -1,0 +1,169 @@
+{
+ "id": "0056",
+ "function": {
+  "name": "CreateBindCtx",
+  "export_name": "CreateBindCtx",
+  "module": "ole32",
+  "source_module": "ole32",
+  "exported_by": [
+   "ole32"
+  ],
+  "side": "PE",
+  "file": "dlls/ole32/bindctx.c",
+  "start_line": 490,
+  "end_line": 519,
+  "body_lines": 27,
+  "signature": "HRESULT WINAPI CreateBindCtx(DWORD reserved, IBindCtx **bind_context)",
+  "header_comment": "/******************************************************************************\n *        CreateBindCtx (OLE32.@)\n */",
+  "code": "HRESULT WINAPI CreateBindCtx(DWORD reserved, IBindCtx **bind_context)\n{\n    BindCtxImpl *object;\n\n    TRACE(\"%#lx, %p.\\n\", reserved, bind_context);\n\n    if (!bind_context) return E_INVALIDARG;\n\n    *bind_context = NULL;\n\n    if (reserved)\n    {\n        WARN(\"reserved should be 0, not %#lx.\\n\", reserved);\n        return E_INVALIDARG;\n    }\n\n    if (!(object = calloc(1, sizeof(*object))))\n        return E_OUTOFMEMORY;\n\n    object->IBindCtx_iface.lpVtbl = &VT_BindCtxImpl;\n    object->ref = 1;\n    object->options.cbStruct = sizeof(object->options);\n    object->options.grfMode = STGM_READWRITE;\n    object->options.dwClassContext = CLSCTX_SERVER;\n    object->options.locale = GetThreadLocale();\n\n    *bind_context = &object->IBindCtx_iface;\n\n    return S_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include \"winerror.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"objbase.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "ole32!CreateBindCtx [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ole32/tests/moniker.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 11
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "objbase",
+   "path": "sdk-api-src/content/objbase/nf-objbase-createbindctx.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/objbase/nf-objbase-createbindctx",
+   "documented_name": "createbindctx",
+   "file": "docs/0056_sdk-api_nf-objbase-createbindctx.md",
+   "text": "---\nUID: NF:objbase.CreateBindCtx\ntitle: CreateBindCtx function (objbase.h)\ndescription: Returns a pointer to an implementation of IBindCtx (a bind context object). This object stores information about a particular moniker-binding operation.\nhelpviewer_keywords: [\"CreateBindCtx\",\"CreateBindCtx function [COM]\",\"_com_CreateBindCtx\",\"com.createbindctx\",\"objbase/CreateBindCtx\"]\nold-location: com\\createbindctx.htm\ntech.root: com\nms.assetid: 0f0ded09-7a7c-40bb-8198-b9f5058827d4\nms.date: 12/05/2018\nms.keywords: CreateBindCtx, CreateBindCtx function [COM], _com_CreateBindCtx, com.createbindctx, objbase/CreateBindCtx\nreq.header: objbase.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ole32.lib\nreq.dll: Ole32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CreateBindCtx\n - objbase/CreateBindCtx\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Ole32.dll\n - API-MS-Win-OLE32-IE-l1-1-0.dll\n - ole32_wp.dll\n - Ext-MS-Win-OLE32-bindctx-l1-1-0.dll\napi_name:\n - CreateBindCtx\n---\n\n# CreateBindCtx function\n\n\n## -description\n\nReturns a pointer to an implementation of <a href=\"/windows/desktop/api/objidl/nn-objidl-ibindctx\">IBindCtx</a> (a bind context object). This object stores information about a particular moniker-binding operation.\n\n## -parameters\n\n### -param reserved [in]\n\nThis parameter is reserved and must be 0.\n\n### -param ppbc [out]\n\nAddress of an <a href=\"/windows/desktop/api/objidl/nn-objidl-ibindctx\">IBindCtx</a>* pointer variable that receives the interface pointer to the new bind context object. When the function is successful, the caller is responsible for calling <a href=\"/windows/desktop/api/unknwn/nf-unknwn-iunknown-release\">Release</a> on the bind context. A <b>NULL</b> value for the bind context indicates that an error occurred.\n\n## -returns\n\nThis function can return the standard return values E_OUTOFMEMORY and S_OK.\n\n## -remarks\n\n<b>CreateBindCtx</b> is most commonly used in the process of binding a moniker (locating and getting a pointer to an interface by identifying it through a moniker), as in the following steps:\n\n<ol>\n<li>Get a pointer to a bind context by calling the <b>CreateBindCtx</b> function.\n</li>\n<li>Call the <a href=\"/windows/desktop/api/objidl/nf-objidl-imoniker-bindtoobject\">IMoniker::BindToObject</a> method on the moniker, retrieving an interface pointer to the object to which the moniker refers. \n</li>\n<li>Release the bind context.</li>\n<li>Use the interface pointer.</li>\n<li>Release the interface pointer.</li>\n</ol>\nThe following code fragment illustrates these steps.\n\n\n``` syntax\n// pMnk is an IMoniker * that points to a previously acquired moniker\nIInterface *pInterface;\nIBindCtx *pbc;\n \nCreateBindCtx( 0, &pbc );\npMnk->BindToObject( pbc, NULL, IID_IInterface, &pInterface );\npbc->Release();\n\n// pInterface now points to the object; safe to use pInterface\npInterface->Release();\n```\n\nBind contexts are also used in other methods of the <a href=\"/windows/desktop/api/objidl/nn-objidl-imoniker\">IMoniker</a> interface besides <a href=\"/windows/desktop/api/objidl/nf-objidl-imoniker-bindtoobject\">IMoniker::BindToObject</a> and in the <a href=\"/windows/desktop/api/objbase/nf-objbase-mkparsedisplayname\">MkParseDisplayName</a> function. \n\nA bind context retains references to the objects that are bound during the binding operation, causing the bound objects to remain active (keeping the object's server running) until the bind context is released. Reusing a bind context when subsequent operations bind to the same object can improve performance. You should, however, release the bind context as soon as possible, because you could be keeping the objects activated unnecessarily.\n\nA bind context contains a <a href=\"/windows/desktop/api/objidl/ns-objidl-bind_opts\">BIND_OPTS</a> structure, which contains parameters that apply to all steps in a binding operation. When you create a bind context using <b>CreateBindCtx</b>, the fields of the <b>BIND_OPTS</b> structure are initialized as follows.\n\n\n``` syntax\ncbStruct = sizeof(BIND_OPTS) \ngrfFlags = 0 \ngrfMode = STGM_READWRITE \ndwTickCountDeadline = 0\n```\n\nYou can call the <a href=\"/windows/desktop/api/objidl/nf-objidl-ibindctx-setbindoptions\">IBindCtx::SetBindOptions</a> method to modify these default values.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/objidl/nn-objidl-ibindctx\">IBindCtx</a>\n\n\n\n<a href=\"/windows/desktop/api/objidl/nn-objidl-imoniker\">IMoniker</a>\n\n\n\n<a href=\"/windows/desktop/api/objbase/nf-objbase-mkparsedisplayname\">MkParseDisplayName</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "BindCtxImpl",
+    "kind": "typedef_decl",
+    "start_line": 50,
+    "end_line": 62,
+    "code": "typedef struct BindCtxImpl{\n\n    IBindCtx IBindCtx_iface;\n\n    LONG ref; /* reference counter for this object */\n\n    BindCtxObject* bindCtxTable; /* this is a table in which all bounded objects are stored*/\n    DWORD          bindCtxTableLastIndex;  /* first free index in the table */\n    DWORD          bindCtxTableSize;   /* size table */\n\n    BIND_OPTS3 options;\n\n} BindCtxImpl;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "VT_BindCtxImpl",
+    "type": "const IBindCtxVtbl",
+    "static": true,
+    "start_line": 470,
+    "end_line": 485,
+    "code": "static const IBindCtxVtbl VT_BindCtxImpl =\n{\n    BindCtxImpl_QueryInterface,\n    BindCtxImpl_AddRef,\n    BindCtxImpl_Release,\n    BindCtxImpl_RegisterObjectBound,\n    BindCtxImpl_RevokeObjectBound,\n    BindCtxImpl_ReleaseBoundObjects,\n    BindCtxImpl_SetBindOptions,\n    BindCtxImpl_GetBindOptions,\n    BindCtxImpl_GetRunningObjectTable,\n    BindCtxImpl_RegisterObjectParam,\n    BindCtxImpl_GetObjectParam,\n    BindCtxImpl_EnumObjectParam,\n    BindCtxImpl_RevokeObjectParam\n};"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 34,
+    "end_line": 34,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ole);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "GetThreadLocale",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/thread.c:318"
+    ]
+   },
+   {
+    "name": "calloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ole32.CreateBindCtx",
+  "category": {
+   "l1": "System services",
+   "l2": "COM",
+   "header": "objbase.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 30,
+   "body": 29,
+   "code": 17
+  },
+  "cyclomatic": 4,
+  "return_type": "HRESULT",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 11,
+   "n_tests": 35,
+   "n_tests_other": 24,
+   "own_test_functions": [
+    "dlls/ole32/tests/moniker.c::_test_moniker_name",
+    "dlls/ole32/tests/moniker.c::test_MkParseDisplayName",
+    "dlls/ole32/tests/moniker.c::test_anti_moniker",
+    "dlls/ole32/tests/moniker.c::test_bind_context",
+    "dlls/ole32/tests/moniker.c::test_class_moniker",
+    "dlls/ole32/tests/moniker.c::test_file_moniker",
+    "dlls/ole32/tests/moniker.c::test_file_monikers",
+    "dlls/ole32/tests/moniker.c::test_generic_composite_moniker",
+    "dlls/ole32/tests/moniker.c::test_item_moniker",
+    "dlls/ole32/tests/moniker.c::test_objref_moniker",
+    "dlls/ole32/tests/moniker.c::test_pointer_moniker"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/objbase/nf-objbase-createbindctx",
+   "source": "win32",
+   "description": "Returns a pointer to an implementation of IBindCtx (a bind context object). This object stores information about a particular moniker-binding operation.",
+   "min_windows": "Windows 2000 Professional [desktop apps \\| UWP apps]",
+   "documented_dll": "Ole32.dll"
+  },
+  "exports": [
+   "ole32.CreateBindCtx"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

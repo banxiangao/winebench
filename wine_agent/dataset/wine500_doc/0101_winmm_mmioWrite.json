@@ -1,0 +1,230 @@
+{
+ "id": "0101",
+ "function": {
+  "name": "mmioWrite",
+  "export_name": "mmioWrite",
+  "module": "winmm",
+  "source_module": "winmm",
+  "exported_by": [
+   "mmsystem.dll16",
+   "winmm"
+  ],
+  "side": "PE",
+  "file": "dlls/winmm/mmio.c",
+  "start_line": 855,
+  "end_line": 903,
+  "body_lines": 46,
+  "signature": "LONG WINAPI mmioWrite(HMMIO hmmio, HPCSTR pch, LONG cch)",
+  "header_comment": "/**************************************************************************\n * \t\t\t\tmmioWrite      \t\t[WINMM.@]\n */",
+  "code": "LONG WINAPI mmioWrite(HMMIO hmmio, HPCSTR pch, LONG cch)\n{\n    LPWINE_MMIO\twm;\n    LONG\tcount;\n\n    TRACE(\"(%p, %p, %ld);\\n\", hmmio, pch, cch);\n\n    if ((wm = MMIO_Get(hmmio)) == NULL)\n\treturn -1;\n\n    if (wm->info.cchBuffer) {\n\tLONG\tbytesW = 0;\n\n        while (cch) {\n            if (wm->info.pchNext != wm->info.pchEndWrite) {\n                count = wm->info.pchEndWrite - wm->info.pchNext;\n                if (count > cch || count < 0) count = cch;\n                memcpy(wm->info.pchNext, pch, count);\n                wm->info.pchNext += count;\n                pch += count;\n                cch -= count;\n                bytesW += count;\n                wm->info.dwFlags |= MMIO_DIRTY;\n\t    } else {\n                if (wm->info.fccIOProc == FOURCC_MEM) {\n                    if (wm->info.adwInfo[0]) {\n                        /* from where would we get the memory handle? */\n                        FIXME(\"memory file expansion not implemented!\\n\");\n                        break;\n\t\t    } else break;\n                }\n            }\n\n            if (wm->info.pchNext == wm->info.pchEndWrite)\n            {\n                MMIO_Flush(wm, MMIO_EMPTYBUF);\n                MMIO_GrabNextBuffer(wm, FALSE);\n            }\n            else break;\n        }\n\tcount = bytesW;\n    } else {\n\tcount = send_message(wm->ioProc, &wm->info, MMIOM_WRITE, (LPARAM)pch, cch, FALSE);\n\twm->info.lBufOffset = wm->info.lDiskOffset;\n    }\n\n    TRACE(\"bytes written=%ld\\n\", count);\n    return count;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <ctype.h>",
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include <errno.h>",
+   "#include <assert.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"mmsystem.h\"",
+   "#include \"winemm.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "winmm!mmioWrite [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/winmm/tests/mmio.c",
+   "dlls/winmm/tests/wave.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "mmsystem.dll16",
+   "source_module": "mmsystem.dll16",
+   "exported_by": [
+    "mmsystem.dll16"
+   ],
+   "file": "dlls/mmsystem.dll16/mmio16.c",
+   "start_line": 327,
+   "resolution": [
+    "mmsystem.dll16!mmioWrite [pascal] -> internal symbol mmioWrite16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 330,
+   "signature": "LONG WINAPI mmioWrite16(HMMIO16 hmmio, HPCSTR pch, LONG cch)",
+   "code": "LONG WINAPI mmioWrite16(HMMIO16 hmmio, HPCSTR pch, LONG cch)\n{\n    return mmioWrite(HMMIO_32(hmmio),pch,cch);\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "mmiscapi",
+   "path": "sdk-api-src/content/mmiscapi/nf-mmiscapi-mmiowrite.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/mmiscapi/nf-mmiscapi-mmiowrite",
+   "documented_name": "mmiowrite",
+   "file": "docs/0101_sdk-api_nf-mmiscapi-mmiowrite.md",
+   "text": "---\nUID: NF:mmiscapi.mmioWrite\ntitle: mmioWrite function (mmiscapi.h)\ndescription: The mmioWrite function writes a specified number of bytes to a file opened by using the mmioOpen function.\nhelpviewer_keywords: [\"_win32_mmioWrite\",\"mmioWrite\",\"mmioWrite function [Windows Multimedia]\",\"mmsystem/mmioWrite\",\"multimedia.mmiowrite\"]\nold-location: multimedia\\mmiowrite.htm\ntech.root: Multimedia\nms.assetid: e47d00ba-ad29-4a23-8a7c-604bedac10e7\nms.date: 12/05/2018\nms.keywords: _win32_mmioWrite, mmioWrite, mmioWrite function [Windows Multimedia], mmsystem/mmioWrite, multimedia.mmiowrite\nreq.header: mmiscapi.h\nreq.include-header: Mmiscapi.h, Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Winmm.lib\nreq.dll: Winmm.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - mmioWrite\n - mmiscapi/mmioWrite\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-mm-io-l1-1-0.dll\n - Winmm.dll\n - API-MS-Win-mm-misc-l1-1-0.dll\n - winmmbase.dll\n - API-MS-Win-mm-misc-l1-1-1.dll\napi_name:\n - mmioWrite\n---\n\n# mmioWrite function\n\n\n## -description\n\nThe <b>mmioWrite</b> function writes a specified number of bytes to a file opened by using the <a href=\"/previous-versions/dd757331(v=vs.85)\">mmioOpen</a> function.\n\n## -parameters\n\n### -param hmmio\n\nFile handle of the file.\n\n### -param pch\n\nPointer to the buffer to be written to the file.\n\n### -param cch\n\nNumber of bytes to write to the file.\n\n## -returns\n\nReturns the number of bytes actually written. If there is an error writing to the file, the return value is -1.\n\n## -remarks\n\nThe current file position is incremented by the number of bytes written."
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "MMIO_Get",
+   "file": "dlls/winmm/mmio.c",
+   "start_line": 480,
+   "end_line": 491,
+   "static": true,
+   "called_from": [
+    "mmioWrite"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winmm/mmio.c:507",
+    "dlls/winmm/mmio.c:778",
+    "dlls/winmm/mmio.c:809",
+    "dlls/winmm/mmio.c:915",
+    "dlls/winmm/mmio.c:985"
+   ],
+   "signature": "static LPWINE_MMIO      MMIO_Get(HMMIO h)",
+   "code": "static LPWINE_MMIO      MMIO_Get(HMMIO h)\n{\n    LPWINE_MMIO\t\twm = NULL;\n\n    EnterCriticalSection(&WINMM_cs);\n    for (wm = MMIOList; wm; wm = wm->lpNext) {\n\tif (wm->info.hmmio == h)\n\t    break;\n    }\n    LeaveCriticalSection(&WINMM_cs);\n    return wm;\n}"
+  },
+  {
+   "name": "MMIO_Flush",
+   "file": "dlls/winmm/mmio.c",
+   "start_line": 542,
+   "end_line": 559,
+   "static": true,
+   "called_from": [
+    "mmioWrite"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winmm/mmio.c:600",
+    "dlls/winmm/mmio.c:781",
+    "dlls/winmm/mmio.c:960",
+    "dlls/winmm/mmio.c:1046",
+    "dlls/winmm/mmio.c:1070"
+   ],
+   "signature": "static\tMMRESULT MMIO_Flush(WINE_MMIO* wm, UINT uFlags)",
+   "code": "static\tMMRESULT MMIO_Flush(WINE_MMIO* wm, UINT uFlags)\n{\n    if (wm->info.cchBuffer && (wm->info.fccIOProc != FOURCC_MEM)) {\n\t/* not quite sure what to do here, but I'll guess */\n\tif (wm->info.dwFlags & MMIO_DIRTY) {\n            /* FIXME: error handling */\n\t    send_message(wm->ioProc, &wm->info, MMIOM_SEEK, wm->info.lBufOffset, SEEK_SET, FALSE);\n\t    send_message(wm->ioProc, &wm->info, MMIOM_WRITE,\n                         (LPARAM)wm->info.pchBuffer,\n                         wm->info.pchNext - wm->info.pchBuffer, FALSE);\n\t}\n\tif (uFlags & MMIO_EMPTYBUF)\n\t    wm->info.pchNext = wm->info.pchEndRead = wm->info.pchBuffer;\n    }\n    wm->info.dwFlags &= ~MMIO_DIRTY;\n\n    return MMSYSERR_NOERROR;\n}"
+  },
+  {
+   "name": "MMIO_GrabNextBuffer",
+   "file": "dlls/winmm/mmio.c",
+   "start_line": 564,
+   "end_line": 587,
+   "static": true,
+   "called_from": [
+    "mmioWrite"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winmm/mmio.c:818",
+    "dlls/winmm/mmio.c:835",
+    "dlls/winmm/mmio.c:1084"
+   ],
+   "signature": "static LONG\tMMIO_GrabNextBuffer(LPWINE_MMIO wm, int for_read)",
+   "code": "static LONG\tMMIO_GrabNextBuffer(LPWINE_MMIO wm, int for_read)\n{\n    LONG\tsize = wm->info.cchBuffer;\n\n    TRACE(\"bo=%lx do=%lx\\n\",\n\t  wm->info.lBufOffset, wm->info.lDiskOffset);\n\n    wm->info.lBufOffset = wm->info.lDiskOffset;\n    wm->info.pchNext = wm->info.pchBuffer;\n    wm->info.pchEndRead = wm->info.pchBuffer;\n    wm->info.pchEndWrite = wm->info.pchBuffer + wm->info.cchBuffer;\n\n    wm->bBufferLoaded = TRUE;\n    if (for_read) {\n\tsize = send_message(wm->ioProc, &wm->info, MMIOM_READ,\n                            (LPARAM)wm->info.pchBuffer, size, FALSE);\n\tif (size > 0)\n\t    wm->info.pchEndRead += size;\n        else\n            wm->bBufferLoaded = FALSE;\n    }\n\n    return size;\n}"
+  },
+  {
+   "name": "send_message",
+   "file": "dlls/winmm/mmio.c",
+   "start_line": 392,
+   "end_line": 417,
+   "static": true,
+   "called_from": [
+    "MMIO_Flush",
+    "MMIO_GrabNextBuffer",
+    "mmioWrite"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winmm/mmio.c:712",
+    "dlls/winmm/mmio.c:716",
+    "dlls/winmm/mmio.c:718",
+    "dlls/winmm/mmio.c:720",
+    "dlls/winmm/mmio.c:784"
+   ],
+   "signature": "static LRESULT\tsend_message(struct IOProcList* ioProc, LPMMIOINFO mmioinfo, DWORD wMsg, LPARAM lParam1, LPARAM lParam2, BOOL is_unicode)",
+   "code": "static LRESULT\tsend_message(struct IOProcList* ioProc, LPMMIOINFO mmioinfo,\n                             DWORD wMsg, LPARAM lParam1,\n                             LPARAM lParam2, BOOL is_unicode)\n{\n    LRESULT \t\tresult = MMSYSERR_ERROR;\n    LPARAM\t\tlp1 = lParam1, lp2 = lParam2;\n\n    if (!ioProc) {\n\tERR(\"ioProc NULL\\n\");\n\treturn MMSYSERR_INVALPARAM;\n    }\n\n    if (ioProc->is_unicode != is_unicode) {\n        /* map (lParam1, lParam2) into (lp1, lp2) 32 A<=>W */\n        FIXME(\"NIY 32 A<=>W mapping\\n\");\n    }\n    result = (ioProc->pIOProc)((LPSTR)mmioinfo, wMsg, lp1, lp2);\n\n#if 0\n    if (ioProc->is_unicode != is_unicode) {\n\t    /* unmap (lParam1, lParam2) into (lp1, lp2) 32 A<=>W */\n\t}\n#endif\n\n    return result;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "MMIOList",
+    "type": "WINE_MMIO *",
+    "static": true,
+    "start_line": 51,
+    "end_line": 51,
+    "code": "static WINE_MMIO *MMIOList;"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 49,
+    "end_line": 49,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(mmio);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "(ioProc->pIOProc)",
+    "in_function": "send_message",
+    "at": "dlls/winmm/mmio.c:408",
+    "candidates": []
+   }
+  ]
+ }
+}

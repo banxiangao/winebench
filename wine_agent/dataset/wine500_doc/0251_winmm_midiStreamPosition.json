@@ -1,0 +1,231 @@
+{
+ "id": "0251",
+ "function": {
+  "name": "midiStreamPosition",
+  "export_name": "midiStreamPosition",
+  "module": "winmm",
+  "source_module": "winmm",
+  "exported_by": [
+   "mmsystem.dll16",
+   "winmm"
+  ],
+  "side": "PE",
+  "file": "dlls/winmm/winmm.c",
+  "start_line": 1542,
+  "end_line": 1590,
+  "body_lines": 46,
+  "signature": "MMRESULT WINAPI midiStreamPosition(HMIDISTRM hMidiStrm, LPMMTIME lpMMT, UINT cbmmt)",
+  "header_comment": "/**************************************************************************\n * \t\t\t\tmidiStreamPosition\t\t[WINMM.@]\n */",
+  "code": "MMRESULT WINAPI midiStreamPosition(HMIDISTRM hMidiStrm, LPMMTIME lpMMT, UINT cbmmt)\n{\n    WINE_MIDIStream*\tlpMidiStrm;\n    DWORD\t\tret = MMSYSERR_NOERROR;\n\n    TRACE(\"(%p, %p, %u)!\\n\", hMidiStrm, lpMMT, cbmmt);\n\n    if (!MMSYSTEM_GetMidiStream(hMidiStrm, &lpMidiStrm, NULL)) {\n\tret = MMSYSERR_INVALHANDLE;\n    } else if (lpMMT == NULL || cbmmt != sizeof(MMTIME)) {\n\tret = MMSYSERR_INVALPARAM;\n    } else {\n\tEnterCriticalSection(&lpMidiStrm->lock);\n\tswitch (lpMMT->wType) {\n\tcase TIME_MIDI:\n\t    if (lpMidiStrm->dwTimeDiv < 0x8000) {\n\t\tDWORD tdiv, pulses;\n\t\ttdiv = (lpMidiStrm->dwTimeDiv > 24) ? lpMidiStrm->dwTimeDiv : 24;\n\t\tpulses = midistream_get_current_pulse(lpMidiStrm);\n\t\tlpMMT->u.midi.songptrpos = (pulses + tdiv/8) / (tdiv/4);\n\t\tif (!lpMMT->u.midi.songptrpos && pulses) lpMMT->u.midi.songptrpos++;\n\t\tTRACE(\"=> song position %ld (pulses %lu, tdiv %lu)\\n\", lpMMT->u.midi.songptrpos, pulses, tdiv);\n\t\tbreak;\n\t    }\n\t/* fall through */\n\tcase TIME_BYTES:\n\tcase TIME_SAMPLES:\n\t    lpMMT->wType = TIME_MS;\n\t    /* fall through to alternative format */\n\tcase TIME_MS:\n\t    lpMMT->u.ms = midistream_get_playing_position(lpMidiStrm);\n\t    TRACE(\"=> %ld ms\\n\", lpMMT->u.ms);\n\t    break;\n\tcase TIME_TICKS:\n\t    lpMMT->u.ticks = midistream_get_current_pulse(lpMidiStrm);\n\t    TRACE(\"=> %ld ticks\\n\", lpMMT->u.ticks);\n\t    break;\n\tdefault:\n\t    FIXME(\"Unsupported time type %x\\n\", lpMMT->wType);\n\t    /* use TIME_MS instead */\n\t    lpMMT->wType = TIME_MS;\n\t    lpMMT->u.ms = midistream_get_playing_position(lpMidiStrm);\n\t    TRACE(\"=> %ld ms\\n\", lpMMT->u.ms);\n\t    break;\n\t}\n\tLeaveCriticalSection(&lpMidiStrm->lock);\n    }\n    return ret;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <stdio.h>",
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"mmsystem.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winemm.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/rbtree.h\""
+  ],
+  "resolution": [
+   "winmm!midiStreamPosition [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/winmm/tests/midi.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "mmsystem.dll16",
+   "source_module": "mmsystem.dll16",
+   "exported_by": [
+    "mmsystem.dll16"
+   ],
+   "file": "dlls/mmsystem.dll16/mmsystem.c",
+   "start_line": 1130,
+   "resolution": [
+    "mmsystem.dll16!midiStreamPosition [pascal] -> internal symbol midiStreamPosition16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 1141,
+   "signature": "MMRESULT16 WINAPI midiStreamPosition16(HMIDISTRM16 hMidiStrm, LPMMTIME16 lpmmt16, UINT16 cbmmt)",
+   "code": "MMRESULT16 WINAPI midiStreamPosition16(HMIDISTRM16 hMidiStrm, LPMMTIME16 lpmmt16, UINT16 cbmmt)\n{\n    MMTIME\tmmt32;\n    MMRESULT\tret;\n\n    if (!lpmmt16)\n\treturn MMSYSERR_INVALPARAM;\n    mmt32.wType = lpmmt16->wType;\n    ret = midiStreamPosition(HMIDISTRM_32(hMidiStrm), &mmt32, sizeof(MMTIME));\n    MMSYSTEM_MMTIME32to16(lpmmt16, &mmt32);\n    return ret;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "mmeapi",
+   "path": "sdk-api-src/content/mmeapi/nf-mmeapi-midistreamposition.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/mmeapi/nf-mmeapi-midistreamposition",
+   "documented_name": "midistreamposition",
+   "file": "docs/0251_sdk-api_nf-mmeapi-midistreamposition.md",
+   "text": "---\nUID: NF:mmeapi.midiStreamPosition\ntitle: midiStreamPosition function (mmeapi.h)\ndescription: The midiStreamPosition function retrieves the current position in a MIDI stream.\nhelpviewer_keywords: [\"_win32_midiStreamPosition\",\"midiStreamPosition\",\"midiStreamPosition function [Windows Multimedia]\",\"mmeapi/midiStreamPosition\",\"multimedia.midistreamposition\"]\nold-location: multimedia\\midistreamposition.htm\ntech.root: Multimedia\nms.assetid: 77d859bb-1f1b-4a95-939e-88bdf31b1959\nms.date: 12/05/2018\nms.keywords: _win32_midiStreamPosition, midiStreamPosition, midiStreamPosition function [Windows Multimedia], mmeapi/midiStreamPosition, multimedia.midistreamposition\nreq.header: mmeapi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Winmm.lib\nreq.dll: Winmm.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - midiStreamPosition\n - mmeapi/midiStreamPosition\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Winmm.dll\n - API-MS-Win-mm-mme-l1-1-0.dll\n - winmmbase.dll\napi_name:\n - midiStreamPosition\n---\n\n# midiStreamPosition function\n\n\n## -description\n\nThe <b>midiStreamPosition</b> function retrieves the current position in a MIDI stream.\n\n## -parameters\n\n### -param hms\n\nHandle to a MIDI stream. This handle must have been returned by a call to the <a href=\"/previous-versions/dd798486(v=vs.85)\">midiStreamOpen</a> function. This handle identifies the output device.\n\n### -param lpmmt\n\nPointer to an <a href=\"/previous-versions/dd757347(v=vs.85)\">MMTIME</a> structure.\n\n### -param cbmmt\n\nSize, in bytes, of the <a href=\"/previous-versions/dd757347(v=vs.85)\">MMTIME</a> structure.\n\n## -returns\n\nReturns MMSYSERR_NOERROR if successful or an error otherwise. Possible error values include the following.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>MMSYSERR_INVALHANDLE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nSpecified device handle is invalid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>MMSYSERR_INVALPARAM</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nSpecified pointer or structure is invalid.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nBefore calling <b>midiStreamPosition</b>, set the <b>wType</b> member of the <a href=\"/previous-versions/dd757347(v=vs.85)\">MMTIME</a> structure to indicate the time format you desire. After calling <b>midiStreamPosition</b>, check the <b>wType</b> member to determine if the desired time format is supported. If the desired format is not supported, <b>wType</b> will specify an alternative format.\n\nThe position is set to zero when the device is opened or reset.\n\n## -see-also\n\n<a href=\"/windows/desktop/Multimedia/midi-functions\">MIDI Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "MMSYSTEM_GetMidiStream",
+   "file": "dlls/winmm/winmm.c",
+   "start_line": 983,
+   "end_line": 1001,
+   "static": true,
+   "called_from": [
+    "midiStreamPosition"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winmm/winmm.c:1329",
+    "dlls/winmm/winmm.c:1462",
+    "dlls/winmm/winmm.c:1516",
+    "dlls/winmm/winmm.c:1602",
+    "dlls/winmm/winmm.c:1654"
+   ],
+   "signature": "static\tBOOL\tMMSYSTEM_GetMidiStream(HMIDISTRM hMidiStrm, WINE_MIDIStream** lpMidiStrm, WINE_MIDI** lplpwm)",
+   "code": "static\tBOOL\tMMSYSTEM_GetMidiStream(HMIDISTRM hMidiStrm, WINE_MIDIStream** lpMidiStrm, WINE_MIDI** lplpwm)\n{\n    WINE_MIDI* lpwm = (LPWINE_MIDI)MMDRV_Get(hMidiStrm, MMDRV_MIDIOUT, FALSE);\n    struct wine_rb_entry *entry;\n\n    if (lplpwm)\n\t*lplpwm = lpwm;\n\n    if (lpwm == NULL) {\n\treturn FALSE;\n    }\n\n    EnterCriticalSection(&WINMM_cs);\n    if ((entry = wine_rb_get(&wine_midi_streams, &lpwm->mod.rgIds.dwStreamID)))\n        *lpMidiStrm = WINE_RB_ENTRY_VALUE(entry, struct WINE_MIDIStream, entry);\n    LeaveCriticalSection(&WINMM_cs);\n\n    return *lpMidiStrm != NULL;\n}"
+  },
+  {
+   "name": "midistream_get_current_pulse",
+   "file": "dlls/winmm/winmm.c",
+   "start_line": 1521,
+   "end_line": 1537,
+   "static": true,
+   "called_from": [
+    "midiStreamPosition"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static DWORD midistream_get_current_pulse(WINE_MIDIStream* lpMidiStrm)",
+   "code": "static DWORD midistream_get_current_pulse(WINE_MIDIStream* lpMidiStrm)\n{\n    DWORD pulses = 0;\n    DWORD now = midistream_get_playing_position(lpMidiStrm);\n    DWORD delta = now - lpMidiStrm->dwLastPositionMS;\n    if (lpMidiStrm->dwTimeDiv > 0x8000) {\n        /* SMPTE, unchecked FIXME */\n        BYTE nf = 256 - HIBYTE(lpMidiStrm->dwTimeDiv);\n        BYTE nsf = LOBYTE(lpMidiStrm->dwTimeDiv);\n        pulses = (delta * nf * nsf) / 1000;\n    }\n    else if (lpMidiStrm->dwTimeDiv) {\n        pulses = (DWORD)((double)(delta * lpMidiStrm->dwTimeDiv) *\n                         1000.0 / (double)lpMidiStrm->dwTempo);\n    }\n    return lpMidiStrm->dwPulses + pulses;\n}"
+  },
+  {
+   "name": "midistream_get_playing_position",
+   "file": "dlls/winmm/winmm.c",
+   "start_line": 1024,
+   "end_line": 1036,
+   "static": true,
+   "called_from": [
+    "midiStreamPosition",
+    "midistream_get_current_pulse"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winmm/winmm.c:1257"
+   ],
+   "signature": "static DWORD midistream_get_playing_position(WINE_MIDIStream* lpMidiStrm)",
+   "code": "static DWORD midistream_get_playing_position(WINE_MIDIStream* lpMidiStrm)\n{\n    switch (lpMidiStrm->status) {\n    case MSM_STATUS_STOPPED:\n    case MSM_STATUS_PAUSED:\n        return lpMidiStrm->dwElapsedMS;\n    case MSM_STATUS_PLAYING:\n        return timeGetTime() - lpMidiStrm->dwStartTicks;\n    default:\n        FIXME(\"Unknown playing status %hu\\n\", lpMidiStrm->status);\n        return 0;\n    }\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "WINE_MIDIStream",
+    "kind": "typedef_decl",
+    "start_line": 914,
+    "end_line": 932,
+    "code": "typedef struct WINE_MIDIStream {\n    HMIDIOUT\t\t\thDevice;\n    HANDLE\t\t\thThread;\n    DWORD\t\t\tdwThreadID;\n    CRITICAL_SECTION\t\tlock;\n    DWORD\t\t\tdwTempo;\n    DWORD\t\t\tdwTimeDiv;\n    ULONGLONG\t\t\tposition_usec;\n    DWORD\t\t\tdwPulses;\n    DWORD\t\t\tdwStartTicks;\n    DWORD\t\t\tdwElapsedMS;\n    DWORD\t\t\tdwLastPositionMS;\n    WORD\t\t\twFlags;\n    WORD\t\t\tstatus;\n    HANDLE\t\t\thEvent;\n    LPMIDIHDR\t\t\tlpMidiHdr;\n    DWORD\t\t\tdwStreamID;\n    struct wine_rb_entry\tentry;\n} WINE_MIDIStream;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "WINMM_cs",
+    "type": "CRITICAL_SECTION",
+    "static": false,
+    "start_line": 72,
+    "end_line": 72,
+    "code": "CRITICAL_SECTION WINMM_cs = { &critsect_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 57,
+    "end_line": 57,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(winmm);"
+   },
+   {
+    "name": "wine_midi_streams",
+    "type": "struct rb_tree",
+    "static": true,
+    "start_line": 74,
+    "end_line": 74,
+    "code": "static struct wine_rb_tree wine_midi_streams;"
+   }
+  ],
+  "macros": [
+   {
+    "name": "MSM_STATUS_PAUSED",
+    "start_line": 940,
+    "end_line": 940,
+    "code": "#define MSM_STATUS_PAUSED\tWINE_MSM_PAUSE"
+   },
+   {
+    "name": "MSM_STATUS_PLAYING",
+    "start_line": 941,
+    "end_line": 941,
+    "code": "#define MSM_STATUS_PLAYING\tWINE_MSM_RESUME"
+   },
+   {
+    "name": "MSM_STATUS_STOPPED",
+    "start_line": 939,
+    "end_line": 939,
+    "code": "#define MSM_STATUS_STOPPED\tWINE_MSM_STOP"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "MMDRV_Get",
+    "file": "dlls/winmm/lolvldrv.c",
+    "start_line": 242
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "timeGetTime",
+    "impl": [
+     "dlls/kernel32/sync.c:797"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   }
+  ],
+  "header_inline": [
+   "rb_get",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

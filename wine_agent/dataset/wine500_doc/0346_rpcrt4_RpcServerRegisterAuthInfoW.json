@@ -1,0 +1,180 @@
+{
+ "id": "0346",
+ "function": {
+  "name": "RpcServerRegisterAuthInfoW",
+  "export_name": "RpcServerRegisterAuthInfoW",
+  "module": "rpcrt4",
+  "source_module": "rpcrt4",
+  "exported_by": [
+   "rpcrt4"
+  ],
+  "side": "PE",
+  "file": "dlls/rpcrt4/rpc_server.c",
+  "start_line": 1438,
+  "end_line": 1480,
+  "body_lines": 40,
+  "signature": "RPC_STATUS WINAPI RpcServerRegisterAuthInfoW( RPC_WSTR ServerPrincName, ULONG AuthnSvc, RPC_AUTH_KEY_RETRIEVAL_FN GetKeyFn, LPVOID Arg )",
+  "header_comment": "/***********************************************************************\n *             RpcServerRegisterAuthInfoW (RPCRT4.@)\n */",
+  "code": "RPC_STATUS WINAPI RpcServerRegisterAuthInfoW( RPC_WSTR ServerPrincName, ULONG AuthnSvc, RPC_AUTH_KEY_RETRIEVAL_FN GetKeyFn,\n                            LPVOID Arg )\n{\n    struct rpc_server_registered_auth_info *auth_info;\n    SecPkgInfoW *packages, *package;\n    WCHAR *package_name;\n    ULONG max_token;\n    RPC_STATUS status;\n\n    TRACE(\"(%s,%lu,%p,%p)\\n\", debugstr_w(ServerPrincName), AuthnSvc, GetKeyFn, Arg);\n\n    status = find_security_package(AuthnSvc, &packages, &package);\n    if (status != RPC_S_OK)\n        return status;\n\n    package_name = wcsdup(package->Name);\n    max_token = package->cbMaxToken;\n    FreeContextBuffer(packages);\n    if (!package_name)\n        return RPC_S_OUT_OF_RESOURCES;\n\n    auth_info = calloc(1, sizeof(*auth_info));\n    if (!auth_info) {\n        free(package_name);\n        return RPC_S_OUT_OF_RESOURCES;\n    }\n\n    if (ServerPrincName && !(auth_info->principal = wcsdup(ServerPrincName))) {\n        free(package_name);\n        free(auth_info);\n        return RPC_S_OUT_OF_RESOURCES;\n    }\n\n    auth_info->auth_type = AuthnSvc;\n    auth_info->package_name = package_name;\n    auth_info->max_token = max_token;\n\n    EnterCriticalSection(&server_auth_info_cs);\n    list_add_tail(&server_registered_auth_info, &auth_info->entry);\n    LeaveCriticalSection(&server_auth_info_cs);\n\n    return RPC_S_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include <assert.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"rpc.h\"",
+   "#include \"rpcndr.h\"",
+   "#include \"excpt.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"rpc_server.h\"",
+   "#include \"rpc_assoc.h\"",
+   "#include \"rpc_message.h\"",
+   "#include \"rpc_defs.h\"",
+   "#include \"ncastatus.h\"",
+   "#include \"secext.h\""
+  ],
+  "resolution": [
+   "rpcrt4!RpcServerRegisterAuthInfoW [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/rpcrt4/tests/rpc.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "rpcdce",
+   "path": "sdk-api-src/content/rpcdce/nf-rpcdce-rpcserverregisterauthinfow.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/rpcdce/nf-rpcdce-rpcserverregisterauthinfow",
+   "documented_name": "rpcserverregisterauthinfow",
+   "file": "docs/0346_sdk-api_nf-rpcdce-rpcserverregisterauthinfow.md",
+   "text": "---\nUID: NF:rpcdce.RpcServerRegisterAuthInfoW\ntitle: RpcServerRegisterAuthInfoW function (rpcdce.h)\ndescription: The RpcServerRegisterAuthInfoW (Unicode) function (rpcdce.h) registers authentication information with the RPC run-time library.\nhelpviewer_keywords: [\"RpcServerRegisterAuthInfo\", \"RpcServerRegisterAuthInfo function [RPC]\", \"RpcServerRegisterAuthInfoW\", \"_rpc_rpcserverregisterauthinfo\", \"rpc.rpcserverregisterauthinfo\", \"rpcdce/RpcServerRegisterAuthInfo\", \"rpcdce/RpcServerRegisterAuthInfoW\"]\nold-location: rpc\\rpcserverregisterauthinfo.htm\ntech.root: Rpc\nms.assetid: b7a7b57e-540b-460b-9eec-6246cc1fd9d3\nms.date: 08/15/2022\nms.keywords: RpcServerRegisterAuthInfo, RpcServerRegisterAuthInfo function [RPC], RpcServerRegisterAuthInfoA, RpcServerRegisterAuthInfoW, _rpc_rpcserverregisterauthinfo, rpc.rpcserverregisterauthinfo, rpcdce/RpcServerRegisterAuthInfo, rpcdce/RpcServerRegisterAuthInfoA, rpcdce/RpcServerRegisterAuthInfoW\nreq.header: rpcdce.h\nreq.include-header: Rpc.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: RpcServerRegisterAuthInfoW (Unicode) and RpcServerRegisterAuthInfoA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Rpcrt4.lib\nreq.dll: Rpcrt4.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - RpcServerRegisterAuthInfoW\n - rpcdce/RpcServerRegisterAuthInfoW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Rpcrt4.dll\napi_name:\n - RpcServerRegisterAuthInfo\n - RpcServerRegisterAuthInfoA\n - RpcServerRegisterAuthInfoW\n---\n\n# RpcServerRegisterAuthInfoW function\n\n\n## -description\n\nThe \n<b>RpcServerRegisterAuthInfo</b> function registers authentication information with the RPC run-time library.\n\n## -parameters\n\n### -param ServerPrincName\n\nPointer to the principal name to use for the server when authenticating remote procedure calls using the service specified by the <i>AuthnSvc</i> parameter. The content of the name and its syntax are defined by the authentication service in use. For more information, see \n<a href=\"/windows/desktop/Rpc/principal-names\">Principal Names</a>.\n\n### -param AuthnSvc\n\nAuthentication service to use when the server receives a request for a remote procedure call.\n\n### -param GetKeyFn\n\nAddress of a server-application-provided routine that returns encryption keys. See \n<a href=\"/windows/desktop/api/rpcdce/nc-rpcdce-rpc_auth_key_retrieval_fn\">RPC_AUTH_KEY_RETRIEVAL_FN</a>. \n\n\n\n\nSpecify a <b>NULL</b> parameter value to use the default method of encryption-key acquisition. In this case, the authentication service specifies the default behavior. Set this parameter to <b>NULL</b> when using the RPC_C_AUTHN_WINNT authentication service.\n\n<table>\n<tr>\n<th>Authentication service</th>\n<th>GetKeyFn</th>\n<th>Arg</th>\n<th>Run-time behavior</th>\n</tr>\n<tr>\n<td>RPC_C_AUTHN_DPA</td>\n<td>Ignored</td>\n<td>Ignored</td>\n<td>Does not support</td>\n</tr>\n<tr>\n<td>RPC_C_AUTHN_GSS_KERBEROS</td>\n<td>Ignored</td>\n<td>Ignored</td>\n<td>Does not support</td>\n</tr>\n<tr>\n<td>RPC_C_AUTHN_GSS_NEGOTIATE</td>\n<td>Ignored</td>\n<td>Ignored</td>\n<td>Does not support</td>\n</tr>\n<tr>\n<td>RPC_C_AUTHN_GSS_SCHANNEL</td>\n<td>Ignored</td>\n<td>Ignored</td>\n<td>Does not support</td>\n</tr>\n<tr>\n<td>RPC_C_AUTHN_MQ</td>\n<td>Ignored</td>\n<td>Ignored</td>\n<td>Does not support</td>\n</tr>\n<tr>\n<td>RPC_C_AUTHN_MSN</td>\n<td>Ignored</td>\n<td>Ignored</td>\n<td>Does not support</td>\n</tr>\n<tr>\n<td>RPC_C_AUTHN_WINNT</td>\n<td>Ignored</td>\n<td>Ignored</td>\n<td>Does not support</td>\n</tr>\n<tr>\n<td>RPC_C_AUTHN_DCE_PRIVATE</td>\n<td><b>NULL</b></td>\n<td>Non-<b>null</b></td>\n<td>Uses default method of encryption-key acquisition from specified key table; specified argument is passed to default acquisition function.</td>\n</tr>\n<tr>\n<td>RPC_C_AUTHN_DCE_PRIVATE</td>\n<td>Non-<b>null</b></td>\n<td><b>NULL</b></td>\n<td>Uses specified encryption-key acquisition function to obtain keys from default key table.</td>\n</tr>\n<tr>\n<td>RPC_C_AUTHN_DCE_PRIVATE</td>\n<td>Non-<b>null</b></td>\n<td>Non-<b>null</b></td>\n<td>Uses specified encryption-key acquisition function to obtain keys from specified key table; specified argument is passed to acquisition function.</td>\n</tr>\n<tr>\n<td>RPC_C_AUTHN_DEC_PUBLIC</td>\n<td>Ignored</td>\n<td>Ignored</td>\n<td>Reserved for future use.</td>\n</tr>\n</table>\n \n\n\n<div> </div>\n\n\nThe RPC run-time library passes the <i>ServerPrincName</i> parameter value from \n<b>RpcServerRegisterAuthInfo</b> as the <i>ServerPrincName</i> parameter value to the <i>GetKeyFn</i> acquisition function. The RPC run-time library automatically provides a value for the key version (<i>KeyVer</i>) parameter. For a <i>KeyVer</i> parameter value of zero, the acquisition function must return the most recent key available. The retrieval function returns the authentication key in the <i>Key</i> parameter.\n\nIf the acquisition function called from \n<b>RpcServerRegisterAuthInfo</b> returns a status other than RPC_S_OK, then this function fails and returns an error code to the server application. If the acquisition function called by the RPC run-time library while authenticating a client's remote procedure call request returns a status other than RPC_S_OK, the request fails and the RPC run-time library returns an error code to the client application.\n\n### -param Arg\n\nPointer to a parameter to pass to the <i>GetKeyFn</i> routine, if specified. This parameter can also be used to pass a pointer to an \n<a href=\"/windows/desktop/api/schannel/ns-schannel-schannel_cred\">SCHANNEL_CRED</a> structure to specify explicit credentials if the authentication service is set to SCHANNEL.  \n\n\nIf the <i>Arg</i> parameter is set to <b>NULL</b>, this function will use the default certificate or credential if it has been set up in the directory service.\n\n## -returns\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>RPC_S_OK</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe call succeeded.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>RPC_S_UNKNOWN_AUTHN_SERVICE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe authentication service is unknown.\n\n</td>\n</tr>\n</table>\n \n\n<div class=\"alert\"><b>Note</b>  For a list of valid error codes, see \n<a href=\"/windows/desktop/Rpc/rpc-return-values\">RPC Return Values</a>.</div>\n<div> </div>\n\n## -remarks\n\nA server application calls \n<b>RpcServerRegisterAuthInfo</b> to register an authentication service to use for authenticating remote procedure calls. A server calls this routine once for each authentication service the server wants to register. If the server calls this function more than once for a given authentication service, the results are undefined.\n\nThe authentication service that a client application specifies (using \n<a href=\"/windows/desktop/api/rpcdce/nf-rpcdce-rpcbindingsetauthinfo\">RpcBindingSetAuthInfo</a> or \n<b>RpcServerRegisterAuthInfo</b>) must be one of the authentication services specified by the server application. Otherwise, the client's remote procedure call fails and an RPC_S_UNKNOWN_AUTHN_SERVICE status code is returned.\n\n\n\n\n\n> [!NOTE]\n> The rpcdce.h header defines RpcServerRegisterAuthInfo as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/api/rpcdce/nf-rpcdce-rpcbindingsetauthinfo\">RpcBindingSetAuthInfo</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "find_security_package",
+   "file": "dlls/rpcrt4/rpc_server.c",
+   "start_line": 1338,
+   "end_line": 1367,
+   "static": true,
+   "called_from": [
+    "RpcServerRegisterAuthInfoW"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static RPC_STATUS find_security_package(ULONG auth_type, SecPkgInfoW **packages_buf, SecPkgInfoW **ret)",
+   "code": "static RPC_STATUS find_security_package(ULONG auth_type, SecPkgInfoW **packages_buf, SecPkgInfoW **ret)\n{\n    SECURITY_STATUS sec_status;\n    SecPkgInfoW *packages;\n    ULONG package_count;\n    ULONG i;\n\n    sec_status = EnumerateSecurityPackagesW(&package_count, &packages);\n    if (sec_status != SEC_E_OK)\n    {\n        ERR(\"EnumerateSecurityPackagesW failed with error 0x%08lx\\n\", sec_status);\n        return RPC_S_SEC_PKG_ERROR;\n    }\n\n    for (i = 0; i < package_count; i++)\n        if (packages[i].wRPCID == auth_type)\n            break;\n\n    if (i == package_count)\n    {\n        WARN(\"unsupported AuthnSvc %lu\\n\", auth_type);\n        FreeContextBuffer(packages);\n        return RPC_S_UNKNOWN_AUTHN_SERVICE;\n    }\n\n    TRACE(\"found package %s for service %lu\\n\", debugstr_w(packages[i].Name), auth_type);\n    *packages_buf = packages;\n    *ret = packages + i;\n    return RPC_S_OK;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "rpc_server_registered_auth_info",
+    "kind": "struct_decl",
+    "start_line": 1329,
+    "end_line": 1336,
+    "code": "struct rpc_server_registered_auth_info\n{\n    struct list entry;\n    USHORT auth_type;\n    WCHAR *package_name;\n    WCHAR *principal;\n    ULONG max_token;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 47,
+    "end_line": 47,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(rpc);"
+   },
+   {
+    "name": "server_auth_info_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 98,
+    "end_line": 98,
+    "code": "static CRITICAL_SECTION server_auth_info_cs = { &server_auth_info_cs_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "server_registered_auth_info",
+    "type": "struct list",
+    "static": true,
+    "start_line": 71,
+    "end_line": 71,
+    "code": "static struct list server_registered_auth_info = LIST_INIT(server_registered_auth_info);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "EnumerateSecurityPackagesW",
+    "module": "schannel",
+    "impl": [
+     "dlls/secur32/secur32.c:655"
+    ]
+   },
+   {
+    "name": "FreeContextBuffer",
+    "module": "schannel",
+    "impl": [
+     "dlls/secur32/secur32.c:644"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "calloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_w",
+   "list_add_tail",
+   "wcsdup",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

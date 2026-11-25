@@ -1,0 +1,144 @@
+{
+ "id": "0048",
+ "function": {
+  "name": "NtUserGetKeyboardLayoutName",
+  "export_name": "GetKeyboardLayoutNameW",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "unicows",
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/input.c",
+  "start_line": 1561,
+  "end_line": 1621,
+  "body_lines": 58,
+  "signature": "BOOL WINAPI NtUserGetKeyboardLayoutName( WCHAR *name )",
+  "header_comment": "/****************************************************************************\n *\t     NtUserGetKeyboardLayoutName    (win32u.@)\n */",
+  "code": "BOOL WINAPI NtUserGetKeyboardLayoutName( WCHAR *name )\n{\n    struct user_thread_info *info = get_user_thread_info();\n    char buffer[4096];\n    KEY_NODE_INFORMATION *key = (KEY_NODE_INFORMATION *)buffer;\n    KEY_VALUE_PARTIAL_INFORMATION *value = (KEY_VALUE_PARTIAL_INFORMATION *)buffer;\n    WCHAR klid[KL_NAMELENGTH];\n    UINT id;\n    ULONG len, i = 0;\n    HKEY hkey, subkey;\n    HKL layout;\n\n    TRACE_(keyboard)( \"name %p\\n\", name );\n\n    if (!name)\n    {\n        RtlSetLastWin32Error( ERROR_NOACCESS );\n        return FALSE;\n    }\n\n    if (info->kbd_layout_id)\n    {\n        snprintf( buffer, sizeof(buffer), \"%08X\", info->kbd_layout_id );\n        asciiz_to_unicode( name, buffer );\n        return TRUE;\n    }\n\n    layout = NtUserGetKeyboardLayout( 0 );\n    id = HandleToUlong( layout );\n    if (!(HIWORD( id ) & 0xf000)) id = HIWORD( id );\n    snprintf( buffer, sizeof(buffer), \"%08X\", id );\n    asciiz_to_unicode( name, buffer );\n    if ((HIWORD( id ) & 0x1000) && (hkey = reg_open_key( NULL, keyboard_layouts_keyW, sizeof(keyboard_layouts_keyW) )))\n    {\n        while (!NtEnumerateKey( hkey, i++, KeyNodeInformation, key,\n                                sizeof(buffer) - sizeof(WCHAR), &len ))\n        {\n            if (!(subkey = reg_open_key( hkey, key->Name, key->NameLength ))) continue;\n            memcpy( klid, key->Name, key->NameLength );\n            klid[key->NameLength / sizeof(WCHAR)] = 0;\n            if (query_reg_ascii_value( subkey, \"Layout Id\", value, sizeof(buffer) ) &&\n                value->Type == REG_SZ)\n                id = 0xf000 | (wcstoul( (const WCHAR *)value->Data, NULL, 16 ) & 0xfff);\n            else\n                id = wcstoul( klid, NULL, 16 );\n            NtClose( subkey );\n\n            if (HIWORD( layout ) == id)\n            {\n                lstrcpynW( name, klid, KL_NAMELENGTH );\n                break;\n            }\n        }\n        NtClose( hkey );\n    }\n\n    info->kbd_layout_id = wcstoul( name, NULL, 16 );\n\n    TRACE_(keyboard)( \"ret %s\\n\", debugstr_w( name ) );\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"win32u_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"kbd.h\""
+  ],
+  "resolution": [
+   "user32!GetKeyboardLayoutNameW [stdcall] -> NtUserGetKeyboardLayoutName implicitly imported from win32u",
+   "win32u!NtUserGetKeyboardLayoutName [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/input.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-getkeyboardlayoutnamew.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getkeyboardlayoutnamew",
+   "documented_name": "getkeyboardlayoutnamew",
+   "file": "docs/0048_sdk-api_nf-winuser-getkeyboardlayoutnamew.md",
+   "text": "---\nUID: NF:winuser.GetKeyboardLayoutNameW\ntitle: GetKeyboardLayoutNameW function (winuser.h)\ndescription: Retrieves the name of the active input locale identifier (formerly called the keyboard layout) for the calling thread. (Unicode)\nhelpviewer_keywords: [\"GetKeyboardLayoutName\", \"GetKeyboardLayoutName function [Keyboard and Mouse Input]\", \"GetKeyboardLayoutNameW\", \"_win32_GetKeyboardLayoutName\", \"_win32_getkeyboardlayoutname_cpp\", \"inputdev.getkeyboardlayoutname\", \"winui._win32_getkeyboardlayoutname\", \"winuser/GetKeyboardLayoutName\", \"winuser/GetKeyboardLayoutNameW\"]\nold-location: inputdev\\getkeyboardlayoutname.htm\ntech.root: inputdev\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\userinput\\keyboardinput\\keyboardinputreference\\keyboardinputfunctions\\getkeyboardlayoutname.htm\nms.date: 12/05/2018\nms.keywords: GetKeyboardLayoutName, GetKeyboardLayoutName function [Keyboard and Mouse Input], GetKeyboardLayoutNameA, GetKeyboardLayoutNameW, _win32_GetKeyboardLayoutName, _win32_getkeyboardlayoutname_cpp, inputdev.getkeyboardlayoutname, winui._win32_getkeyboardlayoutname, winuser/GetKeyboardLayoutName, winuser/GetKeyboardLayoutNameA, winuser/GetKeyboardLayoutNameW\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: GetKeyboardLayoutNameW (Unicode) and GetKeyboardLayoutNameA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetKeyboardLayoutNameW\n - winuser/GetKeyboardLayoutNameW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-ntuser-keyboard-l1-3-2.dll\n - ext-ms-win-ntuser-keyboard-l1-3-1.dll\n - User32.dll\n - Ext-MS-Win-NTUser-Keyboard-l1-1-0.dll\n - Ext-MS-Win-NTUser-Keyboard-l1-1-1.dll\n - api-ms-win-ntuser-ie-keyboard-l1-1-0.dll\n - ie_stubs.dll\n - ext-ms-win-ntuser-keyboard-l1-1-2.dll\n - Ext-MS-Win-NTUser-Keyboard-L1-2-0.dll\n - Ext-MS-Win-NTUser-Keyboard-L1-2-1.dll\n - Ext-MS-Win-NTUser-Keyboard-L1-3-0.dll\napi_name:\n - GetKeyboardLayoutName\n - GetKeyboardLayoutNameA\n - GetKeyboardLayoutNameW\n---\n\n# GetKeyboardLayoutNameW function\n\n\n## -description\n\nRetrieves the name of the active input locale identifier (formerly called the keyboard layout) for the calling thread.\n\n## -parameters\n\n### -param pwszKLID [out]\n\nType: <b>LPTSTR</b>\n\nThe buffer (of at least <b>KL_NAMELENGTH</b> characters in length) that receives the name of the input locale identifier, including the terminating null character. This will be a copy of the string provided to the <a href=\"/windows/desktop/api/winuser/nf-winuser-loadkeyboardlayouta\">LoadKeyboardLayout</a> function, unless layout substitution took place.\n\nFor a list of the input layouts that are supplied with Windows, see [Keyboard Identifiers and Input Method Editors for Windows](/windows-hardware/manufacture/desktop/windows-language-pack-default-values).\n\n## -returns\n\nType: <b>BOOL</b>\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero. To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThe input locale identifier is a broader concept than a keyboard layout, since it can also encompass a speech-to-text converter, an Input Method Editor (IME), or any other form of input.\n\n<b>Beginning in Windows 8:</b> The preferred method to retrieve the language associated with the current keyboard layout or input method is a call to <a href=\"/uwp/api/windows.globalization.language.currentinputmethodlanguagetag\">Windows.Globalization.Language.CurrentInputMethodLanguageTag</a>. If your app passes language tags from <b>CurrentInputMethodLanguageTag</b> to any <a href=\"/windows/desktop/Intl/national-language-support-functions\">National Language Support</a> functions, it must first convert the tags by calling <a href=\"/windows/desktop/api/winnls/nf-winnls-resolvelocalename\">ResolveLocaleName</a>.\n\n> [!NOTE]\n> The winuser.h header defines GetKeyboardLayoutName as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-activatekeyboardlayout\">ActivateKeyboardLayout</a>\n\n<b>Conceptual</b>\n\n<a href=\"/windows/desktop/inputdev/keyboard-input\">Keyboard Input</a>\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-loadkeyboardlayouta\">LoadKeyboardLayout</a>\n\n<b>Reference</b>\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-unloadkeyboardlayout\">UnloadKeyboardLayout</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch_keyboard",
+    "type": "struct __wine_debug_channel",
+    "static": true,
+    "start_line": 41,
+    "end_line": 41,
+    "code": "WINE_DECLARE_DEBUG_CHANNEL(keyboard);"
+   },
+   {
+    "name": "keyboard_layouts_keyW",
+    "type": "const WCHAR[67]",
+    "static": true,
+    "start_line": 47,
+    "end_line": 55,
+    "code": "static const WCHAR keyboard_layouts_keyW[] =\n{\n    '\\\\','R','e','g','i','s','t','r','y',\n    '\\\\','M','a','c','h','i','n','e',\n    '\\\\','S','y','s','t','e','m',\n    '\\\\','C','u','r','r','e','n','t','C','o','n','t','r','o','l','S','e','t',\n    '\\\\','C','o','n','t','r','o','l',\n    '\\\\','K','e','y','b','o','a','r','d',' ','L','a','y','o','u','t','s'\n};"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "get_user_thread_info",
+    "file": "dlls/win32u/syscall.c",
+    "start_line": 190
+   },
+   {
+    "name": "query_reg_ascii_value",
+    "file": "dlls/win32u/font.c",
+    "start_line": 619
+   },
+   {
+    "name": "reg_open_key",
+    "file": "dlls/win32u/font.c",
+    "start_line": 507
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "NtUserGetKeyboardLayout",
+    "impl": [
+     "dlls/win32u/input.c:1105"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtClose",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/server.c:1940"
+    ]
+   },
+   {
+    "name": "NtEnumerateKey",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/registry.c:357"
+    ]
+   },
+   {
+    "name": "RtlSetLastWin32Error",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "header_inline": [
+   "HandleToULong",
+   "debugstr_w",
+   "lstrcpynW",
+   "ntdll_wcstoul",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "asciiz_to_unicode"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

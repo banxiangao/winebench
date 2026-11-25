@@ -1,0 +1,184 @@
+{
+ "id": "0089",
+ "function": {
+  "name": "NtUserSetCursorPos",
+  "export_name": "SetCursorPos",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "user.exe16",
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/input.c",
+  "start_line": 812,
+  "end_line": 835,
+  "body_lines": 21,
+  "signature": "BOOL WINAPI NtUserSetCursorPos( INT x, INT y )",
+  "header_comment": "/***********************************************************************\n *\t     NtUserSetCursorPos (win32u.@)\n */",
+  "code": "BOOL WINAPI NtUserSetCursorPos( INT x, INT y )\n{\n    RECT rect = {x, y, x, y};\n    BOOL ret;\n    INT prev_x, prev_y, new_x, new_y;\n\n    rect = map_rect_virt_to_raw( rect, get_thread_dpi() );\n    SERVER_START_REQ( set_cursor )\n    {\n        req->flags = SET_CURSOR_POS;\n        req->x     = rect.left;\n        req->y     = rect.top;\n        if ((ret = !wine_server_call( req )))\n        {\n            prev_x = reply->prev_x;\n            prev_y = reply->prev_y;\n            new_x  = reply->new_x;\n            new_y  = reply->new_y;\n        }\n    }\n    SERVER_END_REQ;\n    if (ret && (prev_x != new_x || prev_y != new_y)) user_driver->pSetCursorPos( new_x, new_y );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"win32u_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"kbd.h\""
+  ],
+  "resolution": [
+   "user32!SetCursorPos [stdcall -import] -> NtUserSetCursorPos implicitly imported from win32u",
+   "win32u!NtUserSetCursorPos [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/msg.c",
+   "dlls/user32/tests/win.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 15
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "user.exe16",
+   "source_module": "user.exe16",
+   "exported_by": [
+    "user.exe16"
+   ],
+   "file": "dlls/user.exe16/user.c",
+   "start_line": 607,
+   "resolution": [
+    "user.exe16!SetCursorPos [pascal -ret16] -> internal symbol SetCursorPos16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 610,
+   "signature": "void WINAPI SetCursorPos16( INT16 x, INT16 y )",
+   "code": "void WINAPI SetCursorPos16( INT16 x, INT16 y )\n{\n    SetCursorPos( x, y );\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-setcursorpos.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-setcursorpos",
+   "documented_name": "setcursorpos",
+   "file": "docs/0089_sdk-api_nf-winuser-setcursorpos.md",
+   "text": "---\nUID: NF:winuser.SetCursorPos\ntitle: SetCursorPos function (winuser.h)\ndescription: Moves the cursor to the specified screen coordinates.\nhelpviewer_keywords: [\"SetCursorPos\",\"SetCursorPos function [Menus and Other Resources]\",\"_win32_SetCursorPos\",\"_win32_setcursorpos_cpp\",\"menurc.setcursorpos\",\"winui._win32_setcursorpos\",\"winuser/SetCursorPos\"]\nold-location: menurc\\setcursorpos.htm\ntech.root: menurc\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\resources\\cursors\\cursorreference\\cursorfunctions\\setcursorpos.htm\nms.date: 12/05/2018\nms.keywords: SetCursorPos, SetCursorPos function [Menus and Other Resources], _win32_SetCursorPos, _win32_setcursorpos_cpp, menurc.setcursorpos, winui._win32_setcursorpos, winuser/SetCursorPos\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SetCursorPos\n - winuser/SetCursorPos\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-rtcore-ntuser-window-l1-1-0.dll\n - ext-ms-win-rtcore-ntuser-window-ext-l1-1-1.dll\n - ext-ms-win-ntuser-window-l1-1-6.dll\n - ext-ms-win-ntuser-window-l1-1-5.dll\n - User32.dll\n - API-MS-Win-NTUser-IE-Window-l1-1-0.dll\n - ie_shims.dll\n - API-MS-Win-RTCore-NTUser-Window-l1-1-0.dll\n - minuser.dll\n - Ext-MS-Win-NTUser-GUI-l1-1-1.dll\n - Ext-MS-Win-NTUser-Window-l1-1-2.dll\n - Ext-MS-Win-RTCore-NTUser-Window-Ext-l1-1-0.dll\n - ext-ms-win-ntuser-window-l1-1-3.dll\n - Ext-MS-Win-NTUser-Window-L1-1-4.dll\napi_name:\n - SetCursorPos\nreq.apiset: ext-ms-win-ntuser-window-l1-1-2 (introduced in Windows 10, version 10.0.10240)\n---\n\n# SetCursorPos function\n\n\n## -description\n\nMoves the cursor to the specified screen coordinates. If the new coordinates are not within the screen rectangle set by the most recent <a href=\"/windows/desktop/api/winuser/nf-winuser-clipcursor\">ClipCursor</a> function call, the system automatically adjusts the coordinates so that the cursor stays within the rectangle.\n\n## -parameters\n\n### -param X [in]\n\nType: <b>int</b>\n\nThe new x-coordinate of the cursor, in screen coordinates.\n\n### -param Y [in]\n\nType: <b>int</b>\n\nThe new y-coordinate of the cursor, in screen coordinates.\n\n## -returns\n\nType: <b>BOOL</b>\n\nReturns nonzero if successful or zero otherwise. To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThe cursor is a shared resource. A window should move the cursor only when the cursor is in the window's client area.\n\nThe calling process must have <b>WINSTA_WRITEATTRIBUTES</b> access to the window station.\n\nThe input desktop must be the current desktop when you call <b>SetCursorPos</b>. Call <a href=\"/windows/desktop/api/winuser/nf-winuser-openinputdesktop\">OpenInputDesktop</a> to determine whether the current desktop is the input desktop. If it is not, call <a href=\"/windows/desktop/api/winuser/nf-winuser-setthreaddesktop\">SetThreadDesktop</a> with the <b>HDESK</b> returned by <b>OpenInputDesktop</b> to switch to that desktop.\n\n\n#### Examples\n\nFor an example, see <a href=\"/windows/desktop/menurc/using-cursors\">Using the Keyboard to Move the Cursor</a>.\n\n<div class=\"code\"></div>\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-clipcursor\">ClipCursor</a>\n\n\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/menurc/cursors\">Cursors</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-getcursorpos\">GetCursorPos</a>\n\n\n\n<b>Reference</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-setcaretpos\">SetCaretPos</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-setcursor\">SetCursor</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-showcursor\">ShowCursor</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "get_thread_dpi",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 3267
+   },
+   {
+    "name": "map_rect_virt_to_raw",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 3163
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "wine_server_call",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/loader.c:3436"
+    ]
+   }
+  ],
+  "header_inline": [],
+  "system": [
+   "memset"
+  ],
+  "unresolved": [],
+  "server_requests": [
+   {
+    "request": "set_cursor",
+    "handler": "server/queue.c:3998"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "user_driver->pSetCursorPos",
+    "in_function": "NtUserSetCursorPos",
+    "at": "dlls/win32u/input.c:833",
+    "candidates": []
+   }
+  ]
+ },
+ "winebench": {
+  "id": "win32u.NtUserSetCursorPos",
+  "category": {
+   "l1": "User interface",
+   "l2": "Resources (menus, icons, cursors, strings)",
+   "header": "winuser.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 24,
+   "body": 23,
+   "code": 16
+  },
+  "cyclomatic": 5,
+  "return_type": "BOOL",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 15,
+   "n_tests": 26,
+   "n_tests_other": 11,
+   "own_test_functions": [
+    "dlls/user32/tests/msg.c::simulate_click",
+    "dlls/user32/tests/msg.c::test_PeekMessage2",
+    "dlls/user32/tests/msg.c::test_TrackMouseEvent",
+    "dlls/user32/tests/msg.c::test_TrackPopupMenu",
+    "dlls/user32/tests/msg.c::test_accelerators",
+    "dlls/user32/tests/msg.c::test_autoradio_BM_CLICK",
+    "dlls/user32/tests/msg.c::test_defwinproc",
+    "dlls/user32/tests/msg.c::test_messages",
+    "dlls/user32/tests/msg.c::test_setwindowpos",
+    "dlls/user32/tests/win.c::simulate_click",
+    "dlls/user32/tests/win.c::test_GetMessagePos",
+    "dlls/user32/tests/win.c::test_ReleaseCapture",
+    "dlls/user32/tests/win.c::test_SC_SIZE",
+    "dlls/user32/tests/win.c::test_mouse_input",
+    "dlls/user32/tests/win.c::test_nonclient_area"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-setcursorpos",
+   "source": "win32",
+   "description": "Moves the cursor to the specified screen coordinates.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "User32.dll"
+  },
+  "exports": [
+   "user32.SetCursorPos",
+   "win32u.NtUserSetCursorPos"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

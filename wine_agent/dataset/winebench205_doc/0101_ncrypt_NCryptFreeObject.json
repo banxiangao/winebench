@@ -1,0 +1,196 @@
+{
+ "id": "0101",
+ "function": {
+  "name": "NCryptFreeObject",
+  "export_name": "NCryptFreeObject",
+  "module": "ncrypt",
+  "source_module": "ncrypt",
+  "exported_by": [
+   "ncrypt"
+  ],
+  "side": "PE",
+  "file": "dlls/ncrypt/main.c",
+  "start_line": 339,
+  "end_line": 381,
+  "body_lines": 40,
+  "signature": "SECURITY_STATUS WINAPI NCryptFreeObject(NCRYPT_HANDLE handle)",
+  "header_comment": null,
+  "code": "SECURITY_STATUS WINAPI NCryptFreeObject(NCRYPT_HANDLE handle)\n{\n    struct object *object = (struct object *)handle;\n    SECURITY_STATUS ret = STATUS_SUCCESS;\n    unsigned int i;\n\n    TRACE(\"(%#Ix)\\n\", handle);\n\n    if (!object)\n    {\n        WARN(\"invalid handle %#Ix\\n\", handle);\n        return NTE_INVALID_HANDLE;\n    }\n\n    switch (object->type)\n    {\n    case KEY:\n    {\n        if ((ret = free_key_object(&object->key))) return ret;\n        break;\n    }\n    case STORAGE_PROVIDER:\n        if (InterlockedDecrement(&object->refs))\n            return 0;\n        break;\n\n    default:\n        WARN(\"invalid handle %#Ix\\n\", handle);\n        return NTE_INVALID_HANDLE;\n    }\n\n    for (i = 0; i < object->num_properties; i++)\n    {\n        if (!wcscmp(object->properties[i].key, NCRYPT_PROVIDER_HANDLE_PROPERTY))\n            NCryptFreeObject(*(NCRYPT_HANDLE *)object->properties[i].value);\n\n        free(object->properties[i].key);\n        free(object->properties[i].value);\n    }\n    free(object->properties);\n    free(object);\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"ncrypt.h\"",
+   "#include \"bcrypt.h\"",
+   "#include \"ncrypt_internal.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "ncrypt!NCryptFreeObject [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ncrypt/tests/ncrypt.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 11
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "ncrypt",
+   "path": "sdk-api-src/content/ncrypt/nf-ncrypt-ncryptfreeobject.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/ncrypt/nf-ncrypt-ncryptfreeobject",
+   "documented_name": "ncryptfreeobject",
+   "file": "docs/0101_sdk-api_nf-ncrypt-ncryptfreeobject.md",
+   "text": "---\nUID: NF:ncrypt.NCryptFreeObject\ntitle: NCryptFreeObject function (ncrypt.h)\ndescription: Frees a CNG key storage object.\nhelpviewer_keywords: [\"NCryptFreeObject\",\"NCryptFreeObject function [Security]\",\"ncrypt/NCryptFreeObject\",\"security.ncryptfreeobject_func\"]\nold-location: security\\ncryptfreeobject_func.htm\ntech.root: security\nms.assetid: a5535cf9-ba8c-4212-badd-f1dc88903624\nms.date: 12/05/2018\nms.keywords: NCryptFreeObject, NCryptFreeObject function [Security], ncrypt/NCryptFreeObject, security.ncryptfreeobject_func\nreq.header: ncrypt.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ncrypt.lib\nreq.dll: Ncrypt.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - NCryptFreeObject\n - ncrypt/NCryptFreeObject\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Ncrypt.dll\napi_name:\n - NCryptFreeObject\n---\n\n# NCryptFreeObject function\n\n\n## -description\n\nThe <b>NCryptFreeObject</b> function frees a CNG key storage object.\n\n## -parameters\n\n### -param hObject [in]\n\nThe handle of the object to free. This can be either a provider handle (<b>NCRYPT_PROV_HANDLE</b>) or a key handle (<b>NCRYPT_KEY_HANDLE</b>).\n\n## -returns\n\nReturns a status code that indicates the success or failure of the function.\n\n\nPossible return codes include, but are not limited to, the following.\n\n\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_SUCCESS</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe function was successful.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>NTE_INVALID_HANDLE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe handle in the <i>hObject</i> parameter is not valid.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nA service must not call this function from its <a href=\"/windows/win32/api/winsvc/nf-winsvc-startservicea\">StartService Function</a>. If a service calls this function from its StartService function, a deadlock can occur, and the service may stop responding.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/ncrypt/nf-ncrypt-ncryptopenstorageprovider\">NCryptOpenStorageProvider</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "free_key_object",
+   "file": "dlls/ncrypt/main.c",
+   "start_line": 334,
+   "end_line": 337,
+   "static": true,
+   "called_from": [
+    "NCryptFreeObject"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static SECURITY_STATUS free_key_object(struct key *key)",
+   "code": "static SECURITY_STATUS free_key_object(struct key *key)\n{\n    return map_ntstatus( BCryptDestroyKey(key->bcrypt_key) );\n}"
+  },
+  {
+   "name": "map_ntstatus",
+   "file": "dlls/ncrypt/main.c",
+   "start_line": 34,
+   "end_line": 50,
+   "static": true,
+   "called_from": [
+    "free_key_object"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ncrypt/main.c:209",
+    "dlls/ncrypt/main.c:227",
+    "dlls/ncrypt/main.c:280",
+    "dlls/ncrypt/main.c:315",
+    "dlls/ncrypt/main.c:322"
+   ],
+   "signature": "static SECURITY_STATUS map_ntstatus(NTSTATUS status)",
+   "code": "static SECURITY_STATUS map_ntstatus(NTSTATUS status)\n{\n    switch (status)\n    {\n    case STATUS_INVALID_HANDLE:    return NTE_INVALID_HANDLE;\n    case STATUS_INVALID_SIGNATURE: return NTE_BAD_SIGNATURE;\n    case STATUS_SUCCESS:           return ERROR_SUCCESS;\n    case STATUS_INVALID_PARAMETER: return NTE_INVALID_PARAMETER;\n    case STATUS_NO_MEMORY:         return NTE_NO_MEMORY;\n    case STATUS_NOT_SUPPORTED:     return NTE_NOT_SUPPORTED;\n    case NTE_BAD_DATA:             return NTE_BAD_DATA;\n    case STATUS_BUFFER_TOO_SMALL:  return NTE_BUFFER_TOO_SMALL;\n    default:\n        FIXME(\"unhandled status %#lx\\n\", status);\n        return NTE_INTERNAL_ERROR;\n    }\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 32,
+    "end_line": 32,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ncrypt);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "BCryptDestroyKey",
+    "impl": [
+     "dlls/bcrypt/bcrypt_main.c:3987"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "wcscmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:266"
+    ]
+   }
+  ],
+  "header_inline": [
+   "_InterlockedDecrement",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ncrypt.NCryptFreeObject",
+  "category": {
+   "l1": "Security and identity",
+   "l2": "Cryptography",
+   "header": "ncrypt.h",
+   "textbook": "Protection",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 43,
+   "body": 42,
+   "code": 26
+  },
+  "cyclomatic": 8,
+  "return_type": "SECURITY_STATUS",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 11,
+   "n_tests": 11,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ncrypt/tests/ncrypt.c::check_property",
+    "dlls/ncrypt/tests/ncrypt.c::test_NCryptEncrypt",
+    "dlls/ncrypt/tests/ncrypt.c::test_NCryptExportKey",
+    "dlls/ncrypt/tests/ncrypt.c::test_NCryptIsAlgSupported",
+    "dlls/ncrypt/tests/ncrypt.c::test_create_persisted_key",
+    "dlls/ncrypt/tests/ncrypt.c::test_finalize_key",
+    "dlls/ncrypt/tests/ncrypt.c::test_free_object",
+    "dlls/ncrypt/tests/ncrypt.c::test_get_property",
+    "dlls/ncrypt/tests/ncrypt.c::test_key_import_rsa",
+    "dlls/ncrypt/tests/ncrypt.c::test_set_property",
+    "dlls/ncrypt/tests/ncrypt.c::test_verify_signature"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/ncrypt/nf-ncrypt-ncryptfreeobject",
+   "source": "win32",
+   "description": "Frees a CNG key storage object.",
+   "min_windows": "Windows Vista [desktop apps \\| UWP apps]",
+   "documented_dll": "Ncrypt.dll"
+  },
+  "exports": [
+   "ncrypt.NCryptFreeObject"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

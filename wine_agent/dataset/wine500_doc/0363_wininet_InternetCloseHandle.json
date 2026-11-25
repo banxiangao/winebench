@@ -1,0 +1,256 @@
+{
+ "id": "0363",
+ "function": {
+  "name": "InternetCloseHandle",
+  "export_name": "InternetCloseHandle",
+  "module": "wininet",
+  "source_module": "wininet",
+  "exported_by": [
+   "wininet"
+  ],
+  "side": "PE",
+  "file": "dlls/wininet/internet.c",
+  "start_line": 1834,
+  "end_line": 1850,
+  "body_lines": 14,
+  "signature": "BOOL WINAPI InternetCloseHandle(HINTERNET hInternet)",
+  "header_comment": "/***********************************************************************\n *           InternetCloseHandle (WININET.@)\n *\n * Generic close handle function\n *\n * RETURNS\n *    TRUE on success\n *    FALSE on failure\n *\n */",
+  "code": "BOOL WINAPI InternetCloseHandle(HINTERNET hInternet)\n{\n    object_header_t *obj;\n    \n    TRACE(\"%p\\n\", hInternet);\n\n    obj = get_handle_object( hInternet );\n    if (!obj) {\n        SetLastError(ERROR_INVALID_HANDLE);\n        return FALSE;\n    }\n\n    invalidate_handle(obj);\n    WININET_Release(obj);\n\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"winsock2.h\"",
+   "#include \"ws2ipdef.h\"",
+   "#include <string.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <stdlib.h>",
+   "#include <ctype.h>",
+   "#include <assert.h>",
+   "#include <wchar.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winuser.h\"",
+   "#include \"wininet.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"winerror.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"ws2tcpip.h\"",
+   "#include \"winternl.h\"",
+   "#include \"iphlpapi.h\"",
+   "#include \"dhcpcsdk.h\"",
+   "#include \"internet.h\"",
+   "#include \"resource.h\""
+  ],
+  "resolution": [
+   "wininet!InternetCloseHandle [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/wininet/tests/ftp.c",
+   "dlls/wininet/tests/http.c",
+   "dlls/wininet/tests/internet.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wininet",
+   "path": "sdk-api-src/content/wininet/nf-wininet-internetclosehandle.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wininet/nf-wininet-internetclosehandle",
+   "documented_name": "internetclosehandle",
+   "file": "docs/0363_sdk-api_nf-wininet-internetclosehandle.md",
+   "text": "---\nUID: NF:wininet.InternetCloseHandle\ntitle: InternetCloseHandle function (wininet.h)\ndescription: Closes a single Internet handle.\nhelpviewer_keywords: [\"InternetCloseHandle\",\"InternetCloseHandle function [WinINet]\",\"_win32_internetclosehandle\",\"wininet.internetclosehandle\",\"wininet/InternetCloseHandle\"]\nold-location: wininet\\internetclosehandle.htm\ntech.root: wininet\nms.assetid: 52b57e3c-3cfe-40bc-b87b-90cf39c5c38d\nms.date: 12/05/2018\nms.keywords: InternetCloseHandle, InternetCloseHandle function [WinINet], _win32_internetclosehandle, wininet.internetclosehandle, wininet/InternetCloseHandle\nreq.header: wininet.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Wininet.lib\nreq.dll: Wininet.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - InternetCloseHandle\n - wininet/InternetCloseHandle\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Wininet.dll\napi_name:\n - InternetCloseHandle\n---\n\n# InternetCloseHandle function\n\n\n## -description\n\nCloses a single Internet handle.\n\n## -parameters\n\n### -param hInternet [in]\n\nHandle to be closed.\n\n## -returns\n\nReturns <b>TRUE</b> if the handle is successfully closed, or <b>FALSE</b> otherwise. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThe function terminates any pending operations on the handle and discards any outstanding data. \n\n\nIt is safe to call <b>InternetCloseHandle</b> as long as no API calls are being made or will be made using the handle.  Once an API has returned <b>ERROR_IO_PENDING</b>, it is safe to call <b>InternetCloseHandle</b> to cancel that I/O, as long as no subsequent API calls will be issued with the handle. \n\nIt is safe to call <b>InternetCloseHandle</b> in a callback for the handle being closed. If there is a status callback registered for the handle being closed, and the handle was created with a non-NULL context value, an <b>INTERNET_STATUS_HANDLE_CLOSING</b> callback will be made. This indication will be the last callback made from a handle and indicates that the handle is being destroyed.\n\nIf asynchronous requests are pending for the handle or any of its child handles, the handle cannot be closed immediately, but it will be invalidated. Any new requests attempted using the handle will return with an \n<a href=\"/windows/desktop/WinInet/wininet-errors\">ERROR_INVALID_HANDLE</a> notification. The asynchronous requests will complete with <b>INTERNET_STATUS_REQUEST_COMPLETE</b>. Applications must be prepared to receive any <b>INTERNET_STATUS_REQUEST_COMPLETE</b> indications on the handle before the final <b>INTERNET_STATUS_HANDLE_CLOSING</b> indication is made, which indicates that the handle is completely closed.\n\nAn application can call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> to determine if requests are pending. If \n<b>GetLastError</b> returns <b>ERROR_IO_PENDING</b>, there were outstanding requests when the handle was closed.\n\nLike all other aspects of the WinINet API, this function cannot be safely called from within DllMain or the constructors and destructors of global objects.\n\n<div class=\"alert\"><b>Note</b>  WinINet does not support server implementations. In addition, it should not be used from a service.  For server implementations or services use <a href=\"/windows/desktop/WinHttp/winhttp-start-page\">Microsoft Windows HTTP Services (WinHTTP)</a>.</div>\n<div> </div>\n\n## -see-also\n\n<a href=\"/windows/desktop/WinInet/enabling-internet-functionality\">Enabling Internet Functionality</a>\n\n\n\n<a href=\"/windows/desktop/api/wininet/nf-wininet-ftpfindfirstfilea\">FtpFindFirstFile</a>\n\n\n\n<a href=\"/windows/desktop/api/wininet/nf-wininet-ftpopenfilea\">FtpOpenFile</a>\n\n\n\n<a href=\"/windows/desktop/api/wininet/nf-wininet-gopherfindfirstfilea\">GopherFindFirstFile</a>\n\n\n\n<a href=\"/windows/desktop/api/wininet/nf-wininet-httpopenrequesta\">HttpOpenRequest</a>\n\n\n\n<a href=\"/windows/desktop/api/wininet/nf-wininet-internetconnecta\">InternetConnect</a>\n\n\n\n<a href=\"/windows/desktop/WinInet/wininet-functions\">WinINet Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_handle_object",
+   "file": "dlls/wininet/internet.c",
+   "start_line": 205,
+   "end_line": 220,
+   "static": false,
+   "called_from": [
+    "InternetCloseHandle"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/dialogs.c:500",
+    "dlls/wininet/ftp.c:281",
+    "dlls/wininet/ftp.c:464",
+    "dlls/wininet/ftp.c:601",
+    "dlls/wininet/ftp.c:760"
+   ],
+   "signature": "object_header_t *get_handle_object( HINTERNET hinternet )",
+   "code": "object_header_t *get_handle_object( HINTERNET hinternet )\n{\n    object_header_t *info = NULL;\n    UINT_PTR handle = (UINT_PTR) hinternet;\n\n    EnterCriticalSection( &WININET_cs );\n\n    if(handle > 0 && handle < handle_table_size && handle_table[handle] && handle_table[handle]->valid_handle)\n        info = WININET_AddRef(handle_table[handle]);\n\n    LeaveCriticalSection( &WININET_cs );\n\n    TRACE(\"handle %Id -> %p\\n\", handle, info);\n\n    return info;\n}"
+  },
+  {
+   "name": "invalidate_handle",
+   "file": "dlls/wininet/internet.c",
+   "start_line": 222,
+   "end_line": 238,
+   "static": true,
+   "called_from": [
+    "InternetCloseHandle",
+    "WININET_Release"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void invalidate_handle(object_header_t *info)",
+   "code": "static void invalidate_handle(object_header_t *info)\n{\n    object_header_t *child, *next;\n\n    if(!info->valid_handle)\n        return;\n    info->valid_handle = FALSE;\n\n    /* Free all children as native does */\n    LIST_FOR_EACH_ENTRY_SAFE( child, next, &info->children, object_header_t, entry )\n    {\n        TRACE(\"invalidating child handle %p for parent %p\\n\", child->hInternet, info);\n        invalidate_handle( child );\n    }\n\n    WININET_Release(info);\n}"
+  },
+  {
+   "name": "WININET_Release",
+   "file": "dlls/wininet/internet.c",
+   "start_line": 240,
+   "end_line": 280,
+   "static": false,
+   "called_from": [
+    "InternetCloseHandle",
+    "invalidate_handle"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/dialogs.c:609",
+    "dlls/wininet/ftp.c:325",
+    "dlls/wininet/ftp.c:496",
+    "dlls/wininet/ftp.c:641",
+    "dlls/wininet/ftp.c:794"
+   ],
+   "signature": "BOOL WININET_Release( object_header_t *info )",
+   "code": "BOOL WININET_Release( object_header_t *info )\n{\n    ULONG refs = InterlockedDecrement(&info->refs);\n    TRACE( \"object %p refcount = %ld\\n\", info, refs );\n    if( !refs )\n    {\n        invalidate_handle(info);\n        if ( info->vtbl->CloseConnection )\n        {\n            TRACE( \"closing connection %p\\n\", info);\n            info->vtbl->CloseConnection( info );\n        }\n        /* Don't send a callback if this is a session handle created with InternetOpenUrl */\n        if ((info->htype != WH_HHTTPSESSION && info->htype != WH_HFTPSESSION)\n            || !(info->dwInternalFlags & INET_OPENURL))\n        {\n            INTERNET_SendCallback(info, info->dwContext,\n                                  INTERNET_STATUS_HANDLE_CLOSING, &info->hInternet,\n                                  sizeof(HINTERNET));\n        }\n        TRACE( \"destroying object %p\\n\", info);\n        if ( info->htype != WH_HINIT )\n            list_remove( &info->entry );\n        info->vtbl->Destroy( info );\n\n        if(info->hInternet) {\n            UINT_PTR handle = (UINT_PTR)info->hInternet;\n\n            EnterCriticalSection( &WININET_cs );\n\n            handle_table[handle] = NULL;\n            if(next_handle > handle)\n                next_handle = handle;\n\n            LeaveCriticalSection( &WININET_cs );\n        }\n\n        free(info);\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "WININET_AddRef",
+   "file": "dlls/wininet/internet.c",
+   "start_line": 198,
+   "end_line": 203,
+   "static": false,
+   "called_from": [
+    "get_handle_object"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/ftp.c:1351",
+    "dlls/wininet/ftp.c:2470",
+    "dlls/wininet/ftp.c:3545",
+    "dlls/wininet/http.c:3498",
+    "dlls/wininet/http.c:5955"
+   ],
+   "signature": "object_header_t *WININET_AddRef( object_header_t *info )",
+   "code": "object_header_t *WININET_AddRef( object_header_t *info )\n{\n    ULONG refs = InterlockedIncrement(&info->refs);\n    TRACE(\"%p -> refcount = %ld\\n\", info, refs );\n    return info;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "WININET_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 76,
+    "end_line": 76,
+    "code": "static CRITICAL_SECTION WININET_cs = { &WININET_cs_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 58,
+    "end_line": 58,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(wininet);"
+   },
+   {
+    "name": "handle_table",
+    "type": "object_header_t **",
+    "static": true,
+    "start_line": 78,
+    "end_line": 78,
+    "code": "static object_header_t **handle_table;"
+   },
+   {
+    "name": "handle_table_size",
+    "type": "UINT_PTR",
+    "static": true,
+    "start_line": 80,
+    "end_line": 80,
+    "code": "static UINT_PTR handle_table_size;"
+   },
+   {
+    "name": "next_handle",
+    "type": "UINT_PTR",
+    "static": true,
+    "start_line": 79,
+    "end_line": 79,
+    "code": "static UINT_PTR next_handle;"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "INTERNET_SendCallback",
+    "file": "dlls/wininet/utility.c",
+    "start_line": 240
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "_InterlockedDecrement",
+   "_InterlockedIncrement",
+   "list_remove",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "info->vtbl->CloseConnection",
+    "in_function": "WININET_Release",
+    "at": "dlls/wininet/internet.c:250",
+    "candidates": []
+   },
+   {
+    "expr": "info->vtbl->Destroy",
+    "in_function": "WININET_Release",
+    "at": "dlls/wininet/internet.c:263",
+    "candidates": []
+   }
+  ]
+ }
+}

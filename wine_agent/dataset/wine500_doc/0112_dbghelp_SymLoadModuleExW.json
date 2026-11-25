@@ -1,0 +1,507 @@
+{
+ "id": "0112",
+ "function": {
+  "name": "SymLoadModuleExW",
+  "export_name": "SymLoadModuleExW",
+  "module": "dbghelp",
+  "source_module": "dbghelp",
+  "exported_by": [
+   "dbghelp"
+  ],
+  "side": "PE",
+  "file": "dlls/dbghelp/module.c",
+  "start_line": 900,
+  "end_line": 1009,
+  "body_lines": 107,
+  "signature": "DWORD64 WINAPI  SymLoadModuleExW(HANDLE hProcess, HANDLE hFile, PCWSTR wImageName, PCWSTR wModuleName, DWORD64 BaseOfDll, DWORD SizeOfDll, PMODLOAD_DATA Data, DWORD Flags)",
+  "header_comment": "/***********************************************************************\n *\t\t\tSymLoadModuleExW (DBGHELP.@)\n */",
+  "code": "DWORD64 WINAPI  SymLoadModuleExW(HANDLE hProcess, HANDLE hFile, PCWSTR wImageName,\n                                 PCWSTR wModuleName, DWORD64 BaseOfDll, DWORD SizeOfDll,\n                                 PMODLOAD_DATA Data, DWORD Flags)\n{\n    struct process*     pcs;\n    struct module*      module = NULL;\n    struct module*      altmodule;\n\n    TRACE(\"(%p %p %s %s %I64x %08lx %p %08lx)\\n\",\n          hProcess, hFile, debugstr_w(wImageName), debugstr_w(wModuleName),\n          BaseOfDll, SizeOfDll, Data, Flags);\n\n    if (Data)\n        FIXME(\"Unsupported load data parameter %p for %s\\n\",\n              Data, debugstr_w(wImageName));\n\n    if (!(pcs = process_find_by_handle(hProcess))) return 0;\n\n    if (Flags & ~(SLMFLAG_VIRTUAL | SLMFLAG_NO_SYMBOLS))\n        FIXME(\"Unsupported Flags %08lx for %s\\n\", Flags, debugstr_w(wImageName));\n\n    /* Trying to load a new module at the same address of an existing one,\n     * native simply keeps the old one in place.\n     */\n    if (BaseOfDll)\n        for (altmodule = pcs->lmodules; altmodule; altmodule = altmodule->next)\n        {\n            if (altmodule->type == DMT_PE && BaseOfDll == altmodule->module.BaseOfImage)\n            {\n                SetLastError(ERROR_SUCCESS);\n                return 0;\n            }\n        }\n\n    /* this is a Wine extension to the API just to redo the synchronisation */\n    if (!wImageName && !hFile && !Flags)\n    {\n        pcs->loader->synchronize_module_list(pcs);\n        return 0;\n    }\n\n    if (Flags & SLMFLAG_VIRTUAL)\n    {\n        if (!wImageName) wImageName = L\"\";\n        module = module_new(pcs, wImageName, DMT_PE, FALSE, TRUE, BaseOfDll, SizeOfDll, 0, 0, IMAGE_FILE_MACHINE_UNKNOWN);\n        if (!module) return 0;\n    }\n    else\n    {\n        /* try PE image */\n        module = pe_load_native_module(pcs, wImageName, hFile, BaseOfDll, SizeOfDll);\n        if (!module && wImageName)\n        {\n            /* It could be either a dll.so file (for which we need the corresponding\n             * system module) or a system module.\n             * In both cases, ensure system module list is up-to-date.\n             */\n            pcs->loader->synchronize_module_list(pcs);\n            if (module_is_container_loaded(pcs, wImageName, BaseOfDll))\n                module = pe_load_builtin_module(pcs, wImageName, BaseOfDll, SizeOfDll);\n            /* at last, try ELF or Mach-O module */\n            if (!module)\n                module = pcs->loader->load_module(pcs, wImageName, BaseOfDll);\n        }\n        if (!module)\n        {\n            WARN(\"Couldn't locate %s\\n\", debugstr_w(wImageName));\n            SetLastError(ERROR_NO_MORE_FILES);\n            return 0;\n        }\n    }\n    if (Flags & SLMFLAG_NO_SYMBOLS) module->dont_load_symbols = 1;\n\n    /* Store alternate name for module when provided. */\n    if (wModuleName)\n        module->alt_modulename = pool_wcsdup(&module->pool, wModuleName);\n    if (wImageName)\n        lstrcpynW(module->module.ImageName, wImageName, ARRAY_SIZE(module->module.ImageName));\n\n    for (altmodule = pcs->lmodules; altmodule; altmodule = altmodule->next)\n    {\n        if (altmodule != module && altmodule->type == module->type &&\n            module->module.BaseOfImage >= altmodule->module.BaseOfImage &&\n            module->module.BaseOfImage < altmodule->module.BaseOfImage + altmodule->module.ImageSize)\n            break;\n    }\n    if (altmodule)\n    {\n        /* We have a conflict as the new module cannot be found by its base address\n         * (it's hidden by altmodule).\n         * We need to decide which one the two modules we need to get rid of.\n         */\n        /* loading same module at same address... we can only get here when BaseOfDll is 0 */\n        if (module->module.BaseOfImage == altmodule->module.BaseOfImage)\n        {\n            module_remove(pcs, module);\n            SetLastError(ERROR_INVALID_ADDRESS);\n            return 0;\n        }\n        /* replace old module with new one */\n        WARN(\"Replace module %ls at %I64x by module %ls at %I64x\\n\",\n             altmodule->module.ImageName, altmodule->module.BaseOfImage,\n             module->module.ImageName, module->module.BaseOfImage);\n        module_remove(pcs, altmodule);\n    }\n\n    if ((dbghelp_options & SYMOPT_DEFERRED_LOADS) == 0 && !module_get_container(pcs, module))\n        module_load_debug(module);\n    return module->module.BaseOfImage;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <stdlib.h>",
+   "#include <stdio.h>",
+   "#include <string.h>",
+   "#include <assert.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"dbghelp_private.h\"",
+   "#include \"image_private.h\"",
+   "#include \"psapi.h\"",
+   "#include \"tlhelp32.h\"",
+   "#include \"winternl.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "dbghelp!SymLoadModuleExW [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/dbghelp/tests/dbghelp.c",
+   "dlls/dbghelp/tests/path.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "dbghelp",
+   "path": "sdk-api-src/content/dbghelp/nf-dbghelp-symloadmoduleexw.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/dbghelp/nf-dbghelp-symloadmoduleexw",
+   "documented_name": "symloadmoduleexw",
+   "file": "docs/0112_sdk-api_nf-dbghelp-symloadmoduleexw.md",
+   "text": "---\nUID: NF:dbghelp.SymLoadModuleExW\ntitle: SymLoadModuleExW function (dbghelp.h)\ndescription: The SymLoadModuleExW (Unicode) function loads the symbol table for the specified module.\nhelpviewer_keywords: [\"SLMFLAG_NO_SYMBOLS\",\"SLMFLAG_VIRTUAL\",\"SymLoadModuleEx\",\"SymLoadModuleEx function\",\"SymLoadModuleExW\",\"_win32_symloadmoduleex\",\"base.symloadmoduleex\",\"dbghelp/SymLoadModuleEx\",\"dbghelp/SymLoadModuleExW\"]\nold-location: base\\symloadmoduleex.htm\ntech.root: Debug\nms.assetid: 4a880090-f063-4d03-8fd5-a57ccba262c8\nms.date: 08/04/2022\nms.keywords: SLMFLAG_NO_SYMBOLS, SLMFLAG_VIRTUAL, SymLoadModuleEx, SymLoadModuleEx function, SymLoadModuleExW, _win32_symloadmoduleex, base.symloadmoduleex, dbghelp/SymLoadModuleEx, dbghelp/SymLoadModuleExW\nreq.header: dbghelp.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: SymLoadModuleExW (Unicode) and SymLoadModuleEx (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Dbghelp.lib\nreq.dll: Dbghelp.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: DbgHelp.dll 6.0 or later\nms.custom: 19H1\nf1_keywords:\n - SymLoadModuleExW\n - dbghelp/SymLoadModuleExW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Dbghelp.dll\napi_name:\n - SymLoadModuleEx\n - SymLoadModuleEx\n - SymLoadModuleExW\n---\n\n# SymLoadModuleExW function\n\n\n## -description\n\nLoads the symbol table for the specified module.\n\n## -parameters\n\n### -param hProcess [in]\n\nA handle to the process that was originally passed to the \n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-syminitialize\">SymInitialize</a> function.\n\n### -param hFile [in]\n\nA handle to the file for the executable image. This argument is used mostly by debuggers, where the debugger passes the file handle obtained from a debugging event. A value of <b>NULL</b> indicates that <i>hFile</i> is not used.\n\n### -param ImageName [in]\n\nThe name of the executable image. This name can contain a partial path, a full path, or no path at all. If the file cannot be located by the name provided, the symbol search path is used.\n\n### -param ModuleName [in]\n\nA shortcut name for the module. If the pointer value is <b>NULL</b>, the library creates a name using the base name of the symbol file.\n\n### -param BaseOfDll [in]\n\nThe load address of the module. If the value is zero, the library obtains the load address from the symbol file. The load address contained in the symbol file is not necessarily the actual load address. Debuggers and other applications having an actual load address should use the real load address when calling this function.\n\nIf the image is a .pdb file, this parameter cannot be zero.\n\n### -param DllSize [in]\n\nThe size of the module, in bytes. If the value is zero, the library obtains the size from the symbol file. The size contained in the symbol file is not necessarily the actual size. Debuggers and other applications having an actual size should use the real size when calling this function.\n\nIf the image is a .pdb file, this parameter cannot be zero.\n\n### -param Data [in]\n\nA pointer to a \n<a href=\"/windows/desktop/api/dbghelp/ns-dbghelp-modload_data\">MODLOAD_DATA</a> structure that represents headers other than the standard PE header. This parameter is optional and can be <b>NULL</b>.\n\n### -param Flags [in]\n\nThis parameter can be zero or one or more of the following values. If this parameter is zero, the function loads the modules and the symbols for the module.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SLMFLAG_NO_SYMBOLS\"></a><a id=\"slmflag_no_symbols\"></a><dl>\n<dt><b>SLMFLAG_NO_SYMBOLS</b></dt>\n<dt>0x4</dt>\n</dl>\n</td>\n<td width=\"60%\">\nLoads the module but not the symbols for the module.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SLMFLAG_VIRTUAL\"></a><a id=\"slmflag_virtual\"></a><dl>\n<dt><b>SLMFLAG_VIRTUAL</b></dt>\n<dt>0x1</dt>\n</dl>\n</td>\n<td width=\"60%\">\nCreates a virtual module named <i>ModuleName</i> at the address specified in <i>BaseOfDll</i>. To add symbols to this module, call the \n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symaddsymbol\">SymAddSymbol</a> function.\n\n</td>\n</tr>\n</table>\n\n## -returns\n\nIf the function succeeds, the return value is the base address of the loaded module.\n\nIf the function fails, the return value is zero. To retrieve extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\nIf the module is already loaded, the return value is zero and <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> returns ERROR_SUCCESS.\n\n## -remarks\n\nThe symbol handler creates an entry for the module and if the deferred symbol loading option is turned off, an attempt is made to load the symbols. If deferred symbol loading is enabled, the module is marked as deferred and the symbols are not loaded until a reference is made to a symbol in the module. Therefore, you should always call the <a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symgetmoduleinfo64\">SymGetModuleInfo64</a> function after calling <b>SymLoadModuleEx</b>.\n\nTo unload the symbol table, use the \n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symunloadmodule64\">SymUnloadModule64</a> function.\n\nAll DbgHelp functions, such as this one, are single threaded. Therefore, calls from more than one thread to this function will likely result in unexpected behavior or memory corruption. To avoid this, you must synchronize all concurrent calls from more than one thread to this function.\n\nTo call the Unicode version of this function, define DBGHELP_TRANSLATE_TCHAR.\n\n\n#### Examples\n\nFor an example, see \n<a href=\"/windows/desktop/Debug/loading-a-symbol-module\">Loading a Symbol Module</a>.\n\n<div class=\"code\"></div>\n\n\n\n\n> [!NOTE]\n> The dbghelp.h header defines SymLoadModuleEx as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/Debug/dbghelp-functions\">DbgHelp Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/dbghelp/ns-dbghelp-modload_data\">MODLOAD_DATA</a>\n\n\n\n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symaddsymbol\">SymAddSymbol</a>\n\n\n\n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symunloadmodule\">SymUnloadModule64</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "module_new",
+   "file": "dlls/dbghelp/module.c",
+   "start_line": 131,
+   "end_line": 216,
+   "static": false,
+   "called_from": [
+    "SymLoadModuleExW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/dbghelp/pe_module.c:944",
+    "dlls/dbghelp/pe_module.c:1015",
+    "dlls/dbghelp/macho_module.c:1528",
+    "dlls/dbghelp/dbghelp_private.h:814",
+    "dlls/dbghelp/elf_module.c:1248"
+   ],
+   "signature": "struct module* module_new(struct process* pcs, const WCHAR* name, enum dhext_module_type type, BOOL builtin, BOOL virtual, DWORD64 mod_addr, DWORD64 size, ULONG_PTR stamp, ULONG_PTR checksum, WORD machine)",
+   "code": "struct module* module_new(struct process* pcs, const WCHAR* name,\n                          enum dhext_module_type type, BOOL builtin, BOOL virtual,\n                          DWORD64 mod_addr, DWORD64 size,\n                          ULONG_PTR stamp, ULONG_PTR checksum, WORD machine)\n{\n    struct module*      module;\n    struct module**     pmodule;\n    unsigned            i;\n\n    assert(type == DMT_ELF || type == DMT_PE || type == DMT_MACHO);\n    if (!(module = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*module))))\n\treturn NULL;\n\n    for (pmodule = &pcs->lmodules; *pmodule; pmodule = &(*pmodule)->next);\n    module->next = NULL;\n    *pmodule = module;\n\n    TRACE(\"=> %s%s%s %I64x-%I64x %s\\n\", virtual ? \"virtual \" : \"\", builtin ? \"built-in \" : \"\",\n          get_module_type(module), mod_addr, mod_addr + size, debugstr_w(name));\n\n    pool_init(&module->pool, 65536);\n\n    module->process = pcs;\n    module->module.SizeOfStruct = sizeof(module->module);\n    module->module.BaseOfImage = mod_addr;\n    module->module.ImageSize = size;\n    module_set_module(module, name);\n    module->alt_modulename = NULL;\n    module->module.ImageName[0] = '\\0';\n    lstrcpynW(module->module.LoadedImageName, name, ARRAY_SIZE(module->module.LoadedImageName));\n    module->module.SymType = SymDeferred;\n    module->module.NumSyms = 0;\n    module->module.TimeDateStamp = stamp;\n    module->module.CheckSum = checksum;\n\n    memset(module->module.LoadedPdbName, 0, sizeof(module->module.LoadedPdbName));\n    module->module.CVSig = 0;\n    memset(module->module.CVData, 0, sizeof(module->module.CVData));\n    module->module.PdbSig = 0;\n    memset(&module->module.PdbSig70, 0, sizeof(module->module.PdbSig70));\n    module->module.PdbAge = 0;\n    module->module.PdbUnmatched = FALSE;\n    module->module.DbgUnmatched = FALSE;\n    module->module.LineNumbers = FALSE;\n    module->module.GlobalSymbols = FALSE;\n    module->module.TypeInfo = FALSE;\n    module->module.SourceIndexed = FALSE;\n    module->module.Publics = FALSE;\n    module->module.MachineType = machine;\n    module->module.Reserved = 0;\n\n    module->reloc_delta       = 0;\n    module->type              = type;\n    module->is_virtual        = !!virtual;\n    module->is_wine_builtin   = !!builtin;\n    module->has_file_image    = TRUE;\n\n    for (i = 0; i < DFI_LAST; i++) module->format_info[i] = NULL;\n    module->sortlist_valid    = FALSE;\n    module->sorttab_size      = 0;\n    module->addr_sorttab      = NULL;\n    module->num_sorttab       = 0;\n    module->num_symbols       = 0;\n    module->cpu               = cpu_find(machine);\n    if (!module->cpu)\n        module->cpu = dbghelp_current_cpu;\n    module->debug_format_bitmask = 0;\n\n    vector_init(&module->vsymt, sizeof(symref_t), 0);\n    vector_init(&module->vcustom_symt, sizeof(symref_t), 0);\n    /* FIXME: this seems a bit too high (on a per module basis)\n     * need some statistics about this\n     */\n    hash_table_init(&module->pool, &module->ht_symbols, 4096);\n    hash_table_init(&module->pool, &module->ht_types,   4096);\n\n    module->sources_used      = 0;\n    module->sources_alloc     = 0;\n    module->sources           = 0;\n    wine_rb_init(&module->sources_offsets_tree, source_rb_compare);\n\n    /* add top level symbol */\n    module->top = symt_new_module(module);\n\n    return module;\n}"
+  },
+  {
+   "name": "module_is_container_loaded",
+   "file": "dlls/dbghelp/module.c",
+   "start_line": 407,
+   "end_line": 435,
+   "static": true,
+   "called_from": [
+    "SymLoadModuleExW"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL module_is_container_loaded(const struct process* pcs, const WCHAR* ImageName, DWORD64 base)",
+   "code": "static BOOL module_is_container_loaded(const struct process* pcs,\n                                       const WCHAR* ImageName, DWORD64 base)\n{\n    size_t              len;\n    struct module*      module;\n    PCWSTR              filename, modname;\n\n    if (!base) return FALSE;\n    filename = get_filename(ImageName, NULL);\n    len = lstrlenW(filename);\n\n    for (module = pcs->lmodules; module; module = module->next)\n    {\n        if ((module->type == DMT_ELF || module->type == DMT_MACHO) &&\n            base >= module->module.BaseOfImage &&\n            base < module->module.BaseOfImage + module->module.ImageSize)\n        {\n            modname = get_filename(module->module.LoadedImageName, NULL);\n            if (!wcsnicmp(modname, filename, len) &&\n                !memcmp(modname + len, L\".so\", 3 * sizeof(WCHAR)))\n            {\n                return TRUE;\n            }\n        }\n    }\n    /* likely a native PE module */\n    WARN(\"Couldn't find container for %s\\n\", debugstr_w(ImageName));\n    return FALSE;\n}"
+  },
+  {
+   "name": "module_remove",
+   "file": "dlls/dbghelp/module.c",
+   "start_line": 1025,
+   "end_line": 1065,
+   "static": false,
+   "called_from": [
+    "SymLoadModuleExW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/dbghelp/macho_module.c:1780",
+    "dlls/dbghelp/dbghelp_private.h:822",
+    "dlls/dbghelp/module.c:1091",
+    "dlls/dbghelp/elf_module.c:1749",
+    "dlls/dbghelp/elf_module.c:1787"
+   ],
+   "signature": "BOOL module_remove(struct process* pcs, struct module* module)",
+   "code": "BOOL module_remove(struct process* pcs, struct module* module)\n{\n    struct module_format_vtable_iterator iter = {};\n    struct module**     p;\n\n    TRACE(\"%s (%p)\\n\", debugstr_w(module->modulename), module);\n\n    /* remove local scope if symbol is from this module */\n    if (pcs->localscope_symt)\n    {\n        struct module_pair pair;\n        if (module_init_pair(&pair, pcs->handle, pcs->localscope_pc) &&\n            (module == pair.effective || module == pair.requested))\n        {\n            pcs->localscope_pc = 0;\n            pcs->localscope_symt = NULL;\n        }\n    }\n    while (module_format_vtable_iterator_next(module, &iter, MODULE_FORMAT_VTABLE_INDEX(remove)))\n        iter.modfmt->vtable->remove(iter.modfmt);\n\n    hash_table_destroy(&module->ht_symbols);\n    hash_table_destroy(&module->ht_types);\n    HeapFree(GetProcessHeap(), 0, module->sources);\n    HeapFree(GetProcessHeap(), 0, module->addr_sorttab);\n    pool_destroy(&module->pool);\n    /* native dbghelp doesn't invoke registered callback(,CBA_SYMBOLS_UNLOADED,) here\n     * so do we\n     */\n    for (p = &pcs->lmodules; *p; p = &(*p)->next)\n    {\n        if (*p == module)\n        {\n            *p = module->next;\n            HeapFree(GetProcessHeap(), 0, module);\n            return TRUE;\n        }\n    }\n    FIXME(\"This shouldn't happen\\n\");\n    return FALSE;\n}"
+  },
+  {
+   "name": "module_get_container",
+   "file": "dlls/dbghelp/module.c",
+   "start_line": 280,
+   "end_line": 294,
+   "static": true,
+   "called_from": [
+    "SymLoadModuleExW",
+    "module_get_debug"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/dbghelp/module.c:1451",
+    "dlls/dbghelp/module.c:1652"
+   ],
+   "signature": "static struct module* module_get_container(const struct process* pcs, const struct module* inner)",
+   "code": "static struct module* module_get_container(const struct process* pcs,\n                                    const struct module* inner)\n{\n    struct module*      module;\n     \n    for (module = pcs->lmodules; module; module = module->next)\n    {\n        if (module != inner &&\n            module->module.BaseOfImage <= inner->module.BaseOfImage &&\n            module->module.BaseOfImage + module->module.ImageSize >=\n            inner->module.BaseOfImage + inner->module.ImageSize)\n            return module;\n    }\n    return NULL;\n}"
+  },
+  {
+   "name": "module_load_debug",
+   "file": "dlls/dbghelp/module.c",
+   "start_line": 315,
+   "end_line": 354,
+   "static": false,
+   "called_from": [
+    "SymLoadModuleExW",
+    "module_get_debug"
+   ],
+   "exclusive_to_target": false,
+   "signature": "BOOL module_load_debug(struct module* module)",
+   "code": "BOOL module_load_debug(struct module* module)\n{\n    IMAGEHLP_DEFERRED_SYMBOL_LOADW64    idslW64;\n\n    /* if deferred, force loading */\n    if (module->module.SymType == SymDeferred)\n    {\n        BOOL ret;\n\n        if (module->is_virtual)\n        {\n            module->module.SymType = SymVirtual;\n            ret = TRUE;\n        }\n        else if (module->type == DMT_PE)\n        {\n            idslW64.SizeOfStruct = sizeof(idslW64);\n            idslW64.BaseOfImage = module->module.BaseOfImage;\n            idslW64.CheckSum = module->module.CheckSum;\n            idslW64.TimeDateStamp = module->module.TimeDateStamp;\n            memcpy(idslW64.FileName, module->module.ImageName,\n                   sizeof(module->module.ImageName));\n            idslW64.Reparse = FALSE;\n            idslW64.hFile = INVALID_HANDLE_VALUE;\n\n            pcs_callback(module->process, CBA_DEFERRED_SYMBOL_LOAD_START, &idslW64);\n            ret = pe_load_debug_info(module);\n            pcs_callback(module->process,\n                         ret ? CBA_DEFERRED_SYMBOL_LOAD_COMPLETE : CBA_DEFERRED_SYMBOL_LOAD_FAILURE,\n                         &idslW64);\n        }\n        else ret = module->process->loader->load_debug_info(module->process, module);\n\n        if (!ret) module->module.SymType = SymNone;\n        assert(module->module.SymType != SymDeferred);\n        module->module.NumSyms = module->ht_symbols.num_elts;\n        return ret;\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "get_module_type",
+   "file": "dlls/dbghelp/module.c",
+   "start_line": 117,
+   "end_line": 126,
+   "static": true,
+   "called_from": [
+    "module_new"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "referenced through a macro (conservatively shared)"
+   ],
+   "signature": "static const char*      get_module_type(struct module* module)",
+   "code": "static const char*      get_module_type(struct module* module)\n{\n    switch (module->type)\n    {\n    case DMT_ELF: return \"ELF\";\n    case DMT_MACHO: return \"Mach-O\";\n    case DMT_PE: return module->is_wine_builtin ? \"PE (builtin)\" : \"PE\";\n    default: return \"---\";\n    }\n}"
+  },
+  {
+   "name": "module_set_module",
+   "file": "dlls/dbghelp/module.c",
+   "start_line": 106,
+   "end_line": 110,
+   "static": false,
+   "called_from": [
+    "module_new"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/dbghelp/macho_module.c:1979",
+    "dlls/dbghelp/elf_module.c:1792"
+   ],
+   "signature": "void module_set_module(struct module* module, const WCHAR* name)",
+   "code": "void module_set_module(struct module* module, const WCHAR* name)\n{\n    module_fill_module(name, module->module.ModuleName, ARRAY_SIZE(module->module.ModuleName));\n    module_fill_module(name, module->modulename, ARRAY_SIZE(module->modulename));\n}"
+  },
+  {
+   "name": "get_filename",
+   "file": "dlls/dbghelp/module.c",
+   "start_line": 71,
+   "end_line": 81,
+   "static": true,
+   "called_from": [
+    "is_wine_loader",
+    "module_fill_module",
+    "module_is_container_loaded"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/dbghelp/module.c:266",
+    "dlls/dbghelp/module.c:269"
+   ],
+   "signature": "static const WCHAR* get_filename(const WCHAR* name, const WCHAR* endptr)",
+   "code": "static const WCHAR* get_filename(const WCHAR* name, const WCHAR* endptr)\n{\n    const WCHAR*        ptr;\n\n    if (!endptr) endptr = name + lstrlenW(name);\n    for (ptr = endptr - 1; ptr >= name; ptr--)\n    {\n        if (*ptr == '/' || *ptr == '\\\\') break;\n    }\n    return ++ptr;\n}"
+  },
+  {
+   "name": "module_init_pair",
+   "file": "dlls/dbghelp/module.c",
+   "start_line": 218,
+   "end_line": 223,
+   "static": false,
+   "called_from": [
+    "module_remove"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/dbghelp/dbghelp_private.h:799",
+    "dlls/dbghelp/msc.c:4321",
+    "dlls/dbghelp/dwarf.c:3992",
+    "dlls/dbghelp/symbol.c:1673",
+    "dlls/dbghelp/symbol.c:2096"
+   ],
+   "signature": "BOOL module_init_pair(struct module_pair* pair, HANDLE hProcess, DWORD64 addr)",
+   "code": "BOOL module_init_pair(struct module_pair* pair, HANDLE hProcess, DWORD64 addr)\n{\n    if (!(pair->pcs = process_find_by_handle(hProcess))) return FALSE;\n    pair->requested = module_find_by_addr(pair->pcs, addr);\n    return module_get_debug(pair);\n}"
+  },
+  {
+   "name": "module_fill_module",
+   "file": "dlls/dbghelp/module.c",
+   "start_line": 90,
+   "end_line": 104,
+   "static": true,
+   "called_from": [
+    "module_set_module"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void module_fill_module(const WCHAR* in, WCHAR* out, size_t size)",
+   "code": "static void module_fill_module(const WCHAR* in, WCHAR* out, size_t size)\n{\n    const WCHAR *ptr, *endptr;\n    size_t      len;\n\n    endptr = in + lstrlenW(in);\n    endptr -= match_ext(in, endptr - in);\n    ptr = get_filename(in, endptr);\n    len = min(endptr - ptr, size - 1);\n    memcpy(out, ptr, len * sizeof(WCHAR));\n    out[len] = '\\0';\n    if (is_wine_loader(out))\n        lstrcpynW(out, S_WineLoaderW, size);\n    while ((*out = towlower(*out))) out++;\n}"
+  },
+  {
+   "name": "module_find_by_addr",
+   "file": "dlls/dbghelp/module.c",
+   "start_line": 380,
+   "end_line": 399,
+   "static": false,
+   "called_from": [
+    "module_init_pair"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/dbghelp/dbghelp_private.h:802",
+    "dlls/dbghelp/source.c:162",
+    "dlls/dbghelp/module.c:1089",
+    "dlls/dbghelp/module.c:1435",
+    "dlls/dbghelp/module.c:1481"
+   ],
+   "signature": "struct module* module_find_by_addr(const struct process* pcs, DWORD64 addr)",
+   "code": "struct module* module_find_by_addr(const struct process* pcs, DWORD64 addr)\n{\n    struct module* module;\n\n    for (module = pcs->lmodules; module; module = module->next)\n    {\n        if (module->type == DMT_PE && addr >= module->module.BaseOfImage &&\n            addr < module->module.BaseOfImage + module->module.ImageSize)\n            return module;\n    }\n    for (module = pcs->lmodules; module; module = module->next)\n    {\n        if ((module->type == DMT_ELF || module->type == DMT_MACHO) &&\n            addr >= module->module.BaseOfImage &&\n            addr < module->module.BaseOfImage + module->module.ImageSize)\n            return module;\n    }\n    SetLastError(ERROR_MOD_NOT_FOUND);\n    return module;\n}"
+  },
+  {
+   "name": "module_get_debug",
+   "file": "dlls/dbghelp/module.c",
+   "start_line": 365,
+   "end_line": 372,
+   "static": false,
+   "called_from": [
+    "module_init_pair"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/dbghelp/dbghelp_private.h:630",
+    "dlls/dbghelp/source.c:163",
+    "dlls/dbghelp/source.c:177",
+    "dlls/dbghelp/symbol.c:1339",
+    "dlls/dbghelp/symbol.c:1482"
+   ],
+   "signature": "BOOL module_get_debug(struct module_pair* pair)",
+   "code": "BOOL module_get_debug(struct module_pair* pair)\n{\n    if (!pair->requested) return FALSE;\n    /* for a PE builtin, always get info from container */\n    if (!(pair->effective = module_get_container(pair->pcs, pair->requested)))\n        pair->effective = pair->requested;\n    return module_load_debug(pair->effective);\n}"
+  },
+  {
+   "name": "match_ext",
+   "file": "dlls/dbghelp/module.c",
+   "start_line": 42,
+   "end_line": 55,
+   "static": true,
+   "called_from": [
+    "module_fill_module"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/dbghelp/module.c:68"
+   ],
+   "signature": "static int match_ext(const WCHAR* ptr, size_t len)",
+   "code": "static int match_ext(const WCHAR* ptr, size_t len)\n{\n    const WCHAR* const *e;\n    size_t      l;\n\n    for (e = ext; *e; e++)\n    {\n        l = lstrlenW(*e);\n        if (l >= len) return 0;\n        if (wcsnicmp(&ptr[len - l], *e, l)) continue;\n        return l;\n    }\n    return 0;\n}"
+  },
+  {
+   "name": "is_wine_loader",
+   "file": "dlls/dbghelp/module.c",
+   "start_line": 83,
+   "end_line": 88,
+   "static": true,
+   "called_from": [
+    "module_fill_module"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL is_wine_loader(const WCHAR *module)",
+   "code": "static BOOL is_wine_loader(const WCHAR *module)\n{\n    const WCHAR *filename = get_filename(module, NULL);\n\n    return !wcscmp( filename, L\"wine\" );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "S_WineLoaderW",
+    "type": "const WCHAR[14]",
+    "static": false,
+    "start_line": 39,
+    "end_line": 39,
+    "code": "const WCHAR S_WineLoaderW[] = L\"<wine-loader>\";"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 35,
+    "end_line": 35,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(dbghelp);"
+   },
+   {
+    "name": "ext",
+    "type": "const WCHAR *const[7]",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "static const WCHAR * const ext[] = {L\".acm\", L\".dll\", L\".drv\", L\".exe\", L\".ocx\", L\".vxd\", NULL};"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "cpu_find",
+    "file": "dlls/dbghelp/dbghelp.c",
+    "start_line": 170
+   },
+   {
+    "name": "hash_table_destroy",
+    "file": "dlls/dbghelp/storage.c",
+    "start_line": 302
+   },
+   {
+    "name": "hash_table_init",
+    "file": "dlls/dbghelp/storage.c",
+    "start_line": 294
+   },
+   {
+    "name": "pcs_callback",
+    "file": "dlls/dbghelp/dbghelp.c",
+    "start_line": 818
+   },
+   {
+    "name": "pe_load_builtin_module",
+    "file": "dlls/dbghelp/pe_module.c",
+    "start_line": 1002
+   },
+   {
+    "name": "pe_load_debug_info",
+    "file": "dlls/dbghelp/pe_module.c",
+    "start_line": 759
+   },
+   {
+    "name": "pe_load_native_module",
+    "file": "dlls/dbghelp/pe_module.c",
+    "start_line": 882
+   },
+   {
+    "name": "pool_destroy",
+    "file": "dlls/dbghelp/storage.c",
+    "start_line": 36
+   },
+   {
+    "name": "pool_init",
+    "file": "dlls/dbghelp/storage.c",
+    "start_line": 31
+   },
+   {
+    "name": "pool_wcsdup",
+    "file": "dlls/dbghelp/storage.c",
+    "start_line": 63
+   },
+   {
+    "name": "process_find_by_handle",
+    "file": "dlls/dbghelp/dbghelp.c",
+    "start_line": 93
+   },
+   {
+    "name": "source_rb_compare",
+    "file": "dlls/dbghelp/source.c",
+    "start_line": 38
+   },
+   {
+    "name": "symt_new_module",
+    "file": "dlls/dbghelp/symbol.c",
+    "start_line": 220
+   },
+   {
+    "name": "vector_init",
+    "file": "dlls/dbghelp/storage.c",
+    "start_line": 70
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "HeapAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "_assert",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/exit.c:319"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   },
+   {
+    "name": "towlower",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/locale.c:1095"
+    ]
+   },
+   {
+    "name": "wcscmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:266"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "SetLastError",
+   "debugstr_w",
+   "lstrcpynW",
+   "lstrlenW",
+   "rb_init",
+   "wcsnicmp",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "module_format_vtable_iterator_next"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "pcs->loader->synchronize_module_list",
+    "in_function": "SymLoadModuleExW",
+    "at": "dlls/dbghelp/module.c:937",
+    "candidates": []
+   },
+   {
+    "expr": "pcs->loader->load_module",
+    "in_function": "SymLoadModuleExW",
+    "at": "dlls/dbghelp/module.c:962",
+    "candidates": []
+   },
+   {
+    "expr": "iter.modfmt->vtable->remove",
+    "in_function": "module_remove",
+    "at": "dlls/dbghelp/module.c:1044",
+    "candidates": []
+   },
+   {
+    "expr": "module->process->loader->load_debug_info",
+    "in_function": "module_load_debug",
+    "at": "dlls/dbghelp/module.c:346",
+    "candidates": []
+   }
+  ]
+ }
+}

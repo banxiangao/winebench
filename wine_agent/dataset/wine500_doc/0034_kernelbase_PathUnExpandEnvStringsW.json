@@ -1,0 +1,137 @@
+{
+ "id": "0034",
+ "function": {
+  "name": "PathUnExpandEnvStringsW",
+  "export_name": "PathUnExpandEnvStringsW",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernelbase",
+   "shlwapi"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/path.c",
+  "start_line": 2652,
+  "end_line": 2697,
+  "body_lines": 43,
+  "signature": "BOOL WINAPI PathUnExpandEnvStringsW(const WCHAR *path, WCHAR *buffer, UINT buf_len)",
+  "header_comment": null,
+  "code": "BOOL WINAPI PathUnExpandEnvStringsW(const WCHAR *path, WCHAR *buffer, UINT buf_len)\n{\n    static struct envvars_map null_var = {L\"\", {0}, 0};\n    struct envvars_map *match = &null_var, *cur;\n    struct envvars_map envvars[] =\n    {\n        { L\"%ALLUSERSPROFILE%\" },\n        { L\"%APPDATA%\" },\n        { L\"%ProgramFiles%\" },\n        { L\"%SystemRoot%\" },\n        { L\"%SystemDrive%\" },\n        { L\"%USERPROFILE%\" },\n        { NULL }\n    };\n    DWORD pathlen;\n    UINT needed;\n\n    TRACE(\"%s, %p, %d\\n\", debugstr_w(path), buffer, buf_len);\n\n    pathlen = lstrlenW(path);\n    init_envvars_map(envvars);\n    cur = envvars;\n    while (cur->var)\n    {\n        /* path can't contain expanded value or value wasn't retrieved */\n        if (cur->len == 0 || cur->len > pathlen ||\n            CompareStringOrdinal( cur->path, cur->len, path, cur->len, TRUE ) != CSTR_EQUAL)\n        {\n            cur++;\n            continue;\n        }\n\n        if (cur->len > match->len)\n            match = cur;\n        cur++;\n    }\n\n    needed = lstrlenW(match->var) + 1 + pathlen - match->len;\n    if (match->len == 0 || needed > buf_len) return FALSE;\n\n    lstrcpyW(buffer, match->var);\n    lstrcatW(buffer, &path[match->len]);\n    TRACE(\"ret %s\\n\", debugstr_w(buffer));\n\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdbool.h>",
+   "#include <string.h>",
+   "#include <wchar.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"pathcch.h\"",
+   "#include \"strsafe.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"wininet.h\"",
+   "#include \"intshcut.h\"",
+   "#include \"winternl.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernelbase!PathUnExpandEnvStringsW [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/shlwapi/tests/path.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "shlwapi",
+   "path": "sdk-api-src/content/shlwapi/nf-shlwapi-pathunexpandenvstringsw.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/shlwapi/nf-shlwapi-pathunexpandenvstringsw",
+   "documented_name": "pathunexpandenvstringsw",
+   "file": "docs/0034_sdk-api_nf-shlwapi-pathunexpandenvstringsw.md",
+   "text": "---\nUID: NF:shlwapi.PathUnExpandEnvStringsW\ntitle: PathUnExpandEnvStringsW function (shlwapi.h)\ndescription: Replaces certain folder names in a fully qualified path with their associated environment string. (Unicode)\nhelpviewer_keywords: [\"PathUnExpandEnvStrings\", \"PathUnExpandEnvStrings function [Windows Shell]\", \"PathUnExpandEnvStringsW\", \"_win32_PathUnExpandEnvStrings\", \"shell.PathUnExpandEnvStrings\", \"shlwapi/PathUnExpandEnvStrings\", \"shlwapi/PathUnExpandEnvStringsW\"]\nold-location: shell\\PathUnExpandEnvStrings.htm\ntech.root: shell\nms.assetid: cfab1ee0-03f3-4e0f-a29d-5331fec022b5\nms.date: 12/05/2018\nms.keywords: PathUnExpandEnvStrings, PathUnExpandEnvStrings function [Windows Shell], PathUnExpandEnvStringsA, PathUnExpandEnvStringsW, _win32_PathUnExpandEnvStrings, shell.PathUnExpandEnvStrings, shlwapi/PathUnExpandEnvStrings, shlwapi/PathUnExpandEnvStringsA, shlwapi/PathUnExpandEnvStringsW\nreq.header: shlwapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional, Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: PathUnExpandEnvStringsW (Unicode) and PathUnExpandEnvStringsA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Shlwapi.lib\nreq.dll: Shlwapi.dll (version 5.0 or later)\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - PathUnExpandEnvStringsW\n - shlwapi/PathUnExpandEnvStringsW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-downlevel-shlwapi-l1-1-0.dll\n - Shlwapi.dll\n - API-MS-Win-Core-shlwapi-legacy-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-DownLevel-shlwapi-l1-1-1.dll\napi_name:\n - PathUnExpandEnvStrings\n - PathUnExpandEnvStringsA\n - PathUnExpandEnvStringsW\n---\n\n# PathUnExpandEnvStringsW function\n\n\n## -description\n\nReplaces certain folder names in a fully qualified path with their associated environment string.\n\n## -parameters\n\n### -param pszPath [in]\n\nType: <b>LPCTSTR</b>\n\nA pointer to a null-terminated string of maximum length MAX_PATH that contains the path to be unexpanded.\n\n### -param pszBuf [out]\n\nType: <b>LPTSTR</b>\n\nA pointer to a buffer that, when this method returns successfully, receives the unexpanded string. The size of this buffer must be set to MAX_PATH to ensure that it is large enough to hold the returned string.\n\n### -param cchBuf [in]\n\nType: <b>UINT</b>\n\nThe size, in characters, in the <i>pszBuf</i> buffer.\n\n## -returns\n\nType: <b>BOOL</b>\n\nReturns <b>TRUE</b> if successful; otherwise, <b>FALSE</b>.\n\n## -remarks\n\nThe following folder paths are replaced by their equivalent environment string.\n\n<table class=\"clsStd\">\n<tr>\n<th>Folder</th>\n<th>Environment String</th>\n</tr>\n<tr>\n<td>The All Users profile folder</td>\n<td>%ALLUSERSPROFILE%</td>\n</tr>\n<tr>\n<td>The current user's application data folder (Windows Vista and later only).</td>\n<td>%APPDATA%</td>\n</tr>\n<tr>\n<td>The system name</td>\n<td>%COMPUTERNAME%</td>\n</tr>\n<tr>\n<td>The Program Files folder</td>\n<td>%ProgramFiles%</td>\n</tr>\n<tr>\n<td>The system root folder</td>\n<td>%SystemRoot%</td>\n</tr>\n<tr>\n<td>The system drive letter</td>\n<td>%SystemDrive%</td>\n</tr>\n<tr>\n<td>The current user's profile folder</td>\n<td>%USERPROFILE%</td>\n</tr>\n</table>\n \n\n<div class=\"alert\"><b>Note</b>  %APPDATA% and %USERPROFILE% are relative to the user making the call. This function does not work if the user is being impersonated from a service. For further discussion of access control issues, see <a href=\"/windows/desktop/SecAuthZ/access-control\">Access Control</a>.</div>\n<div> </div>\nThe environment variables listed in the above table might not all be set on all systems. If an environment variable is not set, it is not unexpanded.\n\n\n\n\n\n> [!NOTE]\n> The shlwapi.h header defines PathUnExpandEnvStrings as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/api/shellapi/nf-shellapi-doenvironmentsubsta\">DoEnvironmentSubst</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "init_envvars_map",
+   "file": "dlls/kernelbase/path.c",
+   "start_line": 2641,
+   "end_line": 2650,
+   "static": true,
+   "called_from": [
+    "PathUnExpandEnvStringsW"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void init_envvars_map(struct envvars_map *map)",
+   "code": "static void init_envvars_map(struct envvars_map *map)\n{\n    while (map->var)\n    {\n        map->len = ExpandEnvironmentStringsW(map->var, map->path, ARRAY_SIZE(map->path));\n        /* exclude null from length */\n        if (map->len) map->len--;\n        map++;\n    }\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "envvars_map",
+    "kind": "struct_decl",
+    "start_line": 2634,
+    "end_line": 2639,
+    "code": "struct envvars_map\n{\n    const WCHAR *var;\n    WCHAR path[MAX_PATH];\n    DWORD len;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 39,
+    "end_line": 39,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(path);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "CompareStringOrdinal",
+    "impl": [
+     "dlls/kernelbase/locale.c:4941"
+    ]
+   },
+   {
+    "name": "ExpandEnvironmentStringsW",
+    "impl": [
+     "dlls/kernelbase/process.c:1520"
+    ]
+   },
+   {
+    "name": "lstrlenW",
+    "impl": [
+     "dlls/kernelbase/string.c:166"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "debugstr_w",
+   "lstrcatW",
+   "lstrcpyW",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

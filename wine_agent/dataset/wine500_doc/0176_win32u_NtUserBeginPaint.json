@@ -1,0 +1,366 @@
+{
+ "id": "0176",
+ "function": {
+  "name": "NtUserBeginPaint",
+  "export_name": "BeginPaint",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "user.exe16",
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/dce.c",
+  "start_line": 1710,
+  "end_line": 1735,
+  "body_lines": 23,
+  "signature": "HDC WINAPI NtUserBeginPaint( HWND hwnd, PAINTSTRUCT *ps )",
+  "header_comment": "/***********************************************************************\n *           NtUserBeginPaint (win32u.@)\n */",
+  "code": "HDC WINAPI NtUserBeginPaint( HWND hwnd, PAINTSTRUCT *ps )\n{\n    HRGN hrgn;\n    HDC hdc;\n    BOOL erase;\n    RECT rect;\n    UINT flags = UPDATE_NONCLIENT | UPDATE_ERASE | UPDATE_PAINT | UPDATE_INTERNALPAINT | UPDATE_NOCHILDREN;\n\n    NtUserHideCaret( hwnd );\n\n    if (!(hrgn = send_ncpaint( hwnd, NULL, &flags ))) return 0;\n\n    erase = send_erase( hwnd, flags, hrgn, &rect, &hdc );\n\n    TRACE( \"hdc = %p box = (%s), fErase = %d\\n\", hdc, wine_dbgstr_rect(&rect), erase );\n\n    if (!ps)\n    {\n        release_dc( hwnd, hdc, TRUE );\n        return 0;\n    }\n    ps->fErase = erase;\n    ps->rcPaint = rect;\n    ps->hdc = hdc;\n    return hdc;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <pthread.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"ntgdi_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/opengl_driver.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "user32!BeginPaint [stdcall] -> NtUserBeginPaint implicitly imported from win32u",
+   "win32u!NtUserBeginPaint [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/dce.c",
+   "dlls/user32/tests/input.c",
+   "dlls/user32/tests/msg.c",
+   "dlls/user32/tests/win.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "user.exe16",
+   "source_module": "user.exe16",
+   "exported_by": [
+    "user.exe16"
+   ],
+   "file": "dlls/user.exe16/window.c",
+   "start_line": 361,
+   "resolution": [
+    "user.exe16!BeginPaint [pascal -ret16] -> internal symbol BeginPaint16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 375,
+   "signature": "HDC16 WINAPI BeginPaint16( HWND16 hwnd, LPPAINTSTRUCT16 lps )",
+   "code": "HDC16 WINAPI BeginPaint16( HWND16 hwnd, LPPAINTSTRUCT16 lps )\n{\n    PAINTSTRUCT ps;\n\n    BeginPaint( WIN_Handle32(hwnd), &ps );\n    lps->hdc            = HDC_16(ps.hdc);\n    lps->fErase         = ps.fErase;\n    lps->rcPaint.top    = ps.rcPaint.top;\n    lps->rcPaint.left   = ps.rcPaint.left;\n    lps->rcPaint.right  = ps.rcPaint.right;\n    lps->rcPaint.bottom = ps.rcPaint.bottom;\n    lps->fRestore       = ps.fRestore;\n    lps->fIncUpdate     = ps.fIncUpdate;\n    return lps->hdc;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-beginpaint.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-beginpaint",
+   "documented_name": "beginpaint",
+   "file": "docs/0176_sdk-api_nf-winuser-beginpaint.md",
+   "text": "---\nUID: NF:winuser.BeginPaint\ntitle: BeginPaint function (winuser.h)\ndescription: The BeginPaint function prepares the specified window for painting and fills a PAINTSTRUCT structure with information about the painting.\nhelpviewer_keywords: [\"BeginPaint\",\"BeginPaint function [Windows GDI]\",\"_win32_BeginPaint\",\"gdi.beginpaint\",\"winuser/BeginPaint\"]\nold-location: gdi\\beginpaint.htm\ntech.root: gdi\nms.assetid: 513341d7-bed8-469c-a067-ee71dc8860f9\nms.date: 12/05/2018\nms.keywords: BeginPaint, BeginPaint function [Windows GDI], _win32_BeginPaint, gdi.beginpaint, winuser/BeginPaint\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - BeginPaint\n - winuser/BeginPaint\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-rtcore-ntuser-draw-l1-1-0.dll\n - user32.dll\n - Ext-MS-Win-NTUser-Draw-l1-1-0.dll\n - Ext-MS-Win-NTUser-Draw-l1-1-1.dll\n - ext-ms-win-ntuser-draw-l1-1-2.dll\napi_name:\n - BeginPaint\nreq.apiset: ext-ms-win-ntuser-draw-l1-1-0 (introduced in Windows 8)\n---\n\n# BeginPaint function\n\n\n## -description\n\nThe <b>BeginPaint</b> function prepares the specified window for painting and fills a <a href=\"/windows/desktop/api/winuser/ns-winuser-paintstruct\">PAINTSTRUCT</a> structure with information about the painting.\n\n## -parameters\n\n### -param hWnd [in]\n\nHandle to the window to be repainted.\n\n### -param lpPaint [out]\n\nPointer to the <a href=\"/windows/desktop/api/winuser/ns-winuser-paintstruct\">PAINTSTRUCT</a> structure that will receive painting information.\n\n## -returns\n\nIf the function succeeds, the return value is the handle to a display device context for the specified window.\n\nIf the function fails, the return value is <b>NULL</b>, indicating that no display device context is available.\n\n## -remarks\n\nThe <b>BeginPaint</b> function automatically sets the clipping region of the device context to exclude any area outside the update region. The update region is set by the <a href=\"/windows/desktop/api/winuser/nf-winuser-invalidaterect\">InvalidateRect</a> or <a href=\"/windows/desktop/api/winuser/nf-winuser-invalidatergn\">InvalidateRgn</a> function and by the system after sizing, moving, creating, scrolling, or any other operation that affects the client area. If the update region is marked for erasing, <b>BeginPaint</b> sends a <b>WM_ERASEBKGND</b> message to the window.\n\nAn application should not call <b>BeginPaint</b> except in response to a <b>WM_PAINT</b> message. Each call to <b>BeginPaint</b> must have a corresponding call to the <a href=\"/windows/desktop/api/winuser/nf-winuser-endpaint\">EndPaint</a> function.\n\nIf the caret is in the area to be painted, <b>BeginPaint</b> automatically hides the caret to prevent it from being erased.\n\nIf the window's class has a background brush, <b>BeginPaint</b> uses that brush to erase the background of the update region before returning.\n\n<h3><a id=\"DPI_Virtualization\"></a><a id=\"dpi_virtualization\"></a><a id=\"DPI_VIRTUALIZATION\"></a>DPI Virtualization</h3>\nThis API does not participate in DPI virtualization. The output returned is always in terms of physical pixels.\n\n\n#### Examples\n\nFor an example, see <a href=\"/windows/desktop/gdi/drawing-in-the-client-area\">Drawing in the Client Area</a>.\n\n<div class=\"code\"></div>\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-endpaint\">EndPaint</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-invalidaterect\">InvalidateRect</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-invalidatergn\">InvalidateRgn</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/ns-winuser-paintstruct\">PAINTSTRUCT</a>\n\n\n\n<a href=\"/windows/desktop/gdi/painting-and-drawing-functions\">Painting and Drawing Functions</a>\n\n\n\n<a href=\"/windows/desktop/gdi/painting-and-drawing\">Painting and Drawing Overview</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-validaterect\">ValidateRect</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-validatergn\">ValidateRgn</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "send_ncpaint",
+   "file": "dlls/win32u/dce.c",
+   "start_line": 1545,
+   "end_line": 1606,
+   "static": true,
+   "called_from": [
+    "NtUserBeginPaint"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dce.c:1769",
+    "dlls/win32u/dce.c:1910",
+    "dlls/win32u/dce.c:1936"
+   ],
+   "signature": "static HRGN send_ncpaint( HWND hwnd, HWND *child, UINT *flags )",
+   "code": "static HRGN send_ncpaint( HWND hwnd, HWND *child, UINT *flags )\n{\n    HRGN whole_rgn = get_update_region( hwnd, flags, child );\n    HRGN client_rgn = 0;\n    DWORD style;\n\n    if (child) hwnd = *child;\n\n    if (hwnd == get_desktop_window()) return whole_rgn;\n\n    if (whole_rgn)\n    {\n        struct window_rects rects;\n        UINT context;\n        RECT update;\n        INT type;\n\n        context = set_thread_dpi_awareness_context( get_window_dpi_awareness_context( hwnd ));\n\n        /* check if update rgn overlaps with nonclient area */\n        type = NtGdiGetRgnBox( whole_rgn, &update );\n        get_window_rects( hwnd, COORDS_SCREEN, &rects, get_thread_dpi() );\n\n        if ((*flags & UPDATE_NONCLIENT) ||\n            update.left < rects.client.left || update.top < rects.client.top ||\n            update.right > rects.client.right || update.bottom > rects.client.bottom)\n        {\n            client_rgn = NtGdiCreateRectRgn( rects.client.left, rects.client.top, rects.client.right, rects.client.bottom );\n            NtGdiCombineRgn( client_rgn, client_rgn, whole_rgn, RGN_AND );\n\n            /* check if update rgn contains complete nonclient area */\n            if (type == SIMPLEREGION && EqualRect( &rects.window, &update ))\n            {\n                NtGdiDeleteObjectApp( whole_rgn );\n                whole_rgn = (HRGN)1;\n            }\n        }\n        else\n        {\n            client_rgn = whole_rgn;\n            whole_rgn = 0;\n        }\n\n        if (whole_rgn) /* NOTE: WM_NCPAINT allows wParam to be 1 */\n        {\n            if (*flags & UPDATE_NONCLIENT)\n            {\n                /* Mark standard scroll bars as not painted before sending WM_NCPAINT */\n                style = get_window_long( hwnd, GWL_STYLE );\n                if (style & WS_HSCROLL)\n                    set_standard_scroll_painted( hwnd, SB_HORZ, FALSE );\n                if (style & WS_VSCROLL)\n                    set_standard_scroll_painted( hwnd, SB_VERT, FALSE );\n\n                send_message( hwnd, WM_NCPAINT, (WPARAM)whole_rgn, 0 );\n            }\n            if (whole_rgn > (HRGN)1) NtGdiDeleteObjectApp( whole_rgn );\n        }\n        set_thread_dpi_awareness_context( context );\n    }\n    return client_rgn;\n}"
+  },
+  {
+   "name": "send_erase",
+   "file": "dlls/win32u/dce.c",
+   "start_line": 1615,
+   "end_line": 1645,
+   "static": true,
+   "called_from": [
+    "NtUserBeginPaint"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dce.c:1770",
+    "dlls/win32u/dce.c:1913",
+    "dlls/win32u/dce.c:1949"
+   ],
+   "signature": "static BOOL send_erase( HWND hwnd, UINT flags, HRGN client_rgn, RECT *clip_rect, HDC *hdc_ret )",
+   "code": "static BOOL send_erase( HWND hwnd, UINT flags, HRGN client_rgn,\n                        RECT *clip_rect, HDC *hdc_ret )\n{\n    BOOL need_erase = (flags & UPDATE_DELAYED_ERASE) != 0;\n    HDC hdc = 0;\n    RECT dummy;\n\n    if (!clip_rect) clip_rect = &dummy;\n    if (hdc_ret || (flags & UPDATE_ERASE))\n    {\n        UINT dcx_flags = DCX_INTERSECTRGN | DCX_USESTYLE;\n        if (is_iconic(hwnd)) dcx_flags |= DCX_WINDOW;\n\n        if ((hdc = NtUserGetDCEx( hwnd, client_rgn, dcx_flags )))\n        {\n            INT type = NtGdiGetAppClipBox( hdc, clip_rect );\n\n            if (flags & UPDATE_ERASE)\n            {\n                /* don't erase if the clip box is empty */\n                if (type != NULLREGION)\n                    need_erase = !send_message( hwnd, WM_ERASEBKGND, (WPARAM)hdc, 0 );\n            }\n            if (!hdc_ret) release_dc( hwnd, hdc, TRUE );\n        }\n\n        if (hdc_ret) *hdc_ret = hdc;\n    }\n    if (!hdc) NtGdiDeleteObjectApp( client_rgn );\n    return need_erase;\n}"
+  },
+  {
+   "name": "release_dc",
+   "file": "dlls/win32u/dce.c",
+   "start_line": 1231,
+   "end_line": 1257,
+   "static": true,
+   "called_from": [
+    "NtUserBeginPaint",
+    "send_erase"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dce.c:1410",
+    "dlls/win32u/dce.c:1745"
+   ],
+   "signature": "static INT release_dc( HWND hwnd, HDC hdc, BOOL end_paint )",
+   "code": "static INT release_dc( HWND hwnd, HDC hdc, BOOL end_paint )\n{\n    struct list drawables = LIST_INIT( drawables );\n    struct dce *dce;\n    BOOL ret = FALSE;\n\n    TRACE( \"%p %p\\n\", hwnd, hdc );\n\n    user_lock();\n    dce = get_dc_dce( hdc );\n    if (dce && dce->count && dce->hwnd)\n    {\n        if (!(dce->flags & DCX_NORESETATTRS)) set_dce_flags( dce->hdc, DCHF_RESETDC );\n        if (end_paint || (dce->flags & DCX_CACHE)) delete_clip_rgn( dce );\n        if (dce->flags & DCX_CACHE)\n        {\n            dce->count = 0;\n            set_dc_pixel_format_internal( hdc, 0, &drawables );\n            set_dce_flags( dce->hdc, DCHF_DISABLEDC );\n        }\n        ret = TRUE;\n    }\n    user_unlock();\n\n    release_opengl_drawables( &drawables );\n    return ret;\n}"
+  },
+  {
+   "name": "get_update_region",
+   "file": "dlls/win32u/dce.c",
+   "start_line": 1450,
+   "end_line": 1490,
+   "static": true,
+   "called_from": [
+    "send_ncpaint"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dce.c:1524",
+    "dlls/win32u/dce.c:1660",
+    "dlls/win32u/dce.c:1685"
+   ],
+   "signature": "static HRGN get_update_region( HWND hwnd, UINT *flags, HWND *child )",
+   "code": "static HRGN get_update_region( HWND hwnd, UINT *flags, HWND *child )\n{\n    HRGN hrgn = 0;\n    NTSTATUS status;\n    RGNDATA *data;\n    size_t size = 256;\n\n    do\n    {\n        if (!(data = malloc( sizeof(*data) + size - 1 )))\n        {\n            RtlSetLastWin32Error( ERROR_OUTOFMEMORY );\n            return 0;\n        }\n\n        SERVER_START_REQ( get_update_region )\n        {\n            req->window     = wine_server_user_handle( hwnd );\n            req->from_child = wine_server_user_handle( child ? *child : 0 );\n            req->flags      = *flags;\n            wine_server_set_reply( req, data->Buffer, size );\n            if (!(status = wine_server_call( req )))\n            {\n                size_t reply_size = wine_server_reply_size( reply );\n                data->rdh.dwSize   = sizeof(data->rdh);\n                data->rdh.iType    = RDH_RECTANGLES;\n                data->rdh.nCount   = reply_size / sizeof(RECT);\n                data->rdh.nRgnSize = reply_size;\n                hrgn = NtGdiExtCreateRegion( NULL, data->rdh.dwSize + data->rdh.nRgnSize, data );\n                if (child) *child = wine_server_ptr_handle( reply->child );\n                *flags = reply->flags;\n            }\n            else size = reply->total_size;\n        }\n        SERVER_END_REQ;\n        free( data );\n    } while (status == STATUS_BUFFER_OVERFLOW);\n\n    if (status) RtlSetLastWin32Error( RtlNtStatusToDosError(status) );\n    return hrgn;\n}"
+  },
+  {
+   "name": "delete_clip_rgn",
+   "file": "dlls/win32u/dce.c",
+   "start_line": 906,
+   "end_line": 916,
+   "static": true,
+   "called_from": [
+    "release_dc"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dce.c:1380"
+   ],
+   "signature": "static void delete_clip_rgn( struct dce *dce )",
+   "code": "static void delete_clip_rgn( struct dce *dce )\n{\n    if (!dce->clip_rgn) return;  /* nothing to do */\n\n    dce->flags &= ~(DCX_EXCLUDERGN | DCX_INTERSECTRGN);\n    NtGdiDeleteObjectApp( dce->clip_rgn );\n    dce->clip_rgn = 0;\n\n    /* make it dirty so that the vis rgn gets recomputed next time */\n    set_dce_flags( dce->hdc, DCHF_INVALIDATEVISRGN );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "dce",
+    "kind": "struct_decl",
+    "start_line": 37,
+    "end_line": 46,
+    "code": "struct dce\n{\n    struct list entry;         /* entry in global DCE list */\n    HDC         hdc;\n    HWND        hwnd;\n    HRGN        clip_rgn;\n    UINT        flags;\n    LONG        count;         /* usage count; 0 or 1 for cache DCEs, always 1 for window DCEs,\n                                  always >= 1 for class DCEs */\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 35,
+    "end_line": 35,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(win);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "get_dc_dce",
+    "file": "dlls/win32u/dc.c",
+    "start_line": 1249
+   },
+   {
+    "name": "get_desktop_window",
+    "file": "dlls/win32u/winstation.c",
+    "start_line": 805
+   },
+   {
+    "name": "get_thread_dpi",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 3267
+   },
+   {
+    "name": "get_window_dpi_awareness_context",
+    "file": "dlls/win32u/window.c",
+    "start_line": 1203
+   },
+   {
+    "name": "get_window_long",
+    "file": "dlls/win32u/window.c",
+    "start_line": 1392
+   },
+   {
+    "name": "get_window_rects",
+    "file": "dlls/win32u/window.c",
+    "start_line": 1871
+   },
+   {
+    "name": "is_iconic",
+    "file": "dlls/win32u/window.c",
+    "start_line": 1300
+   },
+   {
+    "name": "release_opengl_drawables",
+    "file": "dlls/win32u/opengl.c",
+    "start_line": 2422
+   },
+   {
+    "name": "send_message",
+    "file": "dlls/win32u/message.c",
+    "start_line": 4629
+   },
+   {
+    "name": "set_dc_pixel_format_internal",
+    "file": "dlls/win32u/opengl.c",
+    "start_line": 2409
+   },
+   {
+    "name": "set_dce_flags",
+    "file": "dlls/win32u/dc.c",
+    "start_line": 1264
+   },
+   {
+    "name": "set_standard_scroll_painted",
+    "file": "dlls/win32u/scroll.c",
+    "start_line": 1428
+   },
+   {
+    "name": "set_thread_dpi_awareness_context",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 3290
+   },
+   {
+    "name": "user_lock",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 334
+   },
+   {
+    "name": "user_unlock",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 340
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "NtGdiCombineRgn",
+    "impl": [
+     "dlls/win32u/region.c:1179"
+    ]
+   },
+   {
+    "name": "NtGdiCreateRectRgn",
+    "impl": [
+     "dlls/win32u/region.c:606"
+    ]
+   },
+   {
+    "name": "NtGdiDeleteObjectApp",
+    "impl": [
+     "dlls/win32u/gdiobj.c:857"
+    ]
+   },
+   {
+    "name": "NtGdiExtCreateRegion",
+    "impl": [
+     "dlls/win32u/region.c:893"
+    ]
+   },
+   {
+    "name": "NtGdiGetAppClipBox",
+    "impl": [
+     "dlls/win32u/clipping.c:366"
+    ]
+   },
+   {
+    "name": "NtGdiGetRgnBox",
+    "impl": [
+     "dlls/win32u/region.c:572"
+    ]
+   },
+   {
+    "name": "NtUserGetDCEx",
+    "impl": [
+     "dlls/win32u/dce.c:1262"
+    ]
+   },
+   {
+    "name": "NtUserHideCaret",
+    "impl": [
+     "dlls/win32u/input.c:2681"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "RtlNtStatusToDosError",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:77"
+    ]
+   },
+   {
+    "name": "RtlSetLastWin32Error",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   },
+   {
+    "name": "wine_server_call",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/loader.c:3436"
+    ]
+   }
+  ],
+  "header_inline": [
+   "EqualRect",
+   "wine_dbg_log",
+   "wine_dbgstr_rect",
+   "wine_server_ptr_handle",
+   "wine_server_reply_size",
+   "wine_server_set_reply",
+   "wine_server_user_handle"
+  ],
+  "system": [
+   "free",
+   "malloc"
+  ],
+  "unresolved": [],
+  "server_requests": [
+   {
+    "request": "get_update_region",
+    "handler": "server/window.c:3000"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

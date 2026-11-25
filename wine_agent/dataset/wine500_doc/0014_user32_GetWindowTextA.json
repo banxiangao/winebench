@@ -1,0 +1,157 @@
+{
+ "id": "0014",
+ "function": {
+  "name": "GetWindowTextA",
+  "export_name": "GetWindowTextA",
+  "module": "user32",
+  "source_module": "user32",
+  "exported_by": [
+   "user32"
+  ],
+  "side": "PE",
+  "file": "dlls/user32/win.c",
+  "start_line": 1050,
+  "end_line": 1082,
+  "body_lines": 30,
+  "signature": "INT WINAPI GetWindowTextA( HWND hwnd, LPSTR lpString, INT nMaxCount )",
+  "header_comment": "/*******************************************************************\n *\t\tGetWindowTextA (USER32.@)\n */",
+  "code": "INT WINAPI GetWindowTextA( HWND hwnd, LPSTR lpString, INT nMaxCount )\n{\n    WCHAR *buffer;\n    int ret = 0;\n\n    if (!lpString || nMaxCount <= 0) return 0;\n\n    __TRY\n    {\n        lpString[0] = 0;\n\n        if (WIN_IsCurrentProcess( hwnd ))\n        {\n            ret = (INT)SendMessageA( hwnd, WM_GETTEXT, nMaxCount, (LPARAM)lpString );\n        }\n        else if ((buffer = HeapAlloc( GetProcessHeap(), 0, nMaxCount * sizeof(WCHAR) )))\n        {\n            /* when window belongs to other process, don't send a message */\n            NtUserInternalGetWindowText( hwnd, buffer, nMaxCount );\n            if (!WideCharToMultiByte( CP_ACP, 0, buffer, -1, lpString, nMaxCount, NULL, NULL ))\n                lpString[nMaxCount-1] = 0;\n            HeapFree( GetProcessHeap(), 0, buffer );\n            ret = strlen(lpString);\n        }\n    }\n    __EXCEPT_PAGE_FAULT\n    {\n        ret = 0;\n    }\n    __ENDTRY\n\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"user_private.h\"",
+   "#include \"controls.h\"",
+   "#include \"winver.h\"",
+   "#include \"wine/asm.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "user32!GetWindowTextA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/dialog.c",
+   "dlls/user32/tests/edit.c",
+   "dlls/user32/tests/msg.c",
+   "dlls/user32/tests/static.c",
+   "dlls/user32/tests/win.c",
+   "dlls/user32/tests/winstation.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-getwindowtexta.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getwindowtexta",
+   "documented_name": "getwindowtexta",
+   "file": "docs/0014_sdk-api_nf-winuser-getwindowtexta.md",
+   "text": "---\nUID: NF:winuser.GetWindowTextA\ntitle: GetWindowTextA function (winuser.h)\ndescription: Copies the text of the specified window's title bar (if it has one) into a buffer. If the specified window is a control, the text of the control is copied. However, GetWindowText cannot retrieve the text of a control in another application. (ANSI)\nhelpviewer_keywords: [\"GetWindowTextA\", \"winuser/GetWindowTextA\"]\nold-location: winmsg\\getwindowtext.htm\ntech.root: winmsg\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\windowing\\windows\\windowreference\\windowfunctions\\getwindowtext.htm\nms.date: 12/05/2018\nms.keywords: GetWindowText, GetWindowText function [Windows and Messages], GetWindowTextA, GetWindowTextW, _win32_GetWindowText, _win32_getwindowtext_cpp, winmsg.getwindowtext, winui._win32_getwindowtext, winuser/GetWindowText, winuser/GetWindowTextA, winuser/GetWindowTextW\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: GetWindowTextW (Unicode) and GetWindowTextA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: snippet-project\nf1_keywords:\n - GetWindowTextA\n - winuser/GetWindowTextA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-ntuser-window-l1-1-6.dll\n - ext-ms-win-ntuser-window-l1-1-5.dll\n - User32.dll\n - API-MS-Win-NTUser-IE-Window-l1-1-0.dll\n - ie_shims.dll\n - API-MS-Win-RTCore-NTUser-Window-l1-1-0.dll\n - minuser.dll\n - Ext-MS-Win-NTUser-Window-l1-1-0.dll\n - Ext-MS-Win-NTUser-Window-l1-1-1.dll\n - Ext-MS-Win-NTUser-Window-l1-1-2.dll\n - Ext-MS-Win-RTCore-NTUser-Window-Ext-l1-1-0.dll\n - ext-ms-win-ntuser-window-l1-1-3.dll\n - Ext-MS-Win-NTUser-Window-L1-1-4.dll\napi_name:\n - GetWindowText\n - GetWindowTextA\n - GetWindowTextW\nreq.apiset: ext-ms-win-ntuser-window-l1-1-4 (introduced in Windows 10, version 10.0.14393)\n---\n\n# GetWindowTextA function\n\n\n## -description\n\nCopies the text of the specified window's title bar (if it has one) into a buffer. If the specified window is a control, the text of the control is copied. However, <b>GetWindowText</b> cannot retrieve the text of a control in another application.\n\n## -parameters\n\n### -param hWnd [in]\n\nType: <b>HWND</b>\n\nA handle to the window or control containing the text.\n\n### -param lpString [out]\n\nType: <b>LPTSTR</b>\n\nThe buffer that will receive the text. If the string is as long or longer than the buffer, the string is truncated and terminated with a null character.\n\n### -param nMaxCount [in]\n\nType: <b>int</b>\n\nThe maximum number of characters to copy to the buffer, including the null character. If the text exceeds this limit, it is truncated.\n\n## -returns\n\nType: <b>int</b>\n\nIf the function succeeds, the return value is the length, in characters, of the copied string, not including the terminating null character. If the window has no title bar or text, if the title bar is empty, or if the window or control handle is invalid, the return value is zero. To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>. \n\nThis function cannot retrieve the text of an edit control in another application.\n\n## -remarks\n\nIf the target window is owned by the current process, <b>GetWindowText</b> causes a <a href=\"/windows/desktop/winmsg/wm-gettext\">WM_GETTEXT</a> message to be sent to the specified window or control. If the target window is owned by another process and has a caption, <b>GetWindowText</b> retrieves the window caption text. If the window does not have a caption, the return value is a null string. This behavior is by design. It allows applications to call <b>GetWindowText</b> without becoming unresponsive if the process that owns the target window is not responding. However, if the target window is not responding and it belongs to the calling application, <b>GetWindowText</b> will cause the calling application to become unresponsive. \n\nTo retrieve the text of a control in another process, send a <a href=\"/windows/desktop/winmsg/wm-gettext\">WM_GETTEXT</a> message directly instead of calling <b>GetWindowText</b>. \n\n\n#### Examples\n\nThe following example code demonstrates a call to **GetWindowTextA**.\n\n```cpp\nhwndCombo = GetDlgItem(hwndDlg, IDD_COMBO); \ncTxtLen = GetWindowTextLength(hwndCombo); \n\n// Allocate memory for the string and copy \n// the string into the memory. \n\npszMem = (PSTR) VirtualAlloc((LPVOID) NULL, \n    (DWORD) (cTxtLen + 1), MEM_COMMIT, \n    PAGE_READWRITE); \nGetWindowText(hwndCombo, pszMem, \n    cTxtLen + 1); \n```\n\n To see this example in context, see <a href=\"/windows/desktop/winmsg/using-messages-and-message-queues\">Sending a Message</a>.\n\n<div class=\"code\"></div>\n\n\n\n\n> [!NOTE]\n> The winuser.h header defines GetWindowText as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-getwindowtextlengtha\">GetWindowTextLength</a>\n\n\n\n<b>Reference</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-setwindowtexta\">SetWindowText</a>\n\n\n\n<a href=\"/windows/desktop/winmsg/wm-gettext\">WM_GETTEXT</a>\n\n\n\n<a href=\"/windows/desktop/winmsg/windows\">Windows</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "WIN_IsCurrentProcess",
+   "file": "dlls/user32/win.c",
+   "start_line": 109,
+   "end_line": 112,
+   "static": false,
+   "called_from": [
+    "GetWindowTextA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/user32/win.c:1098",
+    "dlls/user32/win.c:1129",
+    "dlls/user32/win.c:1146",
+    "dlls/user32/win.c:1160",
+    "dlls/user32/win.c:1172"
+   ],
+   "signature": "HWND WIN_IsCurrentProcess( HWND hwnd )",
+   "code": "HWND WIN_IsCurrentProcess( HWND hwnd )\n{\n    return UlongToHandle( NtUserCallHwnd( hwnd, NtUserIsCurrentProcessWindow ));\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "SendMessageA",
+    "impl": [
+     "dlls/user32/message.c:594"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "HeapAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "NtUserCallHwnd",
+    "module": "win32u",
+    "impl": [
+     "dlls/win32u/window.c:6257"
+    ]
+   },
+   {
+    "name": "NtUserInternalGetWindowText",
+    "module": "win32u",
+    "impl": [
+     "dlls/win32u/window.c:3426"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   },
+   {
+    "name": "strlen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:423"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "ULongToHandle",
+   "__wine_pop_frame",
+   "__wine_push_frame"
+  ],
+  "system": [],
+  "unresolved": [
+   "__wine_exception_handler_page_fault",
+   "__wine_setjmpex"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

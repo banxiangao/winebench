@@ -1,0 +1,143 @@
+{
+ "id": "0484",
+ "function": {
+  "name": "RtlLeaveCriticalSection",
+  "export_name": "LeaveCriticalSection",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "kernel32",
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/ntdll/sync.c",
+  "start_line": 433,
+  "end_line": 450,
+  "body_lines": 15,
+  "signature": "NTSTATUS WINAPI RtlLeaveCriticalSection( RTL_CRITICAL_SECTION *crit )",
+  "header_comment": "/******************************************************************************\n *      RtlLeaveCriticalSection   (NTDLL.@)\n */",
+  "code": "NTSTATUS WINAPI RtlLeaveCriticalSection( RTL_CRITICAL_SECTION *crit )\n{\n    if (--crit->RecursionCount)\n    {\n        if (crit->RecursionCount > 0) InterlockedDecrement( &crit->LockCount );\n        else ERR( \"section %p %s is not acquired\\n\", crit, debugstr_a( crit_section_get_name( crit )));\n    }\n    else\n    {\n        crit->OwningThread = 0;\n        if (InterlockedDecrement( &crit->LockCount ) >= 0)\n        {\n            /* someone is waiting */\n            RtlpUnWaitCriticalSection( crit );\n        }\n    }\n    return STATUS_SUCCESS;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <limits.h>",
+   "#include <string.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <stdlib.h>",
+   "#include <time.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winternl.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"ntdll_misc.h\""
+  ],
+  "resolution": [
+   "kernel32!LeaveCriticalSection [stdcall] -> forward NTDLL.RtlLeaveCriticalSection",
+   "ntdll!RtlLeaveCriticalSection [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/sync.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "synchapi",
+   "path": "sdk-api-src/content/synchapi/nf-synchapi-leavecriticalsection.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/synchapi/nf-synchapi-leavecriticalsection",
+   "documented_name": "leavecriticalsection",
+   "file": "docs/0484_sdk-api_nf-synchapi-leavecriticalsection.md",
+   "text": "---\nUID: NF:synchapi.LeaveCriticalSection\ntitle: LeaveCriticalSection function (synchapi.h)\ndescription: Releases ownership of the specified critical section object.\nhelpviewer_keywords: [\"LeaveCriticalSection\",\"LeaveCriticalSection function\",\"_win32_leavecriticalsection\",\"base.leavecriticalsection\",\"synchapi/LeaveCriticalSection\",\"winbase/LeaveCriticalSection\"]\nold-location: base\\leavecriticalsection.htm\ntech.root: base\nms.assetid: cf740e1d-351f-478c-bdbb-4a776b84acc5\nms.date: 02/05/2024\nms.keywords: LeaveCriticalSection, LeaveCriticalSection function, _win32_leavecriticalsection, base.leavecriticalsection, synchapi/LeaveCriticalSection, winbase/LeaveCriticalSection\nreq.header: synchapi.h\nreq.include-header: Windows.h on Windows Server 2003, Windows Vista, Windows 7, Windows Server 2008  Windows Server 2008 R2\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - LeaveCriticalSection\n - synchapi/LeaveCriticalSection\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Kernel32.dll\n - API-MS-Win-Core-Synch-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-Synch-l1-2-0.dll\n - API-MS-Win-Core-Synch-l1-2-1.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\n - vertdll.dll\napi_name:\n - LeaveCriticalSection\n---\n\n# LeaveCriticalSection function\n\n## -description\n\nReleases ownership of the specified critical section object.\n\n## -parameters\n\n### -param lpCriticalSection [in, out]\n\nA pointer to the critical section object.\n\n## -remarks\n\nThe threads of a single process can use a critical-section object for mutual-exclusion synchronization. The process is responsible for allocating the memory used by a critical-section object, which it can do by declaring a variable of type **CRITICAL_SECTION**. Before using a critical section, some thread of the process must call the [InitializeCriticalSection](nf-synchapi-initializecriticalsection.md) or [InitializeCriticalSectionAndSpinCount](nf-synchapi-initializecriticalsectionandspincount.md) function to initialize the object.\n\nA thread uses the [EnterCriticalSection](nf-synchapi-entercriticalsection.md) or [TryEnterCriticalSection](nf-synchapi-tryentercriticalsection.md) function to acquire ownership of a critical section object. To release its ownership, the thread must call **LeaveCriticalSection** once for each time that it entered the critical section.\n\nIf a thread calls **LeaveCriticalSection** when it does not have ownership of the specified critical section object, an error occurs that may cause another thread using [EnterCriticalSection](nf-synchapi-entercriticalsection.md) to wait indefinitely.\n\n**LeaveCriticalSection** does not access the specified **CRITICAL_SECTION** structure after the ownership of a critical section object is released.\n\nAny thread of the process can use the [DeleteCriticalSection](nf-synchapi-deletecriticalsection.md) function to release the system resources that were allocated when the critical section object was initialized. After this function has been called, the critical section object can no longer be used for synchronization.\n\n#### Examples\n\nFor an example that uses **LeaveCriticalSection**, see [Using Critical Section Objects](/windows/win32/Sync/using-critical-section-objects).\n\n## -see-also\n\n[Critical Section Objects](/windows/win32/Sync/critical-section-objects)\n\n[DeleteCriticalSection](nf-synchapi-deletecriticalsection.md)\n\n[EnterCriticalSection](nf-synchapi-entercriticalsection.md)\n\n[InitializeCriticalSection](nf-synchapi-initializecriticalsection.md)\n\n[InitializeCriticalSectionAndSpinCount](nf-synchapi-initializecriticalsectionandspincount.md)\n\n[Synchronization Functions](/windows/win32/Sync/synchronization-functions)\n\n[TryEnterCriticalSection](nf-synchapi-tryentercriticalsection.md)\n\n[Vertdll APIs available in VBS enclaves](/windows/win32/trusted-execution/enclaves-available-in-vertdll)\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "crit_section_get_name",
+   "file": "dlls/ntdll/sync.c",
+   "start_line": 157,
+   "end_line": 162,
+   "static": true,
+   "called_from": [
+    "RtlLeaveCriticalSection"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/sync.c:320"
+   ],
+   "signature": "static const char *crit_section_get_name( const RTL_CRITICAL_SECTION *crit )",
+   "code": "static const char *crit_section_get_name( const RTL_CRITICAL_SECTION *crit )\n{\n    if (crit_section_has_debuginfo( crit ))\n        return (char *)crit->DebugInfo->Spare[0];\n    return \"?\";\n}"
+  },
+  {
+   "name": "crit_section_has_debuginfo",
+   "file": "dlls/ntdll/sync.c",
+   "start_line": 152,
+   "end_line": 155,
+   "static": true,
+   "called_from": [
+    "crit_section_get_name"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/sync.c:278",
+    "dlls/ntdll/sync.c:322"
+   ],
+   "signature": "static BOOL crit_section_has_debuginfo( const RTL_CRITICAL_SECTION *crit )",
+   "code": "static BOOL crit_section_has_debuginfo( const RTL_CRITICAL_SECTION *crit )\n{\n    return crit->DebugInfo != NULL && crit->DebugInfo != no_debug_info_marker;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 39,
+    "end_line": 39,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(sync);"
+   },
+   {
+    "name": "no_debug_info_marker",
+    "type": "void *",
+    "static": true,
+    "start_line": 150,
+    "end_line": 150,
+    "code": "static void *no_debug_info_marker = (void *)(ULONG_PTR)-1;"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "RtlpUnWaitCriticalSection",
+    "impl": [
+     "dlls/ntdll/sync.c:330"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "_InterlockedDecrement",
+   "debugstr_a",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

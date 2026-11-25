@@ -1,0 +1,110 @@
+{
+ "id": "0160",
+ "function": {
+  "name": "FDICreate",
+  "export_name": "FDICreate",
+  "module": "cabinet",
+  "source_module": "cabinet",
+  "exported_by": [
+   "cabinet"
+  ],
+  "side": "PE",
+  "file": "dlls/cabinet/fdi.c",
+  "start_line": 412,
+  "end_line": 459,
+  "body_lines": 45,
+  "signature": "HFDI __cdecl FDICreate( PFNALLOC pfnalloc, PFNFREE  pfnfree, PFNOPEN  pfnopen, PFNREAD  pfnread, PFNWRITE pfnwrite, PFNCLOSE pfnclose, PFNSEEK  pfnseek, int      cpuType, PERF     perf)",
+  "header_comment": "/***********************************************************************\n *\t\tFDICreate (CABINET.20)\n *\n * Provided with several callbacks (all of them are mandatory),\n * returns a handle which can be used to perform operations\n * on cabinet files.\n *\n * PARAMS\n *   pfnalloc [I]  A pointer to a function which allocates ram.  Uses\n *                 the same interface as malloc.\n *   pfnfree  [I]  A pointer to a function which frees ram.  Uses the\n *                 same interface as free.\n *   pfnopen  [I]  A pointer to a function which opens a file.  Uses\n *                 the same interface as _open.\n *   pfnread  [I]  A pointer to a function which reads from a file into\n *                 a caller-provided buffer.  Uses the same interface\n *                 as _read\n *   pfnwrite [I]  A pointer to a function which writes to a file from\n *                 a caller-provided buffer.  Uses the same interface\n *                 as _write.\n *   pfnclose [I]  A pointer to a function which closes a file handle.\n *                 Uses the same interface as _close.\n *   pfnseek  [I]  A pointer to a function which seeks in a file.\n *                 Uses the same interface as _lseek.\n *   cpuType  [I]  The type of CPU; ignored in wine (recommended value:\n *                 cpuUNKNOWN, aka -1).\n *   perf     [IO] A pointer to an ERF structure.  When FDICreate\n *                 returns an error condition, error information may\n *                 be found here as well as from GetLastError.\n *\n * RETURNS\n *   On success, returns an FDI handle of type HFDI.\n *   On failure, the NULL file handle is returned. Error\n *   info can be retrieved from perf.\n *\n * INCLUDES\n *   fdi.h\n * \n */",
+  "code": "HFDI __cdecl FDICreate(\n\tPFNALLOC pfnalloc,\n\tPFNFREE  pfnfree,\n\tPFNOPEN  pfnopen,\n\tPFNREAD  pfnread,\n\tPFNWRITE pfnwrite,\n\tPFNCLOSE pfnclose,\n\tPFNSEEK  pfnseek,\n\tint      cpuType,\n\tPERF     perf)\n{\n  FDI_Int *fdi;\n\n  TRACE(\"(pfnalloc == ^%p, pfnfree == ^%p, pfnopen == ^%p, pfnread == ^%p, pfnwrite == ^%p, \"\n        \"pfnclose == ^%p, pfnseek == ^%p, cpuType == %d, perf == ^%p)\\n\",\n        pfnalloc, pfnfree, pfnopen, pfnread, pfnwrite, pfnclose, pfnseek,\n        cpuType, perf);\n\n  if ((!pfnalloc) || (!pfnfree)) {\n    perf->erfOper = FDIERROR_NONE;\n    perf->erfType = ERROR_BAD_ARGUMENTS;\n    perf->fError = TRUE;\n\n    SetLastError(ERROR_BAD_ARGUMENTS);\n    return NULL;\n  }\n\n  if (!((fdi = pfnalloc(sizeof(FDI_Int))))) {\n    perf->erfOper = FDIERROR_ALLOC_FAIL;\n    perf->erfType = 0;\n    perf->fError = TRUE;\n    return NULL;\n  }\n\n  fdi->magic = FDI_INT_MAGIC;\n  fdi->alloc = pfnalloc;\n  fdi->free  = pfnfree;\n  fdi->open  = pfnopen;\n  fdi->read  = pfnread;\n  fdi->write = pfnwrite;\n  fdi->close = pfnclose;\n  fdi->seek  = pfnseek;\n  /* no-brainer: we ignore the cpu type; this is only used\n     for the 16-bit versions in Windows anyhow... */\n  fdi->perf = perf;\n\n  return (HFDI)fdi;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <sys/stat.h>",
+   "#include <fcntl.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"fdi.h\"",
+   "#include \"cabinet.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "cabinet!FDICreate [cdecl]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/cabinet/tests/fdi.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "fdi",
+   "path": "sdk-api-src/content/fdi/nf-fdi-fdicreate.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/fdi/nf-fdi-fdicreate",
+   "documented_name": "fdicreate",
+   "file": "docs/0160_sdk-api_nf-fdi-fdicreate.md",
+   "text": "---\nUID: NF:fdi.FDICreate\ntitle: FDICreate function (fdi.h)\ndescription: The FDICreate function creates an FDI context.\nhelpviewer_keywords: [\"FDICreate\",\"FDICreate function [Windows API]\",\"cpu80286\",\"cpu80386\",\"cpuUNKNOWN\",\"fdi/FDICreate\",\"winprog.fdicreate\"]\nold-location: winprog\\fdicreate.htm\ntech.root: winprog\nms.assetid: 90634725-b7a8-4369-8a91-684debee9548\nms.date: 12/05/2018\nms.keywords: FDICreate, FDICreate function [Windows API], cpu80286, cpu80386, cpuUNKNOWN, fdi/FDICreate, winprog.fdicreate\nreq.header: fdi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Cabinet.lib\nreq.dll: Cabinet.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - FDICreate\n - fdi/FDICreate\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Cabinet.dll\napi_name:\n - FDICreate\n---\n\n# FDICreate function\n\n\n## -description\n\nThe <b>FDICreate</b> function creates an FDI context.\n\n## -parameters\n\n### -param pfnalloc [in]\n\nPointer to an application-defined callback function to allocate memory. The function should be declared using the <a href=\"/windows/desktop/api/fdi/nf-fdi-fnalloc\">FNALLOC</a> macro.\n\n### -param pfnfree [in]\n\nPointer to an application-defined callback function to free previously allocated memory. The function should be declared using the <a href=\"/windows/desktop/api/fdi/nf-fdi-fnfree\">FNFREE</a> macro.\n\n### -param pfnopen [in]\n\nPointer to an application-defined callback function to open a file. The function should be declared using the <a href=\"/windows/desktop/api/fdi/nf-fdi-fnopen\">FNOPEN</a> macro.\n\n### -param pfnread [in]\n\nPointer to an application-defined callback function to read data from a file. The function should be declared using the <a href=\"/windows/desktop/api/fdi/nf-fdi-fnread\">FNREAD</a> macro.\n\n### -param pfnwrite [in]\n\nPointer to an application-defined callback function to write data to a file. The function should be declared using the <a href=\"/windows/desktop/api/fdi/nf-fdi-fnwrite\">FNWRITE</a> macro.\n\n### -param pfnclose [in]\n\nPointer to an application-defined callback function to close a file. The function should be declared using the <a href=\"/windows/desktop/api/fdi/nf-fdi-fnclose\">FNCLOSE</a> macro.\n\n### -param pfnseek [in]\n\nPointer to an application-defined callback function to move a file pointer to the specified location. The function should be declared using the <a href=\"/windows/desktop/api/fdi/nf-fdi-fnseek\">FNSEEK</a> macro.\n\n### -param cpuType [in]\n\nIn the 16-bit version of FDI, specifies the CPU type and can be any of the following values.\n\n<div class=\"alert\"><b>Note</b>  Expressing the <b>cpuUNKNOWN</b> value is recommended.</div>\n<div> </div>\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"cpuUNKNOWN\"></a><a id=\"cpuunknown\"></a><a id=\"CPUUNKNOWN\"></a><dl>\n<dt><b>cpuUNKNOWN</b></dt>\n<dt>-1</dt>\n</dl>\n</td>\n<td width=\"60%\">\nFDI should determine the CPU type.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"cpu80286\"></a><a id=\"CPU80286\"></a><dl>\n<dt><b>cpu80286</b></dt>\n<dt>0</dt>\n</dl>\n</td>\n<td width=\"60%\">\nOnly 80286 instructions can be used.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"cpu80386\"></a><a id=\"CPU80386\"></a><dl>\n<dt><b>cpu80386</b></dt>\n<dt>1</dt>\n</dl>\n</td>\n<td width=\"60%\">\n80386 instructions can be used.\n\n</td>\n</tr>\n</table>\n\n### -param perf [in, out]\n\nPointer to an <a href=\"/windows/desktop/api/fdi_fci_types/ns-fdi_fci_types-erf\">ERF</a> structure that receives the error information.\n\n## -returns\n\nIf the function succeeds, it returns a non-<b>NULL</b> HFDI context pointer; otherwise, it returns <b>NULL</b>.\n\nExtended error information is provided in the <a href=\"/windows/desktop/api/fdi_fci_types/ns-fdi_fci_types-erf\">ERF</a> structure.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/fdi/nf-fdi-fdidestroy\">FDIDestroy</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "FDI_Int",
+    "kind": "typedef_decl",
+    "start_line": 113,
+    "end_line": 124,
+    "code": "typedef struct\n{\n  unsigned int magic;\n  PFNALLOC     alloc;\n  PFNFREE      free;\n  PFNOPEN      open;\n  PFNREAD      read;\n  PFNWRITE     write;\n  PFNCLOSE     close;\n  PFNSEEK      seek;\n  PERF         perf;\n} FDI_Int;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 74,
+    "end_line": 74,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(cabinet);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "FDI_INT_MAGIC",
+    "start_line": 126,
+    "end_line": 126,
+    "code": "#define FDI_INT_MAGIC 0xfdfdfd05"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [],
+  "header_inline": [
+   "SetLastError",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "pfnalloc",
+    "in_function": "FDICreate",
+    "at": "dlls/cabinet/fdi.c:439",
+    "candidates": []
+   }
+  ]
+ }
+}

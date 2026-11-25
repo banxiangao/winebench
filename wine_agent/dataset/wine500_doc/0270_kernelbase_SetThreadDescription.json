@@ -1,0 +1,107 @@
+{
+ "id": "0270",
+ "function": {
+  "name": "SetThreadDescription",
+  "export_name": "SetThreadDescription",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/thread.c",
+  "start_line": 463,
+  "end_line": 479,
+  "body_lines": 14,
+  "signature": "HRESULT WINAPI DECLSPEC_HOTPATCH SetThreadDescription( HANDLE thread, PCWSTR description )",
+  "header_comment": "/***********************************************************************\n *           SetThreadDescription   (kernelbase.@)\n */",
+  "code": "HRESULT WINAPI DECLSPEC_HOTPATCH SetThreadDescription( HANDLE thread, PCWSTR description )\n{\n    THREAD_NAME_INFORMATION info;\n    int length;\n\n    TRACE( \"(%p, %s)\\n\", thread, debugstr_w( description ));\n\n    length = description ? lstrlenW( description ) * sizeof(WCHAR) : 0;\n\n    if (length > USHRT_MAX)\n        return HRESULT_FROM_NT(STATUS_INVALID_PARAMETER);\n\n    info.ThreadName.Length = info.ThreadName.MaximumLength = length;\n    info.ThreadName.Buffer = (WCHAR *)description;\n\n    return HRESULT_FROM_NT(NtSetInformationThread( thread, ThreadNameInformation, &info, sizeof(info) ));\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include <limits.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/asm.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!SetThreadDescription [stdcall -import] -> import from kernelbase",
+   "kernelbase!SetThreadDescription [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/thread.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "processthreadsapi",
+   "path": "sdk-api-src/content/processthreadsapi/nf-processthreadsapi-setthreaddescription.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreaddescription",
+   "documented_name": "setthreaddescription",
+   "file": "docs/0270_sdk-api_nf-processthreadsapi-setthreaddescription.md",
+   "text": "---\nUID: NF:processthreadsapi.SetThreadDescription\ntitle: SetThreadDescription function (processthreadsapi.h)\ndescription: Assigns a description to a thread.\nhelpviewer_keywords: [\"SetThreadDescription\",\"SetThreadDescription function\",\"base.setthreaddescription\",\"processthreadsapi/SetThreadDescription\"]\nold-location: base\\setthreaddescription.htm\ntech.root: processthreadsapi\nms.assetid: 0C17C60A-8DC9-4DB1-A3ED-5AFEBE598CBB\nms.date: 12/05/2018\nms.keywords: SetThreadDescription, SetThreadDescription function, base.setthreaddescription, processthreadsapi/SetThreadDescription\nreq.header: processthreadsapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 10, version 1607 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2016 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SetThreadDescription\n - processthreadsapi/SetThreadDescription\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-processthreads-l1-1-8.dll\n - api-ms-win-core-processthreads-l1-1-7.dll\n - api-ms-win-core-processthreads-l1-1-6.dll\n - api-ms-win-core-processthreads-l1-1-5.dll\n - api-ms-win-core-processthreads-l1-1-4.dll\n - Kernel32.dll\n - KernelBase.dll\n - Api-ms-win-core-processthreads-l1-1-3.dll\napi_name:\n - SetThreadDescription\n---\n\n# SetThreadDescription function\n\n\n## -description\n\nAssigns a description to a thread.\n\n## -parameters\n\n### -param hThread [in]\n\nA handle for the thread for which you want to set the description. The handle must have THREAD_SET_LIMITED_INFORMATION access.\n\n### -param lpThreadDescription [in]\n\nA Unicode string that specifies the description of the thread.\n\n## -returns\n\nIf the function succeeds, the return value is the **HRESULT** that denotes a successful operation.\nIf the function fails, the return value is an **HRESULT** that denotes the error.\n\n## -remarks\n\nThe description of a thread can be set more than once; the most recently set value is used. You can retrieve the description of a thread by calling [GetThreadDescription](/windows/desktop/api/processthreadsapi/nf-processthreadsapi-getthreaddescription).\n\n<b>Windows Server 2016</b>, <b>Windows 10 LTSB 2016</b> and <b>Windows 10 version 1607</b>: SetThreadDescription is only available by [Run Time Dynamic Linking](/windows/win32/dlls/using-run-time-dynamic-linking) in KernelBase.dll.\n\n#### Examples\n\nThe following example sets the description for the current thread to `simulation_thread`.\n\n```cpp\nHRESULT hr = SetThreadDescription(GetCurrentThread(), L\"simulation_thread\");\nif (FAILED(hr))\n{\n    // Call failed.\n}\n```\n\n## -see-also\n\n[GetThreadDescription](/windows/desktop/api/processthreadsapi/nf-processthreadsapi-getthreaddescription), [How to: Set a Thread Name in Native Code](/visualstudio/debugger/how-to-set-a-thread-name-in-native-code)\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(thread);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "lstrlenW",
+    "impl": [
+     "dlls/kernelbase/string.c:166"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtSetInformationThread",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/thread.c:2482"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_w",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

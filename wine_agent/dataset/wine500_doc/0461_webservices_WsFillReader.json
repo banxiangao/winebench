@@ -1,0 +1,157 @@
+{
+ "id": "0461",
+ "function": {
+  "name": "WsFillReader",
+  "export_name": "WsFillReader",
+  "module": "webservices",
+  "source_module": "webservices",
+  "exported_by": [
+   "webservices"
+  ],
+  "side": "PE",
+  "file": "dlls/webservices/reader.c",
+  "start_line": 648,
+  "end_line": 682,
+  "body_lines": 32,
+  "signature": "HRESULT WINAPI WsFillReader( WS_XML_READER *handle, ULONG min_size, const WS_ASYNC_CONTEXT *ctx, WS_ERROR *error )",
+  "header_comment": "/**************************************************************************\n *          WsFillReader\t\t[webservices.@]\n */",
+  "code": "HRESULT WINAPI WsFillReader( WS_XML_READER *handle, ULONG min_size, const WS_ASYNC_CONTEXT *ctx,\n                             WS_ERROR *error )\n{\n    struct reader *reader = (struct reader *)handle;\n    HRESULT hr;\n\n    TRACE( \"%p %lu %p %p\\n\", handle, min_size, ctx, error );\n    if (error) FIXME( \"ignoring error parameter\\n\" );\n    if (ctx) FIXME( \"ignoring ctx parameter\\n\" );\n\n    if (!reader) return E_INVALIDARG;\n\n    EnterCriticalSection( &reader->cs );\n\n    if (reader->magic != READER_MAGIC)\n    {\n        LeaveCriticalSection( &reader->cs );\n        return E_INVALIDARG;\n    }\n\n    if (reader->input_type == WS_XML_READER_INPUT_TYPE_STREAM)\n    {\n        hr = read_more_data( reader, min_size, ctx, error );\n    }\n    else\n    {\n        reader->read_size = min( min_size, reader->input_size );\n        reader->read_pos = 0;\n        hr = S_OK;\n    }\n\n    LeaveCriticalSection( &reader->cs );\n    TRACE( \"returning %#lx\\n\", hr );\n    return hr;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <assert.h>",
+   "#include <float.h>",
+   "#include <locale.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"webservices.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"webservices_private.h\""
+  ],
+  "resolution": [
+   "webservices!WsFillReader [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/webservices/tests/reader.c",
+   "dlls/webservices/tests/writer.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "webservices",
+   "path": "sdk-api-src/content/webservices/nf-webservices-wsfillreader.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/webservices/nf-webservices-wsfillreader",
+   "documented_name": "wsfillreader",
+   "file": "docs/0461_sdk-api_nf-webservices-wsfillreader.md",
+   "text": "---\nUID: NF:webservices.WsFillReader\ntitle: WsFillReader function (webservices.h)\ndescription: Ensures that the reader has buffered the minimum byte count of XML data for use by subsequent reader functions.\nhelpviewer_keywords: [\"WsFillReader\",\"WsFillReader function [Web Services for Windows]\",\"webservices/WsFillReader\",\"wsw.wsfillreader\"]\nold-location: wsw\\wsfillreader.htm\ntech.root: wsw\nms.assetid: 1f4138a2-acc5-4f1d-8e35-544859d2fa49\nms.date: 12/05/2018\nms.keywords: WsFillReader, WsFillReader function [Web Services for Windows], webservices/WsFillReader, wsw.wsfillreader\nreq.header: webservices.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 7 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 R2 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: WebServices.lib\nreq.dll: WebServices.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - WsFillReader\n - webservices/WsFillReader\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - WebServices.dll\napi_name:\n - WsFillReader\n---\n\n# WsFillReader function\n\n\n## -description\n\nEnsures that the reader has buffered the minimum byte count of XML data for use by subsequent reader functions.  It will invoke the callback specified by <a href=\"/windows/desktop/api/webservices/ns-webservices-ws_xml_reader_stream_input\">WS_XML_READER_STREAM_INPUT</a> as many times as necessary to obtain the number of bytes specified by the value of the <i>minSize</i> parameter.  On completion the buffered data is available to other reader functions.  If a subsequent reader function requires more data than what has been obtained the function\n        will return a <b>WS_E_QUOTA_EXCEEDED</b> exception.\n      (See <a href=\"/windows/desktop/wsw/windows-web-services-return-values\">Windows Web Services Return Values</a>.)\n\n## -parameters\n\n### -param reader [in]\n\nA  pointer to a <a href=\"/windows/desktop/wsw/ws-xml-reader\">WS_XML_READER</a> structure used for obtaining the data.\n\n### -param minSize [in]\n\nSpecifies the minimum number of bytes that the reader should have obtained.  If the current byte count buffered is equal to or greater than the value of <i>minSize</i> the function will do nothing and will return immediately.\n\n### -param asyncContext [in, optional]\n\nA pointer to a <a href=\"/windows/desktop/api/webservices/ns-webservices-ws_async_context\">WS_ASYNC_CONTEXT</a> data structure with information about invoking the function asynchronously.  A <b>NULL</b> \n                 value indicates a request for synchronous operation.\n\n### -param error [in, optional]\n\nA  pointer to a <a href=\"/windows/desktop/wsw/ws-error\">WS_ERROR</a> object where additional information about the error should be stored if the function fails.\n\n## -returns\n\nThis function can return one of these values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WS_S_ASYNC</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe asynchronous operation is still pending.\n        \n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe number of bytes required to read a particular segment of XML data depends upon the encoding\n        and its formatting.\n      \n\nThis function is a \"no-op\" when used with a reader using <a href=\"/windows/desktop/api/webservices/ns-webservices-ws_xml_reader_buffer_input\">WS_XML_READER_BUFFER_INPUT</a>.\n      \n\nBy specifying a <a href=\"/windows/desktop/api/webservices/ns-webservices-ws_async_context\">WS_ASYNC_CONTEXT</a> the data is read asynchronously."
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "read_more_data",
+   "file": "dlls/webservices/reader.c",
+   "start_line": 622,
+   "end_line": 643,
+   "static": true,
+   "called_from": [
+    "WsFillReader"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/reader.c:969",
+    "dlls/webservices/reader.c:986",
+    "dlls/webservices/reader.c:994",
+    "dlls/webservices/reader.c:1003",
+    "dlls/webservices/reader.c:1037"
+   ],
+   "signature": "static HRESULT read_more_data( struct reader *reader, ULONG min_size, const WS_ASYNC_CONTEXT *ctx, WS_ERROR *error )",
+   "code": "static HRESULT read_more_data( struct reader *reader, ULONG min_size, const WS_ASYNC_CONTEXT *ctx,\n                               WS_ERROR *error )\n{\n    ULONG size = 0, max_size;\n\n    if (reader->read_size - reader->read_pos >= min_size) return S_OK;\n    if (reader->input_type != WS_XML_READER_INPUT_TYPE_STREAM) return WS_E_INVALID_FORMAT;\n    if (min_size > reader->input_size) return WS_E_QUOTA_EXCEEDED;\n\n    if (reader->read_pos)\n    {\n        memmove( reader->stream_buf, reader->stream_buf + reader->read_pos, reader->read_size - reader->read_pos );\n        reader->read_size -= reader->read_pos;\n        reader->read_pos = 0;\n    }\n    max_size = reader->input_size - reader->read_size;\n\n    reader->input_cb( reader->input_cb_state, reader->stream_buf + reader->read_size, max_size, &size, ctx, error );\n    if (size < min_size) return WS_E_QUOTA_EXCEEDED;\n    reader->read_size += size;\n    return S_OK;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "reader",
+    "kind": "struct_decl",
+    "start_line": 377,
+    "end_line": 406,
+    "code": "struct reader\n{\n    ULONG                        magic;\n    CRITICAL_SECTION             cs;\n    ULONG                        read_size;\n    ULONG                        read_pos;\n    const unsigned char         *read_bufptr;\n    enum reader_state            state;\n    struct node                 *root;\n    struct node                 *current;\n    ULONG                        current_attr;\n    struct node                 *last;\n    struct prefix               *prefixes;\n    ULONG                        nb_prefixes;\n    ULONG                        nb_prefixes_allocated;\n    WS_XML_READER_ENCODING_TYPE  input_enc;\n    WS_CHARSET                   input_charset;\n    WS_XML_READER_INPUT_TYPE     input_type;\n    WS_READ_CALLBACK             input_cb;\n    void                        *input_cb_state;\n    struct xmlbuf               *input_buf;\n    unsigned char               *input_conv;\n    ULONG                        input_size;\n    ULONG                        text_conv_offset;\n    unsigned char               *stream_buf;\n    const WS_XML_DICTIONARY     *dict_static;\n    WS_XML_DICTIONARY           *dict;\n    ULONG                        prop_count;\n    struct prop                  prop[ARRAY_SIZE( reader_props )];\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 34,
+    "end_line": 34,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(webservices);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "READER_MAGIC",
+    "start_line": 408,
+    "end_line": 408,
+    "code": "#define READER_MAGIC (('R' << 24) | ('E' << 16) | ('A' << 8) | 'D')"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "memmove",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:126"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "reader->input_cb",
+    "in_function": "read_more_data",
+    "at": "dlls/webservices/reader.c:639",
+    "candidates": [
+     "callback @ dlls/webservices/reader.c:7113"
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,170 @@
+{
+ "id": "0337",
+ "function": {
+  "name": "D3DXCreatePolygon",
+  "export_name": "D3DXCreatePolygon",
+  "module": "d3dx9_24",
+  "source_module": "d3dx9_36",
+  "exported_by": [
+   "d3dx9_24",
+   "d3dx9_25",
+   "d3dx9_26",
+   "d3dx9_27",
+   "d3dx9_28",
+   "d3dx9_29",
+   "d3dx9_30",
+   "d3dx9_31",
+   "d3dx9_32",
+   "d3dx9_33",
+   "d3dx9_34",
+   "d3dx9_35",
+   "d3dx9_36",
+   "d3dx9_37",
+   "d3dx9_38",
+   "d3dx9_39",
+   "d3dx9_40",
+   "d3dx9_41",
+   "d3dx9_42",
+   "d3dx9_43"
+  ],
+  "side": "PE",
+  "file": "dlls/d3dx9_36/mesh.c",
+  "start_line": 4501,
+  "end_line": 4589,
+  "body_lines": 86,
+  "signature": "HRESULT WINAPI D3DXCreatePolygon(struct IDirect3DDevice9 *device, float length, UINT sides, struct ID3DXMesh **mesh, struct ID3DXBuffer **adjacency)",
+  "header_comment": null,
+  "code": "HRESULT WINAPI D3DXCreatePolygon(struct IDirect3DDevice9 *device, float length, UINT sides,\n        struct ID3DXMesh **mesh, struct ID3DXBuffer **adjacency)\n{\n    HRESULT hr;\n    ID3DXMesh *polygon;\n    struct vertex *vertices;\n    WORD (*faces)[3];\n    DWORD (*adjacency_buf)[3];\n    float angle, scale;\n    unsigned int i;\n\n    TRACE(\"device %p, length %f, sides %u, mesh %p, adjacency %p.\\n\",\n            device, length, sides, mesh, adjacency);\n\n    if (!device || length < 0.0f || sides < 3 || !mesh)\n        return D3DERR_INVALIDCALL;\n\n    if (FAILED(hr = D3DXCreateMeshFVF(sides, sides + 1, D3DXMESH_MANAGED,\n            D3DFVF_XYZ | D3DFVF_NORMAL, device, &polygon)))\n    {\n        return hr;\n    }\n\n    if (FAILED(hr = polygon->lpVtbl->LockVertexBuffer(polygon, 0, (void **)&vertices)))\n    {\n        polygon->lpVtbl->Release(polygon);\n        return hr;\n    }\n\n    if (FAILED(hr = polygon->lpVtbl->LockIndexBuffer(polygon, 0, (void **)&faces)))\n    {\n        polygon->lpVtbl->UnlockVertexBuffer(polygon);\n        polygon->lpVtbl->Release(polygon);\n        return hr;\n    }\n\n    angle = D3DX_PI / sides;\n    scale = 0.5f * length / sinf(angle);\n    angle *= 2.0f;\n\n    vertices[0].position.x = 0.0f;\n    vertices[0].position.y = 0.0f;\n    vertices[0].position.z = 0.0f;\n    vertices[0].normal.x = 0.0f;\n    vertices[0].normal.y = 0.0f;\n    vertices[0].normal.z = 1.0f;\n\n    for (i = 0; i < sides; ++i)\n    {\n        vertices[i + 1].position.x = cosf(angle * i) * scale;\n        vertices[i + 1].position.y = sinf(angle * i) * scale;\n        vertices[i + 1].position.z = 0.0f;\n        vertices[i + 1].normal.x = 0.0f;\n        vertices[i + 1].normal.y = 0.0f;\n        vertices[i + 1].normal.z = 1.0f;\n\n        faces[i][0] = 0;\n        faces[i][1] = i + 1;\n        faces[i][2] = i + 2;\n    }\n\n    faces[sides - 1][2] = 1;\n\n    polygon->lpVtbl->UnlockVertexBuffer(polygon);\n    polygon->lpVtbl->UnlockIndexBuffer(polygon);\n\n    if (adjacency)\n    {\n        if (FAILED(hr = D3DXCreateBuffer(sides * sizeof(DWORD) * 3, adjacency)))\n        {\n            polygon->lpVtbl->Release(polygon);\n            return hr;\n        }\n\n        adjacency_buf = ID3DXBuffer_GetBufferPointer(*adjacency);\n        for (i = 0; i < sides; ++i)\n        {\n            adjacency_buf[i][0] = i - 1;\n            adjacency_buf[i][1] = ~0U;\n            adjacency_buf[i][2] = i + 1;\n        }\n        adjacency_buf[0][0] = sides - 1;\n        adjacency_buf[sides - 1][2] = 0;\n    }\n\n    *mesh = polygon;\n\n    return D3D_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <float.h>",
+   "#include \"d3dx9_private.h\"",
+   "#include \"dxfile.h\"",
+   "#include \"rmxfguid.h\"",
+   "#include \"rmxftmpl.h\"",
+   "#include \"wine/list.h\""
+  ],
+  "resolution": [
+   "d3dx9_24!D3DXCreatePolygon [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/d3dx9_36/tests/mesh.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "direct3d9",
+   "path": "desktop-src/direct3d9/d3dxcreatepolygon.md",
+   "url": "https://learn.microsoft.com/windows/win32/direct3d9/d3dxcreatepolygon",
+   "documented_name": "d3dxcreatepolygon",
+   "file": "docs/0337_win32_d3dxcreatepolygon.md",
+   "text": "---\ndescription: Uses a left-handed coordinate system to create a mesh containing an n-sided polygon.\nms.assetid: f3313f55-3e60-4440-8bea-d2886b636c9a\ntitle: D3DXCreatePolygon function (D3dx9shape.h)\nms.topic: reference\nms.date: 05/31/2018\ntopic_type:\n- APIRef\n- kbSyntax\napi_name:\n- D3DXCreatePolygon\napi_type:\n- LibDef\napi_location:\n- d3dx9.lib\n- d3dx9.dll\n---\n\n# D3DXCreatePolygon function\n\nUses a left-handed coordinate system to create a mesh containing an n-sided polygon.\n\n## Syntax\n\n\n```C++\nHRESULT D3DXCreatePolygon(\n  _In_  LPDIRECT3DDEVICE9 pDevice,\n  _In_  FLOAT             Length,\n  _In_  UINT              Sides,\n  _Out_ LPD3DXMESH        *ppMesh,\n  _Out_ LPD3DXBUFFER      *ppAdjacency\n);\n```\n\n\n\n## Parameters\n\n<dl> <dt>\n\n*pDevice* \\[in\\]\n</dt> <dd>\n\nType: **[**LPDIRECT3DDEVICE9**](/windows/win32/api/d3d9helper/nn-d3d9helper-idirect3ddevice9)**\n\nPointer to an [**IDirect3DDevice9**](/windows/win32/api/d3d9helper/nn-d3d9helper-idirect3ddevice9) interface, representing the device associated with the created polygon mesh.\n\n</dd> <dt>\n\n*Length* \\[in\\]\n</dt> <dd>\n\nType: **[**FLOAT**](../winprog/windows-data-types.md)**\n\nLength of each side.\n\n</dd> <dt>\n\n*Sides* \\[in\\]\n</dt> <dd>\n\nType: **[**UINT**](../winprog/windows-data-types.md)**\n\nNumber of sides for the polygon. Value must be greater than or equal to 3.\n\n</dd> <dt>\n\n*ppMesh* \\[out\\]\n</dt> <dd>\n\nType: **[**LPD3DXMESH**](id3dxmesh.md)\\***\n\nAddress of a pointer to the output shape, an [**ID3DXMesh**](id3dxmesh.md) interface.\n\n</dd> <dt>\n\n*ppAdjacency* \\[out\\]\n</dt> <dd>\n\nType: **[**LPD3DXBUFFER**](id3dxbuffer.md)\\***\n\nAddress of a pointer to an [**ID3DXBuffer**](id3dxbuffer.md) interface. When the method returns, this parameter is filled with an array of three DWORDs per face that specify the three neighbors for each face in the mesh. **NULL** can be specified.\n\n</dd> </dl>\n\n## Return value\n\nType: **[**HRESULT**](https://msdn.microsoft.com/library/Bb401631(v=MSDN.10).aspx)**\n\nIf the function succeeds, the return value is D3D\\_OK. If the function fails, the return value can be one of the following: D3DERR\\_INVALIDCALL, D3DXERR\\_INVALIDDATA, E\\_OUTOFMEMORY.\n\n## Remarks\n\nThe created polygon is centered at the origin.\n\nThis function creates a mesh with the D3DXMESH\\_MANAGED creation option and [D3DFVF\\_XYZ \\| D3DFVF\\_NORMAL](d3dfvf.md) flexible vertex format (FVF).\n\n## Requirements\n\n\n\n| Requirement | Value |\n|--------------------|-----------------------------------------------------------------------------------------|\n| Header<br/>  | <dl> <dt>D3dx9shape.h</dt> </dl> |\n| Library<br/> | <dl> <dt>D3dx9.lib</dt> </dl>    |\n\n\n\n## See also\n\n<dl> <dt>\n\n[Shape Drawing Functions](dx9-graphics-reference-d3dx-functions-shape.md)\n</dt> </dl>\n\n \n\n \n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "vertex",
+    "kind": "struct_decl",
+    "start_line": 4495,
+    "end_line": 4499,
+    "code": "struct vertex\n{\n    D3DXVECTOR3 position;\n    D3DXVECTOR3 normal;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 38,
+    "end_line": 38,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(d3dx);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "D3DXCreateBuffer",
+    "impl": [
+     "dlls/d3dx9_36/core.c:127"
+    ]
+   },
+   {
+    "name": "D3DXCreateMeshFVF",
+    "impl": [
+     "dlls/d3dx9_36/mesh.c:2401"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "cosf",
+    "module": "msvcr80",
+    "impl": [
+     "dlls/msvcrt/mathf.c:51"
+    ]
+   },
+   {
+    "name": "sinf",
+    "module": "msvcr80",
+    "impl": [
+     "dlls/msvcrt/mathf.c:50"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "polygon->lpVtbl->LockVertexBuffer",
+    "in_function": "D3DXCreatePolygon",
+    "at": "dlls/d3dx9_36/mesh.c:4524",
+    "candidates": []
+   },
+   {
+    "expr": "polygon->lpVtbl->Release",
+    "in_function": "D3DXCreatePolygon",
+    "at": "dlls/d3dx9_36/mesh.c:4526",
+    "candidates": []
+   },
+   {
+    "expr": "polygon->lpVtbl->LockIndexBuffer",
+    "in_function": "D3DXCreatePolygon",
+    "at": "dlls/d3dx9_36/mesh.c:4530",
+    "candidates": []
+   },
+   {
+    "expr": "polygon->lpVtbl->UnlockVertexBuffer",
+    "in_function": "D3DXCreatePolygon",
+    "at": "dlls/d3dx9_36/mesh.c:4532",
+    "candidates": []
+   },
+   {
+    "expr": "polygon->lpVtbl->UnlockIndexBuffer",
+    "in_function": "D3DXCreatePolygon",
+    "at": "dlls/d3dx9_36/mesh.c:4565",
+    "candidates": []
+   }
+  ]
+ }
+}

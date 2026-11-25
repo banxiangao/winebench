@@ -1,0 +1,190 @@
+{
+ "id": "0488",
+ "function": {
+  "name": "D3D10CreateDeviceAndSwapChain1",
+  "export_name": "D3D10CreateDeviceAndSwapChain1",
+  "module": "d3d10_1",
+  "source_module": "d3d10_1",
+  "exported_by": [
+   "d3d10_1"
+  ],
+  "side": "PE",
+  "file": "dlls/d3d10_1/d3d10_1_main.c",
+  "start_line": 188,
+  "end_line": 257,
+  "body_lines": 67,
+  "signature": "HRESULT WINAPI D3D10CreateDeviceAndSwapChain1(IDXGIAdapter *adapter, D3D10_DRIVER_TYPE driver_type, HMODULE swrast, UINT flags, D3D10_FEATURE_LEVEL1 feature_level, UINT sdk_version, DXGI_SWAP_CHAIN_DESC *swapchain_desc, IDXGISwapChain **swapchain, ID3D10Device1 **device)",
+  "header_comment": null,
+  "code": "HRESULT WINAPI D3D10CreateDeviceAndSwapChain1(IDXGIAdapter *adapter, D3D10_DRIVER_TYPE driver_type,\n        HMODULE swrast, UINT flags, D3D10_FEATURE_LEVEL1 feature_level, UINT sdk_version,\n        DXGI_SWAP_CHAIN_DESC *swapchain_desc, IDXGISwapChain **swapchain, ID3D10Device1 **device)\n{\n    IDXGIDevice *dxgi_device;\n    IDXGIFactory *factory;\n    HRESULT hr;\n\n    TRACE(\"adapter %p, driver_type %s, swrast %p, flags %#x, \"\n            \"feature_level %s, sdk_version %d, swapchain_desc %p, swapchain %p, device %p.\\n\",\n            adapter, debug_d3d10_driver_type(driver_type), swrast, flags,\n            debug_d3d10_feature_level(feature_level), sdk_version, swapchain_desc, swapchain, device);\n\n    if (swapchain)\n        *swapchain = NULL;\n\n    if (!device)\n        return E_INVALIDARG;\n\n    /* Avoid forwarding to D3D10CreateDevice1(), since it breaks applications\n     * hooking these entry-points. */\n    if (FAILED(hr = d3d10_create_device1(adapter, driver_type, swrast, flags, feature_level, sdk_version, device)))\n    {\n        WARN(\"Failed to create a device, returning %#lx.\\n\", hr);\n        *device = NULL;\n        return hr;\n    }\n\n    if (swapchain)\n    {\n        if (FAILED(hr = ID3D10Device1_QueryInterface(*device, &IID_IDXGIDevice, (void **)&dxgi_device)))\n        {\n            ERR(\"Failed to get a dxgi device from the d3d10 device, returning %#lx.\\n\", hr);\n            goto cleanup;\n        }\n\n        hr = IDXGIDevice_GetAdapter(dxgi_device, &adapter);\n        IDXGIDevice_Release(dxgi_device);\n        if (FAILED(hr))\n        {\n            ERR(\"Failed to get the device adapter, returning %#lx.\\n\", hr);\n            goto cleanup;\n        }\n\n        hr = IDXGIAdapter_GetParent(adapter, &IID_IDXGIFactory, (void **)&factory);\n        IDXGIAdapter_Release(adapter);\n        if (FAILED(hr))\n        {\n            ERR(\"Failed to get the adapter factory, returning %#lx.\\n\", hr);\n            goto cleanup;\n        }\n\n        hr = IDXGIFactory_CreateSwapChain(factory, (IUnknown *)*device, swapchain_desc, swapchain);\n        IDXGIFactory_Release(factory);\n        if (FAILED(hr))\n        {\n            WARN(\"Failed to create a swapchain, returning %#lx.\\n\", hr);\n            goto cleanup;\n        }\n\n        TRACE(\"Created IDXGISwapChain %p.\\n\", *swapchain);\n    }\n\n    return S_OK;\n\ncleanup:\n    ID3D10Device1_Release(*device);\n    *device = NULL;\n    return hr;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"wine/debug.h\"",
+   "#include \"d3d10_1.h\""
+  ],
+  "resolution": [
+   "d3d10_1!D3D10CreateDeviceAndSwapChain1 [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/d3d10_1/tests/d3d10_1.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "d3d10_1",
+   "path": "sdk-api-src/content/d3d10_1/nf-d3d10_1-d3d10createdeviceandswapchain1.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/d3d10_1/nf-d3d10_1-d3d10createdeviceandswapchain1",
+   "documented_name": "d3d10createdeviceandswapchain1",
+   "file": "docs/0488_sdk-api_nf-d3d10_1-d3d10createdeviceandswapchain1.md",
+   "text": "---\nUID: NF:d3d10_1.D3D10CreateDeviceAndSwapChain1\ntitle: D3D10CreateDeviceAndSwapChain1 function (d3d10_1.h)\ndescription: Create a Direct3D 10.1 device and a swap chain.\nhelpviewer_keywords: [\"D3D10CreateDeviceAndSwapChain1\",\"D3D10CreateDeviceAndSwapChain1 function [Direct3D 10]\",\"b7c9234e-0746-99a6-b30f-ead0bc077ec3\",\"d3d10_1/D3D10CreateDeviceAndSwapChain1\",\"direct3d10.d3d10createdeviceandswapchain1\"]\nold-location: direct3d10\\d3d10createdeviceandswapchain1.htm\ntech.root: direct3d10\nms.assetid: VS|directx_sdk|~\\d3d10createdeviceandswapchain1.htm\nms.date: 12/05/2018\nms.keywords: D3D10CreateDeviceAndSwapChain1, D3D10CreateDeviceAndSwapChain1 function [Direct3D 10], b7c9234e-0746-99a6-b30f-ead0bc077ec3, d3d10_1/D3D10CreateDeviceAndSwapChain1, direct3d10.d3d10createdeviceandswapchain1\nreq.header: d3d10_1.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: D3D10_1.lib\nreq.dll: D3D10_1.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - D3D10CreateDeviceAndSwapChain1\n - d3d10_1/D3D10CreateDeviceAndSwapChain1\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - D3D10_1.dll\napi_name:\n - D3D10CreateDeviceAndSwapChain1\n---\n\n# D3D10CreateDeviceAndSwapChain1 function\n\n\n## -description\n\nCreate a Direct3D 10.1 device and a swap chain.\n\n## -parameters\n\n### -param pAdapter [in]\n\nType: <b><a href=\"/windows/desktop/api/dxgi/nn-dxgi-idxgiadapter\">IDXGIAdapter</a>*</b>\n\nPointer to a <a href=\"/windows/desktop/api/dxgi/nn-dxgi-idxgiadapter\">IDXGIAdapter</a>.\n\n### -param DriverType [in]\n\nType: <b><a href=\"/windows/desktop/api/d3d10misc/ne-d3d10misc-d3d10_driver_type\">D3D10_DRIVER_TYPE</a></b>\n\nThe type of driver for the device. See <a href=\"/windows/desktop/api/d3d10misc/ne-d3d10misc-d3d10_driver_type\">D3D10_DRIVER_TYPE</a>.\n\n### -param Software [in]\n\nType: <b><a href=\"/windows/desktop/WinProg/windows-data-types\">HMODULE</a></b>\n\nA handle to the DLL that implements a software rasterizer. Must be <b>NULL</b> if DriverType is non-software. \n        The HMODULE of a DLL can be obtained with <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-loadlibrarya\">LoadLibrary</a>, \n          <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-loadlibraryexa\">LoadLibraryEx</a>, \n          or <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-getmodulehandlea\">GetModuleHandle</a>.\n\n### -param Flags [in]\n\nType: <b><a href=\"/windows/desktop/WinProg/windows-data-types\">UINT</a></b>\n\nOptional. Device creation flags (see <a href=\"/windows/desktop/api/d3d10/ne-d3d10-d3d10_create_device_flag\">D3D10_CREATE_DEVICE_FLAG</a>) that \n        enable <a href=\"/windows/desktop/direct3d10/d3d10-graphics-programming-guide-api-features-layers\">API layers</a>. These flags can be bitwise OR'd together.\n\n### -param HardwareLevel [in]\n\nType: <b><a href=\"/windows/desktop/api/d3d10_1/ne-d3d10_1-d3d10_feature_level1\">D3D10_FEATURE_LEVEL1</a></b>\n\nThe version of hardware that is available for acceleration (see <a href=\"/windows/desktop/api/d3d10_1/ne-d3d10_1-d3d10_feature_level1\">D3D10_FEATURE_LEVEL1</a>).\n\n### -param SDKVersion [in]\n\nType: <b><a href=\"/windows/desktop/WinProg/windows-data-types\">UINT</a></b>\n\nBit flag that indicates the version of the SDK. Should be D3D10_1_SDK_VERSION, defined in D3D10.h.\n\n### -param pSwapChainDesc [in]\n\nType: <b><a href=\"/windows/desktop/api/dxgi/ns-dxgi-dxgi_swap_chain_desc\">DXGI_SWAP_CHAIN_DESC</a>*</b>\n\nDescription of the swap chain. See <a href=\"/windows/desktop/api/dxgi/ns-dxgi-dxgi_swap_chain_desc\">DXGI_SWAP_CHAIN_DESC</a>.\n\n### -param ppSwapChain [out]\n\nType: <b><a href=\"/windows/desktop/api/dxgi/nn-dxgi-idxgiswapchain\">IDXGISwapChain</a>**</b>\n\nAddress of a pointer to an <a href=\"/windows/desktop/api/dxgi/nn-dxgi-idxgiswapchain\">IDXGISwapChain</a>.\n\n### -param ppDevice [out]\n\nType: <b><a href=\"/windows/desktop/api/d3d10_1/nn-d3d10_1-id3d10device1\">ID3D10Device1</a>**</b>\n\nAddress of a pointer to an <a href=\"/windows/desktop/api/d3d10_1/nn-d3d10_1-id3d10device1\">ID3D10Device1 Interface</a> that will receive the newly created device.\n\n## -returns\n\nType: <b><a href=\"/windows/win32/com/structure-of-com-error-codes\">HRESULT</a></b>\n\nThis method returns one of the following <a href=\"/windows/desktop/direct3d10/d3d10-graphics-reference-returnvalues\">Direct3D 10 Return Codes</a>.\n\n## -remarks\n\nTo create a device without creating a swap chain, see <a href=\"/windows/desktop/api/d3d10_1/nf-d3d10_1-d3d10createdevice1\">D3D10CreateDevice1</a>.\n\nThis method requires Windows Vista Service Pack 1, Windows Server 2008, or later release of Windows.\n\n<div class=\"alert\"><b>Note</b>  If you call this API in a Session 0 process, it returns <a href=\"/windows/desktop/direct3ddxgi/dxgi-error\">DXGI_ERROR_NOT_CURRENTLY_AVAILABLE</a>.</div>\n<div> </div>\n\n## -see-also\n\n<a href=\"/windows/desktop/direct3d10/d3d10-graphics-reference-d3d10-core-functions\">Core Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "debug_d3d10_driver_type",
+   "file": "dlls/d3d10_1/d3d10_1_main.c",
+   "start_line": 32,
+   "end_line": 45,
+   "static": true,
+   "called_from": [
+    "D3D10CreateDeviceAndSwapChain1",
+    "d3d10_create_device1"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "referenced through a macro (conservatively shared)"
+   ],
+   "signature": "static const char *debug_d3d10_driver_type(D3D10_DRIVER_TYPE driver_type)",
+   "code": "static const char *debug_d3d10_driver_type(D3D10_DRIVER_TYPE driver_type)\n{\n    switch (driver_type)\n    {\n        WINE_D3D10_TO_STR(D3D10_DRIVER_TYPE_HARDWARE);\n        WINE_D3D10_TO_STR(D3D10_DRIVER_TYPE_REFERENCE);\n        WINE_D3D10_TO_STR(D3D10_DRIVER_TYPE_NULL);\n        WINE_D3D10_TO_STR(D3D10_DRIVER_TYPE_SOFTWARE);\n        WINE_D3D10_TO_STR(D3D10_DRIVER_TYPE_WARP);\n        default:\n            FIXME(\"Unrecognized D3D10_DRIVER_TYPE %#x.\\n\", driver_type);\n            return \"unrecognized\";\n    }\n}"
+  },
+  {
+   "name": "debug_d3d10_feature_level",
+   "file": "dlls/d3d10_1/d3d10_1_main.c",
+   "start_line": 47,
+   "end_line": 60,
+   "static": true,
+   "called_from": [
+    "D3D10CreateDeviceAndSwapChain1",
+    "d3d10_create_device1"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "referenced through a macro (conservatively shared)"
+   ],
+   "signature": "static const char *debug_d3d10_feature_level(D3D10_FEATURE_LEVEL1 feature_level)",
+   "code": "static const char *debug_d3d10_feature_level(D3D10_FEATURE_LEVEL1 feature_level)\n{\n    switch (feature_level)\n    {\n        WINE_D3D10_TO_STR(D3D10_FEATURE_LEVEL_10_0);\n        WINE_D3D10_TO_STR(D3D10_FEATURE_LEVEL_10_1);\n        WINE_D3D10_TO_STR(D3D10_FEATURE_LEVEL_9_1);\n        WINE_D3D10_TO_STR(D3D10_FEATURE_LEVEL_9_2);\n        WINE_D3D10_TO_STR(D3D10_FEATURE_LEVEL_9_3);\n        default:\n            FIXME(\"Unrecognized D3D10_FEATURE_LEVEL1 %#x.\\n\", feature_level);\n            return \"unrecognized\";\n    }\n}"
+  },
+  {
+   "name": "d3d10_create_device1",
+   "file": "dlls/d3d10_1/d3d10_1_main.c",
+   "start_line": 69,
+   "end_line": 180,
+   "static": true,
+   "called_from": [
+    "D3D10CreateDeviceAndSwapChain1"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/d3d10_1/d3d10_1_main.c:185"
+   ],
+   "signature": "static HRESULT d3d10_create_device1(IDXGIAdapter *adapter, D3D10_DRIVER_TYPE driver_type, HMODULE swrast, UINT flags, D3D10_FEATURE_LEVEL1 hw_level, UINT sdk_version, ID3D10Device1 **device)",
+   "code": "static HRESULT d3d10_create_device1(IDXGIAdapter *adapter, D3D10_DRIVER_TYPE driver_type, HMODULE swrast,\n        UINT flags, D3D10_FEATURE_LEVEL1 hw_level, UINT sdk_version, ID3D10Device1 **device)\n{\n    IDXGIFactory *factory;\n    HRESULT hr;\n\n    TRACE(\"adapter %p, driver_type %s, swrast %p, flags %#x, hw_level %s, sdk_version %d, device %p.\\n\",\n            adapter, debug_d3d10_driver_type(driver_type), swrast, flags,\n            debug_d3d10_feature_level(hw_level), sdk_version, device);\n\n    if (!device)\n        return E_INVALIDARG;\n\n    *device = NULL;\n\n    if (!hw_level)\n        return E_INVALIDARG;\n\n    if (adapter)\n    {\n        if (FAILED(hr = IDXGIAdapter_GetParent(adapter, &IID_IDXGIFactory, (void **)&factory)))\n        {\n            WARN(\"Failed to get dxgi factory, hr %#lx.\\n\", hr);\n            return hr;\n        }\n        IDXGIAdapter_AddRef(adapter);\n    }\n    else\n    {\n        if (FAILED(hr = CreateDXGIFactory(&IID_IDXGIFactory, (void **)&factory)))\n        {\n            WARN(\"Failed to create dxgi factory, hr %#lx.\\n\", hr);\n            return hr;\n        }\n\n        switch (driver_type)\n        {\n            case D3D10_DRIVER_TYPE_WARP:\n                FIXME(\"WARP driver not implemented, falling back to hardware.\\n\");\n            case D3D10_DRIVER_TYPE_HARDWARE:\n            {\n                if (FAILED(hr = IDXGIFactory_EnumAdapters(factory, 0, &adapter)))\n                {\n                    WARN(\"No adapters found, hr %#lx.\\n\", hr);\n                    IDXGIFactory_Release(factory);\n                    return hr;\n                }\n                break;\n            }\n\n            case D3D10_DRIVER_TYPE_NULL:\n                FIXME(\"NULL device not implemented, falling back to refrast.\\n\");\n                /* Fall through, for now. */\n            case D3D10_DRIVER_TYPE_REFERENCE:\n            {\n                HMODULE refrast;\n\n                if (!(refrast = LoadLibraryA(\"d3d10ref.dll\")))\n                {\n                    WARN(\"Failed to load refrast, returning E_FAIL.\\n\");\n                    IDXGIFactory_Release(factory);\n                    return E_FAIL;\n                }\n                hr = IDXGIFactory_CreateSoftwareAdapter(factory, refrast, &adapter);\n                FreeLibrary(refrast);\n                if (FAILED(hr))\n                {\n                    WARN(\"Failed to create a software adapter, hr %#lx.\\n\", hr);\n                    IDXGIFactory_Release(factory);\n                    return hr;\n                }\n                break;\n            }\n\n            case D3D10_DRIVER_TYPE_SOFTWARE:\n            {\n                if (!swrast)\n                {\n                    WARN(\"Software device requested, but NULL swrast passed, returning E_FAIL.\\n\");\n                    IDXGIFactory_Release(factory);\n                    return E_FAIL;\n                }\n                if (FAILED(hr = IDXGIFactory_CreateSoftwareAdapter(factory, swrast, &adapter)))\n                {\n                    WARN(\"Failed to create a software adapter, hr %#lx.\\n\", hr);\n                    IDXGIFactory_Release(factory);\n                    return hr;\n                }\n                break;\n            }\n\n            default:\n                FIXME(\"Unhandled driver type %#x.\\n\", driver_type);\n                IDXGIFactory_Release(factory);\n                return E_FAIL;\n        }\n    }\n\n    hr = D3D10CoreCreateDevice(factory, adapter, flags,\n            d3d_feature_level_from_d3d10_1(hw_level), (ID3D10Device **)device);\n    IDXGIAdapter_Release(adapter);\n    IDXGIFactory_Release(factory);\n    if (FAILED(hr))\n    {\n        WARN(\"Failed to create a device, hr %#lx.\\n\", hr);\n        return hr;\n    }\n\n    TRACE(\"Created device %p.\\n\", *device);\n\n    return hr;\n}"
+  },
+  {
+   "name": "d3d_feature_level_from_d3d10_1",
+   "file": "dlls/d3d10_1/d3d10_1_main.c",
+   "start_line": 64,
+   "end_line": 67,
+   "static": true,
+   "called_from": [
+    "d3d10_create_device1"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static D3D_FEATURE_LEVEL d3d_feature_level_from_d3d10_1(D3D10_FEATURE_LEVEL1 level)",
+   "code": "static D3D_FEATURE_LEVEL d3d_feature_level_from_d3d10_1(D3D10_FEATURE_LEVEL1 level)\n{\n    return (D3D_FEATURE_LEVEL)level;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 25,
+    "end_line": 25,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(d3d10);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "WINE_D3D10_TO_STR",
+    "start_line": 30,
+    "end_line": 30,
+    "code": "#define WINE_D3D10_TO_STR(x) case x: return #x"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "CreateDXGIFactory",
+    "module": "dxgi",
+    "impl": [
+     "dlls/dxgi/dxgi_main.c:73"
+    ]
+   },
+   {
+    "name": "D3D10CoreCreateDevice",
+    "module": "d3d10core",
+    "impl": [
+     "dlls/d3d10core/d3d10core_main.c:39"
+    ]
+   },
+   {
+    "name": "FreeLibrary",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/loader.c:232"
+    ]
+   },
+   {
+    "name": "LoadLibraryA",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/loader.c:525"
+    ]
+   }
+  ],
+  "header_inline": [
+   "ID3D10Device1_QueryInterface",
+   "ID3D10Device1_Release",
+   "IDXGIAdapter_AddRef",
+   "IDXGIAdapter_GetParent",
+   "IDXGIAdapter_Release",
+   "IDXGIDevice_GetAdapter",
+   "IDXGIDevice_Release",
+   "IDXGIFactory_CreateSoftwareAdapter",
+   "IDXGIFactory_CreateSwapChain",
+   "IDXGIFactory_EnumAdapters",
+   "IDXGIFactory_Release",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

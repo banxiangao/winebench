@@ -1,0 +1,533 @@
+{
+ "id": "0038",
+ "function": {
+  "name": "NtUserRedrawWindow",
+  "export_name": "RedrawWindow",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "user.exe16",
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/dce.c",
+  "start_line": 1808,
+  "end_line": 1865,
+  "body_lines": 55,
+  "signature": "BOOL WINAPI NtUserRedrawWindow( HWND hwnd, const RECT *rect, HRGN hrgn, UINT flags )",
+  "header_comment": "/***********************************************************************\n *           NtUserRedrawWindow (win32u.@)\n */",
+  "code": "BOOL WINAPI NtUserRedrawWindow( HWND hwnd, const RECT *rect, HRGN hrgn, UINT flags )\n{\n    static const RECT empty;\n    BOOL ret;\n\n    if (TRACE_ON(win))\n    {\n        if (hrgn)\n        {\n            RECT r;\n            NtGdiGetRgnBox( hrgn, &r );\n            TRACE( \"%p region %p box %s \", hwnd, hrgn, wine_dbgstr_rect(&r) );\n        }\n        else if (rect)\n            TRACE( \"%p rect %s \", hwnd, wine_dbgstr_rect(rect) );\n        else\n            TRACE( \"%p whole window \", hwnd );\n\n        dump_rdw_flags(flags);\n    }\n\n    /* process pending expose events before painting */\n    if (flags & RDW_UPDATENOW) check_for_events( QS_PAINT );\n\n    if (rect && !hrgn)\n    {\n        RECT ordered = *rect;\n\n        order_rect( &ordered );\n        if (IsRectEmpty( &ordered )) ordered = empty;\n        ret = redraw_window_rects( hwnd, flags, &ordered, 1 );\n    }\n    else if (!hrgn)\n    {\n        ret = redraw_window_rects( hwnd, flags, NULL, 0 );\n    }\n    else  /* need to build a list of the region rectangles */\n    {\n        DWORD size;\n        RGNDATA *data;\n\n        if (!(size = NtGdiGetRegionData( hrgn, 0, NULL ))) return FALSE;\n        if (!(data = malloc( size ))) return FALSE;\n        NtGdiGetRegionData( hrgn, size, data );\n        if (!data->rdh.nCount)  /* empty region -> use a single all-zero rectangle */\n            ret = redraw_window_rects( hwnd, flags, &empty, 1 );\n        else\n            ret = redraw_window_rects( hwnd, flags, (const RECT *)data->Buffer, data->rdh.nCount );\n        free( data );\n    }\n\n    if (!hwnd) hwnd = get_desktop_window();\n\n    if (flags & RDW_UPDATENOW) update_now( hwnd, flags );\n    else if (flags & RDW_ERASENOW) erase_now( hwnd, flags );\n\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <pthread.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"ntgdi_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/opengl_driver.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "user32!RedrawWindow [stdcall] -> NtUserRedrawWindow implicitly imported from win32u",
+   "win32u!NtUserRedrawWindow [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/dce.c",
+   "dlls/user32/tests/listbox.c",
+   "dlls/user32/tests/msg.c",
+   "dlls/user32/tests/scroll.c",
+   "dlls/user32/tests/sysparams.c",
+   "dlls/user32/tests/win.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 12
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "user.exe16",
+   "source_module": "user.exe16",
+   "exported_by": [
+    "user.exe16"
+   ],
+   "file": "dlls/user.exe16/window.c",
+   "start_line": 1429,
+   "resolution": [
+    "user.exe16!RedrawWindow [pascal -ret16] -> internal symbol RedrawWindow16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 1442,
+   "signature": "BOOL16 WINAPI RedrawWindow16( HWND16 hwnd, const RECT16 *rectUpdate, HRGN16 hrgnUpdate, UINT16 flags )",
+   "code": "BOOL16 WINAPI RedrawWindow16( HWND16 hwnd, const RECT16 *rectUpdate,\n                              HRGN16 hrgnUpdate, UINT16 flags )\n{\n    if (rectUpdate)\n    {\n        RECT r;\n        r.left   = rectUpdate->left;\n        r.top    = rectUpdate->top;\n        r.right  = rectUpdate->right;\n        r.bottom = rectUpdate->bottom;\n        return RedrawWindow(WIN_Handle32(hwnd), &r, HRGN_32(hrgnUpdate), flags);\n    }\n    return RedrawWindow(WIN_Handle32(hwnd), NULL, HRGN_32(hrgnUpdate), flags);\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-redrawwindow.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-redrawwindow",
+   "documented_name": "redrawwindow",
+   "file": "docs/0038_sdk-api_nf-winuser-redrawwindow.md",
+   "text": "---\nUID: NF:winuser.RedrawWindow\ntitle: RedrawWindow function (winuser.h)\ndescription: The RedrawWindow function updates the specified rectangle or region in a window's client area.\nhelpviewer_keywords: [\"RDW_ALLCHILDREN\",\"RDW_ERASE\",\"RDW_ERASENOW\",\"RDW_FRAME\",\"RDW_INTERNALPAINT\",\"RDW_INVALIDATE\",\"RDW_NOCHILDREN\",\"RDW_NOERASE\",\"RDW_NOFRAME\",\"RDW_NOINTERNALPAINT\",\"RDW_UPDATENOW\",\"RDW_VALIDATE\",\"RedrawWindow\",\"RedrawWindow function [Windows GDI]\",\"_win32_RedrawWindow\",\"gdi.redrawwindow\",\"winuser/RedrawWindow\"]\nold-location: gdi\\redrawwindow.htm\ntech.root: gdi\nms.assetid: c6cb7f74-237e-4d3e-a852-894da36e990c\nms.date: 12/05/2018\nms.keywords: RDW_ALLCHILDREN, RDW_ERASE, RDW_ERASENOW, RDW_FRAME, RDW_INTERNALPAINT, RDW_INVALIDATE, RDW_NOCHILDREN, RDW_NOERASE, RDW_NOFRAME, RDW_NOINTERNALPAINT, RDW_UPDATENOW, RDW_VALIDATE, RedrawWindow, RedrawWindow function [Windows GDI], _win32_RedrawWindow, gdi.redrawwindow, winuser/RedrawWindow\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - RedrawWindow\n - winuser/RedrawWindow\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - user32.dll\n - API-MS-Win-RTCore-NTUser-Draw-l1-1-0.dll\n - minuser.dll\n - Ext-MS-Win-NTUser-Draw-l1-1-0.dll\n - Ext-MS-Win-NTUser-Draw-l1-1-1.dll\n - ext-ms-win-ntuser-draw-l1-1-2.dll\n - Ext-MS-Win-RTCore-NTUser-Draw-Ext-L1-1-0.dll\napi_name:\n - RedrawWindow\nreq.apiset: ext-ms-win-ntuser-draw-l1-1-0 (introduced in Windows 8)\n---\n\n# RedrawWindow function\n\n\n## -description\n\nThe <b>RedrawWindow</b> function updates the specified rectangle or region in a window's client area.\n\n## -parameters\n\n### -param hWnd [in]\n\nA handle to the window to be redrawn. If this parameter is <b>NULL</b>, the desktop window is updated.\n\n### -param lprcUpdate [in]\n\nA pointer to a <a href=\"/windows/desktop/api/windef/ns-windef-rect\">RECT</a> structure containing the coordinates, in device units, of the update rectangle. This parameter is ignored if the <i>hrgnUpdate</i> parameter identifies a region.\n\n### -param hrgnUpdate [in]\n\nA handle to the update region. If both the <i>hrgnUpdate</i> and <i>lprcUpdate</i> parameters are <b>NULL</b>, the entire client area is added to the update region.\n\n### -param flags [in]\n\nOne or more redraw flags. This parameter can be used to invalidate or validate a window, control repainting, and control which windows are affected by <b>RedrawWindow</b>.\n\nThe following flags are used to invalidate the window.\n\n<table>\n<tr>\n<th>Flag (invalidation)</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"RDW_ERASE\"></a><a id=\"rdw_erase\"></a><dl>\n<dt><b>RDW_ERASE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nCauses the window to receive a <a href=\"/windows/desktop/winmsg/wm-erasebkgnd\">WM_ERASEBKGND</a> message when the window is repainted. The RDW_INVALIDATE flag must also be specified; otherwise, RDW_ERASE has no effect.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"RDW_FRAME\"></a><a id=\"rdw_frame\"></a><dl>\n<dt><b>RDW_FRAME</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nCauses any part of the nonclient area of the window that intersects the update region to receive a <a href=\"/windows/desktop/gdi/wm-ncpaint\">WM_NCPAINT</a> message. The RDW_INVALIDATE flag must also be specified; otherwise, RDW_FRAME has no effect. The <b>WM_NCPAINT</b> message is typically not sent during the execution of <b>RedrawWindow</b> unless either RDW_UPDATENOW or RDW_ERASENOW is specified.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"RDW_INTERNALPAINT\"></a><a id=\"rdw_internalpaint\"></a><dl>\n<dt><b>RDW_INTERNALPAINT</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nCauses a <a href=\"/windows/desktop/gdi/wm-paint\">WM_PAINT</a> message to be posted to the window regardless of whether any portion of the window is invalid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"RDW_INVALIDATE\"></a><a id=\"rdw_invalidate\"></a><dl>\n<dt><b>RDW_INVALIDATE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nInvalidates <i>lprcUpdate</i> or <i>hrgnUpdate</i> (only one may be non-<b>NULL</b>). If both are <b>NULL</b>, the entire window is invalidated.\n\n</td>\n</tr>\n</table>\n \n\nThe following flags are used to validate the window.\n\n<table>\n<tr>\n<th>Flag (validation)</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"RDW_NOERASE\"></a><a id=\"rdw_noerase\"></a><dl>\n<dt><b>RDW_NOERASE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nSuppresses any pending <a href=\"/windows/desktop/winmsg/wm-erasebkgnd\">WM_ERASEBKGND</a> messages.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"RDW_NOFRAME\"></a><a id=\"rdw_noframe\"></a><dl>\n<dt><b>RDW_NOFRAME</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nSuppresses any pending <a href=\"/windows/desktop/gdi/wm-ncpaint\">WM_NCPAINT</a> messages. This flag must be used with RDW_VALIDATE and is typically used with RDW_NOCHILDREN. RDW_NOFRAME should be used with care, as it could cause parts of a window to be painted improperly.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"RDW_NOINTERNALPAINT\"></a><a id=\"rdw_nointernalpaint\"></a><dl>\n<dt><b>RDW_NOINTERNALPAINT</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nSuppresses any pending internal <a href=\"/windows/desktop/gdi/wm-paint\">WM_PAINT</a> messages. This flag does not affect <b>WM_PAINT</b> messages resulting from a non-<b>NULL</b> update area.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"RDW_VALIDATE\"></a><a id=\"rdw_validate\"></a><dl>\n<dt><b>RDW_VALIDATE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nValidates <i>lprcUpdate</i> or <i>hrgnUpdate</i> (only one may be non-<b>NULL</b>). If both are <b>NULL</b>, the entire window is validated. This flag does not affect internal <a href=\"/windows/desktop/gdi/wm-paint\">WM_PAINT</a> messages.\n\n</td>\n</tr>\n</table>\n \n\nThe following flags control when repainting occurs. <b>RedrawWindow</b> will not repaint unless one of these flags is specified.\n\n<table>\n<tr>\n<th>Flag</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"RDW_ERASENOW\"></a><a id=\"rdw_erasenow\"></a><dl>\n<dt><b>RDW_ERASENOW</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nCauses the affected windows (as specified by the RDW_ALLCHILDREN and RDW_NOCHILDREN flags) to receive <a href=\"/windows/desktop/gdi/wm-ncpaint\">WM_NCPAINT</a> and <a href=\"/windows/desktop/winmsg/wm-erasebkgnd\">WM_ERASEBKGND</a> messages, if necessary, before the function returns. <a href=\"/windows/desktop/gdi/wm-paint\">WM_PAINT</a> messages are received at the ordinary time.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"RDW_UPDATENOW\"></a><a id=\"rdw_updatenow\"></a><dl>\n<dt><b>RDW_UPDATENOW</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nCauses the affected windows (as specified by the RDW_ALLCHILDREN and RDW_NOCHILDREN flags) to receive <a href=\"/windows/desktop/gdi/wm-ncpaint\">WM_NCPAINT</a>, <a href=\"/windows/desktop/winmsg/wm-erasebkgnd\">WM_ERASEBKGND</a>, and <a href=\"/windows/desktop/gdi/wm-paint\">WM_PAINT</a> messages, if necessary, before the function returns.\n\n</td>\n</tr>\n</table>\n \n\nBy default, the windows affected by <b>RedrawWindow</b> depend on whether the specified window has the WS_CLIPCHILDREN style. Child windows that are not the WS_CLIPCHILDREN style are unaffected; non-WS_CLIPCHILDREN windows are recursively validated or invalidated until a WS_CLIPCHILDREN window is encountered. The following flags control which windows are affected by the <b>RedrawWindow</b> function.\n\n<table>\n<tr>\n<th>Flag</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"RDW_ALLCHILDREN\"></a><a id=\"rdw_allchildren\"></a><dl>\n<dt><b>RDW_ALLCHILDREN</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nIncludes child windows, if any, in the repainting operation.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"RDW_NOCHILDREN\"></a><a id=\"rdw_nochildren\"></a><dl>\n<dt><b>RDW_NOCHILDREN</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nExcludes child windows, if any, from the repainting operation.\n\n</td>\n</tr>\n</table>\n\n## -returns\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero.\n\n## -remarks\n\nWhen <b>RedrawWindow</b> is used to invalidate part of the desktop window, the desktop window does not receive a <a href=\"/windows/desktop/gdi/wm-paint\">WM_PAINT</a> message. To repaint the desktop, an application uses the RDW_ERASE flag to generate a <a href=\"/windows/desktop/winmsg/wm-erasebkgnd\">WM_ERASEBKGND</a> message.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-getupdaterect\">GetUpdateRect</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-getupdatergn\">GetUpdateRgn</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-invalidaterect\">InvalidateRect</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-invalidatergn\">InvalidateRgn</a>\n\n\n\n<a href=\"/windows/desktop/gdi/painting-and-drawing-functions\">Painting and Drawing Functions</a>\n\n\n\n<a href=\"/windows/desktop/gdi/painting-and-drawing\">Painting and Drawing Overview</a>\n\n\n\n<a href=\"/windows/desktop/api/windef/ns-windef-rect\">RECT</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-updatewindow\">UpdateWindow</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "dump_rdw_flags",
+   "file": "dlls/win32u/dce.c",
+   "start_line": 777,
+   "end_line": 810,
+   "static": true,
+   "called_from": [
+    "NtUserRedrawWindow"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void dump_rdw_flags(UINT flags)",
+   "code": "static void dump_rdw_flags(UINT flags)\n{\n    TRACE(\"flags:\");\n    if (flags & RDW_INVALIDATE) TRACE(\" RDW_INVALIDATE\");\n    if (flags & RDW_INTERNALPAINT) TRACE(\" RDW_INTERNALPAINT\");\n    if (flags & RDW_ERASE) TRACE(\" RDW_ERASE\");\n    if (flags & RDW_VALIDATE) TRACE(\" RDW_VALIDATE\");\n    if (flags & RDW_NOINTERNALPAINT) TRACE(\" RDW_NOINTERNALPAINT\");\n    if (flags & RDW_NOERASE) TRACE(\" RDW_NOERASE\");\n    if (flags & RDW_NOCHILDREN) TRACE(\" RDW_NOCHILDREN\");\n    if (flags & RDW_ALLCHILDREN) TRACE(\" RDW_ALLCHILDREN\");\n    if (flags & RDW_UPDATENOW) TRACE(\" RDW_UPDATENOW\");\n    if (flags & RDW_ERASENOW) TRACE(\" RDW_ERASENOW\");\n    if (flags & RDW_FRAME) TRACE(\" RDW_FRAME\");\n    if (flags & RDW_NOFRAME) TRACE(\" RDW_NOFRAME\");\n\n#define RDW_FLAGS \\\n    (RDW_INVALIDATE | \\\n     RDW_INTERNALPAINT | \\\n     RDW_ERASE | \\\n     RDW_VALIDATE | \\\n     RDW_NOINTERNALPAINT | \\\n     RDW_NOERASE | \\\n     RDW_NOCHILDREN | \\\n     RDW_ALLCHILDREN | \\\n     RDW_UPDATENOW | \\\n     RDW_ERASENOW | \\\n     RDW_FRAME | \\\n     RDW_NOFRAME)\n\n    if (flags & ~RDW_FLAGS) TRACE(\" %04x\", flags & ~RDW_FLAGS);\n    TRACE(\"\\n\");\n#undef RDW_FLAGS\n}"
+  },
+  {
+   "name": "redraw_window_rects",
+   "file": "dlls/win32u/dce.c",
+   "start_line": 1497,
+   "end_line": 1513,
+   "static": true,
+   "called_from": [
+    "NtUserRedrawWindow"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL redraw_window_rects( HWND hwnd, UINT flags, const RECT *rects, UINT count )",
+   "code": "static BOOL redraw_window_rects( HWND hwnd, UINT flags, const RECT *rects, UINT count )\n{\n    BOOL ret;\n\n    if (!(flags & (RDW_INVALIDATE|RDW_VALIDATE|RDW_INTERNALPAINT|RDW_NOINTERNALPAINT)))\n        return TRUE;  /* nothing to do */\n\n    SERVER_START_REQ( redraw_window )\n    {\n        req->window = wine_server_user_handle( hwnd );\n        req->flags  = flags;\n        wine_server_add_data( req, rects, count * sizeof(RECT) );\n        ret = !wine_server_call_err( req );\n    }\n    SERVER_END_REQ;\n    return ret;\n}"
+  },
+  {
+   "name": "update_now",
+   "file": "dlls/win32u/dce.c",
+   "start_line": 1782,
+   "end_line": 1803,
+   "static": true,
+   "called_from": [
+    "NtUserRedrawWindow"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void update_now( HWND hwnd, UINT rdw_flags )",
+   "code": "static void update_now( HWND hwnd, UINT rdw_flags )\n{\n    HWND child = 0;\n\n    /* desktop window never gets WM_PAINT, only WM_ERASEBKGND */\n    if (hwnd == get_desktop_window()) erase_now( hwnd, rdw_flags | RDW_NOCHILDREN );\n\n    /* loop while we find a child to repaint */\n    for (;;)\n    {\n        UINT flags = UPDATE_PAINT | UPDATE_INTERNALPAINT;\n\n        if (rdw_flags & RDW_NOCHILDREN) flags |= UPDATE_NOCHILDREN;\n        else if (rdw_flags & RDW_ALLCHILDREN) flags |= UPDATE_ALLCHILDREN;\n\n        if (!get_update_flags( hwnd, &child, &flags )) break;\n        if (!flags) break;  /* nothing more to do */\n\n        send_message( child, WM_PAINT, 0, 0 );\n        if (rdw_flags & RDW_NOCHILDREN) break;\n    }\n}"
+  },
+  {
+   "name": "erase_now",
+   "file": "dlls/win32u/dce.c",
+   "start_line": 1754,
+   "end_line": 1775,
+   "static": false,
+   "called_from": [
+    "NtUserRedrawWindow",
+    "update_now"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/window.c:4204",
+    "dlls/win32u/window.c:4211"
+   ],
+   "signature": "void erase_now( HWND hwnd, UINT rdw_flags )",
+   "code": "void erase_now( HWND hwnd, UINT rdw_flags )\n{\n    HWND child = 0;\n    HRGN hrgn;\n    BOOL need_erase = FALSE;\n\n    /* loop while we find a child to repaint */\n    for (;;)\n    {\n        UINT flags = UPDATE_NONCLIENT | UPDATE_ERASE;\n\n        if (rdw_flags & RDW_NOCHILDREN) flags |= UPDATE_NOCHILDREN;\n        else if (rdw_flags & RDW_ALLCHILDREN) flags |= UPDATE_ALLCHILDREN;\n        if (need_erase) flags |= UPDATE_DELAYED_ERASE;\n\n        if (!(hrgn = send_ncpaint( hwnd, &child, &flags ))) break;\n        need_erase = send_erase( child, flags, hrgn, NULL, NULL );\n\n        if (!flags) break;  /* nothing more to do */\n        if ((rdw_flags & RDW_NOCHILDREN) && !need_erase) break;\n    }\n}"
+  },
+  {
+   "name": "get_update_flags",
+   "file": "dlls/win32u/dce.c",
+   "start_line": 1520,
+   "end_line": 1537,
+   "static": true,
+   "called_from": [
+    "update_now"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dce.c:1916",
+    "dlls/win32u/dce.c:1954"
+   ],
+   "signature": "static BOOL get_update_flags( HWND hwnd, HWND *child, UINT *flags )",
+   "code": "static BOOL get_update_flags( HWND hwnd, HWND *child, UINT *flags )\n{\n    BOOL ret;\n\n    SERVER_START_REQ( get_update_region )\n    {\n        req->window     = wine_server_user_handle( hwnd );\n        req->from_child = wine_server_user_handle( child ? *child : 0 );\n        req->flags      = *flags | UPDATE_NOREGION;\n        if ((ret = !wine_server_call_err( req )))\n        {\n            if (child) *child = wine_server_ptr_handle( reply->child );\n            *flags = reply->flags;\n        }\n    }\n    SERVER_END_REQ;\n    return ret;\n}"
+  },
+  {
+   "name": "send_ncpaint",
+   "file": "dlls/win32u/dce.c",
+   "start_line": 1545,
+   "end_line": 1606,
+   "static": true,
+   "called_from": [
+    "erase_now"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dce.c:1720",
+    "dlls/win32u/dce.c:1910",
+    "dlls/win32u/dce.c:1936"
+   ],
+   "signature": "static HRGN send_ncpaint( HWND hwnd, HWND *child, UINT *flags )",
+   "code": "static HRGN send_ncpaint( HWND hwnd, HWND *child, UINT *flags )\n{\n    HRGN whole_rgn = get_update_region( hwnd, flags, child );\n    HRGN client_rgn = 0;\n    DWORD style;\n\n    if (child) hwnd = *child;\n\n    if (hwnd == get_desktop_window()) return whole_rgn;\n\n    if (whole_rgn)\n    {\n        struct window_rects rects;\n        UINT context;\n        RECT update;\n        INT type;\n\n        context = set_thread_dpi_awareness_context( get_window_dpi_awareness_context( hwnd ));\n\n        /* check if update rgn overlaps with nonclient area */\n        type = NtGdiGetRgnBox( whole_rgn, &update );\n        get_window_rects( hwnd, COORDS_SCREEN, &rects, get_thread_dpi() );\n\n        if ((*flags & UPDATE_NONCLIENT) ||\n            update.left < rects.client.left || update.top < rects.client.top ||\n            update.right > rects.client.right || update.bottom > rects.client.bottom)\n        {\n            client_rgn = NtGdiCreateRectRgn( rects.client.left, rects.client.top, rects.client.right, rects.client.bottom );\n            NtGdiCombineRgn( client_rgn, client_rgn, whole_rgn, RGN_AND );\n\n            /* check if update rgn contains complete nonclient area */\n            if (type == SIMPLEREGION && EqualRect( &rects.window, &update ))\n            {\n                NtGdiDeleteObjectApp( whole_rgn );\n                whole_rgn = (HRGN)1;\n            }\n        }\n        else\n        {\n            client_rgn = whole_rgn;\n            whole_rgn = 0;\n        }\n\n        if (whole_rgn) /* NOTE: WM_NCPAINT allows wParam to be 1 */\n        {\n            if (*flags & UPDATE_NONCLIENT)\n            {\n                /* Mark standard scroll bars as not painted before sending WM_NCPAINT */\n                style = get_window_long( hwnd, GWL_STYLE );\n                if (style & WS_HSCROLL)\n                    set_standard_scroll_painted( hwnd, SB_HORZ, FALSE );\n                if (style & WS_VSCROLL)\n                    set_standard_scroll_painted( hwnd, SB_VERT, FALSE );\n\n                send_message( hwnd, WM_NCPAINT, (WPARAM)whole_rgn, 0 );\n            }\n            if (whole_rgn > (HRGN)1) NtGdiDeleteObjectApp( whole_rgn );\n        }\n        set_thread_dpi_awareness_context( context );\n    }\n    return client_rgn;\n}"
+  },
+  {
+   "name": "send_erase",
+   "file": "dlls/win32u/dce.c",
+   "start_line": 1615,
+   "end_line": 1645,
+   "static": true,
+   "called_from": [
+    "erase_now"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dce.c:1722",
+    "dlls/win32u/dce.c:1913",
+    "dlls/win32u/dce.c:1949"
+   ],
+   "signature": "static BOOL send_erase( HWND hwnd, UINT flags, HRGN client_rgn, RECT *clip_rect, HDC *hdc_ret )",
+   "code": "static BOOL send_erase( HWND hwnd, UINT flags, HRGN client_rgn,\n                        RECT *clip_rect, HDC *hdc_ret )\n{\n    BOOL need_erase = (flags & UPDATE_DELAYED_ERASE) != 0;\n    HDC hdc = 0;\n    RECT dummy;\n\n    if (!clip_rect) clip_rect = &dummy;\n    if (hdc_ret || (flags & UPDATE_ERASE))\n    {\n        UINT dcx_flags = DCX_INTERSECTRGN | DCX_USESTYLE;\n        if (is_iconic(hwnd)) dcx_flags |= DCX_WINDOW;\n\n        if ((hdc = NtUserGetDCEx( hwnd, client_rgn, dcx_flags )))\n        {\n            INT type = NtGdiGetAppClipBox( hdc, clip_rect );\n\n            if (flags & UPDATE_ERASE)\n            {\n                /* don't erase if the clip box is empty */\n                if (type != NULLREGION)\n                    need_erase = !send_message( hwnd, WM_ERASEBKGND, (WPARAM)hdc, 0 );\n            }\n            if (!hdc_ret) release_dc( hwnd, hdc, TRUE );\n        }\n\n        if (hdc_ret) *hdc_ret = hdc;\n    }\n    if (!hdc) NtGdiDeleteObjectApp( client_rgn );\n    return need_erase;\n}"
+  },
+  {
+   "name": "get_update_region",
+   "file": "dlls/win32u/dce.c",
+   "start_line": 1450,
+   "end_line": 1490,
+   "static": true,
+   "called_from": [
+    "send_ncpaint"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dce.c:1660",
+    "dlls/win32u/dce.c:1685"
+   ],
+   "signature": "static HRGN get_update_region( HWND hwnd, UINT *flags, HWND *child )",
+   "code": "static HRGN get_update_region( HWND hwnd, UINT *flags, HWND *child )\n{\n    HRGN hrgn = 0;\n    NTSTATUS status;\n    RGNDATA *data;\n    size_t size = 256;\n\n    do\n    {\n        if (!(data = malloc( sizeof(*data) + size - 1 )))\n        {\n            RtlSetLastWin32Error( ERROR_OUTOFMEMORY );\n            return 0;\n        }\n\n        SERVER_START_REQ( get_update_region )\n        {\n            req->window     = wine_server_user_handle( hwnd );\n            req->from_child = wine_server_user_handle( child ? *child : 0 );\n            req->flags      = *flags;\n            wine_server_set_reply( req, data->Buffer, size );\n            if (!(status = wine_server_call( req )))\n            {\n                size_t reply_size = wine_server_reply_size( reply );\n                data->rdh.dwSize   = sizeof(data->rdh);\n                data->rdh.iType    = RDH_RECTANGLES;\n                data->rdh.nCount   = reply_size / sizeof(RECT);\n                data->rdh.nRgnSize = reply_size;\n                hrgn = NtGdiExtCreateRegion( NULL, data->rdh.dwSize + data->rdh.nRgnSize, data );\n                if (child) *child = wine_server_ptr_handle( reply->child );\n                *flags = reply->flags;\n            }\n            else size = reply->total_size;\n        }\n        SERVER_END_REQ;\n        free( data );\n    } while (status == STATUS_BUFFER_OVERFLOW);\n\n    if (status) RtlSetLastWin32Error( RtlNtStatusToDosError(status) );\n    return hrgn;\n}"
+  },
+  {
+   "name": "release_dc",
+   "file": "dlls/win32u/dce.c",
+   "start_line": 1231,
+   "end_line": 1257,
+   "static": true,
+   "called_from": [
+    "send_erase"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dce.c:1410",
+    "dlls/win32u/dce.c:1728",
+    "dlls/win32u/dce.c:1745"
+   ],
+   "signature": "static INT release_dc( HWND hwnd, HDC hdc, BOOL end_paint )",
+   "code": "static INT release_dc( HWND hwnd, HDC hdc, BOOL end_paint )\n{\n    struct list drawables = LIST_INIT( drawables );\n    struct dce *dce;\n    BOOL ret = FALSE;\n\n    TRACE( \"%p %p\\n\", hwnd, hdc );\n\n    user_lock();\n    dce = get_dc_dce( hdc );\n    if (dce && dce->count && dce->hwnd)\n    {\n        if (!(dce->flags & DCX_NORESETATTRS)) set_dce_flags( dce->hdc, DCHF_RESETDC );\n        if (end_paint || (dce->flags & DCX_CACHE)) delete_clip_rgn( dce );\n        if (dce->flags & DCX_CACHE)\n        {\n            dce->count = 0;\n            set_dc_pixel_format_internal( hdc, 0, &drawables );\n            set_dce_flags( dce->hdc, DCHF_DISABLEDC );\n        }\n        ret = TRUE;\n    }\n    user_unlock();\n\n    release_opengl_drawables( &drawables );\n    return ret;\n}"
+  },
+  {
+   "name": "delete_clip_rgn",
+   "file": "dlls/win32u/dce.c",
+   "start_line": 906,
+   "end_line": 916,
+   "static": true,
+   "called_from": [
+    "release_dc"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dce.c:1380"
+   ],
+   "signature": "static void delete_clip_rgn( struct dce *dce )",
+   "code": "static void delete_clip_rgn( struct dce *dce )\n{\n    if (!dce->clip_rgn) return;  /* nothing to do */\n\n    dce->flags &= ~(DCX_EXCLUDERGN | DCX_INTERSECTRGN);\n    NtGdiDeleteObjectApp( dce->clip_rgn );\n    dce->clip_rgn = 0;\n\n    /* make it dirty so that the vis rgn gets recomputed next time */\n    set_dce_flags( dce->hdc, DCHF_INVALIDATEVISRGN );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "dce",
+    "kind": "struct_decl",
+    "start_line": 37,
+    "end_line": 46,
+    "code": "struct dce\n{\n    struct list entry;         /* entry in global DCE list */\n    HDC         hdc;\n    HWND        hwnd;\n    HRGN        clip_rgn;\n    UINT        flags;\n    LONG        count;         /* usage count; 0 or 1 for cache DCEs, always 1 for window DCEs,\n                                  always >= 1 for class DCEs */\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 35,
+    "end_line": 35,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(win);"
+   },
+   {
+    "name": "__wine_dbch_win",
+    "type": "struct __wine_debug_channel",
+    "static": true,
+    "start_line": 35,
+    "end_line": 35,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(win);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "RDW_FLAGS",
+    "start_line": 793,
+    "end_line": 805,
+    "code": "#define RDW_FLAGS \\\n    (RDW_INVALIDATE | \\\n     RDW_INTERNALPAINT | \\\n     RDW_ERASE | \\\n     RDW_VALIDATE | \\\n     RDW_NOINTERNALPAINT | \\\n     RDW_NOERASE | \\\n     RDW_NOCHILDREN | \\\n     RDW_ALLCHILDREN | \\\n     RDW_UPDATENOW | \\\n     RDW_ERASENOW | \\\n     RDW_FRAME | \\\n     RDW_NOFRAME)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "check_for_events",
+    "file": "dlls/win32u/message.c",
+    "start_line": 3373
+   },
+   {
+    "name": "get_dc_dce",
+    "file": "dlls/win32u/dc.c",
+    "start_line": 1249
+   },
+   {
+    "name": "get_desktop_window",
+    "file": "dlls/win32u/winstation.c",
+    "start_line": 805
+   },
+   {
+    "name": "get_thread_dpi",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 3267
+   },
+   {
+    "name": "get_window_dpi_awareness_context",
+    "file": "dlls/win32u/window.c",
+    "start_line": 1215
+   },
+   {
+    "name": "get_window_long",
+    "file": "dlls/win32u/window.c",
+    "start_line": 1404
+   },
+   {
+    "name": "get_window_rects",
+    "file": "dlls/win32u/window.c",
+    "start_line": 1883
+   },
+   {
+    "name": "is_iconic",
+    "file": "dlls/win32u/window.c",
+    "start_line": 1312
+   },
+   {
+    "name": "release_opengl_drawables",
+    "file": "dlls/win32u/opengl.c",
+    "start_line": 2444
+   },
+   {
+    "name": "send_message",
+    "file": "dlls/win32u/message.c",
+    "start_line": 4629
+   },
+   {
+    "name": "set_dc_pixel_format_internal",
+    "file": "dlls/win32u/opengl.c",
+    "start_line": 2431
+   },
+   {
+    "name": "set_dce_flags",
+    "file": "dlls/win32u/dc.c",
+    "start_line": 1264
+   },
+   {
+    "name": "set_standard_scroll_painted",
+    "file": "dlls/win32u/scroll.c",
+    "start_line": 1428
+   },
+   {
+    "name": "set_thread_dpi_awareness_context",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 3290
+   },
+   {
+    "name": "user_lock",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 334
+   },
+   {
+    "name": "user_unlock",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 340
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "NtGdiCombineRgn",
+    "impl": [
+     "dlls/win32u/region.c:1179"
+    ]
+   },
+   {
+    "name": "NtGdiCreateRectRgn",
+    "impl": [
+     "dlls/win32u/region.c:606"
+    ]
+   },
+   {
+    "name": "NtGdiDeleteObjectApp",
+    "impl": [
+     "dlls/win32u/gdiobj.c:857"
+    ]
+   },
+   {
+    "name": "NtGdiExtCreateRegion",
+    "impl": [
+     "dlls/win32u/region.c:893"
+    ]
+   },
+   {
+    "name": "NtGdiGetAppClipBox",
+    "impl": [
+     "dlls/win32u/clipping.c:366"
+    ]
+   },
+   {
+    "name": "NtGdiGetRegionData",
+    "impl": [
+     "dlls/win32u/region.c:828"
+    ]
+   },
+   {
+    "name": "NtGdiGetRgnBox",
+    "impl": [
+     "dlls/win32u/region.c:572"
+    ]
+   },
+   {
+    "name": "NtUserGetDCEx",
+    "impl": [
+     "dlls/win32u/dce.c:1262"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "RtlNtStatusToDosError",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:77"
+    ]
+   },
+   {
+    "name": "RtlSetLastWin32Error",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   },
+   {
+    "name": "__wine_dbg_get_channel_flags",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/thread.c:93"
+    ]
+   },
+   {
+    "name": "wine_server_call",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/loader.c:3436"
+    ]
+   }
+  ],
+  "header_inline": [
+   "EqualRect",
+   "IsRectEmpty",
+   "wine_dbg_log",
+   "wine_dbgstr_rect",
+   "wine_server_add_data",
+   "wine_server_call_err",
+   "wine_server_ptr_handle",
+   "wine_server_reply_size",
+   "wine_server_set_reply",
+   "wine_server_user_handle"
+  ],
+  "system": [
+   "free",
+   "malloc",
+   "memset"
+  ],
+  "unresolved": [
+   "order_rect"
+  ],
+  "server_requests": [
+   {
+    "request": "get_update_region",
+    "handler": "server/window.c:3000"
+   },
+   {
+    "request": "redraw_window",
+    "handler": "server/window.c:3119"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "win32u.NtUserRedrawWindow",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI",
+   "header": "winuser.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 58,
+   "body": 57,
+   "code": 35
+  },
+  "cyclomatic": 15,
+  "return_type": "BOOL",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 12,
+   "n_tests": 23,
+   "n_tests_other": 11,
+   "own_test_functions": [
+    "dlls/user32/tests/dce.c::test_begin_paint",
+    "dlls/user32/tests/dce.c::test_cropped_parentdc_paint_clipbox",
+    "dlls/user32/tests/listbox.c::test_ownerdraw",
+    "dlls/user32/tests/msg.c::subtest_swp_paint_regions_",
+    "dlls/user32/tests/msg.c::test_DispatchMessage",
+    "dlls/user32/tests/msg.c::test_messages",
+    "dlls/user32/tests/msg.c::test_paint_messages",
+    "dlls/user32/tests/scroll.c::test_visual",
+    "dlls/user32/tests/sysparams.c::test_dpi_mapping",
+    "dlls/user32/tests/win.c::TestNCRedraw_WndProc",
+    "dlls/user32/tests/win.c::test_nonclient_area",
+    "dlls/user32/tests/win.c::test_redrawnow"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-redrawwindow",
+   "source": "win32",
+   "description": "The RedrawWindow function updates the specified rectangle or region in a window's client area.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "User32.dll"
+  },
+  "exports": [
+   "user32.RedrawWindow",
+   "win32u.NtUserRedrawWindow"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

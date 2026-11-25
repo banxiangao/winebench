@@ -1,0 +1,157 @@
+{
+ "id": "0199",
+ "function": {
+  "name": "SymInitialize",
+  "export_name": "SymInitialize",
+  "module": "dbghelp",
+  "source_module": "dbghelp",
+  "exported_by": [
+   "dbghelp",
+   "imagehlp"
+  ],
+  "side": "PE",
+  "file": "dlls/dbghelp/dbghelp.c",
+  "start_line": 521,
+  "end_line": 538,
+  "body_lines": 15,
+  "signature": "BOOL WINAPI SymInitialize(HANDLE hProcess, PCSTR UserSearchPath, BOOL fInvadeProcess)",
+  "header_comment": "/******************************************************************\n *\t\tSymInitialize (DBGHELP.@)\n *\n *\n */",
+  "code": "BOOL WINAPI SymInitialize(HANDLE hProcess, PCSTR UserSearchPath, BOOL fInvadeProcess)\n{\n    WCHAR*              sp = NULL;\n    BOOL                ret;\n\n    if (UserSearchPath)\n    {\n        unsigned len;\n\n        len = MultiByteToWideChar(CP_ACP, 0, UserSearchPath, -1, NULL, 0);\n        sp = HeapAlloc(GetProcessHeap(), 0, len * sizeof(WCHAR));\n        MultiByteToWideChar(CP_ACP, 0, UserSearchPath, -1, sp, len);\n    }\n\n    ret = SymInitializeW(hProcess, sp, fInvadeProcess);\n    HeapFree(GetProcessHeap(), 0, sp);\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <unistd.h>",
+   "#include \"dbghelp_private.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winerror.h\"",
+   "#include \"psapi.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wdbgexts.h\"",
+   "#include \"winnls.h\""
+  ],
+  "resolution": [
+   "dbghelp!SymInitialize [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/dbghelp/tests/dbghelp.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 8
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "dbghelp",
+   "path": "sdk-api-src/content/dbghelp/nf-dbghelp-syminitialize.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/dbghelp/nf-dbghelp-syminitialize",
+   "documented_name": "syminitialize",
+   "file": "docs/0199_sdk-api_nf-dbghelp-syminitialize.md",
+   "text": "---\nUID: NF:dbghelp.SymInitialize\ntitle: SymInitialize function (dbghelp.h)\ndescription: The SymInitialize function (dbghelp.h) initializes the symbol handler for a process.\nhelpviewer_keywords: [\"SymInitialize\",\"SymInitialize function\",\"SymInitializeW\",\"_win32_syminitialize\",\"base.syminitialize\",\"dbghelp/SymInitialize\",\"dbghelp/SymInitializeW\"]\nold-location: base\\syminitialize.htm\ntech.root: Debug\nms.assetid: fb1c98cb-6cd0-4218-aea4-384c24c66395\nms.date: 08/04/2022\nms.keywords: SymInitialize, SymInitialize function, SymInitializeW, _win32_syminitialize, base.syminitialize, dbghelp/SymInitialize, dbghelp/SymInitializeW\nreq.header: dbghelp.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: SymInitializeW (Unicode) and SymInitialize (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Dbghelp.lib\nreq.dll: Dbghelp.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: DbgHelp.dll 5.1 or later\nms.custom: 19H1\nf1_keywords:\n - SymInitialize\n - dbghelp/SymInitialize\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Dbghelp.dll\napi_name:\n - SymInitialize\n - SymInitialize\n - SymInitializeW\n---\n\n# SymInitialize function\n\n\n## -description\n\nInitializes the symbol handler for a process.\n\n## -parameters\n\n### -param hProcess [in]\n\nA handle that identifies the caller. This value should be unique and nonzero, but need not be a process handle. However, if you do use a process handle, be sure to use the correct handle. If the application is a debugger, use the process handle for the process being debugged. Do not use the handle returned by <a href=\"/windows/desktop/api/processthreadsapi/nf-processthreadsapi-getcurrentprocess\">GetCurrentProcess</a>. The handle used must be unique to avoid sharing a session with another component, and using <a href=\"/windows/desktop/api/processthreadsapi/nf-processthreadsapi-getcurrentprocess\">GetCurrentProcess</a> can have unexpected results when multiple components are attempting to use dbghelp to inspect the current process. Using <a href=\"/windows/desktop/api/processthreadsapi/nf-processthreadsapi-getcurrentprocess\">GetCurrentProcess</a> when debugging another process will also cause functions like <a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symloadmoduleex\">SymLoadModuleEx</a> to have unexpected results.\n\n\n\n\nThis parameter cannot be <b>NULL</b>.\n\n### -param UserSearchPath [in, optional]\n\nThe path, or series of paths separated by a semicolon (;), that is used to search for symbol files. If this parameter is <b>NULL</b>, the library attempts to form a symbol path from the following sources: \n\n\n\n\n<ul>\n<li>The current working directory of the application</li>\n<li>The _NT_SYMBOL_PATH environment variable</li>\n<li>The _NT_ALTERNATE_SYMBOL_PATH environment variable</li>\n</ul>\nNote that the search path can also be set using the <a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symsetsearchpath\">SymSetSearchPath</a> function.\n\n### -param fInvadeProcess [in]\n\nIf this value is <b>TRUE</b>, enumerates the loaded modules for the process and effectively calls the \n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symloadmodule\">SymLoadModule64</a> function for each module.\n\n## -returns\n\nIf the function succeeds, the return value is <b>TRUE</b>.\n\nIf the function fails, the return value is <b>FALSE</b>. To retrieve extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThe \n<b>SymInitialize</b> function is used to initialize the symbol handler for a process. In the context of the symbol handler, a process is a convenient object to use when collecting symbol information. Usually, symbol handlers are used by debuggers and other tools that need to load symbols for a process being debugged.\n\nThe  handle passed to \n<b>SymInitialize</b> must be the same value passed to all other symbol handler functions called by the process. It is the  handle that the functions use to identify the caller and locate the correct symbol information. When you have finished using the symbol information, call the \n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symcleanup\">SymCleanup</a> function to deallocate all resources associated with the process for which symbols are loaded.\n\nThe search for symbols files is performed recursively for all paths specified in the <i>UserSearchPath</i> parameter. Therefore, if you specify the root directory in a search, the whole drive is searched, which can take significant time. Note that the directory that contains the executable file for the process is not automatically part of the search path. To include this directory in the search path, call the \n<a href=\"/windows/desktop/api/psapi/nf-psapi-getmodulefilenameexa\">GetModuleFileNameEx</a> function, then add the path returned to <i>UserSearchPath</i>.\n\nA process that calls <b>SymInitialize</b> should not call it again unless it calls <a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symcleanup\">SymCleanup</a> first. If the call to <b>SymInitialize</b> set <i>fInvadeProcess</i> to <b>TRUE</b> and you simply need to reload the module list, use the <a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symrefreshmodulelist\">SymRefreshModuleList</a> function.\n\nAll DbgHelp functions, such as this one, are single threaded. Therefore, calls from more than one thread to this function will likely result in unexpected behavior or memory corruption. To avoid this, call \n<b>SymInitialize</b> only when your process starts and \n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symcleanup\">SymCleanup</a> only when your process ends. It is not necessary for each thread in the process to call these functions.\n\nTo call the Unicode version of this function, define DBGHELP_TRANSLATE_TCHAR.\n\n\n#### Examples\n\nFor an example, see \n<a href=\"/windows/desktop/Debug/initializing-the-symbol-handler\">Initializing the Symbol Handler</a>.\n\n<div class=\"code\"></div>\n\n## -see-also\n\n<a href=\"/windows/desktop/Debug/dbghelp-functions\">DbgHelp Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/psapi/nf-psapi-getmodulefilenameexa\">GetModuleFileNameEx</a>\n\n\n\n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symcleanup\">SymCleanup</a>\n\n\n\n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symenumprocesses\">SymEnumProcesses</a>\n\n\n\n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symloadmodule\">SymLoadModule64</a>\n\n\n\n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symrefreshmodulelist\">SymRefreshModuleList</a>\n\n\n\n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symsetsearchpath\">SymSetSearchPath</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "SymInitializeW",
+    "impl": [
+     "dlls/dbghelp/dbghelp.c:454"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "HeapAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "MultiByteToWideChar",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7070"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "dbghelp.SymInitialize",
+  "category": {
+   "l1": "Diagnostics",
+   "l2": "Debugging and error handling",
+   "header": "dbghelp.h",
+   "textbook": "Process control",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 18,
+   "body": 17,
+   "code": 10
+  },
+  "cyclomatic": 2,
+  "return_type": "BOOL",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 8,
+   "n_tests": 8,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/dbghelp/tests/dbghelp.c::START_TEST(dbghelp)",
+    "dlls/dbghelp/tests/dbghelp.c::get_test_module",
+    "dlls/dbghelp/tests/dbghelp.c::test_function_tables",
+    "dlls/dbghelp/tests/dbghelp.c::test_live_modules_proc",
+    "dlls/dbghelp/tests/dbghelp.c::test_loaded_modules",
+    "dlls/dbghelp/tests/dbghelp.c::test_modules",
+    "dlls/dbghelp/tests/dbghelp.c::test_modules_overlap",
+    "dlls/dbghelp/tests/dbghelp.c::test_refresh_modules"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/dbghelp/nf-dbghelp-syminitialize",
+   "source": "win32",
+   "description": "The SymInitialize function (dbghelp.h) initializes the symbol handler for a process.",
+   "min_windows": "",
+   "documented_dll": "Dbghelp.dll"
+  },
+  "exports": [
+   "dbghelp.SymInitialize",
+   "imagehlp.SymInitialize"
+  ],
+  "subset": {
+   "selected_by": "topup",
+   "lower_bound_used": 6,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

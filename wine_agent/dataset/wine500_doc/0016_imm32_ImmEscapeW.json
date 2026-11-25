@@ -1,0 +1,257 @@
+{
+ "id": "0016",
+ "function": {
+  "name": "ImmEscapeW",
+  "export_name": "ImmEscapeW",
+  "module": "imm32",
+  "source_module": "imm32",
+  "exported_by": [
+   "imm32"
+  ],
+  "side": "PE",
+  "file": "dlls/imm32/imm.c",
+  "start_line": 1197,
+  "end_line": 1225,
+  "body_lines": 26,
+  "signature": "LRESULT WINAPI ImmEscapeW( HKL hkl, HIMC himc, UINT code, void *data )",
+  "header_comment": "/***********************************************************************\n *\t\tImmEscapeW (IMM32.@)\n */",
+  "code": "LRESULT WINAPI ImmEscapeW( HKL hkl, HIMC himc, UINT code, void *data )\n{\n    struct ime *ime;\n    LRESULT ret;\n\n    TRACE( \"hkl %p, himc %p, code %u, data %p.\\n\", hkl, himc, code, data );\n\n    if (!(ime = ime_acquire( hkl ))) return 0;\n\n    if (!EscapeRequiresWA( code ) || ime_is_unicode( ime ) || !data)\n        ret = ime->pImeEscape( himc, code, data );\n    else\n    {\n        char buffer[81]; /* largest required buffer should be 80 */\n        if (code == IME_ESC_SET_EUDC_DICTIONARY)\n        {\n            WideCharToMultiByte( CP_ACP, 0, data, -1, buffer, 81, NULL, NULL );\n            ret = ime->pImeEscape( himc, code, buffer );\n        }\n        else\n        {\n            ret = ime->pImeEscape( himc, code, buffer );\n            MultiByteToWideChar( CP_ACP, 0, buffer, -1, data, 80 );\n        }\n    }\n\n    ime_release( ime );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"initguid.h\"",
+   "#include \"imm_private.h\""
+  ],
+  "resolution": [
+   "imm32!ImmEscapeW [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/imm32/tests/imm32.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "imm",
+   "path": "sdk-api-src/content/imm/nf-imm-immescapew.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/imm/nf-imm-immescapew",
+   "documented_name": "immescapew",
+   "file": "docs/0016_sdk-api_nf-imm-immescapew.md",
+   "text": "---\nUID: NF:imm.ImmEscapeW\ntitle: ImmEscapeW function (imm.h)\ndescription: The ImmEscapeW (Unicode) function (imm.h) accesses capabilities of particular IMEs that are not available through other IME API functions.\nhelpviewer_keywords: [\"ImmEscape\", \"ImmEscape function [Internationalization for Windows Applications]\", \"ImmEscapeW\", \"_win32_ImmEscape\", \"imm/ImmEscape\", \"imm/ImmEscapeW\", \"intl.immescape\"]\nold-location: intl\\immescape.htm\ntech.root: Intl\nms.assetid: f63783a8-9434-4fe4-943c-9383d049f848\nms.date: 08/04/2022\nms.keywords: ImmEscape, ImmEscape function [Internationalization for Windows Applications], ImmEscapeA, ImmEscapeW, _win32_ImmEscape, imm/ImmEscape, imm/ImmEscapeA, imm/ImmEscapeW, intl.immescape\nreq.header: imm.h\nreq.include-header: Immdev.h, Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only],East Asian language support installed.\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: ImmEscapeW (Unicode) and ImmEscapeA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Imm32.lib\nreq.dll: Imm32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ImmEscapeW\n - imm/ImmEscapeW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-imm-l1-1-2.dll\n - imm32.dll\n - Ext-MS-Win-imm-l1-1-0.dll\n - ext-ms-win-imm-l1-1-1.dll\napi_name:\n - ImmEscape\n - ImmEscapeA\n - ImmEscapeW\n---\n\n# ImmEscapeW function\n\n\n## -description\n\nAccesses capabilities of particular IMEs that are not available through other IME API functions. This function is used mainly for country-specific operations.\n\n## -parameters\n\n### -param HKL [in]\n\nInput locale identifier.\n\n### -param HIMC [in]\n\nHandle to the input context.\n\n### -param UINT [in]\n\nIndex of the operations. For more information, see <a href=\"/windows/desktop/Intl/ime-escapes\">IME Escapes</a>.\n\n### -param LPVOID [in, out]\n\nPointer to the data required for the escape specified in <i>uEscape</i>. On output, this parameter indicates the result of the escape. For more information, see <a href=\"/windows/desktop/Intl/ime-escapes\">IME Escapes</a>.\n\n## -returns\n\nReturns an operation-specific value if successful, or 0 otherwise.\n\n## -remarks\n\nWhen <i>uEscape</i> is set to IME_ESC_QUERY_SUPPORT, <i>lpData</i> indicates the buffer containing the IME escape value. For example, to see if the current IME supports IME_ESC_GETHELPFILENAME, your application uses the following call:\n\n\n```cpp\nDWORD dwEsc = IME_ESC_GETHELPFILENAME;\nLRESULT lRet = ImmEscape(hKL,\n                         hIMC,\n                         IME_ESC_QUERY_SUPPORT,\n                         (LPVOID)&dwEsc);\n\n```\n\n\n\n\n\n\n> [!NOTE]\n> The imm.h header defines ImmEscape as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/Intl/input-method-manager\">Input Method Manager</a>\n\n\n\n<a href=\"/windows/desktop/Intl/input-method-manager-functions\">Input Method Manager Functions</a>\n"
+  },
+  {
+   "repo": "sdk-api",
+   "header": "immdev",
+   "path": "sdk-api-src/content/immdev/nf-immdev-immescapew.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/immdev/nf-immdev-immescapew",
+   "documented_name": "immescapew",
+   "file": "docs/0016_sdk-api_nf-immdev-immescapew.md",
+   "text": "---\nUID: NF:immdev.ImmEscapeW\ntitle: ImmEscapeW function (immdev.h)\ndescription: The ImmEscapeW (Unicode) function (immdev.h) accesses capabilities of particular IMEs that are not available through other IME API functions.\nhelpviewer_keywords: [\"ImmEscape\", \"ImmEscape function [Internationalization for Windows Applications]\", \"ImmEscapeW\", \"_win32_ImmEscape\", \"intl.immescape\"]\nold-location: intl\\immescape.htm\ntech.root: Intl\nms.assetid: f63783a8-9434-4fe4-943c-9383d049f848\nms.date: 08/04/2022\nms.keywords: ImmEscape, ImmEscape function [Internationalization for Windows Applications], ImmEscapeA, ImmEscapeW, _win32_ImmEscape, imm/ImmEscape, imm/ImmEscapeA, imm/ImmEscapeW, intl.immescape\nreq.header: immdev.h\nreq.include-header: Immdev.h, Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only],East Asian language support installed.\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: ImmEscapeW (Unicode) and ImmEscapeA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Imm32.lib\nreq.dll: Imm32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ImmEscapeW\n - immdev/ImmEscapeW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-imm-l1-1-2.dll\n - imm32.dll\n - Ext-MS-Win-imm-l1-1-0.dll\n - ext-ms-win-imm-l1-1-1.dll\napi_name:\n - ImmEscape\n - ImmEscapeA\n - ImmEscapeW\n---\n\n# ImmEscapeW function\n\n\n## -description\n\nAccesses capabilities of particular IMEs that are not available through other IME API functions. This function is used mainly for country-specific operations.\n\n## -parameters\n\n### -param HKL [in]\n\nInput locale identifier.\n\n### -param HIMC [in]\n\nHandle to the input context.\n\n### -param UINT [in]\n\nIndex of the operations. For more information, see <a href=\"/windows/desktop/Intl/ime-escapes\">IME Escapes</a>.\n\n### -param LPVOID [in, out]\n\nPointer to the data required for the escape specified in <i>uEscape</i>. On output, this parameter indicates the result of the escape. For more information, see <a href=\"/windows/desktop/Intl/ime-escapes\">IME Escapes</a>.\n\n## -returns\n\nReturns an operation-specific value if successful, or 0 otherwise.\n\n## -remarks\n\nWhen <i>uEscape</i> is set to IME_ESC_QUERY_SUPPORT, <i>lpData</i> indicates the buffer containing the IME escape value. For example, to see if the current IME supports IME_ESC_GETHELPFILENAME, your application uses the following call:\n\n\n```cpp\nDWORD dwEsc = IME_ESC_GETHELPFILENAME;\nLRESULT lRet = ImmEscape(hKL,\n                         hIMC,\n                         IME_ESC_QUERY_SUPPORT,\n                         (LPVOID)&dwEsc);\n\n```\n\n\n\n\n\n\n> [!NOTE]\n> The immdev.h header defines ImmEscape as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/Intl/input-method-manager\">Input Method Manager</a>\n\n\n\n<a href=\"/windows/desktop/Intl/input-method-manager-functions\">Input Method Manager Functions</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "ime_acquire",
+   "file": "dlls/imm32/imm.c",
+   "start_line": 556,
+   "end_line": 574,
+   "static": true,
+   "called_from": [
+    "ImmEscapeW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/imm32/imm.c:662",
+    "dlls/imm32/imm.c:862",
+    "dlls/imm32/imm.c:892",
+    "dlls/imm32/imm.c:1088",
+    "dlls/imm32/imm.c:1134"
+   ],
+   "signature": "static struct ime *ime_acquire( HKL hkl )",
+   "code": "static struct ime *ime_acquire( HKL hkl )\n{\n    struct ime *ime;\n\n    EnterCriticalSection( &ime_cs );\n\n    if (!ImmLoadIME( hkl )) ime = NULL;\n    else ime = find_ime_from_hkl( hkl );\n\n    if (ime)\n    {\n        ULONG ref = ++ime->refcount;\n        TRACE( \"ime %p increasing refcount to %lu.\\n\", ime, ref );\n    }\n\n    LeaveCriticalSection( &ime_cs );\n\n    return ime;\n}"
+  },
+  {
+   "name": "EscapeRequiresWA",
+   "file": "dlls/imm32/imm.c",
+   "start_line": 1151,
+   "end_line": 1159,
+   "static": true,
+   "called_from": [
+    "ImmEscapeW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/imm32/imm.c:1173"
+   ],
+   "signature": "static inline BOOL EscapeRequiresWA(UINT uEscape)",
+   "code": "static inline BOOL EscapeRequiresWA(UINT uEscape)\n{\n        if (uEscape == IME_ESC_GET_EUDC_DICTIONARY ||\n            uEscape == IME_ESC_SET_EUDC_DICTIONARY ||\n            uEscape == IME_ESC_IME_NAME ||\n            uEscape == IME_ESC_GETHELPFILENAME)\n        return TRUE;\n    return FALSE;\n}"
+  },
+  {
+   "name": "ime_is_unicode",
+   "file": "dlls/imm32/imm.c",
+   "start_line": 138,
+   "end_line": 141,
+   "static": true,
+   "called_from": [
+    "ImmEscapeW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/imm32/imm.c:146",
+    "dlls/imm32/imm.c:538",
+    "dlls/imm32/imm.c:864",
+    "dlls/imm32/imm.c:894",
+    "dlls/imm32/imm.c:1090"
+   ],
+   "signature": "static BOOL ime_is_unicode( const struct ime *ime )",
+   "code": "static BOOL ime_is_unicode( const struct ime *ime )\n{\n    return !!(ime->info.fdwProperty & IME_PROP_UNICODE);\n}"
+  },
+  {
+   "name": "ime_release",
+   "file": "dlls/imm32/imm.c",
+   "start_line": 576,
+   "end_line": 589,
+   "static": true,
+   "called_from": [
+    "ImmEscapeW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/imm32/imm.c:647",
+    "dlls/imm32/imm.c:877",
+    "dlls/imm32/imm.c:907",
+    "dlls/imm32/imm.c:1101",
+    "dlls/imm32/imm.c:1147"
+   ],
+   "signature": "static void ime_release( struct ime *ime )",
+   "code": "static void ime_release( struct ime *ime )\n{\n    ULONG ref;\n\n    EnterCriticalSection( &ime_cs );\n\n    ref = --ime->refcount;\n    TRACE( \"ime %p decreasing refcount to %lu.\\n\", ime, ref );\n\n    if (!ref && (ime->info.fdwProperty & IME_PROP_END_UNLOAD))\n        ImmFreeLayout( ime->hkl );\n\n    LeaveCriticalSection( &ime_cs );\n}"
+  },
+  {
+   "name": "find_ime_from_hkl",
+   "file": "dlls/imm32/imm.c",
+   "start_line": 433,
+   "end_line": 439,
+   "static": true,
+   "called_from": [
+    "ime_acquire"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/imm32/imm.c:449",
+    "dlls/imm32/imm.c:476"
+   ],
+   "signature": "static struct ime *find_ime_from_hkl( HKL hkl )",
+   "code": "static struct ime *find_ime_from_hkl( HKL hkl )\n{\n    struct ime *ime = NULL;\n    LIST_FOR_EACH_ENTRY( ime, &ime_list, struct ime, entry )\n        if (ime->hkl == hkl) return ime;\n    return NULL;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "ime",
+    "kind": "struct_decl",
+    "start_line": 49,
+    "end_line": 77,
+    "code": "struct ime\n{\n    LONG refcount; /* guarded by ime_cs */\n\n    HKL hkl;\n    HMODULE module;\n    struct list entry;\n\n    IMEINFO info;\n    WCHAR ui_class[17];\n    struct list input_contexts;\n\n    BOOL (WINAPI *pImeInquire)(IMEINFO *, void *, DWORD);\n    BOOL (WINAPI *pImeConfigure)(HKL, HWND, DWORD, void *);\n    BOOL (WINAPI *pImeDestroy)(UINT);\n    LRESULT (WINAPI *pImeEscape)(HIMC, UINT, void *);\n    BOOL (WINAPI *pImeSelect)(HIMC, BOOL);\n    BOOL (WINAPI *pImeSetActiveContext)(HIMC, BOOL);\n    UINT (WINAPI *pImeToAsciiEx)(UINT, UINT, const BYTE *, TRANSMSGLIST *, UINT, HIMC);\n    BOOL (WINAPI *pNotifyIME)(HIMC, DWORD, DWORD, DWORD);\n    BOOL (WINAPI *pImeRegisterWord)(const void/*TCHAR*/*, DWORD, const void/*TCHAR*/*);\n    BOOL (WINAPI *pImeUnregisterWord)(const void/*TCHAR*/*, DWORD, const void/*TCHAR*/*);\n    UINT (WINAPI *pImeEnumRegisterWord)(void */*REGISTERWORDENUMPROCW*/, const void/*TCHAR*/*, DWORD, const void/*TCHAR*/*, void *);\n    BOOL (WINAPI *pImeSetCompositionString)(HIMC, DWORD, const void/*TCHAR*/*, DWORD, const void/*TCHAR*/*, DWORD);\n    DWORD (WINAPI *pImeConversionList)(HIMC, const void/*TCHAR*/*, CANDIDATELIST*, DWORD, UINT);\n    UINT (WINAPI *pImeGetRegisterWordStyle)(UINT, void/*STYLEBUFW*/*);\n    BOOL (WINAPI *pImeProcessKey)(HIMC, UINT, LPARAM, const BYTE*);\n    DWORD (WINAPI *pImeGetImeMenuItems)(HIMC, DWORD, DWORD, void/*IMEMENUITEMINFOW*/*, void/*IMEMENUITEMINFOW*/*, DWORD);\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 26,
+    "end_line": 26,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(imm);"
+   },
+   {
+    "name": "ime_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 117,
+    "end_line": 117,
+    "code": "static CRITICAL_SECTION ime_cs = { &ime_cs_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "ime_list",
+    "type": "struct list",
+    "static": true,
+    "start_line": 118,
+    "end_line": 118,
+    "code": "static struct list ime_list = LIST_INIT( ime_list );"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "ImmFreeLayout",
+    "impl": [
+     "dlls/imm32/imm.c:441"
+    ]
+   },
+   {
+    "name": "ImmLoadIME",
+    "impl": [
+     "dlls/imm32/imm.c:467"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernel32",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernel32",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "MultiByteToWideChar",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernelbase/locale.c:7070"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "ime->pImeEscape",
+    "in_function": "ImmEscapeW",
+    "at": "dlls/imm32/imm.c:1207",
+    "candidates": [
+     "ImeEscape @ dlls/imm32/imm.c:494"
+    ]
+   }
+  ]
+ }
+}

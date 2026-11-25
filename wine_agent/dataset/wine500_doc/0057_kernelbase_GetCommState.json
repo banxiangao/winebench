@@ -1,0 +1,147 @@
+{
+ "id": "0057",
+ "function": {
+  "name": "GetCommState",
+  "export_name": "GetCommState",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase",
+   "user.exe16"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/file.c",
+  "start_line": 4497,
+  "end_line": 4556,
+  "body_lines": 57,
+  "signature": "BOOL WINAPI DECLSPEC_HOTPATCH GetCommState( HANDLE handle, DCB *dcb )",
+  "header_comment": "/*****************************************************************************\n *\tGetCommState   (kernelbase.@)\n */",
+  "code": "BOOL WINAPI DECLSPEC_HOTPATCH GetCommState( HANDLE handle, DCB *dcb )\n{\n    SERIAL_BAUD_RATE sbr;\n    SERIAL_LINE_CONTROL slc;\n    SERIAL_HANDFLOW shf;\n    SERIAL_CHARS sc;\n\n    if (!dcb)\n    {\n        SetLastError( ERROR_INVALID_PARAMETER );\n        return FALSE;\n    }\n    if (!DeviceIoControl(handle, IOCTL_SERIAL_GET_BAUD_RATE, NULL, 0, &sbr, sizeof(sbr), NULL, NULL) ||\n        !DeviceIoControl(handle, IOCTL_SERIAL_GET_LINE_CONTROL, NULL, 0, &slc, sizeof(slc), NULL, NULL) ||\n        !DeviceIoControl(handle, IOCTL_SERIAL_GET_HANDFLOW, NULL, 0, &shf, sizeof(shf), NULL, NULL) ||\n        !DeviceIoControl(handle, IOCTL_SERIAL_GET_CHARS, NULL, 0, &sc, sizeof(sc), NULL, NULL))\n        return FALSE;\n\n    dcb->DCBlength         = sizeof(*dcb);\n    dcb->BaudRate          = sbr.BaudRate;\n    /* yes, they seem no never be (re)set on NT */\n    dcb->fBinary           = 1;\n    dcb->fParity           = 0;\n    dcb->fOutxCtsFlow      = !!(shf.ControlHandShake & SERIAL_CTS_HANDSHAKE);\n    dcb->fOutxDsrFlow      = !!(shf.ControlHandShake & SERIAL_DSR_HANDSHAKE);\n    dcb->fDsrSensitivity   = !!(shf.ControlHandShake & SERIAL_DSR_SENSITIVITY);\n    dcb->fTXContinueOnXoff = !!(shf.FlowReplace & SERIAL_XOFF_CONTINUE);\n    dcb->fOutX             = !!(shf.FlowReplace & SERIAL_AUTO_TRANSMIT);\n    dcb->fInX              = !!(shf.FlowReplace & SERIAL_AUTO_RECEIVE);\n    dcb->fErrorChar        = !!(shf.FlowReplace & SERIAL_ERROR_CHAR);\n    dcb->fNull             = !!(shf.FlowReplace & SERIAL_NULL_STRIPPING);\n    dcb->fAbortOnError     = !!(shf.ControlHandShake & SERIAL_ERROR_ABORT);\n    dcb->XonLim            = shf.XonLimit;\n    dcb->XoffLim           = shf.XoffLimit;\n    dcb->ByteSize          = slc.WordLength;\n    dcb->Parity            = slc.Parity;\n    dcb->StopBits          = slc.StopBits;\n    dcb->XonChar           = sc.XonChar;\n    dcb->XoffChar          = sc.XoffChar;\n    dcb->ErrorChar         = sc.ErrorChar;\n    dcb->EofChar           = sc.EofChar;\n    dcb->EvtChar           = sc.EventChar;\n\n    switch (shf.ControlHandShake & (SERIAL_DTR_CONTROL | SERIAL_DTR_HANDSHAKE))\n    {\n    case SERIAL_DTR_CONTROL:    dcb->fDtrControl = DTR_CONTROL_ENABLE; break;\n    case SERIAL_DTR_HANDSHAKE:  dcb->fDtrControl = DTR_CONTROL_HANDSHAKE; break;\n    default:                    dcb->fDtrControl = DTR_CONTROL_DISABLE; break;\n    }\n    switch (shf.FlowReplace & (SERIAL_RTS_CONTROL | SERIAL_RTS_HANDSHAKE))\n    {\n    case SERIAL_RTS_CONTROL:    dcb->fRtsControl = RTS_CONTROL_ENABLE; break;\n    case SERIAL_RTS_HANDSHAKE:  dcb->fRtsControl = RTS_CONTROL_HANDSHAKE; break;\n    case SERIAL_RTS_CONTROL | SERIAL_RTS_HANDSHAKE:\n                                dcb->fRtsControl = RTS_CONTROL_TOGGLE; break;\n    default:                    dcb->fRtsControl = RTS_CONTROL_DISABLE; break;\n    }\n    dump_dcb( dcb );\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include \"winerror.h\"",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"wincon.h\"",
+   "#include \"fileapi.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"ddk/ntddser.h\"",
+   "#include \"ioringapi.h\"",
+   "#include \"ddk/ntifs.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!GetCommState [stdcall -import] -> import from kernelbase",
+   "kernelbase!GetCommState [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/comm.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "user.exe16",
+   "source_module": "user.exe16",
+   "exported_by": [
+    "user.exe16"
+   ],
+   "file": "dlls/user.exe16/comm.c",
+   "start_line": 870,
+   "resolution": [
+    "user.exe16!GetCommState [pascal -ret16] -> internal symbol GetCommState16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 893,
+   "signature": "INT16 WINAPI GetCommState16(INT16 cid, LPDCB16 lpdcb)",
+   "code": "INT16 WINAPI GetCommState16(INT16 cid, LPDCB16 lpdcb)\n{\n\tstruct DosDeviceStruct *ptr;\n\tDCB dcb;\n\n\tTRACE(\"cid %d, ptr %p\\n\", cid, lpdcb);\n\tif ((ptr = GetDeviceStruct(cid)) == NULL) {\n\t\tFIXME(\"no handle for cid = %0x!\\n\",cid);\n\t\treturn -1;\n\t}\n\tif (!GetCommState(ptr->handle,&dcb)) {\n\t\tptr->commerror = WinError();\n\t\treturn -1;\n\t}\n\n\tlpdcb->Id = cid;\n\n\tCOMM16_DCBtoDCB16(&dcb,lpdcb);\n\n\tlpdcb->EvtChar = ptr->evtchar;\n\n\tptr->commerror = 0;\n\treturn 0;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winbase",
+   "path": "sdk-api-src/content/winbase/nf-winbase-getcommstate.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-getcommstate",
+   "documented_name": "getcommstate",
+   "file": "docs/0057_sdk-api_nf-winbase-getcommstate.md",
+   "text": "---\nUID: NF:winbase.GetCommState\ntitle: GetCommState function (winbase.h)\ndescription: Retrieves the current control settings for a specified communications device.\nhelpviewer_keywords: [\"GetCommState\",\"GetCommState function\",\"_win32_getcommstate\",\"base.getcommstate\",\"winbase/GetCommState\"]\nold-location: base\\getcommstate.htm\ntech.root: base\nms.assetid: 974c2ddc-9f7f-445e-ac47-8cd86817ce9b\nms.date: 12/05/2018\nms.keywords: GetCommState, GetCommState function, _win32_getcommstate, base.getcommstate, winbase/GetCommState\nreq.header: winbase.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetCommState\n - winbase/GetCommState\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-comm-l1-1-2.dll\n - api-ms-win-core-comm-l1-1-1.dll\n - Kernel32.dll\n - API-MS-Win-Core-comm-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\napi_name:\n - GetCommState\n---\n\n# GetCommState function\n\n\n## -description\n\nRetrieves the current control settings for a specified communications device.\n\n## -parameters\n\n### -param hFile [in]\n\nA handle to the communications device. The \n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-createfilea\">CreateFile</a> function returns this handle.\n\n### -param lpDCB [in, out]\n\nA pointer to a \n<a href=\"/windows/desktop/api/winbase/ns-winbase-dcb\">DCB</a> structure that receives the control settings information.\n\n## -returns\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -see-also\n\n<a href=\"/windows/desktop/DevIO/communications-functions\">Communications Functions</a>\n\n\n\n<a href=\"/windows/desktop/DevIO/communications-resources\">Communications Resources</a>\n\n\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-createfilea\">CreateFile</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/ns-winbase-dcb\">DCB</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-setcommstate\">SetCommState</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "dump_dcb",
+   "file": "dlls/kernelbase/file.c",
+   "start_line": 4318,
+   "end_line": 4326,
+   "static": true,
+   "called_from": [
+    "GetCommState"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/file.c:4627"
+   ],
+   "signature": "static void dump_dcb( const DCB *dcb )",
+   "code": "static void dump_dcb( const DCB *dcb )\n{\n    TRACE( \"size=%d rate=%ld fParity=%d Parity=%d stopbits=%d %sIXON %sIXOFF CTS=%d RTS=%d DSR=%d DTR=%d %sCRTSCTS\\n\",\n           dcb->ByteSize, dcb->BaudRate, dcb->fParity, dcb->Parity,\n           (dcb->StopBits == ONESTOPBIT) ? 1 : (dcb->StopBits == TWOSTOPBITS) ? 2 : 0,\n           dcb->fOutX ? \"\" : \"~\", dcb->fInX ? \"\" : \"~\",\n           dcb->fOutxCtsFlow, dcb->fRtsControl, dcb->fOutxDsrFlow, dcb->fDtrControl,\n           (dcb->fOutxCtsFlow || dcb->fRtsControl == RTS_CONTROL_HANDSHAKE) ? \"\" : \"~\" );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(file);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "DeviceIoControl",
+    "impl": [
+     "dlls/kernelbase/file.c:4378"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

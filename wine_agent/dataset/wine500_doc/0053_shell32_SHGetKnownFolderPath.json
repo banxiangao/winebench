@@ -1,0 +1,164 @@
+{
+ "id": "0053",
+ "function": {
+  "name": "SHGetKnownFolderPath",
+  "export_name": "SHGetKnownFolderPath",
+  "module": "shell32",
+  "source_module": "shell32",
+  "exported_by": [
+   "shell32",
+   "windows.storage"
+  ],
+  "side": "PE",
+  "file": "dlls/shell32/shellpath.c",
+  "start_line": 3561,
+  "end_line": 3611,
+  "body_lines": 48,
+  "signature": "HRESULT WINAPI SHGetKnownFolderPath(REFKNOWNFOLDERID rfid, DWORD flags, HANDLE token, WCHAR **ret_path)",
+  "header_comment": "/*************************************************************************\n * SHGetKnownFolderPath           [SHELL32.@]\n */",
+  "code": "HRESULT WINAPI SHGetKnownFolderPath(REFKNOWNFOLDERID rfid, DWORD flags, HANDLE token, WCHAR **ret_path)\n{\n    WCHAR pathW[MAX_PATH];\n    HRESULT    hr;\n    int folder = csidl_from_id(rfid), shgfp_flags;\n\n    TRACE(\"%s, 0x%08lx, %p, %p\\n\", debugstr_guid(rfid), flags, token, ret_path);\n\n    *ret_path = NULL;\n\n    if (folder < 0)\n        return HRESULT_FROM_WIN32( ERROR_FILE_NOT_FOUND );\n\n    if (flags & ~(KF_FLAG_CREATE|KF_FLAG_SIMPLE_IDLIST|KF_FLAG_DONT_UNEXPAND|\n        KF_FLAG_DONT_VERIFY|KF_FLAG_NO_ALIAS|KF_FLAG_INIT|KF_FLAG_DEFAULT_PATH|KF_FLAG_NOT_PARENT_RELATIVE))\n    {\n        FIXME(\"flags 0x%08lx not supported\\n\", flags);\n        return E_INVALIDARG;\n    }\n\n    if ((flags & (KF_FLAG_DEFAULT_PATH | KF_FLAG_NOT_PARENT_RELATIVE)) == KF_FLAG_NOT_PARENT_RELATIVE)\n    {\n        WARN(\"Invalid flags mask %#lx.\\n\", flags);\n        return E_INVALIDARG;\n    }\n\n    if (flags & KF_FLAG_NOT_PARENT_RELATIVE)\n    {\n        FIXME(\"Ignoring KF_FLAG_NOT_PARENT_RELATIVE.\\n\");\n        flags &= ~KF_FLAG_NOT_PARENT_RELATIVE;\n    }\n\n    folder |= flags & CSIDL_FLAG_MASK;\n    shgfp_flags = flags & KF_FLAG_DEFAULT_PATH ? SHGFP_TYPE_DEFAULT : SHGFP_TYPE_CURRENT;\n\n    hr = SHGetFolderPathAndSubDirW( 0, folder, token, shgfp_flags, NULL, pathW );\n    if (FAILED( hr ))\n    {\n        TRACE(\"Failed to get folder path, %#lx.\\n\", hr);\n        return hr;\n    }\n\n    TRACE(\"Final path is %s, %#lx\\n\", debugstr_w(pathW), hr);\n\n    *ret_path = CoTaskMemAlloc((lstrlenW(pathW) + 1) * sizeof(WCHAR));\n    if (!*ret_path)\n        return E_OUTOFMEMORY;\n    lstrcpyW(*ret_path, pathW);\n\n    return hr;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <stdio.h>",
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include <ctype.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winreg.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"ddk/mountmgr.h\"",
+   "#include \"shlobj.h\"",
+   "#include \"shtypes.h\"",
+   "#include \"shresdef.h\"",
+   "#include \"shell32_main.h\"",
+   "#include \"pidl.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"sddl.h\"",
+   "#include \"knownfolders.h\"",
+   "#include \"initguid.h\"",
+   "#include \"shobjidl.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "shell32!SHGetKnownFolderPath [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/shell32/tests/shellpath.c",
+   "dlls/shell32/tests/shlfolder.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "shlobj_core",
+   "path": "sdk-api-src/content/shlobj_core/nf-shlobj_core-shgetknownfolderpath.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/shlobj_core/nf-shlobj_core-shgetknownfolderpath",
+   "documented_name": "shgetknownfolderpath",
+   "file": "docs/0053_sdk-api_nf-shlobj_core-shgetknownfolderpath.md",
+   "text": "---\nUID: NF:shlobj_core.SHGetKnownFolderPath\ntitle: SHGetKnownFolderPath function (shlobj_core.h)\ndescription: Retrieves the full path of a known folder identified by the folder's KNOWNFOLDERID.\nhelpviewer_keywords: [\"SHGetKnownFolderPath\",\"SHGetKnownFolderPath function [Windows Shell]\",\"_shell_SHGetKnownFolderPath\",\"shell.SHGetKnownFolderPath\",\"shlobj_core/SHGetKnownFolderPath\"]\nold-location: shell\\SHGetKnownFolderPath.htm\ntech.root: shell\nms.assetid: 5434c744-484b-4c34-9a76-dddbcb81eb29\nms.date: 12/05/2018\nms.keywords: SHGetKnownFolderPath, SHGetKnownFolderPath function [Windows Shell], _shell_SHGetKnownFolderPath, shell.SHGetKnownFolderPath, shlobj_core/SHGetKnownFolderPath\nreq.header: shlobj_core.h\nreq.include-header: Shlobj.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps only]\nreq.target-min-winversvr: Windows Server 2008 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: OneCore.Lib\nreq.dll: Shell32.dll (version 6.0.6000 or later)\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SHGetKnownFolderPath\n - shlobj_core/SHGetKnownFolderPath\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-shell32-shellfolders-l1-2-1.dll\n - api-ms-win-shell-shellfolders-l1-1-1.dll\n - Shell32.dll\n - API-MS-Win-shell-shellfolders-l1-1-0.dll\n - KernelBase.dll\n - Ext-MS-Win-Shell32-Shellfolders-L1-1-0.dll\n - Ext-MS-Win-Shell32-Shellfolders-L1-1-1.dll\n - ext-ms-win-shell32-shellfolders-l1-2-0.dll\n - Windows.Storage.dll\napi_name:\n - SHGetKnownFolderPath\n---\n\n# SHGetKnownFolderPath function\n\n\n## -description\n\nRetrieves the full path of a known folder identified by the folder's <a href=\"/windows/desktop/shell/knownfolderid\">KNOWNFOLDERID</a>.\n\n## -parameters\n\n### -param rfid [in]\n\nType: <b>REFKNOWNFOLDERID</b>\n\nA reference to the <a href=\"/windows/desktop/shell/knownfolderid\">KNOWNFOLDERID</a> that identifies the folder.\n\n### -param dwFlags [in]\n\nType: <b>DWORD</b>\n\nFlags that specify special retrieval options. This value can be 0; otherwise, one or more of the <a href=\"/windows/desktop/api/shlobj_core/ne-shlobj_core-known_folder_flag\">KNOWN_FOLDER_FLAG</a> values.\n\n### -param hToken [in, optional]\n\nType: <b>HANDLE</b>\n\nAn <a href=\"/windows/desktop/SecAuthZ/access-tokens\">access token</a> that represents a particular user. If this parameter is <b>NULL</b>, which is the most common usage, the function requests the known folder for the current user. \n    \n                        \n\nRequest a specific user's folder by passing the <i>hToken</i> of that user. This is typically done in the context of a service that has sufficient privileges to retrieve the token of a given user. That token must be opened with <a href=\"/windows/desktop/SecAuthZ/access-rights-for-access-token-objects\">TOKEN_QUERY</a> and <a href=\"/windows/desktop/SecAuthZ/access-rights-for-access-token-objects\">TOKEN_IMPERSONATE</a> rights. In some cases, you also need to include <a href=\"/windows/desktop/SecAuthZ/access-rights-for-access-token-objects\">TOKEN_DUPLICATE</a>. In addition to passing the user's <i>hToken</i>, the registry hive of that specific user must be mounted. See <a href=\"/windows/desktop/SecAuthZ/access-control\">Access Control</a> for further discussion of access control issues.\n\nAssigning the <i>hToken</i> parameter a value of -1 indicates the Default User. This allows clients of <b>SHGetKnownFolderPath</b> to find folder locations (such as the <b>Desktop</b> folder) for the Default User. The Default User user profile is duplicated when any new user account is created, and includes special folders such as <b>Documents</b> and <b>Desktop</b>. Any items added to the Default User folder also appear in any new user account. Note that access to the Default User folders requires administrator privileges.\n\n### -param ppszPath [out]\n\nType: <b>PWSTR*</b>\n\nWhen this method returns, contains the address of a pointer to a null-terminated Unicode string that specifies the path of the known folder. The calling process is responsible for freeing this resource once it is no longer needed by calling <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-cotaskmemfree\">CoTaskMemFree</a>, whether <b>SHGetKnownFolderPath</b> succeeds or not. The returned path does not include a trailing backslash. For example, \"C:\\Users\" is returned rather than \"C:\\Users\\\\\".\n\n## -returns\n\nType: <b>HRESULT</b>\n\nReturns S_OK if successful, or an error value otherwise, including the following:\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_FAIL</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAmong other things, this value can indicate that the <i>rfid</i> parameter references a <a href=\"/windows/desktop/shell/knownfolderid\">KNOWNFOLDERID</a> which does not have a path (such as a folder marked as <a href=\"/windows/desktop/api/shobjidl_core/ne-shobjidl_core-kf_category\">KF_CATEGORY_VIRTUAL</a>).\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_INVALIDARG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAmong other things, this value can indicate that the <i>rfid</i> parameter references a <a href=\"/windows/desktop/shell/knownfolderid\">KNOWNFOLDERID</a> that is not present on the system. Not all <b>KNOWNFOLDERID</b> values are present on all systems. Use <a href=\"/windows/desktop/api/shobjidl_core/nf-shobjidl_core-iknownfoldermanager-getfolderids\">IKnownFolderManager::GetFolderIds</a> to retrieve the set of <b>KNOWNFOLDERID</b> values for the current system.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThis function replaces <a href=\"/windows/desktop/api/shlobj_core/nf-shlobj_core-shgetfolderpatha\">SHGetFolderPath</a>. That older function is now simply a wrapper for <b>SHGetKnownFolderPath</b>.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/shobjidl_core/nf-shobjidl_core-iknownfolder-getpath\">IKnownFolder::GetPath</a>\n\n\n\n<a href=\"/previous-versions/windows/desktop/legacy/dd940364(v=vs.85)\">Known Folders Sample</a>\n\n\n\n<a href=\"/windows/desktop/api/shlobj_core/nf-shlobj_core-shgetknownfolderidlist\">SHGetKnownFolderIDList</a>\n\n\n\n<a href=\"/windows/desktop/api/shlobj_core/nf-shlobj_core-shsetknownfolderpath\">SHSetKnownFolderPath</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "csidl_from_id",
+   "file": "dlls/shell32/shellpath.c",
+   "start_line": 2108,
+   "end_line": 2114,
+   "static": true,
+   "called_from": [
+    "SHGetKnownFolderPath"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/shell32/shellpath.c:2277",
+    "dlls/shell32/shellpath.c:4331"
+   ],
+   "signature": "static int csidl_from_id( const KNOWNFOLDERID *id )",
+   "code": "static int csidl_from_id( const KNOWNFOLDERID *id )\n{\n    int i;\n    for (i = 0; i < ARRAY_SIZE(CSIDL_Data); i++)\n        if (IsEqualGUID( CSIDL_Data[i].id, id )) return i;\n    return -1;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "CSIDL_DATA",
+    "kind": "struct_decl",
+    "start_line": 1074,
+    "end_line": 1088,
+    "code": "typedef struct\n{\n    const KNOWNFOLDERID *id;\n    CSIDL_Type type;\n    const WCHAR *value;\n    const WCHAR *def_path; /* fallback string or resource ID */\n    KF_CATEGORY category;\n    const WCHAR *name;\n    const KNOWNFOLDERID *parent;\n    const WCHAR *path;\n    const WCHAR *parsing;\n    DWORD attributes;\n    KF_DEFINITION_FLAGS flags;\n    const FOLDERTYPEID *typeid;\n} CSIDL_DATA;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "CSIDL_Data",
+    "type": "const CSIDL_DATA[118]",
+    "static": true,
+    "start_line": 1090,
+    "end_line": 1090,
+    "code": "static const CSIDL_DATA CSIDL_Data[] ="
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 57,
+    "end_line": 57,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(shell);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "SHGetFolderPathAndSubDirW",
+    "impl": [
+     "dlls/shell32/shellpath.c:2936"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CoTaskMemAlloc",
+    "module": "combase",
+    "impl": [
+     "dlls/combase/malloc.c:381"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   }
+  ],
+  "header_inline": [
+   "HRESULT_FROM_WIN32",
+   "debugstr_guid",
+   "debugstr_w",
+   "lstrcpyW",
+   "lstrlenW",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

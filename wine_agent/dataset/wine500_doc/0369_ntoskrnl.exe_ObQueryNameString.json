@@ -1,0 +1,107 @@
+{
+ "id": "0369",
+ "function": {
+  "name": "ObQueryNameString",
+  "export_name": "ObQueryNameString",
+  "module": "ntoskrnl.exe",
+  "source_module": "ntoskrnl.exe",
+  "exported_by": [
+   "ntoskrnl.exe"
+  ],
+  "side": "PE",
+  "file": "dlls/ntoskrnl.exe/ntoskrnl.c",
+  "start_line": 3895,
+  "end_line": 3908,
+  "body_lines": 11,
+  "signature": "NTSTATUS WINAPI ObQueryNameString( void *object, OBJECT_NAME_INFORMATION *name, ULONG size, ULONG *ret_size )",
+  "header_comment": "/*****************************************************\n *           ObQueryNameString  (NTOSKRNL.EXE.@)\n */",
+  "code": "NTSTATUS WINAPI ObQueryNameString( void *object, OBJECT_NAME_INFORMATION *name, ULONG size, ULONG *ret_size )\n{\n    HANDLE handle;\n    NTSTATUS ret;\n\n    TRACE(\"object %p, name %p, size %lu, ret_size %p.\\n\", object, name, size, ret_size);\n\n    if ((ret = ObOpenObjectByPointer( object, 0, NULL, 0, NULL, KernelMode, &handle )))\n        return ret;\n    ret = NtQueryObject( handle, ObjectNameInformation, name, size, ret_size );\n\n    NtClose( handle );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"ntoskrnl_private.h\"",
+   "#include \"excpt.h\"",
+   "#include \"winreg.h\"",
+   "#include \"ntsecapi.h\"",
+   "#include \"evntprov.h\"",
+   "#include \"ddk/csq.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/svcctl.h\""
+  ],
+  "resolution": [
+   "ntoskrnl.exe!ObQueryNameString [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntoskrnl.exe/tests/driver.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "ntifs",
+   "path": "wdk-ddi-src/content/ntifs/nf-ntifs-obquerynamestring.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/ntifs/nf-ntifs-obquerynamestring",
+   "documented_name": "obquerynamestring",
+   "file": "docs/0369_windows-driver-docs-ddi_nf-ntifs-obquerynamestring.md",
+   "text": "---\nUID: NF:ntifs.ObQueryNameString\ntitle: ObQueryNameString function (ntifs.h)\ndescription: The ObQueryNameString routine supplies the name, if there is one, of a given object to which the caller has a pointer.\nold-location: ifsk\\obquerynamestring.htm\ntech.root: ifsk\nms.date: 04/16/2018\nkeywords: [\"ObQueryNameString function\"]\nms.keywords: ObQueryNameString, ObQueryNameString routine [Installable File System Drivers], ifsk.obquerynamestring, ntifs/ObQueryNameString, obref_3d52f727-edc5-4bea-b7c1-24a3aced1079.xml\nreq.header: ntifs.h\nreq.include-header: FltKernel.h, Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt: Windows 2000\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: < DISPATCH_LEVEL\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - ObQueryNameString\n - ntifs/ObQueryNameString\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - ObQueryNameString\n---\n\n# ObQueryNameString function\n\n\n## -description\n\nThe <b>ObQueryNameString</b> routine supplies the name, if there is one, of a given object to which the caller has a pointer.\n\n## -parameters\n\n### -param Object [in]\n\n\nA pointer to the object for which the name is requested. This parameter is required and cannot be <b>NULL</b>.\n\n### -param ObjectNameInfo [out, optional]\n\n\nA pointer to a caller-allocated buffer, of the following type, that receives the object name information: \n\n\n```\ntypedef struct _OBJECT_NAME_INFORMATION {\n  UNICODE_STRING Name;\n} OBJECT_NAME_INFORMATION, *POBJECT_NAME_INFORMATION;\n```\n\nThis parameter is optional and can be <b>NULL</b>. If <i>ObjectNameInfo</i> is <b>NULL</b>, <i>Length</i> must be zero.\n\n### -param Length [in]\n\n\nThe size, in bytes, of the buffer that is pointed to by <i>ObjectNameInfo</i>. This parameter is optional and can be zero. If <i>Length</i> is zero, <i>ReturnLength</i> receives the size, in bytes, of the buffer that is needed to hold the object name information. A reasonable size for the buffer to accommodate most object names is 1024 bytes. If <i>Length</i> is zero, <i>ObjectNameInfo</i> can be <b>NULL</b>.\n\n### -param ReturnLength [out]\n\n\nA pointer to a caller-allocated variable that receives the size, in bytes, of the returned object name information. The object name (when present) includes a NULL-terminator and all path separators \"\\\\\" in the name. If <b>ObQueryNameString</b> returns <b>STATUS_INFO_LENGTH_MISMATCH</b>, it sets this parameter to the required buffer length.\n\n## -returns\n\n<b>ObQueryNameString</b> returns STATUS_SUCCESS or an NTSTATUS value such as the following: \n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_INFO_LENGTH_MISMATCH</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe buffer that is pointed to by <i>ObjectNameInfo</i> is too small to hold the requested object name information. <i>ReturnLength</i> points to the required buffer size. In this case, no object name information is returned. This is an error code. Be aware that if <i>Length</i> is set to zero, <b>STATUS_INFO_LENGTH_MISMATCH</b> is returned.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nIf the given object is named and the object name was successfully acquired, the returned string is the name of the given object including as much of the object's full path as possible. In this case, <b>ObQueryNameString</b> sets <b>Name.Buffer</b> to the address of the NULL-terminated name of the specified object. The value of <b>Name.MaximumLength</b> is the length of the object name including the <b>NULL</b> termination. The value of <b>Name.Length</b> is length of the only the object name.\n\nIf the given object is unnamed, or if the object name was not successfully acquired, <b>ObQueryNameString</b> sets <b>Name.Buffer</b> to <b>NULL</b> and sets <b>Name.Length</b> and <b>Name.MaximumLength</b> to zero.\n\nThe storage for <i>ObjectNameInfo</i> can be allocated from paged or nonpaged pool.\n\n## -see-also\n\n<a href=\"/windows/win32/api/ntdef/ns-ntdef-_unicode_string\">UNICODE_STRING</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 35,
+    "end_line": 35,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ntoskrnl);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "NtClose",
+    "impl": [
+     "dlls/ntdll/unix/server.c:1940"
+    ]
+   },
+   {
+    "name": "ObOpenObjectByPointer",
+    "impl": [
+     "dlls/ntoskrnl.exe/ntoskrnl.c:373"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtQueryObject",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/file.c:7808"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

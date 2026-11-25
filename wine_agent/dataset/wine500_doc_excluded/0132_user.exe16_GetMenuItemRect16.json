@@ -1,0 +1,101 @@
+{
+ "id": "0132",
+ "function": {
+  "name": "GetMenuItemRect16",
+  "export_name": "GetMenuItemRect",
+  "module": "user.exe16",
+  "source_module": "user.exe16",
+  "exported_by": [
+   "user.exe16",
+   "user32"
+  ],
+  "side": "PE",
+  "file": "dlls/user.exe16/window.c",
+  "start_line": 2119,
+  "end_line": 2131,
+  "body_lines": 10,
+  "signature": "BOOL16 WINAPI GetMenuItemRect16( HWND16 hwnd, HMENU16 hMenu, UINT16 uItem, LPRECT16 rect)",
+  "header_comment": "/**************************************************************************\n *              GetMenuItemRect   (USER.665)\n */",
+  "code": "BOOL16 WINAPI GetMenuItemRect16( HWND16 hwnd, HMENU16 hMenu, UINT16 uItem,\n                                 LPRECT16 rect)\n{\n     RECT r32;\n     BOOL res;\n     if (!rect) return FALSE;\n     res = GetMenuItemRect( WIN_Handle32(hwnd), HMENU_32(hMenu), uItem, &r32 );\n     rect->left   = r32.left;\n     rect->top    = r32.top;\n     rect->right  = r32.right;\n     rect->bottom = r32.bottom;\n     return res;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"wine/winuser16.h\"",
+   "#include \"wownt32.h\"",
+   "#include \"user_private.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "user.exe16!GetMenuItemRect [pascal -ret16] -> internal symbol GetMenuItemRect16"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/menu.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "user32",
+   "source_module": "win32u",
+   "exported_by": [
+    "user32"
+   ],
+   "file": "dlls/win32u/menu.c",
+   "start_line": 822,
+   "resolution": [
+    "user32!GetMenuItemRect [stdcall] -> NtUserGetMenuItemRect implicitly imported from win32u",
+    "win32u!NtUserGetMenuItemRect [stdcall -syscall]"
+   ],
+   "macro_generated": false,
+   "win16": false,
+   "end_line": 857,
+   "signature": "BOOL WINAPI NtUserGetMenuItemRect( HWND hwnd, HMENU handle, UINT item, RECT *rect )",
+   "code": "BOOL WINAPI NtUserGetMenuItemRect( HWND hwnd, HMENU handle, UINT item, RECT *rect )\n{\n    struct menu *menu;\n    UINT pos;\n    RECT window_rect;\n\n    TRACE( \"(%p,%p,%d,%p)\\n\", hwnd, handle, item, rect );\n\n    if (!rect)\n        return FALSE;\n\n    if (!(menu = find_menu_item( handle, item, MF_BYPOSITION, &pos )))\n        return FALSE;\n\n    if (!hwnd) hwnd = menu->hWnd;\n    if (!hwnd)\n    {\n        release_menu_ptr( menu );\n        return FALSE;\n    }\n\n    *rect = menu->items[pos].rect;\n    OffsetRect( rect, menu->items_rect.left, menu->items_rect.top );\n\n    /* Popup menu item draws in the client area */\n    if (menu->wFlags & MF_POPUP) map_window_points( hwnd, 0, (POINT *)rect, 2, get_thread_dpi() );\n    else\n    {\n        /* Sysmenu draws in the non-client area */\n        get_window_rect( hwnd, &window_rect, get_thread_dpi() );\n        OffsetRect( rect, window_rect.left, window_rect.top );\n    }\n\n    release_menu_ptr(menu);\n    return TRUE;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-getmenuitemrect.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getmenuitemrect",
+   "documented_name": "getmenuitemrect",
+   "file": "docs/0132_sdk-api_nf-winuser-getmenuitemrect.md",
+   "text": "---\nUID: NF:winuser.GetMenuItemRect\ntitle: GetMenuItemRect function (winuser.h)\ndescription: Retrieves the bounding rectangle for the specified menu item.\nhelpviewer_keywords: [\"GetMenuItemRect\",\"GetMenuItemRect function [Menus and Other Resources]\",\"_win32_GetMenuItemRect\",\"_win32_getmenuitemrect_cpp\",\"menurc.getmenuitemrect\",\"winui._win32_getmenuitemrect\",\"winuser/GetMenuItemRect\"]\nold-location: menurc\\getmenuitemrect.htm\ntech.root: menurc\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\resources\\menus\\menureference\\menufunctions\\getmenuitemrect.htm\nms.date: 12/05/2018\nms.keywords: GetMenuItemRect, GetMenuItemRect function [Menus and Other Resources], _win32_GetMenuItemRect, _win32_getmenuitemrect_cpp, menurc.getmenuitemrect, winui._win32_getmenuitemrect, winuser/GetMenuItemRect\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetMenuItemRect\n - winuser/GetMenuItemRect\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-ntuser-menu-l1-1-3.dll\n - ext-ms-win-ntuser-menu-l1-1-2.dll\n - ext-ms-win-ntuser-menu-l1-1-1.dll\n - ext-ms-win-ntuser-menu-l1-1-0.dll\n - User32.dll\napi_name:\n - GetMenuItemRect\n---\n\n# GetMenuItemRect function\n\n\n## -description\n\nRetrieves the bounding rectangle \n\t\tfor the specified menu item.\n\n## -parameters\n\n### -param hWnd [in, optional]\n\nType: <b>HWND</b>\n\nA handle to the window containing the menu.\n\nIf this value is <b>NULL</b> and the <i>hMenu</i> \n\t\t\t\t\t\tparameter represents a popup menu, the function will find the menu window.\n\n### -param hMenu [in]\n\nType: <b>HMENU</b>\n\nA handle to a menu.\n\n### -param uItem [in]\n\nType: <b>UINT</b>\n\nThe zero-based position of the menu item.\n\n### -param lprcItem [out]\n\nType: <b>LPRECT</b>\n\nA pointer to a <a href=\"/windows/desktop/api/windef/ns-windef-rect\">RECT</a> structure that receives the \n\t\t\t\tbounding rectangle of the specified menu item expressed in screen coordinates.\n\n## -returns\n\nType: <b>BOOL</b>\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero. To get extended error \n\t\t\t\t\tinformation, use the <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> function.\n\n## -remarks\n\nIn order for the returned rectangle to be meaningful, the menu must be popped \n\t\tup if a popup menu or attached to a window if a menu bar. Menu item positions are not \n\t\tdetermined until the menu is displayed.\n\n## -see-also\n\n<a href=\"/windows/desktop/menurc/menus\">Menus</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetMenuItemRect",
+    "impl": [
+     "dlls/user.exe16/window.c:2119"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [
+   "WIN_Handle32"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

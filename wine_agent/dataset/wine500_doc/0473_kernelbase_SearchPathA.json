@@ -1,0 +1,236 @@
+{
+ "id": "0473",
+ "function": {
+  "name": "SearchPathA",
+  "export_name": "SearchPathA",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/file.c",
+  "start_line": 2850,
+  "end_line": 2885,
+  "body_lines": 33,
+  "signature": "DWORD WINAPI DECLSPEC_HOTPATCH SearchPathA( LPCSTR path, LPCSTR name, LPCSTR ext, DWORD buflen, LPSTR buffer, LPSTR *lastpart )",
+  "header_comment": "/***********************************************************************\n *\tSearchPathA   (kernelbase.@)\n */",
+  "code": "DWORD WINAPI DECLSPEC_HOTPATCH SearchPathA( LPCSTR path, LPCSTR name, LPCSTR ext,\n                                            DWORD buflen, LPSTR buffer, LPSTR *lastpart )\n{\n    WCHAR *pathW = NULL, *nameW, *extW = NULL;\n    WCHAR bufferW[MAX_PATH];\n    DWORD ret;\n\n    if (!name)\n    {\n        SetLastError( ERROR_INVALID_PARAMETER );\n        return 0;\n    }\n\n    if (!(nameW = file_name_AtoW( name, FALSE ))) return 0;\n    if (path && !(pathW = file_name_AtoW( path, TRUE ))) return 0;\n    if (ext && !(extW = file_name_AtoW( ext, TRUE )))\n    {\n        RtlFreeHeap( GetProcessHeap(), 0, pathW );\n        return 0;\n    }\n\n    ret = SearchPathW( pathW, nameW, extW, MAX_PATH, bufferW, NULL );\n\n    RtlFreeHeap( GetProcessHeap(), 0, pathW );\n    RtlFreeHeap( GetProcessHeap(), 0, extW );\n\n    if (!ret) return 0;\n    if (ret > MAX_PATH)\n    {\n        SetLastError( ERROR_FILENAME_EXCED_RANGE );\n        return 0;\n    }\n    ret = copy_filename_WtoA( bufferW, buffer, buflen );\n    if (buflen > ret && lastpart) *lastpart = strrchr(buffer, '\\\\') + 1;\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include \"winerror.h\"",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"wincon.h\"",
+   "#include \"fileapi.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"ddk/ntddser.h\"",
+   "#include \"ioringapi.h\"",
+   "#include \"ddk/ntifs.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!SearchPathA [stdcall -import] -> import from kernelbase",
+   "kernelbase!SearchPathA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/path.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "processenv",
+   "path": "sdk-api-src/content/processenv/nf-processenv-searchpatha.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/processenv/nf-processenv-searchpatha",
+   "documented_name": "searchpatha",
+   "file": "docs/0473_sdk-api_nf-processenv-searchpatha.md",
+   "text": "---\nUID: NF:processenv.SearchPathA\ntitle: SearchPathA function\ndescription: Searches for a specified file in a specified path. (ANSI)\nhelpviewer_keywords: [\"SearchPathA\", \"processenv/SearchPathA\"]\nold-location: fs\\searchpath.htm\ntech.root: fs\nms.assetid: 8039365a-1b39-431e-af87-9a9933ca102d\nms.date: 12/5/2018\nms.keywords: SearchPath, SearchPath function [Files], SearchPathA, SearchPathW, _win32_searchpath, base.searchpath, fs.searchpath, processenv/SearchPath, processenv/SearchPathA, processenv/SearchPathW\nreq.header: processenv.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: SearchPathW (Unicode) and SearchPathA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nf1_keywords:\n - SearchPathA\n - processenv/SearchPathA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Kernel32.dll\n - API-MS-Win-Core-ProcessEnvironment-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-ProcessEnvironment-l1-2-0.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\napi_name:\n - SearchPath\n - SearchPathA\n - SearchPathW\n---\n\n# SearchPathA function\n\n\n## -description\n\nSearches for a specified file in a specified path.\n\n## -parameters\n\n### -param lpPath [in, optional]\n\nThe path to be searched for the file.\n\nIf this parameter is <b>NULL</b>, the \n       function searches for a matching file using a registry-dependent system  search path. For more information, see \n       the Remarks section.\n\n### -param lpFileName [in]\n\nThe name of the file for which to search.\n\nBy default, the name is limited to MAX_PATH characters. To extend this limit to 32,767 wide characters, prepend \"\\\\\\\\?\\\\\" to the path. For more information, see [Naming Files, Paths, and Namespaces](/windows/win32/fileio/naming-a-file).\n\n> [!TIP]\n> Starting with Windows 10, Version 1607, you can opt-in to remove the MAX_PATH limitation without prepending \"\\\\\\\\?\\\\\". See the \"Maximum Path Length Limitation\" section of [Naming Files, Paths, and Namespaces](/windows/win32/fileio/naming-a-file) for details.\n\n### -param lpExtension [in, optional]\n\nThe extension to be added to the file name when searching for the file. The first character of the file name \n       extension must be a period (.). The extension is added only if the specified file name does not end with an \n       extension.\n\nIf a file name extension is not required or if the file name contains an extension, this parameter can be \n       <b>NULL</b>.\n\n### -param nBufferLength [in]\n\nThe size of the buffer that receives the valid path and file name (including the terminating null \n      character), in <b>TCHARs</b>.\n\n### -param lpBuffer [out]\n\nA pointer to the buffer to receive the path and file name of the file found. The  string is a \n      null-terminated string.\n\n### -param lpFilePart [out, optional]\n\nA pointer to the variable to receive the address (within <i>lpBuffer</i>) of the last \n      component of the valid path and file name, which is the address of the character immediately following the final \n      backslash (\\\\) in the path.\n\n## -returns\n\nIf the function succeeds, the value returned is the length, in <b>TCHARs</b>, of the \n       string that is copied to the buffer, not including the terminating null character. If the return value is \n       greater than <i>nBufferLength</i>, the value returned is the size of the buffer that is \n       required to hold the path, including the terminating null character.\n\nIf the function fails, the return value is zero. To get extended error information, call \n       <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nIf the <i>lpPath</i> parameter is <b>NULL</b>, \n     <b>SearchPath</b> searches for a matching file based on the current \n     value of the following registry value:\n\n\n<b>HKEY_LOCAL_MACHINE</b>&#92;<b>SYSTEM</b>&#92;<b>CurrentControlSet</b>&#92;<b>Control</b>&#92;<b>Session Manager</b>&#92;<b>SafeProcessSearchMode</b>\n\n\n\nWhen the value of this <b>REG_DWORD</b> registry value is set to 1, \n     <b>SearchPath</b> first searches the folders that are specified in \n     the system path, and then searches the current working folder. When the value of this registry value is set to 0, \n     the computer first searches the current working folder, and then searches the folders that are specified in the \n     system path. The system default value for this registry key is 0.\n\nThe search mode used by the <b>SearchPath</b> function can also \n     be set per-process by calling the <a href=\"/windows/desktop/api/winbase/nf-winbase-setsearchpathmode\">SetSearchPathMode</a> \n     function.\n\nThe <b>SearchPath</b> function is not recommended as a method of \n     locating a .dll file if the intended use of the output is in a call to the \n     <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-loadlibrarya\">LoadLibrary</a> function. This can result in locating the \n     wrong .dll file because the search order of the <b>SearchPath</b> \n     function differs from the search order used by the \n     <b>LoadLibrary</b> function. If you need to locate and load a \n     .dll file, use the <b>LoadLibrary</b> function. \n\n\n\n\n\n\n\nIn Windows 8 and Windows Server 2012, this function is supported by the following technologies.\n\n<table>\n<tr>\n<th>Technology</th>\n<th>Supported</th>\n</tr>\n<tr>\n<td>\nServer Message Block (SMB) 3.0 protocol\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nSMB 3.0 Transparent Failover (TFO)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nSMB 3.0 with Scale-out File Shares (SO)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nCluster Shared Volume File System (CsvFS)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nResilient File System (ReFS)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n</table>\n \n\n\n\n\n\n> [!NOTE]\n> The processenv.h header defines SearchPath as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/FileIO/file-management-functions\">File Management Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-findfirstfilea\">FindFirstFile</a>\n\n\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-findnextfilea\">FindNextFile</a>\n\n\n\n<a href=\"/windows/desktop/api/sysinfoapi/nf-sysinfoapi-getsystemdirectorya\">GetSystemDirectory</a>\n\n\n\n<a href=\"/windows/desktop/api/sysinfoapi/nf-sysinfoapi-getwindowsdirectorya\">GetWindowsDirectory</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-setsearchpathmode\">SetSearchPathMode</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "file_name_AtoW",
+   "file": "dlls/kernelbase/file.c",
+   "start_line": 426,
+   "end_line": 445,
+   "static": false,
+   "called_from": [
+    "SearchPathA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/loader.c:373",
+    "dlls/kernelbase/loader.c:550",
+    "dlls/kernelbase/process.c:480",
+    "dlls/kernelbase/process.c:481",
+    "dlls/kernelbase/process.c:482"
+   ],
+   "signature": "WCHAR *file_name_AtoW( LPCSTR name, BOOL alloc )",
+   "code": "WCHAR *file_name_AtoW( LPCSTR name, BOOL alloc )\n{\n    ANSI_STRING str;\n    UNICODE_STRING strW, *pstrW;\n    NTSTATUS status;\n\n    RtlInitAnsiString( &str, name );\n    pstrW = alloc ? &strW : &NtCurrentTeb()->StaticUnicodeString;\n    if (oem_file_apis)\n        status = RtlOemStringToUnicodeString( pstrW, &str, alloc );\n    else\n        status = RtlAnsiStringToUnicodeString( pstrW, &str, alloc );\n    if (status == STATUS_SUCCESS) return pstrW->Buffer;\n\n    if (status == STATUS_BUFFER_OVERFLOW)\n        SetLastError( ERROR_FILENAME_EXCED_RANGE );\n    else\n        SetLastError( RtlNtStatusToDosError(status) );\n    return NULL;\n}"
+  },
+  {
+   "name": "copy_filename_WtoA",
+   "file": "dlls/kernelbase/file.c",
+   "start_line": 393,
+   "end_line": 414,
+   "static": true,
+   "called_from": [
+    "SearchPathA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/file.c:1755",
+    "dlls/kernelbase/file.c:2076",
+    "dlls/kernelbase/file.c:2118",
+    "dlls/kernelbase/file.c:2362",
+    "dlls/kernelbase/file.c:2403"
+   ],
+   "signature": "static DWORD copy_filename_WtoA( LPCWSTR nameW, LPSTR buffer, DWORD len )",
+   "code": "static DWORD copy_filename_WtoA( LPCWSTR nameW, LPSTR buffer, DWORD len )\n{\n    UNICODE_STRING strW;\n    DWORD ret;\n\n    RtlInitUnicodeString( &strW, nameW );\n\n    ret = oem_file_apis ? RtlUnicodeStringToOemSize( &strW ) : RtlUnicodeStringToAnsiSize( &strW );\n    if (buffer && ret <= len)\n    {\n        ANSI_STRING str;\n\n        str.Buffer = buffer;\n        str.MaximumLength = min( len, UNICODE_STRING_MAX_CHARS );\n        if (oem_file_apis)\n            RtlUnicodeStringToOemString( &str, &strW, FALSE );\n        else\n            RtlUnicodeStringToAnsiString( &str, &strW, FALSE );\n        ret = str.Length;  /* length without terminating 0 */\n    }\n    return ret;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "oem_file_apis",
+    "type": "BOOL",
+    "static": true,
+    "start_line": 70,
+    "end_line": 70,
+    "code": "static BOOL oem_file_apis;"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetProcessHeap",
+    "impl": [
+     "dlls/kernelbase/process.c:910"
+    ]
+   },
+   {
+    "name": "SearchPathW",
+    "impl": [
+     "dlls/kernelbase/file.c:2891"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "RtlAnsiStringToUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:563"
+    ]
+   },
+   {
+    "name": "RtlFreeHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "RtlInitAnsiString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:56"
+    ]
+   },
+   {
+    "name": "RtlInitUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:173"
+    ]
+   },
+   {
+    "name": "RtlNtStatusToDosError",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:77"
+    ]
+   },
+   {
+    "name": "RtlOemStringToUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:600"
+    ]
+   },
+   {
+    "name": "RtlUnicodeStringToAnsiSize",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:922"
+    ]
+   },
+   {
+    "name": "RtlUnicodeStringToAnsiString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:637"
+    ]
+   },
+   {
+    "name": "RtlUnicodeStringToOemSize",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/locale.c:838"
+    ]
+   },
+   {
+    "name": "RtlUnicodeStringToOemString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:684"
+    ]
+   },
+   {
+    "name": "strrchr",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:575"
+    ]
+   }
+  ],
+  "header_inline": [
+   "NtCurrentTeb"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

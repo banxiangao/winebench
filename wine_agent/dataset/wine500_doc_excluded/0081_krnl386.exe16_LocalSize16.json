@@ -1,0 +1,146 @@
+{
+ "id": "0081",
+ "function": {
+  "name": "LocalSize16",
+  "export_name": "LocalSize",
+  "module": "krnl386.exe16",
+  "source_module": "krnl386.exe16",
+  "exported_by": [
+   "kernel32",
+   "krnl386.exe16"
+  ],
+  "side": "PE",
+  "file": "dlls/krnl386.exe16/local.c",
+  "start_line": 1467,
+  "end_line": 1486,
+  "body_lines": 17,
+  "signature": "UINT16 WINAPI LocalSize16( HLOCAL16 handle )",
+  "header_comment": "/***********************************************************************\n *           LocalSize   (KERNEL.10)\n */",
+  "code": "UINT16 WINAPI LocalSize16( HLOCAL16 handle )\n{\n    HANDLE16 ds = CURRENT_DS;\n    char *ptr = MapSL( MAKESEGPTR( ds, 0 ) );\n    LOCALARENA *pArena;\n\n    TRACE(\"%04x ds=%04x\\n\", handle, ds );\n\n    if (!handle) return 0;\n    if (HANDLE_MOVEABLE( handle ))\n    {\n        handle = *(WORD *)(ptr + handle);\n        if (!handle) return 0;\n        pArena = ARENA_PTR( ptr, ARENA_HEADER(handle - MOVEABLE_PREFIX) );\n    }\n    else\n        pArena = ARENA_PTR( ptr, ARENA_HEADER(handle) );\n\n    return pArena->next - handle;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include \"wine/winbase16.h\"",
+   "#include \"wownt32.h\"",
+   "#include \"winternl.h\"",
+   "#include \"kernel16_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "krnl386.exe16!LocalSize [pascal -ret16] -> alias of krnl386.exe16!LocalSize16",
+   "krnl386.exe16!LocalSize16 [stdcall -arch=win32]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/format_msg.c",
+   "dlls/kernel32/tests/heap.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "kernel32",
+   "source_module": "kernel32",
+   "exported_by": [
+    "kernel32"
+   ],
+   "file": "dlls/kernel32/heap.c",
+   "start_line": 383,
+   "resolution": [
+    "kernel32!LocalSize [stdcall]"
+   ],
+   "macro_generated": false,
+   "win16": false,
+   "end_line": 410,
+   "signature": "SIZE_T WINAPI LocalSize( HLOCAL handle )",
+   "code": "SIZE_T WINAPI LocalSize( HLOCAL handle )\n{\n    HANDLE heap = GetProcessHeap();\n    struct mem_entry *mem;\n    SIZE_T ret = 0;\n    void *ptr;\n\n    TRACE_(globalmem)( \"handle %p\\n\", handle );\n\n    RtlLockHeap( heap );\n    if ((ptr = unsafe_ptr_from_HLOCAL( handle )) &&\n        HeapValidate( heap, HEAP_NO_SERIALIZE, ptr ))\n        ret = HeapSize( heap, HEAP_NO_SERIALIZE, ptr );\n    else if ((mem = unsafe_mem_from_HLOCAL( handle )))\n    {\n        if (!mem->ptr) ret = 0;\n        else ret = HeapSize( heap, HEAP_NO_SERIALIZE, mem->ptr );\n    }\n    else\n    {\n        WARN_(globalmem)( \"invalid handle %p\\n\", handle );\n        SetLastError( ERROR_INVALID_HANDLE );\n    }\n    RtlUnlockHeap( heap );\n\n    if (ret == ~(SIZE_T)0) return 0;\n    return ret;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winbase",
+   "path": "sdk-api-src/content/winbase/nf-winbase-localsize.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-localsize",
+   "documented_name": "localsize",
+   "file": "docs/0081_sdk-api_nf-winbase-localsize.md",
+   "text": "---\nUID: NF:winbase.LocalSize\ntitle: LocalSize function (winbase.h)\ndescription: Retrieves the current size of the specified local memory object, in bytes.\nhelpviewer_keywords: [\"LocalSize\",\"LocalSize function\",\"_win32_localsize\",\"base.localsize\",\"winbase/LocalSize\"]\nold-location: base\\localsize.htm\ntech.root: base\nms.assetid: d1337845-d89c-4cd5-a584-36fe0c682c1a\nms.date: 12/05/2018\nms.keywords: LocalSize, LocalSize function, _win32_localsize, base.localsize, winbase/LocalSize\nreq.header: winbase.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - LocalSize\n - winbase/LocalSize\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Kernel32.dll\n - API-MS-Win-Core-Heap-Obsolete-l1-1-0.dll\n - kernel32legacy.dll\n - API-MS-Win-DownLevel-Kernel32-l2-1-0.dll\napi_name:\n - LocalSize\n---\n\n# LocalSize function\n\n\n## -description\n\nRetrieves the current size of the specified local memory object, in bytes.\n<div class=\"alert\"><b>Note</b>  The local functions have greater overhead and provide fewer features than other memory management functions. New applications should use the <a href=\"/windows/desktop/Memory/heap-functions\">heap functions</a> unless documentation states that a local function should be used. For more information, see <a href=\"/windows/desktop/Memory/global-and-local-functions\">Global and Local Functions</a>.</div><div> </div>\n\n## -parameters\n\n### -param hMem [in]\n\nA handle to the local memory object. This handle is returned by the \n<a href=\"/windows/desktop/api/winbase/nf-winbase-localalloc\">LocalAlloc</a>, \n<a href=\"/windows/desktop/api/winbase/nf-winbase-localrealloc\">LocalReAlloc</a>, or \n<a href=\"/windows/desktop/api/winbase/nf-winbase-localhandle\">LocalHandle</a> function.\n\n## -returns\n\nIf the function succeeds, the return value is the size of the specified local memory object, in bytes. If the specified handle is not valid or if the object has been discarded, the return value is zero. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThe size of a memory block may be larger than the size requested when the memory was allocated.\n\nTo verify that the specified object's memory block has not been discarded, call the \n<a href=\"/windows/desktop/api/winbase/nf-winbase-localflags\">LocalFlags</a> function before calling \n<b>LocalSize</b>.\n\n## -see-also\n\n<a href=\"/windows/desktop/Memory/global-and-local-functions\">Global and Local Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-localalloc\">LocalAlloc</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-localflags\">LocalFlags</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-localhandle\">LocalHandle</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-localrealloc\">LocalReAlloc</a>\n\n\n\n<a href=\"/windows/desktop/Memory/memory-management-functions\">Memory\n\t\t  Management Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "LOCALARENA",
+    "kind": "typedef_decl",
+    "start_line": 40,
+    "end_line": 49,
+    "code": "typedef struct\n{\n/* Arena header */\n    WORD prev;          /* Previous arena | arena type */\n    WORD next;          /* Next arena */\n/* Start of the memory block or free-list info */\n    WORD size;          /* Size of the free block */\n    WORD free_prev;     /* Previous free block */\n    WORD free_next;     /* Next free block */\n} LOCALARENA;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 38,
+    "end_line": 38,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(local);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "ARENA_HEADER",
+    "start_line": 52,
+    "end_line": 52,
+    "code": "#define ARENA_HEADER( handle) ((handle) - ARENA_HEADER_SIZE)"
+   },
+   {
+    "name": "ARENA_PTR",
+    "start_line": 147,
+    "end_line": 147,
+    "code": "#define ARENA_PTR(ptr,arena)       ((LOCALARENA *)((char *)(ptr)+(arena)))"
+   },
+   {
+    "name": "HANDLE_MOVEABLE",
+    "start_line": 154,
+    "end_line": 154,
+    "code": "#define HANDLE_MOVEABLE(handle) (((handle) & 3) == 2)"
+   },
+   {
+    "name": "MOVEABLE_PREFIX",
+    "start_line": 88,
+    "end_line": 88,
+    "code": "#define MOVEABLE_PREFIX sizeof(HLOCAL16)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "MapSL",
+    "impl": [
+     "dlls/krnl386.exe16/selector.c:636"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "NtCurrentTeb",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

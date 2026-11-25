@@ -1,0 +1,1932 @@
+{
+ "id": "0087",
+ "function": {
+  "name": "NtUserGetDisplayConfigBufferSizes",
+  "export_name": "GetDisplayConfigBufferSizes",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/sysparams.c",
+  "start_line": 3503,
+  "end_line": 3552,
+  "body_lines": 47,
+  "signature": "LONG WINAPI NtUserGetDisplayConfigBufferSizes( UINT32 flags, UINT32 *num_path_info, UINT32 *num_mode_info )",
+  "header_comment": "/**********************************************************************\n *           NtUserGetDisplayConfigBufferSizes    (win32u.@)\n */",
+  "code": "LONG WINAPI NtUserGetDisplayConfigBufferSizes( UINT32 flags, UINT32 *num_path_info,\n                                               UINT32 *num_mode_info )\n{\n    struct monitor *monitor;\n    UINT32 count = 0;\n\n    TRACE( \"(0x%x %p %p)\\n\", flags, num_path_info, num_mode_info );\n\n    if (!num_path_info || !num_mode_info)\n        return ERROR_INVALID_PARAMETER;\n\n    *num_path_info = 0;\n\n    switch (flags & qdc_retrieve_flags_mask)\n    {\n    case QDC_ALL_PATHS:\n    case QDC_ONLY_ACTIVE_PATHS:\n    case QDC_DATABASE_CURRENT:\n        break;\n    default:\n        return ERROR_INVALID_PARAMETER;\n    }\n\n    if ((flags & ~(qdc_retrieve_flags_mask | QDC_VIRTUAL_MODE_AWARE)))\n    {\n        FIXME( \"unsupported flags %#x.\\n\", flags );\n        return ERROR_INVALID_PARAMETER;\n    }\n\n    /* FIXME: semi-stub */\n    if ((flags & qdc_retrieve_flags_mask) != QDC_ONLY_ACTIVE_PATHS)\n        FIXME( \"only returning active paths\\n\" );\n\n    if (lock_display_devices( FALSE ))\n    {\n        LIST_FOR_EACH_ENTRY( monitor, &monitors, struct monitor, entry )\n        {\n            if (!is_monitor_active( monitor )) continue;\n            count++;\n        }\n        unlock_display_devices();\n    }\n\n    *num_path_info = count;\n    *num_mode_info = count * 2;\n    if (flags & QDC_VIRTUAL_MODE_AWARE)\n        *num_mode_info += count;\n    TRACE( \"returning %u paths %u modes\\n\", *num_path_info, *num_mode_info );\n    return ERROR_SUCCESS;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <pthread.h>",
+   "#include <assert.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"ntgdi_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"winreg.h\"",
+   "#include \"cfgmgr32.h\"",
+   "#include \"d3dkmdt.h\"",
+   "#include \"wine/wingdi16.h\"",
+   "#include \"wine/server.h\""
+  ],
+  "resolution": [
+   "user32!GetDisplayConfigBufferSizes [stdcall] -> NtUserGetDisplayConfigBufferSizes implicitly imported from win32u",
+   "win32u!NtUserGetDisplayConfigBufferSizes [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/monitor.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-getdisplayconfigbuffersizes.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getdisplayconfigbuffersizes",
+   "documented_name": "getdisplayconfigbuffersizes",
+   "file": "docs/0087_sdk-api_nf-winuser-getdisplayconfigbuffersizes.md",
+   "text": "---\nUID: NF:winuser.GetDisplayConfigBufferSizes\ntitle: GetDisplayConfigBufferSizes function (winuser.h)\ndescription: The GetDisplayConfigBufferSizes function retrieves the size of the buffers that are required to call the QueryDisplayConfig function.\nhelpviewer_keywords: [\"CCD_Functions_0d604cd6-222b-4e6e-a8aa-60866d3f3ef6.xml\",\"GetDisplayConfigBufferSizes\",\"GetDisplayConfigBufferSizes function [Display Devices]\",\"display.getdisplayconfigbuffersizes\",\"winuser/GetDisplayConfigBufferSizes\"]\nold-location: display\\getdisplayconfigbuffersizes.htm\ntech.root: display\nms.assetid: 5ec7f521-28b5-4922-a3fc-aa4433de69e0\nms.date: 12/05/2018\nms.keywords: CCD_Functions_0d604cd6-222b-4e6e-a8aa-60866d3f3ef6.xml, GetDisplayConfigBufferSizes, GetDisplayConfigBufferSizes function [Display Devices], display.getdisplayconfigbuffersizes, winuser/GetDisplayConfigBufferSizes\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Universal\nreq.target-min-winverclnt: Available in Windows Vista and later versions of the Windows operating systems.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib; OneCoreUAP.lib on Windows 10\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetDisplayConfigBufferSizes\n - winuser/GetDisplayConfigBufferSizes\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - User32.dll\n - API-MS-Win-NTUser-SysParams-l1-1-0.dll\n - minuser.dll\n - Ext-MS-Win-RTCore-NTUser-SysParams-l1-1-0.dll\napi_name:\n - GetDisplayConfigBufferSizes\nreq.apiset: ext-ms-win-ntuser-sysparams-ext-l1-1-1 (introduced in Windows 10, version 10.0.14393)\n---\n\n# GetDisplayConfigBufferSizes function\n\n\n## -description\n\nThe <b>GetDisplayConfigBufferSizes</b> function retrieves the size of the buffers that are required to call the <a href=\"/windows/desktop/api/winuser/nf-winuser-querydisplayconfig\">QueryDisplayConfig</a> function.\n\n## -parameters\n\n### -param flags [in]\n\nThe type of information to retrieve. The value for the <i>Flags</i> parameter must be one of the following values.\n\n\n\n\n\n#### QDC_ALL_PATHS\n\nThe caller requests the table sizes to hold all the possible path combinations.\n\n\n\n#### QDC_ONLY_ACTIVE_PATHS\n\nThe caller requests the table sizes to hold only active paths. \n\n\n\n#### QDC_DATABASE_CURRENT\n\nThe caller requests the table sizes to hold the active paths as defined in the persistence database for the currently connected monitors.\n\n### -param numPathArrayElements [out]\n\nPointer to a variable that receives the number of elements in the path information table. The <i>pNumPathArrayElements</i> parameter value is then used by a subsequent call to the <a href=\"/windows/desktop/api/winuser/nf-winuser-querydisplayconfig\">QueryDisplayConfig</a> function. This parameter cannot be <b>NULL</b>.\n\n### -param numModeInfoArrayElements [out]\n\nPointer to a variable that receives the number of elements in the mode information table. The <i>pNumModeInfoArrayElements</i> parameter value is then used by a subsequent call to the <a href=\"/windows/desktop/api/winuser/nf-winuser-querydisplayconfig\">QueryDisplayConfig</a> function. This parameter cannot be <b>NULL</b>.\n\n## -returns\n\nThe function returns one of the following return codes.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_SUCCESS</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe function succeeded.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe combination of parameters and flags that are specified is invalid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOT_SUPPORTED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe system is not running a graphics driver that was written according to the <a href=\"/windows-hardware/drivers/display/windows-vista-display-driver-model-design-guide\">Windows Display Driver Model (WDDM)</a>. The function is only supported on a system with a WDDM driver running.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_ACCESS_DENIED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe caller does not have access to the console session. This error occurs if the calling process does not have access to the current desktop or is running on a remote session.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_GEN_FAILURE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn unspecified error occurred.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nGiven the current display path configuration and the requested flags, <b>GetDisplayConfigBufferSizes</b> returns the size of the path and mode tables that are required to store the information. <b>GetDisplayConfigBufferSizes</b> can return values that are slightly larger than are actually required because it determines that all source and target paths are valid; whereas, the driver might place some restrictions on the possible combinations.\n\nAs <b>GetDisplayConfigBufferSizes</b> can only determine the required array size of that moment in time, it is possible that between calls to <b>GetDisplayConfigBufferSizes</b> and <a href=\"/windows/desktop/api/winuser/nf-winuser-querydisplayconfig\">QueryDisplayConfig</a> the system configuration has changed and the provided array sizes are no longer sufficient to store the new path data. \n\nIf a caller is aware that it must enable additional sources and targets, the caller can allocate a larger mode information array than is returned from <b>GetDisplayConfigBufferSizes</b> so that it has the space to add the additional source and target modes after calling <b>QueryDisplayConfig</b> and before calling <a href=\"/windows/desktop/api/winuser/nf-winuser-setdisplayconfig\">SetDisplayConfig</a>.\n\n## Examples\n\nSee <a href=\"/windows/desktop/api/winuser/nf-winuser-querydisplayconfig#examples\">__QueryDisplayConfig__</a> for an example of __GetDisplayConfigBufferSizes__.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-querydisplayconfig\">QueryDisplayConfig</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-setdisplayconfig\">SetDisplayConfig</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "lock_display_devices",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2874,
+   "end_line": 2923,
+   "static": true,
+   "called_from": [
+    "NtUserGetDisplayConfigBufferSizes"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:2932",
+    "dlls/win32u/sysparams.c:3154",
+    "dlls/win32u/sysparams.c:3168",
+    "dlls/win32u/sysparams.c:3183",
+    "dlls/win32u/sysparams.c:3213"
+   ],
+   "signature": "static BOOL lock_display_devices( BOOL force )",
+   "code": "static BOOL lock_display_devices( BOOL force )\n{\n    static const WCHAR wine_service_station_name[] =\n        {'_','_','w','i','n','e','s','e','r','v','i','c','e','_','w','i','n','s','t','a','t','i','o','n',0};\n    struct device_manager_ctx ctx =\n    {\n        .opengl_gpus = LIST_INIT(ctx.opengl_gpus),\n        .vulkan_gpus = LIST_INIT(ctx.vulkan_gpus),\n    };\n    UINT64 serial;\n    UINT status;\n    WCHAR name[MAX_PATH];\n    BOOL ret = TRUE;\n\n    init_display_driver(); /* make sure to load the driver before anything else */\n\n    pthread_mutex_lock( &display_lock );\n\n    serial = get_monitor_update_serial();\n    if (!force && monitor_update_serial >= serial) return TRUE;\n\n    /* services do not have any adapters, only a virtual monitor */\n    if (NtUserGetObjectInformation( NtUserGetProcessWindowStation(), UOI_NAME, name, sizeof(name), NULL )\n        && !wcscmp( name, wine_service_station_name ))\n    {\n        clear_display_devices();\n        list_add_tail( &monitors, &virtual_monitor.entry );\n        set_winstation_monitors( TRUE );\n        return TRUE;\n    }\n\n    if (!force && !update_display_cache_from_registry( serial )) force = TRUE;\n    if (force)\n    {\n        if (!get_vulkan_gpus( &ctx.vulkan_gpus )) WARN( \"Failed to find any Vulkan GPU\\n\" );\n        if (!get_opengl_gpus( &ctx.opengl_gpus )) WARN( \"Failed to find any OpenGL GPU\\n\" );\n        if (!(status = update_display_devices( &ctx ))) commit_display_devices( &ctx );\n        else WARN( \"Failed to update display devices, status %#x\\n\", status );\n        release_display_manager_ctx( &ctx );\n\n        ret = update_display_cache_from_registry( serial );\n    }\n\n    if (!ret)\n    {\n        ERR( \"Failed to read display config.\\n\" );\n        pthread_mutex_unlock( &display_lock );\n    }\n    return ret;\n}"
+  },
+  {
+   "name": "is_monitor_active",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2295,
+   "end_line": 2304,
+   "static": true,
+   "called_from": [
+    "NtUserGetDisplayConfigBufferSizes",
+    "set_winstation_monitors"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:3072",
+    "dlls/win32u/sysparams.c:3124",
+    "dlls/win32u/sysparams.c:3140",
+    "dlls/win32u/sysparams.c:3193",
+    "dlls/win32u/sysparams.c:3760"
+   ],
+   "signature": "static BOOL is_monitor_active( struct monitor *monitor )",
+   "code": "static BOOL is_monitor_active( struct monitor *monitor )\n{\n    DEVMODEW current_mode = {.dmSize = sizeof(DEVMODEW)};\n    struct source *source;\n    /* services do not have any adapters, only a virtual monitor */\n    if (!(source = monitor->source)) return TRUE;\n    if (!(source->state_flags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP)) return FALSE;\n    source_get_current_settings( source, &current_mode );\n    return !is_detached_mode( &current_mode );\n}"
+  },
+  {
+   "name": "unlock_display_devices",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2925,
+   "end_line": 2928,
+   "static": true,
+   "called_from": [
+    "NtUserGetDisplayConfigBufferSizes"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:2933",
+    "dlls/win32u/sysparams.c:3157",
+    "dlls/win32u/sysparams.c:3171",
+    "dlls/win32u/sysparams.c:3203",
+    "dlls/win32u/sysparams.c:3215"
+   ],
+   "signature": "static void unlock_display_devices(void)",
+   "code": "static void unlock_display_devices(void)\n{\n    pthread_mutex_unlock( &display_lock );\n}"
+  },
+  {
+   "name": "get_monitor_update_serial",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2854,
+   "end_line": 2865,
+   "static": true,
+   "called_from": [
+    "lock_display_devices"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static UINT64 get_monitor_update_serial(void)",
+   "code": "static UINT64 get_monitor_update_serial(void)\n{\n    struct object_lock lock = OBJECT_LOCK_INIT;\n    const desktop_shm_t *desktop_shm;\n    UINT64 serial = 0;\n    NTSTATUS status;\n\n    while ((status = get_shared_desktop( &lock, &desktop_shm )) == STATUS_PENDING)\n        serial = desktop_shm->monitor_serial;\n\n    return status ? 0 : serial;\n}"
+  },
+  {
+   "name": "clear_display_devices",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 841,
+   "end_line": 873,
+   "static": true,
+   "called_from": [
+    "lock_display_devices",
+    "prepare_devices",
+    "update_display_cache_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void clear_display_devices(void)",
+   "code": "static void clear_display_devices(void)\n{\n    struct source *source;\n    struct monitor *monitor;\n    struct gpu *gpu;\n\n    if (list_head( &monitors ) == &virtual_monitor.entry)\n    {\n        list_init( &monitors );\n        return;\n    }\n\n    while (!list_empty( &monitors ))\n    {\n        monitor = LIST_ENTRY( list_head( &monitors ), struct monitor, entry );\n        list_remove( &monitor->entry );\n        monitor_release( monitor );\n    }\n\n    while (!list_empty( &sources ))\n    {\n        source = LIST_ENTRY( list_head( &sources ), struct source, entry );\n        list_remove( &source->entry );\n        source_release( source );\n    }\n\n    while (!list_empty( &gpus ))\n    {\n        gpu = LIST_ENTRY( list_head( &gpus ), struct gpu, entry );\n        list_remove( &gpu->entry );\n        gpu_release( gpu );\n    }\n}"
+  },
+  {
+   "name": "set_winstation_monitors",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2456,
+   "end_line": 2490,
+   "static": true,
+   "called_from": [
+    "commit_display_devices",
+    "lock_display_devices",
+    "update_display_cache_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void set_winstation_monitors( BOOL increment )",
+   "code": "static void set_winstation_monitors( BOOL increment )\n{\n    struct monitor_info *infos, *info;\n    struct monitor *monitor;\n    struct ratio x, y;\n    UINT count;\n\n    if (!(count = list_count( &monitors ))) return;\n    if (!(info = infos = calloc( count, sizeof(*infos) ))) return;\n\n    TRACE( \"increment %u\\n\", increment );\n    LIST_FOR_EACH_ENTRY( monitor, &monitors, struct monitor, entry )\n    {\n        if (is_monitor_primary( monitor )) info->flags |= MONITOR_FLAG_PRIMARY;\n        if (!is_monitor_active( monitor )) info->flags |= MONITOR_FLAG_INACTIVE;\n        if (monitor->is_clone) info->flags |= MONITOR_FLAG_CLONE;\n        info->dpi = monitor_get_dpi( monitor, MDT_EFFECTIVE_DPI, &x, &y );\n        info->raw_dpi = monitor_get_dpi( monitor, MDT_RAW_DPI, &x, &y );\n        info->virt = wine_server_rectangle( monitor_get_rect( monitor, no_dpi, MDT_EFFECTIVE_DPI ) );\n        info->raw = wine_server_rectangle( monitor_get_rect( monitor, no_dpi, MDT_RAW_DPI ) );\n        TRACE( \"  flags %#x virt %s dpi %s raw %s raw_dpi %s\\n\", info->flags, wine_dbgstr_rect( (RECT *)&info->virt ),\n               debugstr_ratio( info->dpi ), wine_dbgstr_rect( (RECT *)&info->raw ), debugstr_ratio( info->raw_dpi ) );\n        info++;\n    }\n\n    SERVER_START_REQ( set_winstation_monitors )\n    {\n        req->increment = increment;\n        wine_server_add_data( req, infos, count * sizeof(*infos) );\n        if (!wine_server_call( req )) monitor_update_serial = reply->serial;\n    }\n    SERVER_END_REQ;\n\n    free( infos );\n}"
+  },
+  {
+   "name": "update_display_cache_from_registry",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2577,
+   "end_line": 2665,
+   "static": true,
+   "called_from": [
+    "lock_display_devices"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL update_display_cache_from_registry( UINT64 serial )",
+   "code": "static BOOL update_display_cache_from_registry( UINT64 serial )\n{\n    char path[MAX_PATH];\n    DWORD source_id, monitor_id, monitor_count = 0, size;\n    KEY_BASIC_INFORMATION key;\n    struct source *source;\n    struct monitor *monitor;\n    HANDLE mutex = NULL;\n    NTSTATUS status;\n    struct gpu *gpu;\n    HKEY hkey;\n    BOOL ret;\n\n    /* If user driver didn't initialize the registry, then exit */\n    if (!enum_key && !(enum_key = reg_open_ascii_key( NULL, enum_keyA )))\n        return FALSE;\n    if (!video_key && !(video_key = reg_open_ascii_key( NULL, devicemap_video_keyA )))\n        return FALSE;\n\n    status = NtQueryKey( video_key, KeyBasicInformation, &key,\n                         offsetof(KEY_BASIC_INFORMATION, Name), &size );\n    if (status && status != STATUS_BUFFER_OVERFLOW)\n        return FALSE;\n\n    if (key.LastWriteTime.QuadPart <= last_query_display_time)\n    {\n        monitor_update_serial = serial;\n        return TRUE;\n    }\n\n    mutex = get_display_device_init_mutex();\n\n    clear_display_devices();\n\n    enum_device_keys( \"PCI\", guid_devclass_displayW, sizeof(guid_devclass_displayW), enum_gpus );\n    enum_device_keys( \"DISPLAY\", guid_devclass_monitorW, sizeof(guid_devclass_monitorW), enum_monitors );\n\n    LIST_FOR_EACH_ENTRY( gpu, &gpus, struct gpu, entry )\n    {\n        if (!read_gpu_from_registry( gpu ))\n            WARN( \"Failed to read gpu from registry\\n\" );\n    }\n\n    LIST_FOR_EACH_ENTRY( monitor, &monitors, struct monitor, entry )\n    {\n        if (!read_monitor_from_registry( monitor ))\n            WARN( \"Failed to read monitor from registry\\n\" );\n    }\n\n    for (source_id = 0;; source_id++)\n    {\n        if (!(source = calloc( 1, sizeof(*source) ))) break;\n        source->refcount = 1;\n        source->id = source_id;\n\n        if (!read_source_from_registry( source_id, source, path ) ||\n            !(source->gpu = find_gpu_from_path( path )))\n        {\n            free( source->modes );\n            free( source );\n            break;\n        }\n\n        list_add_tail( &sources, &source->entry );\n        if (!(hkey = reg_open_ascii_key( config_key, source->path ))) continue;\n\n        for (monitor_id = 0;; monitor_id++)\n        {\n            struct monitor *monitor;\n\n            if (!read_source_monitor_path( hkey, monitor_id, path )) break;\n            if (!(monitor = find_monitor_from_path( path ))) continue;\n\n            monitor->id = monitor_id;\n            monitor->source = source_acquire( source );\n            monitor->handle = UlongToHandle( ++monitor_count );\n            if (source->monitor_count++) monitor->is_clone = TRUE;\n        }\n\n        NtClose( hkey );\n    }\n\n    if ((ret = !list_empty( &sources ) && !list_empty( &monitors )))\n        last_query_display_time = key.LastWriteTime.QuadPart;\n\n    set_winstation_monitors( FALSE );\n    release_display_device_init_mutex( mutex );\n    return ret;\n}"
+  },
+  {
+   "name": "update_display_devices",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2822,
+   "end_line": 2834,
+   "static": true,
+   "called_from": [
+    "lock_display_devices"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static UINT update_display_devices( struct device_manager_ctx *ctx )",
+   "code": "static UINT update_display_devices( struct device_manager_ctx *ctx )\n{\n    UINT status;\n\n    if (!(status = user_driver->pUpdateDisplayDevices( &device_manager, ctx )))\n    {\n        if (ctx->source_count && is_virtual_desktop()) return add_virtual_source( ctx );\n        return status;\n    }\n\n    if (status == STATUS_NOT_IMPLEMENTED) return default_update_display_devices( ctx );\n    return status;\n}"
+  },
+  {
+   "name": "commit_display_devices",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2836,
+   "end_line": 2852,
+   "static": true,
+   "called_from": [
+    "lock_display_devices"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void commit_display_devices( struct device_manager_ctx *ctx )",
+   "code": "static void commit_display_devices( struct device_manager_ctx *ctx )\n{\n    struct gpu_info *gpu, *next;\n\n    LIST_FOR_EACH_ENTRY_SAFE( gpu, next, &ctx->vulkan_gpus, struct gpu_info, entry )\n    {\n        TRACE( \"adding vulkan-only gpu uuid %s, name %s\\n\", debugstr_guid(&gpu->uuid), debugstr_a(gpu->name));\n        add_gpu( gpu->name, &gpu->pci_id, &gpu->uuid, ctx );\n    }\n    LIST_FOR_EACH_ENTRY_SAFE( gpu, next, &ctx->opengl_gpus, struct gpu_info, entry )\n    {\n        TRACE( \"adding opengl-only gpu uuid %s, name %s\\n\", debugstr_guid(&gpu->uuid), debugstr_a(gpu->name));\n        add_gpu( gpu->name, &gpu->pci_id, &gpu->uuid, ctx );\n    }\n\n    set_winstation_monitors( TRUE );\n}"
+  },
+  {
+   "name": "release_display_manager_ctx",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2280,
+   "end_line": 2293,
+   "static": true,
+   "called_from": [
+    "lock_display_devices"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void release_display_manager_ctx( struct device_manager_ctx *ctx )",
+   "code": "static void release_display_manager_ctx( struct device_manager_ctx *ctx )\n{\n    if (ctx->mutex)\n    {\n        release_display_device_init_mutex( ctx->mutex );\n        ctx->mutex = 0;\n    }\n\n    if (!list_empty( &sources )) last_query_display_time = 0;\n    if (ctx->gpu_count) cleanup_devices();\n\n    free_gpu_infos( &ctx->vulkan_gpus );\n    free_gpu_infos( &ctx->opengl_gpus );\n}"
+  },
+  {
+   "name": "source_get_current_settings",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 583,
+   "end_line": 588,
+   "static": true,
+   "called_from": [
+    "is_monitor_active",
+    "monitor_get_rect"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:2369",
+    "dlls/win32u/sysparams.c:3769",
+    "dlls/win32u/sysparams.c:4162",
+    "dlls/win32u/sysparams.c:4203",
+    "dlls/win32u/sysparams.c:4424"
+   ],
+   "signature": "static BOOL source_get_current_settings( const struct source *source, DEVMODEW *mode )",
+   "code": "static BOOL source_get_current_settings( const struct source *source, DEVMODEW *mode )\n{\n    memcpy( &mode->dmFields, &source->current.dmFields, offsetof(DEVMODEW, dmICMMethod) - offsetof(DEVMODEW, dmFields) );\n    if (source->depth) mode->dmBitsPerPel = source->depth;\n    return TRUE;\n}"
+  },
+  {
+   "name": "is_detached_mode",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 504,
+   "end_line": 511,
+   "static": true,
+   "called_from": [
+    "add_modes",
+    "is_monitor_active"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:4098",
+    "dlls/win32u/sysparams.c:4137",
+    "dlls/win32u/sysparams.c:4158",
+    "dlls/win32u/sysparams.c:4413"
+   ],
+   "signature": "static BOOL is_detached_mode( const DEVMODEW *mode )",
+   "code": "static BOOL is_detached_mode( const DEVMODEW *mode )\n{\n    return mode->dmFields & DM_POSITION &&\n           mode->dmFields & DM_PELSWIDTH &&\n           mode->dmFields & DM_PELSHEIGHT &&\n           mode->dmPelsWidth == 0 &&\n           mode->dmPelsHeight == 0;\n}"
+  },
+  {
+   "name": "monitor_release",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 414,
+   "end_line": 423,
+   "static": true,
+   "called_from": [
+    "add_monitor",
+    "clear_display_devices"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void monitor_release( struct monitor *monitor )",
+   "code": "static void monitor_release( struct monitor *monitor )\n{\n    UINT ref = InterlockedDecrement( &monitor->refcount );\n    TRACE( \"monitor %p decreasing refcount to %u\\n\", monitor, ref );\n    if (!ref)\n    {\n        if (monitor->source) source_release( monitor->source );\n        free( monitor );\n    }\n}"
+  },
+  {
+   "name": "source_release",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 401,
+   "end_line": 412,
+   "static": true,
+   "called_from": [
+    "add_source",
+    "add_virtual_source",
+    "clear_display_devices",
+    "monitor_release"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:3937",
+    "dlls/win32u/sysparams.c:4425",
+    "dlls/win32u/sysparams.c:4552",
+    "dlls/win32u/sysparams.c:4615"
+   ],
+   "signature": "static void source_release( struct source *source )",
+   "code": "static void source_release( struct source *source )\n{\n    UINT ref = InterlockedDecrement( &source->refcount );\n    TRACE( \"source %p decreasing refcount to %u\\n\", source, ref );\n    if (!ref)\n    {\n        if (source->key) NtClose( source->key );\n        gpu_release( source->gpu );\n        free( source->modes );\n        free( source );\n    }\n}"
+  },
+  {
+   "name": "gpu_release",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 387,
+   "end_line": 392,
+   "static": true,
+   "called_from": [
+    "add_gpu",
+    "clear_display_devices",
+    "source_release"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:8072"
+   ],
+   "signature": "static void gpu_release( struct gpu *gpu )",
+   "code": "static void gpu_release( struct gpu *gpu )\n{\n    UINT ref = InterlockedDecrement( &gpu->refcount );\n    TRACE( \"gpu %p decreasing refcount to %u\\n\", gpu, ref );\n    if (!ref) free( gpu );\n}"
+  },
+  {
+   "name": "is_monitor_primary",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2306,
+   "end_line": 2312,
+   "static": true,
+   "called_from": [
+    "set_winstation_monitors"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:2444",
+    "dlls/win32u/sysparams.c:3107",
+    "dlls/win32u/sysparams.c:3491",
+    "dlls/win32u/sysparams.c:4725",
+    "dlls/win32u/sysparams.c:4736"
+   ],
+   "signature": "static BOOL is_monitor_primary( struct monitor *monitor )",
+   "code": "static BOOL is_monitor_primary( struct monitor *monitor )\n{\n    struct source *source;\n    /* services do not have any adapters, only a virtual monitor */\n    if (!(source = monitor->source)) return TRUE;\n    return !!(source->state_flags & DISPLAY_DEVICE_PRIMARY_DEVICE);\n}"
+  },
+  {
+   "name": "monitor_get_dpi",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2333,
+   "end_line": 2351,
+   "static": true,
+   "called_from": [
+    "monitor_get_rect",
+    "set_winstation_monitors"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:2372",
+    "dlls/win32u/sysparams.c:2408",
+    "dlls/win32u/sysparams.c:2409",
+    "dlls/win32u/sysparams.c:3214",
+    "dlls/win32u/sysparams.c:4824"
+   ],
+   "signature": "static struct ratio monitor_get_dpi( struct monitor *monitor, MONITOR_DPI_TYPE type, struct ratio *dpi_x, struct ratio *dpi_y )",
+   "code": "static struct ratio monitor_get_dpi( struct monitor *monitor, MONITOR_DPI_TYPE type, struct ratio *dpi_x, struct ratio *dpi_y )\n{\n    struct ratio scale_x = {1, 1}, scale_y = {1, 1};\n    struct source *source = monitor->source;\n    UINT dpi;\n\n    if (!source || !(dpi = source->dpi)) dpi = system_dpi;\n    if (source && type != MDT_EFFECTIVE_DPI && (source->state_flags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP))\n    {\n        scale_x.num = source->physical.dmPelsWidth;\n        scale_x.den = source->current.dmPelsWidth;\n        scale_y.num = source->physical.dmPelsHeight;\n        scale_y.den = source->current.dmPelsHeight;\n    }\n\n    *dpi_x = make_ratio( dpi * scale_x.num, scale_x.den );\n    *dpi_y = make_ratio( dpi * scale_y.num, scale_y.den );\n    return min_ratio( *dpi_x, *dpi_y );\n}"
+  },
+  {
+   "name": "monitor_get_rect",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2414,
+   "end_line": 2436,
+   "static": true,
+   "called_from": [
+    "set_winstation_monitors"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:2441",
+    "dlls/win32u/sysparams.c:3074",
+    "dlls/win32u/sysparams.c:3141",
+    "dlls/win32u/sysparams.c:3195",
+    "dlls/win32u/sysparams.c:3199"
+   ],
+   "signature": "static RECT monitor_get_rect( struct monitor *monitor, struct ratio dpi, MONITOR_DPI_TYPE type )",
+   "code": "static RECT monitor_get_rect( struct monitor *monitor, struct ratio dpi, MONITOR_DPI_TYPE type )\n{\n    DEVMODEW current_mode = {.dmSize = sizeof(DEVMODEW)};\n    RECT rect = {0, 0, 1024, 768};\n    struct ratio dpi_from, x, y;\n    struct source *source;\n    DEVMODEW *mode;\n\n    /* services do not have any adapters, only a virtual monitor */\n    if (!(source = monitor->source)) return rect;\n\n    SetRectEmpty( &rect );\n    if (!(source->state_flags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP)) return rect;\n    source_get_current_settings( source, &current_mode );\n\n    mode = type != MDT_EFFECTIVE_DPI ? &source->physical : &current_mode;\n    SetRect( &rect, mode->dmPosition.x, mode->dmPosition.y,\n             mode->dmPosition.x + mode->dmPelsWidth,\n             mode->dmPosition.y + mode->dmPelsHeight );\n\n    dpi_from = monitor_get_dpi( monitor, type, &x, &y );\n    return map_dpi_rect( rect, dpi_from, dpi );\n}"
+  },
+  {
+   "name": "get_display_device_init_mutex",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 355,
+   "end_line": 372,
+   "static": true,
+   "called_from": [
+    "add_gpu",
+    "update_display_cache_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:551",
+    "dlls/win32u/sysparams.c:570",
+    "dlls/win32u/sysparams.c:596"
+   ],
+   "signature": "static HANDLE get_display_device_init_mutex( void )",
+   "code": "static HANDLE get_display_device_init_mutex( void )\n{\n    WCHAR bufferW[256];\n    UNICODE_STRING name = {.Buffer = bufferW};\n    OBJECT_ATTRIBUTES attr;\n    char buffer[256];\n    HANDLE mutex;\n\n    snprintf( buffer, ARRAY_SIZE(buffer), \"\\\\Sessions\\\\%u\\\\BaseNamedObjects\\\\display_device_init\",\n              RtlGetCurrentPeb()->SessionId );\n    name.MaximumLength = asciiz_to_unicode( bufferW, buffer );\n    name.Length = name.MaximumLength - sizeof(WCHAR);\n\n    InitializeObjectAttributes( &attr, &name, OBJ_OPENIF, NULL, NULL );\n    if (NtCreateMutant( &mutex, MUTEX_ALL_ACCESS, &attr, FALSE ) < 0) return 0;\n    NtWaitForSingleObject( mutex, FALSE, NULL );\n    return mutex;\n}"
+  },
+  {
+   "name": "enum_device_keys",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2492,
+   "end_line": 2535,
+   "static": true,
+   "called_from": [
+    "update_display_cache_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void enum_device_keys( const char *root, const WCHAR *classW, UINT class_size, void (*callback)(const char *) )",
+   "code": "static void enum_device_keys( const char *root, const WCHAR *classW, UINT class_size, void (*callback)(const char *) )\n{\n    char buffer[1024];\n    KEY_VALUE_PARTIAL_INFORMATION *value = (void *)buffer;\n    KEY_BASIC_INFORMATION *key2 = (void *)buffer;\n    HKEY root_key, device_key, instance_key;\n    DWORD size, root_len, i = 0;\n    char path[MAX_PATH];\n\n    if (!(root_key = reg_open_ascii_key( enum_key, root ))) return;\n    root_len = snprintf( path, sizeof(path), \"%s\\\\\", root );\n\n    while (!NtEnumerateKey( root_key, i++, KeyBasicInformation, key2, sizeof(buffer), &size ))\n    {\n        DWORD j = 0, k, len, device_len;\n\n        if (!(device_key = reg_open_key( root_key, key2->Name, key2->NameLength ))) continue;\n        for (k = 0, len = root_len; k < key2->NameLength / sizeof(WCHAR); k++) path[len++] = key2->Name[k];\n        path[len++] = '\\\\';\n        device_len = len;\n\n        while (!NtEnumerateKey( device_key, j++, KeyBasicInformation, key2, sizeof(buffer), &size ))\n        {\n            if (!(instance_key = reg_open_key( device_key, key2->Name, key2->NameLength ))) continue;\n            for (k = 0, len = device_len; k < key2->NameLength / sizeof(WCHAR); k++) path[len++] = key2->Name[k];\n            path[len++] = 0;\n\n            size = query_reg_ascii_value( instance_key, \"ClassGUID\", value, sizeof(buffer) );\n            if (size != class_size || wcscmp( (WCHAR *)value->Data, classW ))\n            {\n                NtClose( instance_key );\n                continue;\n            }\n\n            callback( path );\n\n            NtClose( instance_key );\n        }\n\n        NtClose( device_key );\n    }\n\n    NtClose( root_key );\n}"
+  },
+  {
+   "name": "enum_gpus",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2537,
+   "end_line": 2544,
+   "static": true,
+   "called_from": [
+    "update_display_cache_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void enum_gpus( const char *path )",
+   "code": "static void enum_gpus( const char *path )\n{\n    struct gpu *gpu;\n    if (!(gpu = calloc( 1, sizeof(*gpu) ))) return;\n    gpu->refcount = 1;\n    strcpy( gpu->path, path );\n    list_add_tail( &gpus, &gpu->entry );\n}"
+  },
+  {
+   "name": "enum_monitors",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2557,
+   "end_line": 2564,
+   "static": true,
+   "called_from": [
+    "update_display_cache_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void enum_monitors( const char *path )",
+   "code": "static void enum_monitors( const char *path )\n{\n    struct monitor *monitor;\n    if (!(monitor = calloc( 1, sizeof(*monitor) ))) return;\n    monitor->refcount = 1;\n    strcpy( monitor->path, path );\n    list_add_tail( &monitors, &monitor->entry );\n}"
+  },
+  {
+   "name": "read_gpu_from_registry",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 1094,
+   "end_line": 1138,
+   "static": true,
+   "called_from": [
+    "update_display_cache_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL read_gpu_from_registry( struct gpu *gpu )",
+   "code": "static BOOL read_gpu_from_registry( struct gpu *gpu )\n{\n    char buffer[1024];\n    KEY_VALUE_PARTIAL_INFORMATION *value = (void *)buffer;\n    WCHAR *value_str = (WCHAR *)value->Data;\n    HKEY hkey, subkey;\n    unsigned int i;\n\n    if (!(hkey = reg_open_ascii_key( enum_key, gpu->path ))) return FALSE;\n\n    if (query_reg_ascii_value( hkey, \"Driver\", value, sizeof(buffer) ) && value->Type == REG_SZ)\n        gpu->index = wcstoul( wcsrchr( value_str, '\\\\' ) + 1, NULL, 16 );\n\n    if (query_reg_ascii_value( hkey, \"DeviceDesc\", value, sizeof(buffer) ) && value->Type == REG_SZ)\n        memcpy( gpu->name, value->Data, value->DataLength );\n\n    if ((subkey = reg_open_ascii_key( hkey, devpropkey_gpu_luidA )))\n    {\n        if (query_reg_value( subkey, NULL, value, sizeof(buffer) ) == sizeof(LUID))\n            gpu->luid = *(const LUID *)value->Data;\n        NtClose( subkey );\n    }\n\n    if ((subkey = reg_create_ascii_key( hkey, \"Device Parameters\", 0, NULL )))\n    {\n        if (query_reg_ascii_value( subkey, \"VideoID\", value, sizeof(buffer) ) == sizeof(gpu->guid) * sizeof(WCHAR))\n        {\n            WCHAR *guidW = (WCHAR *)value->Data;\n            for (i = 0; i < sizeof(gpu->guid); i++) gpu->guid[i] = guidW[i];\n            TRACE( \"got guid %s\\n\", debugstr_a(gpu->guid) );\n        }\n        NtClose( subkey );\n    }\n\n    if ((subkey = reg_open_ascii_key( hkey, devpropkey_gpu_uuidA )))\n    {\n        if (query_reg_value( subkey, NULL, value, sizeof(buffer) ) == sizeof(GUID))\n            gpu->uuid = *(const GUID *)value->Data;\n        NtClose( subkey );\n    }\n\n    NtClose( hkey );\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "read_monitor_from_registry",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 751,
+   "end_line": 800,
+   "static": true,
+   "called_from": [
+    "update_display_cache_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL read_monitor_from_registry( struct monitor *monitor )",
+   "code": "static BOOL read_monitor_from_registry( struct monitor *monitor )\n{\n    char buffer[4096];\n    KEY_VALUE_PARTIAL_INFORMATION *value = (void *)buffer;\n    HKEY hkey, subkey;\n    DWORD size;\n\n    if (!(hkey = reg_open_ascii_key( enum_key, monitor->path ))) return FALSE;\n\n    /* Output ID */\n    size = query_reg_subkey_value( hkey, devpropkey_monitor_output_idA,\n                                   value, sizeof(buffer) );\n    if (size != sizeof(monitor->output_id))\n    {\n        NtClose( hkey );\n        return FALSE;\n    }\n    monitor->output_id = *(const unsigned int *)value->Data;\n\n    /* rc_work, WINE_DEVPROPKEY_MONITOR_RCWORK */\n    size = query_reg_subkey_value( hkey, wine_devpropkey_monitor_rcworkA,\n                                   value, sizeof(buffer) );\n    if (size != sizeof(monitor->rc_work))\n    {\n        NtClose( hkey );\n        return FALSE;\n    }\n    monitor->rc_work = *(const RECT *)value->Data;\n\n    /* EDID */\n    if ((subkey = reg_open_ascii_key( hkey, \"Device Parameters\" )))\n    {\n        if (query_reg_ascii_value( subkey, \"EDID\", value, sizeof(buffer) ))\n            get_monitor_info_from_edid( &monitor->edid_info, value->Data, value->DataLength );\n        NtClose( subkey );\n    }\n\n    /* WINE_DEVPROPKEY_MONITOR_HDR_ENABLED */\n    size = query_reg_subkey_value( hkey, wine_devpropkey_monitor_hdr_enabledA,\n                                   value, sizeof(buffer) );\n    if (size != sizeof(monitor->hdr_enabled))\n    {\n        NtClose( hkey );\n        return FALSE;\n    }\n    monitor->hdr_enabled = *(const BOOL *)value->Data;\n\n    NtClose( hkey );\n    return TRUE;\n}"
+  },
+  {
+   "name": "read_source_from_registry",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 684,
+   "end_line": 749,
+   "static": true,
+   "called_from": [
+    "update_display_cache_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL read_source_from_registry( unsigned int index, struct source *source, char *gpu_path )",
+   "code": "static BOOL read_source_from_registry( unsigned int index, struct source *source, char *gpu_path )\n{\n    char buffer[4096];\n    KEY_VALUE_PARTIAL_INFORMATION *value = (void *)buffer;\n    WCHAR *value_str = (WCHAR *)value->Data;\n    DWORD i, size;\n    HKEY hkey;\n\n    if (!enum_key && !(enum_key = reg_open_ascii_key( NULL, enum_keyA )))\n        return FALSE;\n\n    /* Find source */\n    snprintf( buffer, sizeof(buffer), \"\\\\Device\\\\Video%d\", index );\n    size = query_reg_ascii_value( video_key, buffer, value, sizeof(buffer) );\n    if (!size || value->Type != REG_SZ) return FALSE;\n\n    /* DeviceKey */\n    size = sizeof(\"\\\\Registry\\\\Machine\");\n    if (value->DataLength / sizeof(WCHAR) <= size) return FALSE;\n    for (i = 0; i < value->DataLength / sizeof(WCHAR) - size; i++) source->path[i] = value_str[size + i];\n    if (!(hkey = reg_open_ascii_key( config_key, source->path ))) return FALSE;\n\n    /* StateFlags */\n    if (query_reg_ascii_value( hkey, \"StateFlags\", value, sizeof(buffer) ) && value->Type == REG_DWORD)\n        source->state_flags = *(const DWORD *)value->Data;\n\n    /* Dpi */\n    if (query_reg_ascii_value( hkey, \"Dpi\", value, sizeof(buffer) ) && value->Type == REG_DWORD)\n        source->dpi = *(DWORD *)value->Data;\n\n    /* Depth */\n    if (query_reg_ascii_value( hkey, \"Depth\", value, sizeof(buffer) ) && value->Type == REG_DWORD)\n        source->depth = *(const DWORD *)value->Data;\n\n    /* ModeCount */\n    if (query_reg_ascii_value( hkey, \"ModeCount\", value, sizeof(buffer) ) && value->Type == REG_DWORD)\n        source->mode_count = *(const DWORD *)value->Data;\n\n    /* Modes */\n    size = offsetof( KEY_VALUE_PARTIAL_INFORMATION, Data[(source->mode_count + 1) * sizeof(*source->modes)] );\n    if (!(value = malloc( size )) || !query_reg_ascii_value( hkey, \"Modes\", value, size )) free( value );\n    else\n    {\n        source->modes = (DEVMODEW *)value;\n        source->mode_count = value->DataLength / sizeof(*source->modes);\n        memmove( source->modes, value->Data, value->DataLength );\n        memset( source->modes + source->mode_count, 0, sizeof(*source->modes) ); /* extra empty mode for easier iteration */\n        qsort( source->modes, source->mode_count, sizeof(*source->modes), mode_compare );\n    }\n    value = (void *)buffer;\n\n    /* Cache current and physical display modes */\n    if (read_source_mode( hkey, ENUM_CURRENT_SETTINGS, &source->current ))\n        source->current.dmSize = sizeof(source->current);\n    source->physical = source->current;\n    if (read_source_mode( hkey, WINE_ENUM_PHYSICAL_SETTINGS, &source->physical ))\n        source->physical.dmSize = sizeof(source->physical);\n\n    /* DeviceID */\n    size = query_reg_ascii_value( hkey, \"GPUID\", value, sizeof(buffer) );\n    NtClose( hkey );\n    if (!size || value->Type != REG_SZ || !source->mode_count || !source->modes) return FALSE;\n\n    for (i = 0; i < value->DataLength / sizeof(WCHAR); i++) gpu_path[i] = value_str[i];\n    return TRUE;\n}"
+  },
+  {
+   "name": "find_gpu_from_path",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2546,
+   "end_line": 2555,
+   "static": true,
+   "called_from": [
+    "update_display_cache_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static struct gpu *find_gpu_from_path( const char *path )",
+   "code": "static struct gpu *find_gpu_from_path( const char *path )\n{\n    struct gpu *gpu;\n\n    LIST_FOR_EACH_ENTRY( gpu, &gpus, struct gpu, entry )\n        if (!strcmp( gpu->path, path )) return gpu_acquire( gpu );\n\n    ERR( \"Failed to find gpu with path %s\\n\", debugstr_a(path) );\n    return NULL;\n}"
+  },
+  {
+   "name": "read_source_monitor_path",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 802,
+   "end_line": 816,
+   "static": true,
+   "called_from": [
+    "update_display_cache_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL read_source_monitor_path( HKEY hkey, UINT index, char *path )",
+   "code": "static BOOL read_source_monitor_path( HKEY hkey, UINT index, char *path )\n{\n    char buffer[4096];\n    KEY_VALUE_PARTIAL_INFORMATION *value = (void *)buffer;\n    WCHAR *value_str = (WCHAR *)value->Data;\n    DWORD size;\n    UINT i;\n\n    snprintf( buffer, sizeof(buffer), \"MonitorID%u\", index );\n    size = query_reg_ascii_value( hkey, buffer, value, sizeof(buffer) );\n    if (!size || value->Type != REG_SZ) return FALSE;\n\n    for (i = 0; i < value->DataLength / sizeof(WCHAR); i++) path[i] = value_str[i];\n    return TRUE;\n}"
+  },
+  {
+   "name": "find_monitor_from_path",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2566,
+   "end_line": 2575,
+   "static": true,
+   "called_from": [
+    "update_display_cache_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static struct monitor *find_monitor_from_path( const char *path )",
+   "code": "static struct monitor *find_monitor_from_path( const char *path )\n{\n    struct monitor *monitor;\n\n    LIST_FOR_EACH_ENTRY( monitor, &monitors, struct monitor, entry )\n        if (!strcmp( monitor->path, path )) return monitor;\n\n    ERR( \"Failed to find monitor with path %s\\n\", debugstr_a(path) );\n    return NULL;\n}"
+  },
+  {
+   "name": "source_acquire",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 394,
+   "end_line": 399,
+   "static": true,
+   "called_from": [
+    "add_monitor",
+    "update_display_cache_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:3890"
+   ],
+   "signature": "static struct source *source_acquire( struct source *source )",
+   "code": "static struct source *source_acquire( struct source *source )\n{\n    UINT ref = InterlockedIncrement( &source->refcount );\n    TRACE( \"source %p increasing refcount to %u\\n\", source, ref );\n    return source;\n}"
+  },
+  {
+   "name": "release_display_device_init_mutex",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 374,
+   "end_line": 378,
+   "static": true,
+   "called_from": [
+    "release_display_manager_ctx",
+    "update_display_cache_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:560",
+    "dlls/win32u/sysparams.c:579",
+    "dlls/win32u/sysparams.c:606"
+   ],
+   "signature": "static void release_display_device_init_mutex( HANDLE mutex )",
+   "code": "static void release_display_device_init_mutex( HANDLE mutex )\n{\n    NtReleaseMutant( mutex, NULL );\n    NtClose( mutex );\n}"
+  },
+  {
+   "name": "add_virtual_source",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2753,
+   "end_line": 2820,
+   "static": true,
+   "called_from": [
+    "update_display_devices"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL add_virtual_source( struct device_manager_ctx *ctx )",
+   "code": "static BOOL add_virtual_source( struct device_manager_ctx *ctx )\n{\n    DEVMODEW current = {.dmSize = sizeof(current)}, initial = ctx->primary, maximum = ctx->primary, *modes;\n    struct source *physical, *source;\n    struct gdi_monitor monitor = {0};\n    UINT modes_count;\n    struct gpu *gpu;\n\n    assert( !list_empty( &gpus ) );\n    gpu = LIST_ENTRY( list_tail( &gpus ), struct gpu, entry );\n\n    if (list_empty( &sources )) physical = NULL;\n    else physical = LIST_ENTRY( list_tail( &sources ), struct source, entry );\n\n    if (!(source = calloc( 1, sizeof(*source) ))) return STATUS_NO_MEMORY;\n    source->refcount = 1;\n    source->state_flags = DISPLAY_DEVICE_ATTACHED_TO_DESKTOP | DISPLAY_DEVICE_VGA_COMPATIBLE;\n\n    if (ctx->has_primary && physical) physical->id = ctx->source_count;\n    else\n    {\n        source->state_flags |= DISPLAY_DEVICE_PRIMARY_DEVICE;\n        ctx->has_primary = TRUE;\n    }\n    source->gpu = gpu_acquire( gpu );\n\n    /* Wine specific config key where source settings will be held, symlinked with the logically indexed config key */\n    snprintf( source->path, sizeof(source->path), \"%s\\\\%s\\\\Video\\\\%s\\\\Sources\\\\%s\", config_keyA,\n              control_keyA + strlen( \"\\\\Registry\\\\Machine\" ), gpu->guid, \"Virtual\" );\n\n    if (!write_source_to_registry( source ))\n    {\n        WARN( \"Failed to write source to registry\\n\" );\n        source_release( source );\n        return STATUS_UNSUCCESSFUL;\n    }\n\n    list_add_tail( &sources, &source->entry );\n    gpu->source_count++;\n    ctx->source_count++;\n\n    if (!get_default_desktop_size( &initial.dmPelsWidth, &initial.dmPelsHeight ))\n    {\n        initial.dmPelsWidth = maximum.dmPelsWidth;\n        initial.dmPelsHeight = maximum.dmPelsHeight;\n    }\n\n    if (!read_source_mode( source->key, ENUM_CURRENT_SETTINGS, &current ))\n    {\n        current = ctx->primary;\n        current.dmDisplayFrequency = 60;\n        current.dmPelsWidth = initial.dmPelsWidth;\n        current.dmPelsHeight = initial.dmPelsHeight;\n    }\n\n    monitor.rc_monitor.right = current.dmPelsWidth;\n    monitor.rc_monitor.bottom = current.dmPelsHeight;\n    monitor.rc_work.right = current.dmPelsWidth;\n    monitor.rc_work.bottom = current.dmPelsHeight;\n    add_monitor( &monitor, ctx );\n\n    /* Expose the virtual source display modes as physical modes, to avoid DPI scaling */\n    if (!(modes = get_virtual_modes( &initial, &maximum, NULL, 0, &modes_count ))) return STATUS_NO_MEMORY;\n    add_modes( &current, modes_count, modes, ctx );\n    free( modes );\n\n    return STATUS_SUCCESS;\n}"
+  },
+  {
+   "name": "default_update_display_devices",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2667,
+   "end_line": 2719,
+   "static": true,
+   "called_from": [
+    "update_display_devices"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS default_update_display_devices( struct device_manager_ctx *ctx )",
+   "code": "static NTSTATUS default_update_display_devices( struct device_manager_ctx *ctx )\n{\n    /* default implementation: expose an adapter and a monitor with a few standard modes,\n     * and read / write current display settings from / to the registry.\n     */\n    static const DEVMODEW modes[] =\n    {\n        { .dmSize = sizeof(DEVMODEW),\n          .dmFields = DM_DISPLAYORIENTATION | DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFLAGS | DM_DISPLAYFREQUENCY,\n          .dmBitsPerPel = 32, .dmPelsWidth = 640, .dmPelsHeight = 480, .dmDisplayFrequency = 60, },\n        { .dmSize = sizeof(DEVMODEW),\n          .dmFields = DM_DISPLAYORIENTATION | DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFLAGS | DM_DISPLAYFREQUENCY,\n          .dmBitsPerPel = 32, .dmPelsWidth = 800, .dmPelsHeight = 600, .dmDisplayFrequency = 60, },\n        { .dmSize = sizeof(DEVMODEW),\n          .dmFields = DM_DISPLAYORIENTATION | DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFLAGS | DM_DISPLAYFREQUENCY,\n          .dmBitsPerPel = 32, .dmPelsWidth = 1024, .dmPelsHeight = 768, .dmDisplayFrequency = 60, },\n        { .dmSize = sizeof(DEVMODEW),\n          .dmFields = DM_DISPLAYORIENTATION | DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFLAGS | DM_DISPLAYFREQUENCY,\n          .dmBitsPerPel = 16, .dmPelsWidth = 640, .dmPelsHeight = 480, .dmDisplayFrequency = 60, },\n        { .dmSize = sizeof(DEVMODEW),\n          .dmFields = DM_DISPLAYORIENTATION | DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFLAGS | DM_DISPLAYFREQUENCY,\n          .dmBitsPerPel = 16, .dmPelsWidth = 800, .dmPelsHeight = 600, .dmDisplayFrequency = 60, },\n        { .dmSize = sizeof(DEVMODEW),\n          .dmFields = DM_DISPLAYORIENTATION | DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFLAGS | DM_DISPLAYFREQUENCY,\n          .dmBitsPerPel = 16, .dmPelsWidth = 1024, .dmPelsHeight = 768, .dmDisplayFrequency = 60, },\n    };\n    static const DWORD source_flags = DISPLAY_DEVICE_ATTACHED_TO_DESKTOP | DISPLAY_DEVICE_PRIMARY_DEVICE | DISPLAY_DEVICE_VGA_COMPATIBLE;\n    struct pci_id pci_id = {0};\n    struct gdi_monitor monitor = {0};\n    DEVMODEW mode = {.dmSize = sizeof(mode)};\n    struct source *source;\n\n    add_gpu( NULL, &pci_id, NULL, ctx );\n    add_source( \"Default\", source_flags, system_dpi, ctx );\n\n    assert( !list_empty( &sources ) );\n    source = LIST_ENTRY( list_tail( &sources ), struct source, entry );\n\n    if (!read_source_mode( source->key, ENUM_CURRENT_SETTINGS, &mode ))\n    {\n        mode = modes[2];\n        mode.dmFields |= DM_POSITION;\n    }\n    monitor.rc_monitor.right = mode.dmPelsWidth;\n    monitor.rc_monitor.bottom = mode.dmPelsHeight;\n    monitor.rc_work.right = mode.dmPelsWidth;\n    monitor.rc_work.bottom = mode.dmPelsHeight;\n\n    add_monitor( &monitor, ctx );\n    add_modes( &mode, ARRAY_SIZE(modes), modes, ctx );\n\n    return STATUS_SUCCESS;\n}"
+  },
+  {
+   "name": "add_gpu",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 1737,
+   "end_line": 1840,
+   "static": true,
+   "called_from": [
+    "commit_display_devices",
+    "default_update_display_devices"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:2263"
+   ],
+   "signature": "static void add_gpu( const char *name, const struct pci_id *pci_id, const GUID *uuid, void *param )",
+   "code": "static void add_gpu( const char *name, const struct pci_id *pci_id, const GUID *uuid, void *param )\n{\n    struct device_manager_ctx *ctx = param;\n    char buffer[4096];\n    KEY_VALUE_PARTIAL_INFORMATION *value = (void *)buffer;\n    struct gpu_info *vulkan_gpu = NULL, *opengl_gpu = NULL;\n    ULONGLONG memory = 0;\n    struct gpu *gpu;\n    unsigned int i;\n    HKEY hkey, subkey;\n    DWORD len;\n\n    static const GUID empty_uuid;\n\n    TRACE( \"%s %04X %04X %08X %02X %s\\n\", debugstr_a( name ), pci_id->vendor, pci_id->device,\n           pci_id->subsystem, pci_id->revision, debugstr_guid( uuid ) );\n\n    if (!enum_key && !(enum_key = reg_create_ascii_key( NULL, enum_keyA, 0, NULL )))\n        return;\n\n    if (!ctx->mutex)\n    {\n        ctx->mutex = get_display_device_init_mutex();\n        prepare_devices();\n    }\n\n    if (!(gpu = calloc( 1, sizeof(*gpu) ))) return;\n    gpu->refcount = 1;\n    gpu->index = ctx->gpu_count;\n\n    vulkan_gpu = find_gpu_info( &ctx->vulkan_gpus, uuid, pci_id );\n    opengl_gpu = find_gpu_info( &ctx->opengl_gpus, uuid, pci_id );\n    if (uuid && !IsEqualGUID( uuid, &empty_uuid )) gpu->uuid = *uuid;\n    else if (vulkan_gpu) gpu->uuid = vulkan_gpu->uuid;\n    else if (opengl_gpu) gpu->uuid = opengl_gpu->uuid;\n\n    if (!pci_id->vendor && !pci_id->device && vulkan_gpu) pci_id = &vulkan_gpu->pci_id;\n    if (!pci_id->vendor && !pci_id->device && opengl_gpu) pci_id = &opengl_gpu->pci_id;\n\n    name = gpu_device_name( pci_id->vendor, pci_id->device, name );\n    if (!strcmp( name, \"Wine Adapter\" ) && vulkan_gpu) name = vulkan_gpu->name;\n    if (!strcmp( name, \"Wine Adapter\" ) && opengl_gpu) name = opengl_gpu->name;\n    RtlUTF8ToUnicodeN( gpu->name, sizeof(gpu->name) - sizeof(WCHAR), &len, name, strlen( name ) );\n\n    snprintf( gpu->path, sizeof(gpu->path), \"PCI\\\\VEN_%04X&DEV_%04X&SUBSYS_%08X&REV_%02X\\\\%08X\",\n              pci_id->vendor, pci_id->device, pci_id->subsystem, pci_id->revision, gpu->index );\n    if (!(hkey = reg_create_ascii_key( enum_key, gpu->path, 0, NULL ))) return;\n\n    if ((subkey = reg_create_ascii_key( hkey, \"Device Parameters\", 0, NULL )))\n    {\n        if (query_reg_ascii_value( subkey, \"VideoID\", value, sizeof(buffer) ) != sizeof(gpu->guid) * sizeof(WCHAR))\n        {\n            GUID guid;\n            uuid_create( &guid );\n            snprintf( gpu->guid, sizeof(gpu->guid), \"{%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}\",\n                      (unsigned int)guid.Data1, guid.Data2, guid.Data3, guid.Data4[0], guid.Data4[1], guid.Data4[2],\n                      guid.Data4[3], guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7] );\n            TRACE( \"created guid %s\\n\", debugstr_a(gpu->guid) );\n        }\n        else\n        {\n            WCHAR *guidW = (WCHAR *)value->Data;\n            for (i = 0; i < sizeof(gpu->guid); i++) gpu->guid[i] = guidW[i];\n            TRACE( \"got guid %s\\n\", debugstr_a(gpu->guid) );\n        }\n        NtClose( subkey );\n    }\n\n    if ((subkey = reg_create_ascii_key( hkey, devpropkey_gpu_luidA, 0, NULL )))\n    {\n        if (query_reg_value( subkey, NULL, value, sizeof(buffer) ) != sizeof(LUID))\n        {\n            NtAllocateLocallyUniqueId( &gpu->luid );\n            TRACE(\"allocated luid %08x%08x\\n\", gpu->luid.HighPart, gpu->luid.LowPart );\n        }\n        else\n        {\n            memcpy( &gpu->luid, value->Data, sizeof(gpu->luid) );\n            TRACE(\"got luid %08x%08x\\n\", gpu->luid.HighPart, gpu->luid.LowPart );\n        }\n        NtClose( subkey );\n    }\n\n    NtClose( hkey );\n\n    if (!memory && vulkan_gpu) memory = vulkan_gpu->memory;\n    if (!memory && opengl_gpu) memory = opengl_gpu->memory;\n    if (!memory) memory = 1024 * 1024 * 1024;\n\n    if (!write_gpu_to_registry( gpu, pci_id, memory ))\n    {\n        WARN( \"Failed to write gpu %p to registry\\n\", gpu );\n        gpu_release( gpu );\n    }\n    else\n    {\n        list_add_tail( &gpus, &gpu->entry );\n        TRACE( \"created gpu %p\\n\", gpu );\n        ctx->gpu_count++;\n    }\n\n    if (vulkan_gpu) free_gpu_info( vulkan_gpu );\n    if (opengl_gpu) free_gpu_info( opengl_gpu );\n}"
+  },
+  {
+   "name": "cleanup_devices",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 952,
+   "end_line": 1002,
+   "static": true,
+   "called_from": [
+    "release_display_manager_ctx"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void cleanup_devices(void)",
+   "code": "static void cleanup_devices(void)\n{\n    char buffer[4096];\n    KEY_NODE_INFORMATION *key = (void *)buffer;\n    KEY_VALUE_PARTIAL_INFORMATION *value = (void *)buffer;\n    WCHAR bufferW[512], *value_str = (WCHAR *)value->Data;\n    unsigned i = 0;\n    DWORD size;\n    HKEY hkey, subkey, device_key, prop_key;\n\n    hkey = reg_open_ascii_key( enum_key, \"PCI\" );\n\n    while (!NtEnumerateKey( hkey, i++, KeyNodeInformation, key, sizeof(buffer), &size ))\n    {\n        unsigned int j = 0;\n\n        if (!(subkey = reg_open_key( hkey, key->Name, key->NameLength ))) continue;\n\n        while (!NtEnumerateKey( subkey, j++, KeyNodeInformation, key, sizeof(buffer), &size ))\n        {\n            BOOL present = FALSE;\n\n            if (!(device_key = reg_open_key( subkey, key->Name, key->NameLength ))) continue;\n            memcpy( bufferW, key->Name, key->NameLength );\n            bufferW[key->NameLength / sizeof(WCHAR)] = 0;\n\n            size = query_reg_ascii_value( device_key, \"ClassGUID\", value, sizeof(buffer) );\n            if (size != sizeof(guid_devclass_displayW) || wcscmp( value_str, guid_devclass_displayW ))\n            {\n                NtClose( device_key );\n                continue;\n            }\n\n            if ((prop_key = reg_open_ascii_key( device_key, devpropkey_device_ispresentA )))\n            {\n                if (query_reg_value( prop_key, NULL, value, sizeof(buffer) ) == sizeof(BOOL))\n                    present = *(const BOOL *)value->Data;\n                NtClose( prop_key );\n            }\n\n            NtClose( device_key );\n\n            if (!present && reg_delete_tree( subkey, bufferW, lstrlenW( bufferW ) * sizeof(WCHAR) ))\n                j = 0;\n        }\n\n        NtClose( subkey );\n    }\n\n    NtClose( hkey );\n}"
+  },
+  {
+   "name": "free_gpu_infos",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2269,
+   "end_line": 2278,
+   "static": true,
+   "called_from": [
+    "release_display_manager_ctx"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void free_gpu_infos( struct list *infos )",
+   "code": "static void free_gpu_infos( struct list *infos )\n{\n    struct list *ptr;\n\n    while ((ptr = list_head( infos )))\n    {\n        struct gpu_info *info = LIST_ENTRY( ptr, struct gpu_info, entry );\n        free_gpu_info( info );\n    }\n}"
+  },
+  {
+   "name": "make_ratio",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 320,
+   "end_line": 327,
+   "static": true,
+   "called_from": [
+    "monitor_get_dpi"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static struct ratio make_ratio( UINT num, UINT den )",
+   "code": "static struct ratio make_ratio( UINT num, UINT den )\n{\n    UINT d = gcd( num, den );\n    struct ratio r = { num / d, den / d };\n    assert( num / d < 65536 );\n    assert( den / d < 65536 );\n    return r;\n}"
+  },
+  {
+   "name": "min_ratio",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 329,
+   "end_line": 332,
+   "static": true,
+   "called_from": [
+    "monitor_get_dpi"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static struct ratio min_ratio( struct ratio x, struct ratio y )",
+   "code": "static struct ratio min_ratio( struct ratio x, struct ratio y )\n{\n    return x.num * y.den <= y.num * x.den ? x : y;\n}"
+  },
+  {
+   "name": "map_dpi_rect",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 3318,
+   "end_line": 3329,
+   "static": false,
+   "called_from": [
+    "monitor_get_rect"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/window.c:349",
+    "dlls/win32u/window.c:1889",
+    "dlls/win32u/window.c:1978",
+    "dlls/win32u/window.c:1979",
+    "dlls/win32u/window.c:1980"
+   ],
+   "signature": "RECT map_dpi_rect( RECT rect, struct ratio dpi_from, struct ratio dpi_to )",
+   "code": "RECT map_dpi_rect( RECT rect, struct ratio dpi_from, struct ratio dpi_to )\n{\n    if (needs_dpi_mapping( dpi_from, dpi_to ))\n    {\n        unsigned int num = dpi_to.num * dpi_from.den, den = dpi_from.num * dpi_to.den;\n        rect.left   = muldiv( rect.left, num, den );\n        rect.top    = muldiv( rect.top, num, den );\n        rect.right  = muldiv( rect.right, num, den );\n        rect.bottom = muldiv( rect.bottom, num, den );\n    }\n    return rect;\n}"
+  },
+  {
+   "name": "query_reg_subkey_value",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 674,
+   "end_line": 682,
+   "static": true,
+   "called_from": [
+    "read_monitor_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static unsigned int query_reg_subkey_value( HKEY hkey, const char *name, KEY_VALUE_PARTIAL_INFORMATION *value, unsigned int size )",
+   "code": "static unsigned int query_reg_subkey_value( HKEY hkey, const char *name, KEY_VALUE_PARTIAL_INFORMATION *value, unsigned int size )\n{\n    HKEY subkey;\n\n    if (!(subkey = reg_open_ascii_key( hkey, name ))) return 0;\n    size = query_reg_value( subkey, NULL, value, size );\n    NtClose( subkey );\n    return size;\n}"
+  },
+  {
+   "name": "get_monitor_info_from_edid",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 427,
+   "end_line": 475,
+   "static": true,
+   "called_from": [
+    "add_monitor",
+    "read_monitor_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void get_monitor_info_from_edid( struct edid_monitor_info *info, const unsigned char *edid, unsigned int edid_len )",
+   "code": "static void get_monitor_info_from_edid( struct edid_monitor_info *info, const unsigned char *edid, unsigned int edid_len )\n{\n    unsigned int i, j;\n    unsigned short w;\n    unsigned char d;\n    const char *s;\n\n    info->flags = 0;\n    if (!edid || edid_len < 128) return;\n\n    w = (edid[8] << 8) | edid[9]; /* Manufacturer ID, big endian. */\n    for (i = 0; i < 3; ++i)\n    {\n        d = w & 0x1f;\n        if (!d || d - 1 > 'Z' - 'A') return;\n        info->monitor_id_string[2 - i] = 'A' + d - 1;\n        w >>= 5;\n    }\n    if (w) return;\n    w = edid[10] | (edid[11] << 8); /* Product code, little endian. */\n    info->manufacturer = *(unsigned short *)(edid + 8);\n    info->product_code = w;\n    snprintf( info->monitor_id_string + 3, sizeof(info->monitor_id_string) - 3, \"%04X\", w );\n    info->flags = MONITOR_INFO_HAS_MONITOR_ID;\n    TRACE( \"Monitor id %s.\\n\", info->monitor_id_string );\n\n    for (i = 0; i < 4; ++i)\n    {\n        if (edid[54 + i * 18] || edid[54 + i * 18 + 1])\n        {\n            /* Detailed timing descriptor. */\n            if (info->flags & MONITOR_INFO_HAS_PREFERRED_MODE) continue;\n            info->preferred_width = edid[54 + i * 18 + 2] | ((UINT32)(edid[54 + i * 18 + 4] & 0xf0) << 4);\n            info->preferred_height = edid[54 + i * 18 + 5] | ((UINT32)(edid[54 + i * 18 + 7] & 0xf0) << 4);\n            if (info->preferred_width && info->preferred_height)\n                info->flags |= MONITOR_INFO_HAS_PREFERRED_MODE;\n            continue;\n        }\n        if (edid[54 + i * 18 + 3] != 0xfc) continue;\n        /* \"Display name\" ASCII descriptor. */\n        s = (const char *)&edid[54 + i * 18 + 5];\n        for (j = 0; s[j] && j < 13; ++j)\n            info->monitor_name[j] = s[j];\n        while (j && isspace(s[j - 1])) --j;\n        info->monitor_name[j] = 0;\n        info->flags |= MONITOR_INFO_HAS_MONITOR_NAME;\n        break;\n    }\n}"
+  },
+  {
+   "name": "mode_compare",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 610,
+   "end_line": 672,
+   "static": true,
+   "called_from": [
+    "read_source_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static int mode_compare(const void *p1, const void *p2)",
+   "code": "static int mode_compare(const void *p1, const void *p2)\n{\n    BOOL a_interlaced, b_interlaced, a_stretched, b_stretched;\n    DWORD a_width, a_height, b_width, b_height;\n    const DEVMODEW *a = p1, *b = p2;\n    int ret;\n\n    /* Depth in descending order */\n    if ((ret = b->dmBitsPerPel - a->dmBitsPerPel)) return ret;\n\n    /* Use the width and height in landscape mode for comparison */\n    if (a->dmDisplayOrientation == DMDO_DEFAULT || a->dmDisplayOrientation == DMDO_180)\n    {\n        a_width = a->dmPelsWidth;\n        a_height = a->dmPelsHeight;\n    }\n    else\n    {\n        a_width = a->dmPelsHeight;\n        a_height = a->dmPelsWidth;\n    }\n\n    if (b->dmDisplayOrientation == DMDO_DEFAULT || b->dmDisplayOrientation == DMDO_180)\n    {\n        b_width = b->dmPelsWidth;\n        b_height = b->dmPelsHeight;\n    }\n    else\n    {\n        b_width = b->dmPelsHeight;\n        b_height = b->dmPelsWidth;\n    }\n\n    /* Width in ascending order */\n    if ((ret = a_width - b_width)) return ret;\n\n    /* Height in ascending order */\n    if ((ret = a_height - b_height)) return ret;\n\n    /* Frequency in descending order */\n    if ((ret = b->dmDisplayFrequency - a->dmDisplayFrequency)) return ret;\n\n    /* Orientation in ascending order */\n    if ((ret = a->dmDisplayOrientation - b->dmDisplayOrientation)) return ret;\n\n    if (!(a->dmFields & DM_DISPLAYFLAGS)) a_interlaced = FALSE;\n    else a_interlaced = !!(a->dmDisplayFlags & DM_INTERLACED);\n    if (!(b->dmFields & DM_DISPLAYFLAGS)) b_interlaced = FALSE;\n    else b_interlaced = !!(b->dmDisplayFlags & DM_INTERLACED);\n\n    /* Interlaced in ascending order */\n    if ((ret = a_interlaced - b_interlaced)) return ret;\n\n    if (!(a->dmFields & DM_DISPLAYFIXEDOUTPUT)) a_stretched = FALSE;\n    else a_stretched = a->dmDisplayFixedOutput == DMDFO_STRETCH;\n    if (!(b->dmFields & DM_DISPLAYFIXEDOUTPUT)) b_stretched = FALSE;\n    else b_stretched = b->dmDisplayFixedOutput == DMDFO_STRETCH;\n\n    /* Stretched in ascending order */\n    if ((ret = a_stretched - b_stretched)) return ret;\n\n    return 0;\n}"
+  },
+  {
+   "name": "read_source_mode",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 527,
+   "end_line": 543,
+   "static": true,
+   "called_from": [
+    "add_modes",
+    "add_virtual_source",
+    "default_update_display_devices",
+    "read_source_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:556"
+   ],
+   "signature": "static BOOL read_source_mode( HKEY hkey, UINT index, DEVMODEW *mode )",
+   "code": "static BOOL read_source_mode( HKEY hkey, UINT index, DEVMODEW *mode )\n{\n    char value_buf[offsetof(KEY_VALUE_PARTIAL_INFORMATION, Data[sizeof(*mode)])];\n    KEY_VALUE_PARTIAL_INFORMATION *value = (void *)value_buf;\n    const char *key;\n\n    assert( index == ENUM_CURRENT_SETTINGS || index == ENUM_REGISTRY_SETTINGS || index == WINE_ENUM_PHYSICAL_SETTINGS );\n\n    if (index == ENUM_CURRENT_SETTINGS) key = \"Current\";\n    else if (index == ENUM_REGISTRY_SETTINGS) key = \"Registry\";\n    else if (index == WINE_ENUM_PHYSICAL_SETTINGS) key = \"Physical\";\n    else return FALSE;\n\n    if (!query_reg_ascii_value( hkey, key, value, sizeof(value_buf) )) return FALSE;\n    memcpy( &mode->dmFields, value->Data, offsetof(DEVMODEW, dmICMMethod) - offsetof(DEVMODEW, dmFields) );\n    return TRUE;\n}"
+  },
+  {
+   "name": "gpu_acquire",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 380,
+   "end_line": 385,
+   "static": true,
+   "called_from": [
+    "add_source",
+    "add_virtual_source",
+    "find_gpu_from_path"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:8025"
+   ],
+   "signature": "static struct gpu *gpu_acquire( struct gpu *gpu )",
+   "code": "static struct gpu *gpu_acquire( struct gpu *gpu )\n{\n    UINT ref = InterlockedIncrement( &gpu->refcount );\n    TRACE( \"gpu %p increasing refcount to %u\\n\", gpu, ref );\n    return gpu;\n}"
+  },
+  {
+   "name": "write_source_to_registry",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 1842,
+   "end_line": 1882,
+   "static": true,
+   "called_from": [
+    "add_source",
+    "add_virtual_source"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL write_source_to_registry( struct source *source )",
+   "code": "static BOOL write_source_to_registry( struct source *source )\n{\n    struct gpu *gpu = source->gpu;\n    unsigned int len, source_index = gpu->source_count;\n    char name[64], buffer[MAX_PATH];\n    WCHAR bufferW[MAX_PATH];\n    HKEY hkey;\n\n    snprintf( buffer, sizeof(buffer), \"%s\\\\Video\\\\%s\\\\%04x\", control_keyA, gpu->guid, source_index );\n    len = asciiz_to_unicode( bufferW, buffer ) - sizeof(WCHAR);\n\n    hkey = reg_create_ascii_key( NULL, buffer, REG_OPTION_VOLATILE | REG_OPTION_CREATE_LINK, NULL );\n    if (!hkey) hkey = reg_create_ascii_key( NULL, buffer, REG_OPTION_VOLATILE | REG_OPTION_OPEN_LINK, NULL );\n\n    snprintf( name, sizeof(name), \"\\\\Device\\\\Video%u\", source->id );\n    set_reg_ascii_value( video_key, name, buffer );\n\n    if (!hkey) return FALSE;\n\n    snprintf( buffer, sizeof(buffer), \"%s\\\\Class\\\\%s\\\\%04X\", control_keyA, guid_devclass_displayA, gpu->index );\n    len = asciiz_to_unicode( bufferW, buffer ) - sizeof(WCHAR);\n    set_reg_value( hkey, symbolic_link_valueW, REG_LINK, bufferW, len );\n    NtClose( hkey );\n\n    /* Following information is Wine specific, it doesn't really exist on Windows. */\n    source->key = reg_create_ascii_key( NULL, source->path, REG_OPTION_VOLATILE, NULL );\n    set_reg_ascii_value( source->key, \"GPUID\", gpu->path );\n    set_reg_value( source->key, state_flagsW, REG_DWORD, &source->state_flags,\n                   sizeof(source->state_flags) );\n    set_reg_value( source->key, dpiW, REG_DWORD, &source->dpi, sizeof(source->dpi) );\n\n    snprintf( buffer, sizeof(buffer), \"System\\\\CurrentControlSet\\\\Control\\\\Video\\\\%s\\\\%04x\", gpu->guid, source_index );\n    hkey = reg_create_ascii_key( config_key, buffer, REG_OPTION_VOLATILE | REG_OPTION_CREATE_LINK, NULL );\n    if (!hkey) hkey = reg_create_ascii_key( config_key, buffer, REG_OPTION_VOLATILE | REG_OPTION_OPEN_LINK, NULL );\n\n    len = asciiz_to_unicode( bufferW, source->path ) - sizeof(WCHAR);\n    set_reg_value( hkey, symbolic_link_valueW, REG_LINK, bufferW, len );\n    NtClose( hkey );\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "get_default_desktop_size",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2735,
+   "end_line": 2751,
+   "static": true,
+   "called_from": [
+    "add_virtual_source"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL get_default_desktop_size( DWORD *width, DWORD *height )",
+   "code": "static BOOL get_default_desktop_size( DWORD *width, DWORD *height )\n{\n    WCHAR buffer[4096];\n    KEY_VALUE_PARTIAL_INFORMATION *value = (void *)buffer;\n    DWORD size;\n    HKEY hkey;\n\n    /* @@ Wine registry key: HKCU\\Software\\Wine\\Explorer\\Desktops */\n    if (!(hkey = reg_open_hkcu_key( \"Software\\\\Wine\\\\Explorer\\\\Desktops\" ))) return FALSE;\n\n    size = query_reg_ascii_value( hkey, \"Default\", value, sizeof(buffer) );\n    NtClose( hkey );\n    if (!size || value->Type != REG_SZ) return FALSE;\n\n    if (!parse_size( (const WCHAR *)value->Data, width, height )) return FALSE;\n    return TRUE;\n}"
+  },
+  {
+   "name": "add_monitor",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2010,
+   "end_line": 2053,
+   "static": true,
+   "called_from": [
+    "add_virtual_source",
+    "default_update_display_devices"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:2265"
+   ],
+   "signature": "static void add_monitor( const struct gdi_monitor *gdi_monitor, void *param )",
+   "code": "static void add_monitor( const struct gdi_monitor *gdi_monitor, void *param )\n{\n    struct device_manager_ctx *ctx = param;\n    struct monitor *monitor;\n    struct source *source;\n    char buffer[MAX_PATH];\n    char monitor_id_string[16];\n\n    assert( !list_empty( &sources ) );\n    source = LIST_ENTRY( list_tail( &sources ), struct source, entry );\n\n    if (!(monitor = calloc( 1, sizeof(*monitor) ))) return;\n    monitor->refcount = 1;\n    monitor->source = source_acquire( source );\n    monitor->id = source->monitor_count;\n    monitor->output_id = ctx->monitor_count;\n    monitor->rc_work = gdi_monitor->rc_work;\n    monitor->hdr_enabled = gdi_monitor->hdr_enabled;\n\n    TRACE( \"%u %s %s\\n\", monitor->id, wine_dbgstr_rect(&gdi_monitor->rc_monitor), wine_dbgstr_rect(&gdi_monitor->rc_work) );\n\n    get_monitor_info_from_edid( &monitor->edid_info, gdi_monitor->edid, gdi_monitor->edid_len );\n    if (monitor->edid_info.flags & MONITOR_INFO_HAS_MONITOR_ID)\n        strcpy( monitor_id_string, monitor->edid_info.monitor_id_string );\n    else\n        strcpy( monitor_id_string, \"Default_Monitor\" );\n\n    snprintf( buffer, sizeof(buffer), \"MonitorID%u\", monitor->id );\n    snprintf( monitor->path, sizeof(monitor->path), \"DISPLAY\\\\%s\\\\%04X&%04X\", monitor_id_string, source->id, monitor->id );\n    set_reg_ascii_value( source->key, buffer, monitor->path );\n\n    if (!write_monitor_to_registry( monitor, gdi_monitor->edid, gdi_monitor->edid_len ))\n    {\n        WARN( \"Failed to write monitor %p to registry\\n\", monitor );\n        monitor_release( monitor );\n    }\n    else\n    {\n        list_add_tail( &monitors, &monitor->entry );\n        TRACE( \"created monitor %p for source %p\\n\", monitor, source );\n        source->monitor_count++;\n        ctx->monitor_count++;\n    }\n}"
+  },
+  {
+   "name": "get_virtual_modes",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2140,
+   "end_line": 2198,
+   "static": true,
+   "called_from": [
+    "add_modes",
+    "add_virtual_source"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DEVMODEW *get_virtual_modes( const DEVMODEW *initial, const DEVMODEW *maximum, const DEVMODEW *host_modes, UINT host_modes_count, UINT32 *modes_count )",
+   "code": "static DEVMODEW *get_virtual_modes( const DEVMODEW *initial, const DEVMODEW *maximum,\n                                    const DEVMODEW *host_modes, UINT host_modes_count, UINT32 *modes_count )\n{\n    UINT depths[] = {8, 16, initial->dmBitsPerPel}, freqs[] = {60, -1}, sizes_count, i, j, f, count = 0;\n    DEVMODEW *modes = NULL;\n    SIZE *screen_sizes;\n    BOOL vertical;\n\n    /* Check the ratio of dmPelsWidth to dmPelsHeight to determine whether the initial display mode\n     * is in horizontal or vertical orientation. DMDO_DEFAULT is the natural orientation of the\n     * device, which isn't necessarily a horizontal mode */\n    vertical = initial->dmPelsHeight > initial->dmPelsWidth;\n\n    freqs[1] = devmode_get( initial, DM_DISPLAYFREQUENCY );\n    if (freqs[1] <= 60) freqs[1] = 0;\n\n    if (!(screen_sizes = get_screen_sizes( maximum, host_modes, host_modes_count, &sizes_count ))) return NULL;\n    modes = malloc( ARRAY_SIZE(freqs) * ARRAY_SIZE(depths) * (sizes_count + 2) * sizeof(*modes) );\n\n    for (i = 0; modes && i < ARRAY_SIZE(depths); ++i)\n    for (f = 0; f < ARRAY_SIZE(freqs); ++f)\n    {\n        DEVMODEW mode =\n        {\n            .dmSize = sizeof(mode),\n            .dmFields = DM_DISPLAYORIENTATION | DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFLAGS | DM_DISPLAYFREQUENCY,\n            .dmDisplayFrequency = freqs[f],\n            .dmBitsPerPel = depths[i],\n            .dmDisplayOrientation = initial->dmDisplayOrientation,\n        };\n        if (!mode.dmDisplayFrequency) continue;\n\n        for (j = 0; j < sizes_count; ++j)\n        {\n            mode.dmPelsWidth = vertical ? screen_sizes[j].cy : screen_sizes[j].cx;\n            mode.dmPelsHeight = vertical ? screen_sizes[j].cx : screen_sizes[j].cy;\n\n            if (mode.dmPelsWidth > maximum->dmPelsWidth || mode.dmPelsHeight > maximum->dmPelsHeight) continue;\n            if (mode.dmPelsWidth == maximum->dmPelsWidth && mode.dmPelsHeight == maximum->dmPelsHeight) continue;\n            if (mode.dmPelsWidth == initial->dmPelsWidth && mode.dmPelsHeight == initial->dmPelsHeight) continue;\n            count += add_virtual_mode( modes, count, &mode );\n        }\n\n        mode.dmPelsWidth = vertical ? initial->dmPelsHeight : initial->dmPelsWidth;\n        mode.dmPelsHeight = vertical ? initial->dmPelsWidth : initial->dmPelsHeight;\n        count += add_virtual_mode( modes, count, &mode );\n\n        if (maximum->dmPelsWidth != initial->dmPelsWidth || maximum->dmPelsHeight != initial->dmPelsHeight)\n        {\n            mode.dmPelsWidth = vertical ? maximum->dmPelsHeight : maximum->dmPelsWidth;\n            mode.dmPelsHeight = vertical ? maximum->dmPelsWidth : maximum->dmPelsHeight;\n            count += add_virtual_mode( modes, count, &mode );\n        }\n    }\n\n    *modes_count = count;\n    free( screen_sizes );\n    return modes;\n}"
+  },
+  {
+   "name": "add_modes",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2200,
+   "end_line": 2259,
+   "static": true,
+   "called_from": [
+    "add_virtual_source",
+    "default_update_display_devices"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:2266"
+   ],
+   "signature": "static void add_modes( const DEVMODEW *current, UINT host_modes_count, const DEVMODEW *host_modes, void *param )",
+   "code": "static void add_modes( const DEVMODEW *current, UINT host_modes_count, const DEVMODEW *host_modes, void *param )\n{\n    struct device_manager_ctx *ctx = param;\n    DEVMODEW dummy, physical, detached = *current, virtual, *virtual_modes = NULL;\n    UINT virtual_count, modes_count = host_modes_count;\n    const DEVMODEW *modes = host_modes;\n    struct source *source;\n\n    TRACE( \"current %s, host_modes_count %u, host_modes %p, param %p\\n\", debugstr_devmodew( current ),\n           host_modes_count, host_modes, param );\n\n    assert( !list_empty( &sources ) );\n    source = LIST_ENTRY( list_tail( &sources ), struct source, entry );\n\n    if (emulate_modeset)\n    {\n        modes = current;\n        modes_count = 1;\n    }\n\n    physical = modes_count == 1 ? *modes : *current;\n    if (ctx->is_primary) ctx->primary = *current;\n\n    detached.dmPelsWidth = 0;\n    detached.dmPelsHeight = 0;\n    if (!(source->state_flags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP)) current = &detached;\n\n    if (modes_count > 1 || current == &detached)\n    {\n        reg_delete_value( source->key, physicalW );\n        virtual_modes = NULL;\n    }\n    else\n    {\n        if (!read_source_mode( source->key, ENUM_CURRENT_SETTINGS, &virtual ) || is_detached_mode( &virtual ))\n            virtual = physical;\n\n        if ((virtual_modes = get_virtual_modes( current, &physical, host_modes, host_modes_count, &virtual_count )))\n        {\n            modes_count = virtual_count;\n            modes = virtual_modes;\n            current = &virtual;\n\n            write_source_mode( source->key, WINE_ENUM_PHYSICAL_SETTINGS, &physical );\n        }\n    }\n\n    if (current == &detached || !read_source_mode( source->key, ENUM_REGISTRY_SETTINGS, &dummy ))\n        write_source_mode( source->key, ENUM_REGISTRY_SETTINGS, current );\n    write_source_mode( source->key, ENUM_CURRENT_SETTINGS, current );\n\n    assert( !modes_count || modes->dmDriverExtra == 0 );\n    set_reg_value( source->key, modesW, REG_BINARY, modes, modes_count * sizeof(*modes) );\n    set_reg_value( source->key, mode_countW, REG_DWORD, &modes_count, sizeof(modes_count) );\n    source->mode_count = modes_count;\n    source->current = *current;\n    source->physical = physical;\n\n    free( virtual_modes );\n}"
+  },
+  {
+   "name": "add_source",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 1884,
+   "end_line": 1929,
+   "static": true,
+   "called_from": [
+    "default_update_display_devices"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:2264"
+   ],
+   "signature": "static void add_source( const char *name, UINT state_flags, UINT dpi, void *param )",
+   "code": "static void add_source( const char *name, UINT state_flags, UINT dpi, void *param )\n{\n    struct device_manager_ctx *ctx = param;\n    struct source *source;\n    struct gpu *gpu;\n    BOOL is_primary;\n\n    TRACE( \"name %s, state_flags %#x\\n\", name, state_flags );\n\n    assert( !list_empty( &gpus ) );\n    gpu = LIST_ENTRY( list_tail( &gpus ), struct gpu, entry );\n\n    /* in virtual desktop mode, report all physical sources as detached */\n    is_primary = !!(state_flags & DISPLAY_DEVICE_PRIMARY_DEVICE);\n    if (is_virtual_desktop()) state_flags &= ~(DISPLAY_DEVICE_ATTACHED_TO_DESKTOP | DISPLAY_DEVICE_PRIMARY_DEVICE);\n\n    if (!(source = calloc( 1, sizeof(*source) ))) return;\n    source->refcount = 1;\n    source->gpu = gpu_acquire( gpu );\n    source->id = ctx->source_count + (ctx->has_primary ? 0 : 1);\n    source->state_flags = state_flags;\n    if (state_flags & DISPLAY_DEVICE_PRIMARY_DEVICE)\n    {\n        source->id = 0;\n        ctx->has_primary = TRUE;\n    }\n    source->dpi = dpi;\n\n    /* Wine specific config key where source settings will be held, symlinked with the logically indexed config key */\n    snprintf( source->path, sizeof(source->path), \"%s\\\\%s\\\\Video\\\\%s\\\\Sources\\\\%s\", config_keyA,\n              control_keyA + strlen( \"\\\\Registry\\\\Machine\" ), gpu->guid, name );\n\n    if (!write_source_to_registry( source ))\n    {\n        WARN( \"Failed to write source %p to registry\\n\", source );\n        source_release( source );\n    }\n    else\n    {\n        list_add_tail( &sources, &source->entry );\n        TRACE( \"created source %p for gpu %p\\n\", source, gpu );\n        ctx->is_primary = is_primary;\n        gpu->source_count++;\n        ctx->source_count++;\n    }\n}"
+  },
+  {
+   "name": "prepare_devices",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 875,
+   "end_line": 950,
+   "static": true,
+   "called_from": [
+    "add_gpu"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void prepare_devices(void)",
+   "code": "static void prepare_devices(void)\n{\n    char buffer[4096];\n    KEY_NODE_INFORMATION *key = (void *)buffer;\n    KEY_VALUE_PARTIAL_INFORMATION *value = (void *)buffer;\n    WCHAR *value_str = (WCHAR *)value->Data;\n    unsigned i = 0;\n    DWORD size;\n    HKEY hkey, subkey, device_key, prop_key;\n\n    clear_display_devices();\n\n    if (!enum_key) enum_key = reg_create_ascii_key( NULL, enum_keyA, 0, NULL );\n    if (!control_key) control_key = reg_create_ascii_key( NULL, control_keyA, 0, NULL );\n    if (!video_key) video_key = reg_create_ascii_key( NULL, devicemap_video_keyA, REG_OPTION_VOLATILE, NULL );\n\n    /* delete monitors */\n    reg_empty_key( enum_key, \"DISPLAY\", FALSE );\n    snprintf( buffer, sizeof(buffer), \"Class\\\\%s\", guid_devclass_monitorA );\n    hkey = reg_create_ascii_key( control_key, buffer, 0, NULL );\n    reg_empty_key( hkey, NULL, FALSE );\n    set_reg_ascii_value( hkey, \"\", \"Monitors\" );\n    set_reg_ascii_value( hkey, \"Class\", \"Monitor\" );\n    NtClose( hkey );\n\n    /* delete sources */\n    reg_empty_key( video_key, NULL, FALSE );\n\n    /* clean GPUs */\n    snprintf( buffer, sizeof(buffer), \"Class\\\\%s\", guid_devclass_displayA );\n    hkey = reg_create_ascii_key( control_key, buffer, 0, NULL );\n    reg_empty_key( hkey, NULL, FALSE );\n    set_reg_ascii_value( hkey, \"\", \"Display adapters\" );\n    set_reg_ascii_value( hkey, \"Class\", \"Display\" );\n    NtClose( hkey );\n    if ((hkey = reg_create_ascii_key( NULL, directx_keyA, 0, NULL )))\n    {\n        reg_empty_key( hkey, NULL, TRUE );\n        NtClose( hkey );\n    }\n\n    hkey = reg_open_ascii_key( enum_key, \"PCI\" );\n\n    /* To preserve GPU GUIDs, mark them as not present and delete them in cleanup_devices if needed. */\n    while (!NtEnumerateKey( hkey, i++, KeyNodeInformation, key, sizeof(buffer), &size ))\n    {\n        unsigned int j = 0;\n\n        if (!(subkey = reg_open_key( hkey, key->Name, key->NameLength ))) continue;\n\n        while (!NtEnumerateKey( subkey, j++, KeyNodeInformation, key, sizeof(buffer), &size ))\n        {\n            if (!(device_key = reg_open_key( subkey, key->Name, key->NameLength ))) continue;\n            size = query_reg_ascii_value( device_key, \"ClassGUID\", value, sizeof(buffer) );\n            if (size != sizeof(guid_devclass_displayW) || wcscmp( value_str, guid_devclass_displayW ))\n            {\n                NtClose( device_key );\n                continue;\n            }\n\n            if ((prop_key = reg_create_ascii_key( device_key, devpropkey_device_ispresentA, 0, NULL )))\n            {\n                BOOL present = FALSE;\n                set_reg_value( prop_key, NULL, 0xffff0000 | DEVPROP_TYPE_BOOLEAN,\n                               &present, sizeof(present) );\n                NtClose( prop_key );\n            }\n\n            NtClose( device_key );\n        }\n\n        NtClose( subkey );\n    }\n\n    NtClose( hkey );\n}"
+  },
+  {
+   "name": "find_gpu_info",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 1709,
+   "end_line": 1728,
+   "static": true,
+   "called_from": [
+    "add_gpu"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static struct gpu_info *find_gpu_info( const struct list *infos, const GUID *uuid, const struct pci_id *pci_id )",
+   "code": "static struct gpu_info *find_gpu_info( const struct list *infos, const GUID *uuid, const struct pci_id *pci_id )\n{\n    struct gpu_info *info;\n    struct list *ptr;\n\n    if ((info = find_gpu_info_from_uuid( infos, uuid )))\n        TRACE( \"Found GPU matching uuid %s, pci_id %#04x:%#04x, name %s\\n\", debugstr_guid( &info->uuid ),\n               info->pci_id.vendor, info->pci_id.device, debugstr_a(info->name) );\n    else if ((info = find_gpu_info_from_pci_id( infos, pci_id )))\n        TRACE( \"Found GPU matching pci_id %#04x:%#04x, uuid %s, name %s\\n\", info->pci_id.vendor,\n               info->pci_id.device, debugstr_guid( &info->uuid ), debugstr_a(info->name) );\n    else if ((ptr = list_head( infos )))\n    {\n        info = LIST_ENTRY( ptr, struct gpu_info, entry );\n        WARN( \"Using GPU pci_id %#04x:%#04x, uuid %s, name %s\\n\", info->pci_id.vendor,\n              info->pci_id.device, debugstr_guid( &info->uuid ), debugstr_a(info->name) );\n    }\n\n    return info;\n}"
+  },
+  {
+   "name": "gpu_device_name",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 1163,
+   "end_line": 1499,
+   "static": false,
+   "called_from": [
+    "add_gpu"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/opengl.c:1873"
+   ],
+   "signature": "const char *gpu_device_name( UINT16 vendor, UINT16 device, const char *default_name )",
+   "code": "const char *gpu_device_name( UINT16 vendor, UINT16 device, const char *default_name )\n{\n    switch (MAKELONG(vendor, device))\n    {\n    /* Nvidia cards */\n    case MAKELONG(0x10de, 0x0018): return \"NVIDIA RIVA 128\";\n    case MAKELONG(0x10de, 0x0020): return \"NVIDIA RIVA TNT\";\n    case MAKELONG(0x10de, 0x0028): return \"NVIDIA RIVA TNT2/TNT2 Pro\";\n    case MAKELONG(0x10de, 0x0100): return \"NVIDIA GeForce 256\";\n    case MAKELONG(0x10de, 0x0150): return \"NVIDIA GeForce2 GTS/GeForce2 Pro\";\n    case MAKELONG(0x10de, 0x0110): return \"NVIDIA GeForce2 MX/MX 400\";\n    case MAKELONG(0x10de, 0x0200): return \"NVIDIA GeForce3\";\n    case MAKELONG(0x10de, 0x0170): return \"NVIDIA GeForce4 MX 460\";\n    case MAKELONG(0x10de, 0x0253): return \"NVIDIA GeForce4 Ti 4200\";\n    case MAKELONG(0x10de, 0x0320): return \"NVIDIA GeForce FX 5200\";\n    case MAKELONG(0x10de, 0x0312): return \"NVIDIA GeForce FX 5600\";\n    case MAKELONG(0x10de, 0x0302): return \"NVIDIA GeForce FX 5800\";\n    case MAKELONG(0x10de, 0x014f): return \"NVIDIA GeForce 6200\";\n    case MAKELONG(0x10de, 0x0140): return \"NVIDIA GeForce 6600 GT\";\n    case MAKELONG(0x10de, 0x0041): return \"NVIDIA GeForce 6800\";\n    case MAKELONG(0x10de, 0x01d7): return \"NVIDIA GeForce Go 7300\";\n    case MAKELONG(0x10de, 0x01d8): return \"NVIDIA GeForce Go 7400\";\n    case MAKELONG(0x10de, 0x0391): return \"NVIDIA GeForce 7600 GT\";\n    case MAKELONG(0x10de, 0x0092): return \"NVIDIA GeForce 7800 GT\";\n    case MAKELONG(0x10de, 0x0849): return \"NVIDIA GeForce 8200\";\n    case MAKELONG(0x10de, 0x084b): return \"NVIDIA GeForce 8200\";\n    case MAKELONG(0x10de, 0x0423): return \"NVIDIA GeForce 8300 GS\";\n    case MAKELONG(0x10de, 0x0404): return \"NVIDIA GeForce 8400 GS\";\n    case MAKELONG(0x10de, 0x0421): return \"NVIDIA GeForce 8500 GT\";\n    case MAKELONG(0x10de, 0x0402): return \"NVIDIA GeForce 8600 GT\";\n    case MAKELONG(0x10de, 0x0407): return \"NVIDIA GeForce 8600M GT\";\n    case MAKELONG(0x10de, 0x0193): return \"NVIDIA GeForce 8800 GTS\";\n    case MAKELONG(0x10de, 0x0191): return \"NVIDIA GeForce 8800 GTX\";\n    case MAKELONG(0x10de, 0x086d): return \"NVIDIA GeForce 9200\";\n    case MAKELONG(0x10de, 0x086c): return \"NVIDIA GeForce 9300\";\n    case MAKELONG(0x10de, 0x0863): return \"NVIDIA GeForce 9400M\";\n    case MAKELONG(0x10de, 0x042c): return \"NVIDIA GeForce 9400 GT\";\n    case MAKELONG(0x10de, 0x0640): return \"NVIDIA GeForce 9500 GT\";\n    case MAKELONG(0x10de, 0x0622): return \"NVIDIA GeForce 9600 GT\";\n    case MAKELONG(0x10de, 0x064a): return \"NVIDIA GeForce 9700M GT\";\n    case MAKELONG(0x10de, 0x0614): return \"NVIDIA GeForce 9800 GT\";\n    case MAKELONG(0x10de, 0x0a23): return \"NVIDIA GeForce 210\";\n    case MAKELONG(0x10de, 0x0a20): return \"NVIDIA GeForce GT 220\";\n    case MAKELONG(0x10de, 0x0ca3): return \"NVIDIA GeForce GT 240\";\n    case MAKELONG(0x10de, 0x0615): return \"NVIDIA GeForce GTS 250\";\n    case MAKELONG(0x10de, 0x05e2): return \"NVIDIA GeForce GTX 260\";\n    case MAKELONG(0x10de, 0x05e6): return \"NVIDIA GeForce GTX 275\";\n    case MAKELONG(0x10de, 0x05e1): return \"NVIDIA GeForce GTX 280\";\n    case MAKELONG(0x10de, 0x0a7a): return \"NVIDIA GeForce 315M\";\n    case MAKELONG(0x10de, 0x08a3): return \"NVIDIA GeForce 320M\";\n    case MAKELONG(0x10de, 0x0a2d): return \"NVIDIA GeForce GT 320M\";\n    case MAKELONG(0x10de, 0x0a35): return \"NVIDIA GeForce GT 325M\";\n    case MAKELONG(0x10de, 0x0ca0): return \"NVIDIA GeForce GT 330\";\n    case MAKELONG(0x10de, 0x0cb0): return \"NVIDIA GeForce GTS 350M\";\n    case MAKELONG(0x10de, 0x1055): return \"NVIDIA GeForce 410M\";\n    case MAKELONG(0x10de, 0x0de2): return \"NVIDIA GeForce GT 420\";\n    case MAKELONG(0x10de, 0x0df0): return \"NVIDIA GeForce GT 425M\";\n    case MAKELONG(0x10de, 0x0de1): return \"NVIDIA GeForce GT 430\";\n    case MAKELONG(0x10de, 0x0de0): return \"NVIDIA GeForce GT 440\";\n    case MAKELONG(0x10de, 0x0dc4): return \"NVIDIA GeForce GTS 450\";\n    case MAKELONG(0x10de, 0x0e22): return \"NVIDIA GeForce GTX 460\";\n    case MAKELONG(0x10de, 0x0dd1): return \"NVIDIA GeForce GTX 460M\";\n    case MAKELONG(0x10de, 0x06c4): return \"NVIDIA GeForce GTX 465\";\n    case MAKELONG(0x10de, 0x06cd): return \"NVIDIA GeForce GTX 470\";\n    case MAKELONG(0x10de, 0x06c0): return \"NVIDIA GeForce GTX 480\";\n    case MAKELONG(0x10de, 0x1040): return \"NVIDIA GeForce GT 520\";\n    case MAKELONG(0x10de, 0x0dec): return \"NVIDIA GeForce GT 525M\";\n    case MAKELONG(0x10de, 0x0df4): return \"NVIDIA GeForce GT 540M\";\n    case MAKELONG(0x10de, 0x1244): return \"NVIDIA GeForce GTX 550 Ti\";\n    case MAKELONG(0x10de, 0x04b8): return \"NVIDIA GeForce GT 555M\";\n    case MAKELONG(0x10de, 0x1200): return \"NVIDIA GeForce GTX 560 Ti\";\n    case MAKELONG(0x10de, 0x1251): return \"NVIDIA GeForce GTX 560M\";\n    case MAKELONG(0x10de, 0x1201): return \"NVIDIA GeForce GTX 560\";\n    case MAKELONG(0x10de, 0x1081): return \"NVIDIA GeForce GTX 570\";\n    case MAKELONG(0x10de, 0x1080): return \"NVIDIA GeForce GTX 580\";\n    case MAKELONG(0x10de, 0x104a): return \"NVIDIA GeForce GT 610\";\n    case MAKELONG(0x10de, 0x0f00): return \"NVIDIA GeForce GT 630\";\n    case MAKELONG(0x10de, 0x0de9): return \"NVIDIA GeForce GT 630M\";\n    case MAKELONG(0x10de, 0x0fc1): return \"NVIDIA GeForce GT 640\";\n    case MAKELONG(0x10de, 0x0fd2): return \"NVIDIA GeForce GT 640M\";\n    case MAKELONG(0x10de, 0x0fd1): return \"NVIDIA GeForce GT 650M\";\n    case MAKELONG(0x10de, 0x0fc6): return \"NVIDIA GeForce GTX 650\";\n    case MAKELONG(0x10de, 0x11c6): return \"NVIDIA GeForce GTX 650 Ti\";\n    case MAKELONG(0x10de, 0x11c0): return \"NVIDIA GeForce GTX 660\";\n    case MAKELONG(0x10de, 0x0fd4): return \"NVIDIA GeForce GTX 660M\";\n    case MAKELONG(0x10de, 0x1183): return \"NVIDIA GeForce GTX 660 Ti\";\n    case MAKELONG(0x10de, 0x1189): return \"NVIDIA GeForce GTX 670\";\n    case MAKELONG(0x10de, 0x11a1): return \"NVIDIA GeForce GTX 670MX\";\n    case MAKELONG(0x10de, 0x11a7): return \"NVIDIA GeForce GTX 675MX\";\n    case MAKELONG(0x10de, 0x11a2): return \"NVIDIA GeForce GTX 675MX\";\n    case MAKELONG(0x10de, 0x1180): return \"NVIDIA GeForce GTX 680\";\n    case MAKELONG(0x10de, 0x1188): return \"NVIDIA GeForce GTX 690\";\n    case MAKELONG(0x10de, 0x128b): return \"NVIDIA GeForce GT 720\";\n    case MAKELONG(0x10de, 0x1287): return \"NVIDIA GeForce GT 730\";\n    case MAKELONG(0x10de, 0x0fe1): return \"NVIDIA GeForce GT 730M\";\n    case MAKELONG(0x10de, 0x1292): return \"NVIDIA GeForce GT 740M\";\n    case MAKELONG(0x10de, 0x0fe9): return \"NVIDIA GeForce GT 750M\";\n    case MAKELONG(0x10de, 0x0fcd): return \"NVIDIA GeForce GT 755M\";\n    case MAKELONG(0x10de, 0x1381): return \"NVIDIA GeForce GTX 750\";\n    case MAKELONG(0x10de, 0x1380): return \"NVIDIA GeForce GTX 750 Ti\";\n    case MAKELONG(0x10de, 0x1187): return \"NVIDIA GeForce GTX 760\";\n    case MAKELONG(0x10de, 0x1193): return \"NVIDIA GeForce GTX 760 Ti\";\n    case MAKELONG(0x10de, 0x11e2): return \"NVIDIA GeForce GTX 765M\";\n    case MAKELONG(0x10de, 0x11e0): return \"NVIDIA GeForce GTX 770M\";\n    case MAKELONG(0x10de, 0x1184): return \"NVIDIA GeForce GTX 770\";\n    case MAKELONG(0x10de, 0x119d): return \"NVIDIA GeForce GTX 775M\";\n    case MAKELONG(0x10de, 0x1004): return \"NVIDIA GeForce GTX 780\";\n    case MAKELONG(0x10de, 0x119e): return \"NVIDIA GeForce GTX 780M\";\n    case MAKELONG(0x10de, 0x100a): return \"NVIDIA GeForce GTX 780 Ti\";\n    case MAKELONG(0x10de, 0x1005): return \"NVIDIA GeForce GTX TITAN\";\n    case MAKELONG(0x10de, 0x100c): return \"NVIDIA GeForce GTX TITAN Black\";\n    case MAKELONG(0x10de, 0x17c2): return \"NVIDIA GeForce GTX TITAN X\";\n    case MAKELONG(0x10de, 0x1001): return \"NVIDIA GeForce GTX TITAN Z\";\n    case MAKELONG(0x10de, 0x0fed): return \"NVIDIA GeForce 820M\";\n    case MAKELONG(0x10de, 0x1340): return \"NVIDIA GeForce 830M\";\n    case MAKELONG(0x10de, 0x1341): return \"NVIDIA GeForce 840M\";\n    case MAKELONG(0x10de, 0x1344): return \"NVIDIA GeForce 845M\";\n    case MAKELONG(0x10de, 0x1391): return \"NVIDIA GeForce GTX 850M\";\n    case MAKELONG(0x10de, 0x1392): return \"NVIDIA GeForce GTX 860M\";\n    case MAKELONG(0x10de, 0x119a): return \"NVIDIA GeForce GTX 860M\";\n    case MAKELONG(0x10de, 0x1199): return \"NVIDIA GeForce GTX 870M\";\n    case MAKELONG(0x10de, 0x1198): return \"NVIDIA GeForce GTX 880M\";\n    case MAKELONG(0x10de, 0x1347): return \"NVIDIA GeForce 940M\";\n    case MAKELONG(0x10de, 0x1402): return \"NVIDIA GeForce GTX 950\";\n    case MAKELONG(0x10de, 0x139a): return \"NVIDIA GeForce GTX 950M\";\n    case MAKELONG(0x10de, 0x1401): return \"NVIDIA GeForce GTX 960\";\n    case MAKELONG(0x10de, 0x139b): return \"NVIDIA GeForce GTX 960M\";\n    case MAKELONG(0x10de, 0x13c2): return \"NVIDIA GeForce GTX 970\";\n    case MAKELONG(0x10de, 0x13d8): return \"NVIDIA GeForce GTX 970M\";\n    case MAKELONG(0x10de, 0x13c0): return \"NVIDIA GeForce GTX 980\";\n    case MAKELONG(0x10de, 0x17c8): return \"NVIDIA GeForce GTX 980 Ti\";\n    case MAKELONG(0x10de, 0x1d01): return \"NVIDIA GeForce GT 1030\";\n    case MAKELONG(0x10de, 0x1c81): return \"NVIDIA GeForce GTX 1050\";\n    case MAKELONG(0x10de, 0x1c82): return \"NVIDIA GeForce GTX 1050 Ti\";\n    case MAKELONG(0x10de, 0x1c02): return \"NVIDIA GeForce GTX 1060 3GB\";\n    case MAKELONG(0x10de, 0x1c03): return \"NVIDIA GeForce GTX 1060\";\n    case MAKELONG(0x10de, 0x1c20): return \"NVIDIA GeForce GTX 1060M\";\n    case MAKELONG(0x10de, 0x1b81): return \"NVIDIA GeForce GTX 1070\";\n    case MAKELONG(0x10de, 0x1be1): return \"NVIDIA GeForce GTX 1070M\";\n    case MAKELONG(0x10de, 0x1b80): return \"NVIDIA GeForce GTX 1080\";\n    case MAKELONG(0x10de, 0x1be0): return \"NVIDIA GeForce GTX 1080M\";\n    case MAKELONG(0x10de, 0x1b06): return \"NVIDIA GeForce GTX 1080 Ti\";\n    case MAKELONG(0x10de, 0x1b00): return \"NVIDIA TITAN X (Pascal)\";\n    case MAKELONG(0x10de, 0x1d81): return \"NVIDIA TITAN V\";\n    case MAKELONG(0x10de, 0x1f82): return \"NVIDIA GeForce GTX 1650\";\n    case MAKELONG(0x10de, 0x2187): return \"NVIDIA GeForce GTX 1650 SUPER\";\n    case MAKELONG(0x10de, 0x21c4): return \"NVIDIA GeForce GTX 1660 SUPER\";\n    case MAKELONG(0x10de, 0x2182): return \"NVIDIA GeForce GTX 1660 Ti\";\n    case MAKELONG(0x10de, 0x1f08): return \"NVIDIA GeForce RTX 2060\";\n    case MAKELONG(0x10de, 0x1f07): return \"NVIDIA GeForce RTX 2070\";\n    case MAKELONG(0x10de, 0x1e87): return \"NVIDIA GeForce RTX 2080\";\n    case MAKELONG(0x10de, 0x1e07): return \"NVIDIA GeForce RTX 2080 Ti\";\n    case MAKELONG(0x10de, 0x2507): return \"NVIDIA GeForce RTX 3050\";\n    case MAKELONG(0x10de, 0x2544): return \"NVIDIA GeForce RTX 3060\";\n    case MAKELONG(0x10de, 0x2504): return \"NVIDIA GeForce RTX 3060 (Low Hash Rate)\";\n    case MAKELONG(0x10de, 0x2414): return \"NVIDIA GeForce RTX 3060 Ti (GA103)\";\n    case MAKELONG(0x10de, 0x2486): return \"NVIDIA GeForce RTX 3060 Ti (GA104)\";\n    case MAKELONG(0x10de, 0x2489): return \"NVIDIA GeForce RTX 3060 Ti (GA104, Low Hash Rate)\";\n    case MAKELONG(0x10de, 0x2484): return \"NVIDIA GeForce RTX 3070\";\n    case MAKELONG(0x10de, 0x2488): return \"NVIDIA GeForce RTX 3070 (Low Hash Rate)\";\n    case MAKELONG(0x10de, 0x249d): return \"NVIDIA GeForce RTX 3070 (mobile)\";\n    case MAKELONG(0x10de, 0x2482): return \"NVIDIA GeForce RTX 3070 Ti\";\n    case MAKELONG(0x10de, 0x2206): return \"NVIDIA GeForce RTX 3080 10GB\";\n    case MAKELONG(0x10de, 0x2216): return \"NVIDIA GeForce RTX 3080 10GB (Low Hash Rate)\";\n    case MAKELONG(0x10de, 0x220a): return \"NVIDIA GeForce RTX 3080 12GB\";\n    case MAKELONG(0x10de, 0x2208): return \"NVIDIA GeForce RTX 3080 Ti\";\n    case MAKELONG(0x10de, 0x2204): return \"NVIDIA GeForce RTX 3090\";\n    case MAKELONG(0x10de, 0x2203): return \"NVIDIA GeForce RTX 3090 Ti\";\n    case MAKELONG(0x10de, 0x1eb8): return \"NVIDIA Tesla T4\";\n    case MAKELONG(0x10de, 0x2236): return \"NVIDIA Ampere A10\";\n    case MAKELONG(0x10de, 0x2882): return \"NVIDIA GeForce RTX 4060\";\n    case MAKELONG(0x10de, 0x28a0): return \"NVIDIA GeForce RTX 4060M\";\n    case MAKELONG(0x10de, 0x2803): return \"NVIDIA GeForce RTX 4060 Ti 8GB\";\n    case MAKELONG(0x10de, 0x2805): return \"NVIDIA GeForce RTX 4060 Ti 16GB\";\n    case MAKELONG(0x10de, 0x2786): return \"NVIDIA GeForce RTX 4070\";\n    case MAKELONG(0x10de, 0x2783): return \"NVIDIA GeForce RTX 4070 SUPER\";\n    case MAKELONG(0x10de, 0x2782): return \"NVIDIA GeForce RTX 4070 Ti\";\n    case MAKELONG(0x10de, 0x2705): return \"NVIDIA GeForce RTX 4070 Ti SUPER\";\n    case MAKELONG(0x10de, 0x2704): return \"NVIDIA GeForce RTX 4080\";\n    case MAKELONG(0x10de, 0x2702): return \"NVIDIA GeForce RTX 4080 SUPER\";\n    case MAKELONG(0x10de, 0x2684): return \"NVIDIA GeForce RTX 4090\";\n\n    /* AMD cards */\n    case MAKELONG(0x1002, 0x5246): return \"ATI Rage Fury\";\n    case MAKELONG(0x1002, 0x5144): return \"ATI RADEON 7200 SERIES\";\n    case MAKELONG(0x1002, 0x514c): return \"ATI RADEON 8500 SERIES\";\n    case MAKELONG(0x1002, 0x4144): return \"ATI Radeon 9500\";\n    case MAKELONG(0x1002, 0x5955): return \"ATI RADEON XPRESS 200M Series\";\n    case MAKELONG(0x1002, 0x5e4c): return \"ATI Radeon X700 SE\";\n    case MAKELONG(0x1002, 0x71c2): return \"ATI Radeon X1600 Series\";\n    case MAKELONG(0x1002, 0x94c7): return \"ATI Mobility Radeon HD 2350\";\n    case MAKELONG(0x1002, 0x9581): return \"ATI Mobility Radeon HD 2600\";\n    case MAKELONG(0x1002, 0x9400): return \"ATI Radeon HD 2900 XT\";\n    case MAKELONG(0x1002, 0x9620): return \"ATI Radeon HD 3200 Graphics\";\n    case MAKELONG(0x1002, 0x9515): return \"ATI Radeon HD 3850 AGP\";\n    case MAKELONG(0x1002, 0x9712): return \"ATI Mobility Radeon HD 4200\";\n    case MAKELONG(0x1002, 0x954f): return \"ATI Radeon HD 4350\";\n    case MAKELONG(0x1002, 0x9495): return \"ATI Radeon HD 4600 Series\";\n    case MAKELONG(0x1002, 0x944e): return \"ATI Radeon HD 4700 Series\";\n    case MAKELONG(0x1002, 0x944c): return \"ATI Radeon HD 4800 Series\";\n    case MAKELONG(0x1002, 0x68f9): return \"ATI Radeon HD 5400 Series\";\n    case MAKELONG(0x1002, 0x68d8): return \"ATI Radeon HD 5600 Series\";\n    case MAKELONG(0x1002, 0x68be): return \"ATI Radeon HD 5700 Series\";\n    case MAKELONG(0x1002, 0x6898): return \"ATI Radeon HD 5800 Series\";\n    case MAKELONG(0x1002, 0x689c): return \"ATI Radeon HD 5900 Series\";\n    case MAKELONG(0x1002, 0x9803): return \"AMD Radeon HD 6300 series Graphics\";\n    case MAKELONG(0x1002, 0x6770): return \"AMD Radeon HD 6400 Series\";\n    case MAKELONG(0x1002, 0x9644): return \"AMD Radeon HD 6410D\";\n    case MAKELONG(0x1002, 0x9648): return \"AMD Radeon HD 6480G\";\n    case MAKELONG(0x1002, 0x6760): return \"AMD Radeon HD 6490M\";\n    case MAKELONG(0x1002, 0x9640): return \"AMD Radeon HD 6550D\";\n    case MAKELONG(0x1002, 0x6758): return \"AMD Radeon HD 6600 Series\";\n    case MAKELONG(0x1002, 0x6741): return \"AMD Radeon HD 6600M Series\";\n    case MAKELONG(0x1002, 0x68ba): return \"AMD Radeon HD 6700 Series\";\n    case MAKELONG(0x1002, 0x6739): return \"AMD Radeon HD 6800 Series\";\n    case MAKELONG(0x1002, 0x6719): return \"AMD Radeon HD 6900 Series\";\n    case MAKELONG(0x1002, 0x9901): return \"AMD Radeon HD 7660D\";\n    case MAKELONG(0x1002, 0x683d): return \"AMD Radeon HD 7700 Series\";\n    case MAKELONG(0x1002, 0x6819): return \"AMD Radeon HD 7800 Series\";\n    case MAKELONG(0x1002, 0x6818): return \"AMD Radeon HD 7870 Series\";\n    case MAKELONG(0x1002, 0x679a): return \"AMD Radeon HD 7900 Series\";\n    case MAKELONG(0x1002, 0x6660): return \"AMD Radeon HD 8600M Series\";\n    case MAKELONG(0x1002, 0x6610): return \"AMD Radeon HD 8670\";\n    case MAKELONG(0x1002, 0x665c): return \"AMD Radeon HD 8770\";\n    case MAKELONG(0x1002, 0x9830): return \"AMD Radeon HD 8400 / R3 Series\";\n    case MAKELONG(0x1002, 0x130f): return \"AMD Radeon(TM) R7 Graphics\";\n    case MAKELONG(0x1002, 0x6939): return \"AMD Radeon R9 285\";\n    case MAKELONG(0x1002, 0x67b1): return \"AMD Radeon R9 290\";\n    case MAKELONG(0x1002, 0x67b0): return \"AMD Radeon R9 290X\";\n    case MAKELONG(0x1002, 0x7300): return \"AMD Radeon (TM) R9 Fury Series\";\n    case MAKELONG(0x1002, 0x6821): return \"AMD Radeon R9 M370X\";\n    case MAKELONG(0x1002, 0x6647): return \"AMD Radeon R9 M380\";\n    case MAKELONG(0x1002, 0x6920): return \"AMD Radeon R9 M395X\";\n    case MAKELONG(0x1002, 0x67ef): return \"Radeon(TM) RX 460 Graphics\";\n    case MAKELONG(0x1002, 0x67df): return \"Radeon (TM) RX 480 Graphics\";\n    case MAKELONG(0x1002, 0x73df): return \"AMD Radeon RX 6700 XT\";\n    case MAKELONG(0x1002, 0x687f): return \"Radeon RX Vega\";\n    case MAKELONG(0x1002, 0x69af): return \"Radeon Pro Vega 20\";\n    case MAKELONG(0x1002, 0x15dd): return \"AMD Radeon(TM) Vega 10 Mobile Graphics\";\n    case MAKELONG(0x1002, 0x66af): return \"Radeon RX Vega 20\";\n    case MAKELONG(0x1002, 0x731f): return \"Radeon RX 5700 / 5700 XT\";\n    case MAKELONG(0x1002, 0x7340): return \"Radeon RX 5500M\";\n    case MAKELONG(0x1002, 0x73bf): return \"Radeon RX 6800/6800 XT / 6900 XT\";\n    case MAKELONG(0x1002, 0x7480): return \"AMD Radeon RX 7600 XT\";\n    case MAKELONG(0x1002, 0x7590): return \"AMD Radeon RX 9060 XT\";\n    case MAKELONG(0x1002, 0x73a1): return \"Radeon Pro V620\";\n    case MAKELONG(0x1002, 0x73ae): return \"Radeon Pro V620 VF\";\n    case MAKELONG(0x1002, 0x163f): return \"AMD VANGOGH\";\n    case MAKELONG(0x1002, 0x164e): return \"AMD Radeon(TM) Graphics\";\n\n    /* Intel cards */\n    case MAKELONG(0x8086, 0x3577): return \"Intel(R) 82830M Graphics Controller\";\n    case MAKELONG(0x8086, 0x3582): return \"Intel(R) 82852/82855 GM/GME Graphics Controller\";\n    case MAKELONG(0x8086, 0x2562): return \"Intel(R) 845G\";\n    case MAKELONG(0x8086, 0x2572): return \"Intel(R) 82865G Graphics Controller\";\n    case MAKELONG(0x8086, 0x2582): return \"Intel(R) 82915G/GV/910GL Express Chipset Family\";\n    case MAKELONG(0x8086, 0x258a): return \"Intel(R) E7221G\";\n    case MAKELONG(0x8086, 0x2592): return \"Mobile Intel(R) 915GM/GMS,910GML Express Chipset Family\";\n    case MAKELONG(0x8086, 0x2772): return \"Intel(R) 945G\";\n    case MAKELONG(0x8086, 0x27a2): return \"Mobile Intel(R) 945GM Express Chipset Family\";\n    case MAKELONG(0x8086, 0x27ae): return \"Intel(R) 945GME\";\n    case MAKELONG(0x8086, 0x29b2): return \"Intel(R) Q35\";\n    case MAKELONG(0x8086, 0x29c2): return \"Intel(R) G33\";\n    case MAKELONG(0x8086, 0x29d2): return \"Intel(R) Q33\";\n    case MAKELONG(0x8086, 0xa001): return \"Intel(R) IGD\";\n    case MAKELONG(0x8086, 0xa011): return \"Intel(R) IGD\";\n    case MAKELONG(0x8086, 0x2992): return \"Intel(R) 965Q\";\n    case MAKELONG(0x8086, 0x2982): return \"Intel(R) 965G\";\n    case MAKELONG(0x8086, 0x2972): return \"Intel(R) 946GZ\";\n    case MAKELONG(0x8086, 0x2a02): return \"Mobile Intel(R) 965 Express Chipset Family\";\n    case MAKELONG(0x8086, 0x2a12): return \"Intel(R) 965GME\";\n    case MAKELONG(0x8086, 0x2a42): return \"Mobile Intel(R) GM45 Express Chipset Family\";\n    case MAKELONG(0x8086, 0x2e02): return \"Intel(R) Integrated Graphics Device\";\n    case MAKELONG(0x8086, 0x2e22): return \"Intel(R) G45/G43\";\n    case MAKELONG(0x8086, 0x2e12): return \"Intel(R) Q45/Q43\";\n    case MAKELONG(0x8086, 0x2e32): return \"Intel(R) G41\";\n    case MAKELONG(0x8086, 0x2e92): return \"Intel(R) B43\";\n    case MAKELONG(0x8086, 0x0042): return \"Intel(R) HD Graphics\";\n    case MAKELONG(0x8086, 0x0046): return \"Intel(R) HD Graphics\";\n    case MAKELONG(0x8086, 0x0122): return \"Intel(R) HD Graphics 3000\";\n    case MAKELONG(0x8086, 0x0126): return \"Intel(R) HD Graphics 3000\";\n    case MAKELONG(0x8086, 0x010a): return \"Intel(R) HD Graphics Family\";\n    case MAKELONG(0x8086, 0x0162): return \"Intel(R) HD Graphics 4000\";\n    case MAKELONG(0x8086, 0x0166): return \"Intel(R) HD Graphics 4000\";\n    case MAKELONG(0x8086, 0x015a): return \"Intel(R) HD Graphics Family\";\n    case MAKELONG(0x8086, 0x0412): return \"Intel(R) HD Graphics 4600\";\n    case MAKELONG(0x8086, 0x0416): return \"Intel(R) HD Graphics 4600\";\n    case MAKELONG(0x8086, 0x0a26): return \"Intel(R) HD Graphics 5000\";\n    case MAKELONG(0x8086, 0x0422): return \"Intel(R) HD Graphics 5000\";\n    case MAKELONG(0x8086, 0x0a22): return \"Intel(R) Iris(TM) Graphics 5100\";\n    case MAKELONG(0x8086, 0x0a2a): return \"Intel(R) Iris(TM) Graphics 5100\";\n    case MAKELONG(0x8086, 0x0a2b): return \"Intel(R) Iris(TM) Graphics 5100\";\n    case MAKELONG(0x8086, 0x0a2e): return \"Intel(R) Iris(TM) Graphics 5100\";\n    case MAKELONG(0x8086, 0x0d22): return \"Intel(R) Iris(TM) Pro Graphics 5200\";\n    case MAKELONG(0x8086, 0x0d26): return \"Intel(R) Iris(TM) Pro Graphics 5200\";\n    case MAKELONG(0x8086, 0x0d2a): return \"Intel(R) Iris(TM) Pro Graphics 5200\";\n    case MAKELONG(0x8086, 0x0d2b): return \"Intel(R) Iris(TM) Pro Graphics 5200\";\n    case MAKELONG(0x8086, 0x0d2e): return \"Intel(R) Iris(TM) Pro Graphics 5200\";\n    case MAKELONG(0x8086, 0x0c22): return \"Intel(R) Iris(TM) Pro Graphics 5200\";\n    case MAKELONG(0x8086, 0x161e): return \"Intel(R) HD Graphics 5300\";\n    case MAKELONG(0x8086, 0x1616): return \"Intel(R) HD Graphics 5500\";\n    case MAKELONG(0x8086, 0x1612): return \"Intel(R) HD Graphics 5600\";\n    case MAKELONG(0x8086, 0x1626): return \"Intel(R) HD Graphics 6000\";\n    case MAKELONG(0x8086, 0x162b): return \"Intel(R) Iris(TM) Graphics 6100\";\n    case MAKELONG(0x8086, 0x1622): return \"Intel(R) Iris(TM) Pro Graphics 6200\";\n    case MAKELONG(0x8086, 0x162a): return \"Intel(R) Iris(TM) Pro Graphics P6300\";\n    case MAKELONG(0x8086, 0x1902): return \"Intel(R) HD Graphics 510\";\n    case MAKELONG(0x8086, 0x1906): return \"Intel(R) HD Graphics 510\";\n    case MAKELONG(0x8086, 0x190b): return \"Intel(R) HD Graphics 510\";\n    case MAKELONG(0x8086, 0x191e): return \"Intel(R) HD Graphics 515\";\n    case MAKELONG(0x8086, 0x1916): return \"Intel(R) HD Graphics 520\";\n    case MAKELONG(0x8086, 0x1921): return \"Intel(R) HD Graphics 520\";\n    case MAKELONG(0x8086, 0x1912): return \"Intel(R) HD Graphics 530\";\n    case MAKELONG(0x8086, 0x191b): return \"Intel(R) HD Graphics 530\";\n    case MAKELONG(0x8086, 0x191d): return \"Intel(R) HD Graphics P530\";\n    case MAKELONG(0x8086, 0x1926): return \"Intel(R) Iris(TM) Graphics 540\";\n    case MAKELONG(0x8086, 0x1927): return \"Intel(R) Iris(TM) Graphics 550\";\n    case MAKELONG(0x8086, 0x192b): return \"Intel(R) Iris(TM) Graphics 555\";\n    case MAKELONG(0x8086, 0x192d): return \"Intel(R) Iris(TM) Graphics P555\";\n    case MAKELONG(0x8086, 0x1932): return \"Intel(R) Iris(TM) Pro Graphics 580\";\n    case MAKELONG(0x8086, 0x193b): return \"Intel(R) Iris(TM) Pro Graphics 580\";\n    case MAKELONG(0x8086, 0x193a): return \"Intel(R) Iris(TM) Pro Graphics P580\";\n    case MAKELONG(0x8086, 0x193d): return \"Intel(R) Iris(TM) Pro Graphics P580\";\n    case MAKELONG(0x8086, 0x87c0): return \"Intel(R) UHD Graphics 617\";\n    case MAKELONG(0x8086, 0x3ea0): return \"Intel(R) UHD Graphics 620\";\n    case MAKELONG(0x8086, 0x5917): return \"Intel(R) UHD Graphics 620\";\n    case MAKELONG(0x8086, 0x591e): return \"Intel(R) HD Graphics 615\";\n    case MAKELONG(0x8086, 0x5916): return \"Intel(R) HD Graphics 620\";\n    case MAKELONG(0x8086, 0x5912): return \"Intel(R) HD Graphics 630\";\n    case MAKELONG(0x8086, 0x591b): return \"Intel(R) HD Graphics 630\";\n    case MAKELONG(0x8086, 0x3e9b): return \"Intel(R) UHD Graphics 630\";\n    case MAKELONG(0x8086, 0x3e91): return \"Intel(R) UHD Graphics 630\";\n    }\n\n    if (!default_name) return \"Wine Adapter\";\n    return default_name;\n};"
+  },
+  {
+   "name": "uuid_create",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 1005,
+   "end_line": 1014,
+   "static": true,
+   "called_from": [
+    "add_gpu"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void uuid_create( GUID *uuid )",
+   "code": "static void uuid_create( GUID *uuid )\n{\n    char buf[4096];\n    NtQuerySystemInformation( SystemInterruptInformation, buf, sizeof(buf), NULL );\n    memcpy( uuid, buf, sizeof(*uuid) );\n    uuid->Data3 &= 0x0fff;\n    uuid->Data3 |= (4 << 12);\n    uuid->Data4[0] &= 0x3f;\n    uuid->Data4[0] |= 0x80;\n}"
+  },
+  {
+   "name": "write_gpu_to_registry",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 1501,
+   "end_line": 1685,
+   "static": true,
+   "called_from": [
+    "add_gpu"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL write_gpu_to_registry( const struct gpu *gpu, const struct pci_id *pci, ULONGLONG memory_size )",
+   "code": "static BOOL write_gpu_to_registry( const struct gpu *gpu, const struct pci_id *pci,\n                                   ULONGLONG memory_size )\n{\n    unsigned int size, name_size = (wcslen( gpu->name ) + 1) * sizeof(WCHAR);\n    char buffer[4096], *tmp;\n    WCHAR bufferW[512];\n    HKEY subkey;\n    LARGE_INTEGER ft;\n    ULONG value;\n    HKEY hkey;\n\n    static const BOOL present = TRUE;\n    static const WCHAR driver_date_dataW[] =\n        {'D','r','i','v','e','r','D','a','t','e','D','a','t','a',0};\n    static const WCHAR adapter_stringW[] =\n        {'H','a','r','d','w','a','r','e','I','n','f','o','r','m','a','t','i','o','n',\n         '.','A','d','a','p','t','e','r','S','t','r','i','n','g',0};\n    static const WCHAR bios_stringW[] =\n        {'H','a','r','d','w','a','r','e','I','n','f','o','r','m','a','t','i','o','n','.',\n         'B','i','o','s','S','t','r','i','n','g',0};\n    static const WCHAR chip_typeW[] =\n        {'H','a','r','d','w','a','r','e','I','n','f','o','r','m','a','t','i','o','n','.',\n         'C','h','i','p','T','y','p','e',0};\n    static const WCHAR qw_memory_sizeW[] =\n        {'H','a','r','d','w','a','r','e','I','n','f','o','r','m','a','t','i','o','n','.',\n         'q','w','M','e','m','o','r','y','S','i','z','e',0};\n    static const WCHAR memory_sizeW[] =\n        {'H','a','r','d','w','a','r','e','I','n','f','o','r','m','a','t','i','o','n','.',\n         'M','e','m','o','r','y','S','i','z','e',0};\n    static const WCHAR dac_typeW[] =\n        {'H','a','r','d','w','a','r','e','I','n','f','o','r','m','a','t','i','o','n','.',\n         'D','a','c','T','y','p','e',0};\n    static const WCHAR ramdacW[] =\n        {'I','n','t','e','r','g','r','a','t','e','d',' ','R','A','M','D','A','C',0};\n    static const WCHAR driver_dateW[] = {'D','r','i','v','e','r','D','a','t','e',0};\n\n\n    if (!(hkey = reg_create_ascii_key( enum_key, gpu->path, 0, NULL ))) return FALSE;\n\n    set_reg_ascii_value( hkey, \"Class\", \"Display\" );\n    set_reg_ascii_value( hkey, \"ClassGUID\", guid_devclass_displayA );\n    snprintf( buffer, sizeof(buffer), \"%s\\\\%04X\", guid_devclass_displayA, gpu->index );\n    set_reg_ascii_value( hkey, \"Driver\", buffer );\n\n    strcpy( buffer, gpu->path );\n    if ((tmp = strrchr( buffer, '\\\\' ))) *tmp = 0;\n    size = asciiz_to_unicode( bufferW, buffer );\n    bufferW[size / sizeof(WCHAR)] = 0; /* for REG_MULTI_SZ */\n    set_reg_value( hkey, hardware_idW, REG_MULTI_SZ, bufferW, size + sizeof(WCHAR) );\n\n    if ((subkey = reg_create_ascii_key( hkey, devpkey_device_matching_device_id, 0, NULL )))\n    {\n        if (pci->vendor && pci->device)\n            set_reg_value( subkey, NULL, 0xffff0000 | DEVPROP_TYPE_STRING, bufferW, size );\n        else\n            set_reg_value( subkey, NULL, 0xffff0000 | DEVPROP_TYPE_STRING, bufferW,\n                           asciiz_to_unicode( bufferW, \"ROOT\\\\BasicRender\" ));\n        NtClose( subkey );\n    }\n\n    NtQuerySystemTime( &ft );\n    ft.QuadPart -= ft.QuadPart % 864000000000;\n    if ((subkey = reg_create_ascii_key( hkey, devpkey_device_driver_date, 0, NULL )))\n    {\n        set_reg_value( subkey, NULL, 0xffff0000 | DEVPROP_TYPE_FILETIME, &ft, sizeof(LARGE_INTEGER));\n        NtClose( subkey );\n    }\n\n    if ((subkey = reg_create_ascii_key( hkey, devpkey_device_driver_version, 0, NULL )))\n    {\n        set_reg_value( subkey, NULL, 0xffff0000 | DEVPROP_TYPE_STRING, bufferW,\n                       asciiz_to_unicode( bufferW, driver_vendor_to_version( pci->vendor ) ));\n        NtClose( subkey );\n    }\n\n    if ((subkey = reg_create_ascii_key( hkey, devpkey_device_driver_desc, 0, NULL )))\n    {\n        set_reg_value( subkey, NULL, 0xffff0000 | DEVPROP_TYPE_STRING, gpu->name, name_size );\n        NtClose( subkey );\n    }\n\n    if ((subkey = reg_create_ascii_key( hkey, devpkey_device_driver_provider, 0, NULL )))\n    {\n        set_reg_value( subkey, NULL, 0xffff0000 | DEVPROP_TYPE_STRING, bufferW,\n                       asciiz_to_unicode( bufferW, driver_vendor_to_name( pci->vendor ) ));\n        NtClose( subkey );\n    }\n\n    if (pci->vendor && pci->device)\n    {\n        if ((subkey = reg_create_ascii_key( hkey, devpkey_device_bus_number, 0, NULL )))\n        {\n            set_reg_value( subkey, NULL, 0xffff0000 | DEVPROP_TYPE_UINT32,\n                           &gpu->index, sizeof(gpu->index) );\n            NtClose( subkey );\n        }\n    }\n\n    if ((subkey = reg_create_ascii_key( hkey, devpkey_device_removal_policy, 0, NULL )))\n    {\n        unsigned int removal_policy = CM_REMOVAL_POLICY_EXPECT_NO_REMOVAL;\n\n        set_reg_value( subkey, NULL, 0xffff0000 | DEVPROP_TYPE_UINT32,\n                       &removal_policy, sizeof(removal_policy) );\n        NtClose( subkey );\n    }\n\n    set_reg_value( hkey, device_descW, REG_SZ, gpu->name, name_size );\n\n    if ((subkey = reg_create_ascii_key( hkey, \"Device Parameters\", 0, NULL )))\n    {\n        set_reg_ascii_value( subkey, \"VideoID\", gpu->guid );\n        NtClose( subkey );\n    }\n\n    if ((subkey = reg_create_ascii_key( hkey, devpropkey_gpu_uuidA, 0, NULL )))\n    {\n        set_reg_value( subkey, NULL, 0xffff0000 | DEVPROP_TYPE_GUID, &gpu->uuid, sizeof(gpu->uuid) );\n        NtClose( subkey );\n    }\n\n    if ((subkey = reg_create_ascii_key( hkey, devpropkey_device_ispresentA, 0, NULL )))\n    {\n        set_reg_value( subkey, NULL, 0xffff0000 | DEVPROP_TYPE_BOOLEAN,\n                       &present, sizeof(present) );\n        NtClose( subkey );\n    }\n\n    if ((subkey = reg_create_ascii_key( hkey, devpropkey_gpu_luidA, 0, NULL )))\n    {\n        set_reg_value( subkey, NULL, 0xffff0000 | DEVPROP_TYPE_UINT64,\n                       &gpu->luid, sizeof(gpu->luid) );\n        NtClose( subkey );\n    }\n\n    NtClose( hkey );\n\n\n    snprintf( buffer, sizeof(buffer), \"Class\\\\%s\\\\%04X\", guid_devclass_displayA, gpu->index );\n    if (!(hkey = reg_create_ascii_key( control_key, buffer, 0, NULL ))) return FALSE;\n\n    set_reg_value( hkey, driver_dateW, REG_SZ, bufferW, format_date( bufferW, ft.QuadPart ));\n    set_reg_value( hkey, driver_date_dataW, REG_BINARY, &ft, sizeof(ft) );\n    set_reg_value( hkey, driver_descW, REG_SZ, gpu->name, name_size );\n    set_reg_value( hkey, adapter_stringW, REG_SZ, gpu->name, name_size );\n    set_reg_value( hkey, bios_stringW, REG_SZ, gpu->name, name_size );\n    set_reg_value( hkey, chip_typeW, REG_SZ, gpu->name, name_size );\n    set_reg_value( hkey, dac_typeW, REG_SZ, ramdacW, sizeof(ramdacW) );\n\n    set_reg_value( hkey, qw_memory_sizeW, REG_QWORD, &memory_size, sizeof(memory_size) );\n    value = (ULONG)min( memory_size, (ULONGLONG)ULONG_MAX );\n    set_reg_value( hkey, memory_sizeW, REG_DWORD, &value, sizeof(value) );\n\n    set_reg_ascii_value( hkey, \"DriverVersion\", driver_vendor_to_version( pci->vendor ) );\n    NtClose( hkey );\n\n\n    link_device( gpu->path, guid_devinterface_display_adapterA );\n    link_device( gpu->path, guid_display_device_arrivalA );\n\n    snprintf( buffer, sizeof(buffer), \"%s\\\\%s\", directx_keyA, gpu->guid );\n    hkey = reg_create_ascii_key( NULL, buffer, REG_OPTION_VOLATILE, NULL );\n    if (hkey)\n    {\n        UINT64 ver = 0x230000000f1ff4; /* Some version in the future. */\n\n        asciiz_to_unicode( bufferW, \"AdapterLuid\" );\n        set_reg_value( hkey, bufferW, REG_QWORD, &gpu->luid, sizeof(gpu->luid) );\n        asciiz_to_unicode( bufferW, \"DriverVersion\" );\n        set_reg_value( hkey, bufferW, REG_QWORD, &ver, sizeof(ver) );\n        asciiz_to_unicode( bufferW, \"Description\" );\n        set_reg_value( hkey, bufferW, REG_SZ, gpu->name, name_size );\n        if (pci->vendor && pci->device)\n        {\n            asciiz_to_unicode( bufferW, \"DeviceId\" );\n            value = pci->device;\n            set_reg_value( hkey, bufferW, REG_DWORD, &value, sizeof(value) );\n            asciiz_to_unicode( bufferW, \"VendorId\" );\n            value = pci->vendor;\n            set_reg_value( hkey, bufferW, REG_DWORD, &value, sizeof(value) );\n        }\n        NtClose( hkey );\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "free_gpu_info",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 1730,
+   "end_line": 1735,
+   "static": true,
+   "called_from": [
+    "add_gpu",
+    "free_gpu_infos"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void free_gpu_info( struct gpu_info *info )",
+   "code": "static void free_gpu_info( struct gpu_info *info )\n{\n    list_remove( &info->entry );\n    free( info->name );\n    free( info );\n}"
+  },
+  {
+   "name": "gcd",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 306,
+   "end_line": 318,
+   "static": true,
+   "called_from": [
+    "make_ratio"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static UINT gcd( UINT a, UINT b )",
+   "code": "static UINT gcd( UINT a, UINT b )\n{\n    UINT r;\n\n    for (;;)\n    {\n        if (!a) return b;\n        if (!b) return a;\n        r = a % b;\n        a = b;\n        b = r;\n    }\n}"
+  },
+  {
+   "name": "needs_dpi_mapping",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 3310,
+   "end_line": 3313,
+   "static": true,
+   "called_from": [
+    "map_dpi_rect"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:3343",
+    "dlls/win32u/sysparams.c:3376"
+   ],
+   "signature": "static BOOL needs_dpi_mapping( struct ratio dpi_from, struct ratio dpi_to )",
+   "code": "static BOOL needs_dpi_mapping( struct ratio dpi_from, struct ratio dpi_to )\n{\n    return dpi_from.num && dpi_to.num && memcmp( &dpi_from, &dpi_to, sizeof(struct ratio) );\n}"
+  },
+  {
+   "name": "parse_size",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2722,
+   "end_line": 2732,
+   "static": true,
+   "called_from": [
+    "get_default_desktop_size"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL parse_size( const WCHAR *size, DWORD *width, DWORD *height )",
+   "code": "static BOOL parse_size( const WCHAR *size, DWORD *width, DWORD *height )\n{\n    WCHAR *end;\n\n    *width = wcstoul( size, &end, 10 );\n    if (end == size) return FALSE;\n    if (*end != 'x') return FALSE;\n    size = end + 1;\n    *height = wcstoul( size, &end, 10 );\n    return !*end;\n}"
+  },
+  {
+   "name": "write_monitor_to_registry",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 1931,
+   "end_line": 2008,
+   "static": true,
+   "called_from": [
+    "add_monitor"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL write_monitor_to_registry( struct monitor *monitor, const BYTE *edid, UINT edid_len )",
+   "code": "static BOOL write_monitor_to_registry( struct monitor *monitor, const BYTE *edid, UINT edid_len )\n{\n    char buffer[1024], *tmp;\n    WCHAR bufferW[1024];\n    HKEY hkey, subkey;\n    unsigned int len;\n\n    if (!(hkey = reg_create_ascii_key( enum_key, monitor->path, 0, NULL ))) return FALSE;\n\n    set_reg_ascii_value( hkey, \"DeviceDesc\", \"Generic Non-PnP Monitor\" );\n\n    set_reg_ascii_value( hkey, \"Class\", \"Monitor\" );\n    snprintf( buffer, sizeof(buffer), \"%s\\\\%04X\", guid_devclass_monitorA, monitor->output_id );\n    set_reg_ascii_value( hkey, \"Driver\", buffer );\n    set_reg_ascii_value( hkey, \"ClassGUID\", guid_devclass_monitorA );\n\n    snprintf( buffer, sizeof(buffer), \"MONITOR\\\\%s\", monitor->path + 8 );\n    if ((tmp = strrchr( buffer, '\\\\' ))) *tmp = 0;\n    len = asciiz_to_unicode( bufferW, buffer );\n    bufferW[len / sizeof(WCHAR)] = 0;\n    set_reg_value( hkey, hardware_idW, REG_MULTI_SZ, bufferW, len + sizeof(WCHAR) );\n\n    if ((subkey = reg_create_ascii_key( hkey, \"Device Parameters\", 0, NULL )))\n    {\n        static const WCHAR bad_edidW[] = {'B','A','D','_','E','D','I','D',0};\n        static const WCHAR edidW[] = {'E','D','I','D',0};\n\n        if (edid_len)\n            set_reg_value( subkey, edidW, REG_BINARY, edid, edid_len );\n        else\n            set_reg_value( subkey, bad_edidW, REG_BINARY, NULL, 0 );\n        NtClose( subkey );\n    }\n\n    /* WINE_DEVPROPKEY_MONITOR_RCWORK */\n    if ((subkey = reg_create_ascii_key( hkey, wine_devpropkey_monitor_rcworkA, 0, NULL )))\n    {\n        TRACE( \"rc_work %s\\n\", wine_dbgstr_rect(&monitor->rc_work) );\n        set_reg_value( subkey, NULL, 0xffff0000 | DEVPROP_TYPE_BINARY, &monitor->rc_work,\n                       sizeof(monitor->rc_work) );\n        NtClose( subkey );\n    }\n\n    /* DEVPROPKEY_MONITOR_GPU_LUID */\n    if ((subkey = reg_create_ascii_key( hkey, devpropkey_monitor_gpu_luidA, 0, NULL )))\n    {\n        set_reg_value( subkey, NULL, 0xffff0000 | DEVPROP_TYPE_INT64,\n                       &monitor->source->gpu->luid, sizeof(monitor->source->gpu->luid) );\n        NtClose( subkey );\n    }\n\n    /* DEVPROPKEY_MONITOR_OUTPUT_ID */\n    if ((subkey = reg_create_ascii_key( hkey, devpropkey_monitor_output_idA, 0, NULL )))\n    {\n        set_reg_value( subkey, NULL, 0xffff0000 | DEVPROP_TYPE_UINT32,\n                       &monitor->output_id, sizeof(monitor->output_id) );\n        NtClose( subkey );\n    }\n\n    /* WINE_DEVPROPKEY_MONITOR_HDR_ENABLED */\n    if ((subkey = reg_create_ascii_key( hkey, wine_devpropkey_monitor_hdr_enabledA, 0, NULL )))\n    {\n        set_reg_value( subkey, NULL, 0xffff0000 | DEVPROP_TYPE_BOOLEAN,\n                       &monitor->hdr_enabled, sizeof(monitor->hdr_enabled) );\n        NtClose( subkey );\n    }\n\n    NtClose( hkey );\n\n\n    snprintf( buffer, sizeof(buffer), \"Class\\\\%s\\\\%04X\", guid_devclass_monitorA, monitor->output_id );\n    if (!(hkey = reg_create_ascii_key( control_key, buffer, 0, NULL ))) return FALSE;\n    NtClose( hkey );\n\n    link_device( monitor->path, guid_devinterface_monitorA );\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "devmode_get",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 489,
+   "end_line": 502,
+   "static": true,
+   "called_from": [
+    "get_screen_sizes",
+    "get_virtual_modes"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static UINT devmode_get( const DEVMODEW *mode, UINT field )",
+   "code": "static UINT devmode_get( const DEVMODEW *mode, UINT field )\n{\n    switch (field)\n    {\n    case DM_DISPLAYORIENTATION: return mode->dmFields & DM_DISPLAYORIENTATION ? mode->dmDisplayOrientation : 0;\n    case DM_BITSPERPEL: return mode->dmFields & DM_BITSPERPEL ? mode->dmBitsPerPel : 0;\n    case DM_PELSWIDTH: return mode->dmFields & DM_PELSWIDTH ? mode->dmPelsWidth : 0;\n    case DM_PELSHEIGHT: return mode->dmFields & DM_PELSHEIGHT ? mode->dmPelsHeight : 0;\n    case DM_DISPLAYFLAGS: return mode->dmFields & DM_DISPLAYFLAGS ? mode->dmDisplayFlags : 0;\n    case DM_DISPLAYFREQUENCY: return mode->dmFields & DM_DISPLAYFREQUENCY ? mode->dmDisplayFrequency : 0;\n    case DM_DISPLAYFIXEDOUTPUT: return mode->dmFields & DM_DISPLAYFIXEDOUTPUT ? mode->dmDisplayFixedOutput : 0;\n    }\n    return 0;\n}"
+  },
+  {
+   "name": "get_screen_sizes",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2074,
+   "end_line": 2138,
+   "static": true,
+   "called_from": [
+    "get_virtual_modes"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static SIZE *get_screen_sizes( const DEVMODEW *maximum, const DEVMODEW *modes, UINT modes_count, UINT *sizes_count )",
+   "code": "static SIZE *get_screen_sizes( const DEVMODEW *maximum, const DEVMODEW *modes, UINT modes_count,\n                               UINT *sizes_count )\n{\n    static SIZE default_sizes[] =\n    {\n        /* 4:3 */\n        { 640,  480},\n        { 800,  600},\n        {1024,  768},\n        {1152,  864},\n        {1280,  960},\n        {1600, 1200},\n        /* 16:9 */\n        { 960,  540},\n        {1280,  720},\n        {1600,  900},\n        {1920, 1080},\n        {2560, 1440},\n        {2880, 1620},\n        {3200, 1800},\n        /* 16:10 */\n        {1440,  900},\n        {1680, 1050},\n        {1920, 1200},\n        {2560, 1600},\n        /* 3:2 */\n        {1440,  960},\n        {1920, 1280},\n        /* 21:9 ultra-wide */\n        {2560, 1080},\n        /* 12:5 */\n        {1920,  800},\n        {3840, 1600},\n        /* 5:4 */\n        {1280, 1024},\n        /* 5:3 */\n        {1280,  768},\n    };\n    UINT max_width = devmode_get( maximum, DM_PELSWIDTH ), max_height = devmode_get( maximum, DM_PELSHEIGHT );\n    SIZE *sizes, max_size = {.cx = max( max_width, max_height ), .cy = min( max_width, max_height )};\n    const DEVMODEW *mode;\n    UINT i, count;\n\n    count = 1 + ARRAY_SIZE(default_sizes) + modes_count;\n    if (!(sizes = malloc( count * sizeof(*sizes) ))) return NULL;\n\n    count = add_screen_size( sizes, 0, max_size );\n    for (i = 0; i < ARRAY_SIZE(default_sizes); i++)\n    {\n        if (default_sizes[i].cx > max_size.cx || default_sizes[i].cy > max_size.cy) continue;\n        count += add_screen_size( sizes, count, default_sizes[i] );\n    }\n\n    for (mode = modes; mode && modes_count; mode = NEXT_DEVMODEW(mode), modes_count--)\n    {\n        UINT width = devmode_get( mode, DM_PELSWIDTH ), height = devmode_get( mode, DM_PELSHEIGHT );\n        SIZE size = {.cx = max( width, height ), .cy = min( width, height )};\n        if (!size.cx || size.cx > max_size.cx) continue;\n        if (!size.cy || size.cy > max_size.cy) continue;\n        count += add_screen_size( sizes, count, size );\n    }\n\n    *sizes_count = count;\n    return sizes;\n}"
+  },
+  {
+   "name": "add_virtual_mode",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2067,
+   "end_line": 2072,
+   "static": true,
+   "called_from": [
+    "get_virtual_modes"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static UINT add_virtual_mode( DEVMODEW *modes, UINT count, const DEVMODEW *mode )",
+   "code": "static UINT add_virtual_mode( DEVMODEW *modes, UINT count, const DEVMODEW *mode )\n{\n    TRACE( \"adding mode %s\\n\", debugstr_devmodew(mode) );\n    modes[count] = *mode;\n    return 1;\n}"
+  },
+  {
+   "name": "debugstr_devmodew",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 477,
+   "end_line": 487,
+   "static": true,
+   "called_from": [
+    "add_modes",
+    "add_virtual_mode"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static const char *debugstr_devmodew( const DEVMODEW *devmode )",
+   "code": "static const char *debugstr_devmodew( const DEVMODEW *devmode )\n{\n    char position[32] = {0};\n    if (devmode->dmFields & DM_POSITION) snprintf( position, sizeof(position), \" at %s\", wine_dbgstr_point( (POINT *)&devmode->dmPosition ) );\n    return wine_dbg_sprintf( \"%ux%u %ubits %uHz rotated %u degrees %sstretched %sinterlaced%s\",\n                             devmode->dmPelsWidth, devmode->dmPelsHeight, devmode->dmBitsPerPel,\n                             devmode->dmDisplayFrequency, devmode->dmDisplayOrientation * 90,\n                             devmode->dmDisplayFixedOutput == DMDFO_STRETCH ? \"\" : \"un\",\n                             devmode->dmDisplayFlags & DM_INTERLACED ? \"\" : \"non-\",\n                             position );\n}"
+  },
+  {
+   "name": "write_source_mode",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 513,
+   "end_line": 525,
+   "static": true,
+   "called_from": [
+    "add_modes"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/sysparams.c:575",
+    "dlls/win32u/sysparams.c:601"
+   ],
+   "signature": "static BOOL write_source_mode( HKEY hkey, UINT index, const DEVMODEW *mode )",
+   "code": "static BOOL write_source_mode( HKEY hkey, UINT index, const DEVMODEW *mode )\n{\n    WCHAR bufferW[MAX_PATH] = {0};\n\n    assert( index == ENUM_CURRENT_SETTINGS || index == ENUM_REGISTRY_SETTINGS || index == WINE_ENUM_PHYSICAL_SETTINGS );\n\n    if (index == ENUM_CURRENT_SETTINGS) asciiz_to_unicode( bufferW, \"Current\" );\n    else if (index == ENUM_REGISTRY_SETTINGS) asciiz_to_unicode( bufferW, \"Registry\" );\n    else if (index == WINE_ENUM_PHYSICAL_SETTINGS) asciiz_to_unicode( bufferW, \"Physical\" );\n    else return FALSE;\n\n    return set_reg_value( hkey, bufferW, REG_BINARY, &mode->dmFields, sizeof(*mode) - offsetof(DEVMODEW, dmFields) );\n}"
+  },
+  {
+   "name": "reg_empty_key",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 818,
+   "end_line": 839,
+   "static": true,
+   "called_from": [
+    "prepare_devices"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void reg_empty_key( HKEY root, const char *key_name, BOOL subkeys_only )",
+   "code": "static void reg_empty_key( HKEY root, const char *key_name, BOOL subkeys_only )\n{\n    char buffer[4096];\n    KEY_NODE_INFORMATION *key = (KEY_NODE_INFORMATION *)buffer;\n    KEY_VALUE_FULL_INFORMATION *value = (KEY_VALUE_FULL_INFORMATION *)buffer;\n    DWORD size;\n    HKEY hkey = key_name ? reg_open_ascii_key( root, key_name ) : root;\n\n    while (!NtEnumerateKey( hkey, 0, KeyNodeInformation, key, sizeof(buffer), &size ))\n        reg_delete_tree( hkey, key->Name, key->NameLength );\n\n    if (!subkeys_only)\n    {\n        while (!NtEnumerateValueKey( hkey, 0, KeyValueFullInformation, value, sizeof(buffer), &size ))\n        {\n            UNICODE_STRING name = { value->NameLength, value->NameLength, value->Name };\n            NtDeleteValueKey( hkey, &name );\n        }\n    }\n\n    if (hkey != root) NtClose( hkey );\n}"
+  },
+  {
+   "name": "find_gpu_info_from_uuid",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 1687,
+   "end_line": 1697,
+   "static": true,
+   "called_from": [
+    "find_gpu_info"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static struct gpu_info *find_gpu_info_from_uuid( const struct list *infos, const GUID *uuid )",
+   "code": "static struct gpu_info *find_gpu_info_from_uuid( const struct list *infos, const GUID *uuid )\n{\n    struct gpu_info *gpu;\n\n    if (!uuid) return NULL;\n\n    LIST_FOR_EACH_ENTRY( gpu, infos, struct gpu_info, entry )\n        if (!memcmp( &gpu->uuid, uuid, sizeof(*uuid) )) return gpu;\n\n    return NULL;\n}"
+  },
+  {
+   "name": "find_gpu_info_from_pci_id",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 1699,
+   "end_line": 1707,
+   "static": true,
+   "called_from": [
+    "find_gpu_info"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static struct gpu_info *find_gpu_info_from_pci_id( const struct list *infos, const struct pci_id *pci_id )",
+   "code": "static struct gpu_info *find_gpu_info_from_pci_id( const struct list *infos, const struct pci_id *pci_id )\n{\n    struct gpu_info *gpu;\n\n    LIST_FOR_EACH_ENTRY( gpu, infos, struct gpu_info, entry )\n        if (gpu->pci_id.vendor == pci_id->vendor && gpu->pci_id.device == pci_id->device) return gpu;\n\n    return NULL;\n}"
+  },
+  {
+   "name": "driver_vendor_to_version",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 1140,
+   "end_line": 1150,
+   "static": true,
+   "called_from": [
+    "write_gpu_to_registry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static const char* driver_vendor_to_version( UINT16 vendor )",
+   "code": "static const char* driver_vendor_to_version( UINT16 vendor )\n{\n    /* The last seven digits are the driver number. */\n    switch (vendor)\n    {\n    case 0x8086: /* Intel */    return \"35.0.101.6314\";\n    case 0x1002: /* AMD */      return \"35.0.21025.1024\";\n    case 0x10de: /* Nvidia */   return \"35.0.15.6094\";\n    default:                    return \"35.0.10.1000\";\n    }\n}"
+  },
+  {
+   "name": "driver_vendor_to_name",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 1152,
+   "end_line": 1161,
+   "static": true,
+   "called_from": [
+    "write_gpu_to_registry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static const char* driver_vendor_to_name( UINT16 vendor )",
+   "code": "static const char* driver_vendor_to_name( UINT16 vendor )\n{\n    switch (vendor)\n    {\n    case 0x8086: return \"Intel Corporation\";\n    case 0x1002: return \"Advanced Micro Devices, Inc.\";\n    case 0x10de: return \"NVIDIA\";\n    default:     return \"\";\n    }\n}"
+  },
+  {
+   "name": "format_date",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 1021,
+   "end_line": 1049,
+   "static": true,
+   "called_from": [
+    "write_gpu_to_registry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static unsigned int format_date( WCHAR *bufferW, LONGLONG time )",
+   "code": "static unsigned int format_date( WCHAR *bufferW, LONGLONG time )\n{\n    int cleaps, years, yearday, months, days;\n    unsigned int day, month, year;\n    char buffer[33];\n\n    days = time / TICKSPERSEC / SECSPERDAY;\n\n    /* compute year, month and day of month, see RtlTimeToTimeFields */\n    cleaps = (3 * ((4 * days + 1227) / DAYSPERQUADRICENTENNIUM) + 3) / 4;\n    days += 28188 + cleaps;\n    years = (20 * days - 2442) / (5 * DAYSPERNORMALQUADRENNIUM);\n    yearday = days - (years * DAYSPERNORMALQUADRENNIUM) / 4;\n    months = (64 * yearday) / 1959;\n    if (months < 14)\n    {\n        month = months - 1;\n        year = years + 1524;\n    }\n    else\n    {\n        month = months - 13;\n        year = years + 1525;\n    }\n    day = yearday - (1959 * months) / 64 ;\n\n    snprintf( buffer, sizeof(buffer), \"%u-%u-%u\", month, day, year );\n    return asciiz_to_unicode( bufferW, buffer );\n}"
+  },
+  {
+   "name": "link_device",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 1065,
+   "end_line": 1092,
+   "static": true,
+   "called_from": [
+    "write_gpu_to_registry",
+    "write_monitor_to_registry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void link_device( const char *instance, const char *class )",
+   "code": "static void link_device( const char *instance, const char *class )\n{\n    char buffer[MAX_PATH], *ptr;\n    HKEY hkey, subkey;\n    unsigned int pos;\n\n    pos = snprintf( buffer, ARRAY_SIZE(buffer), \"DeviceClasses\\\\%s\\\\\", class );\n    snprintf( buffer + pos, ARRAY_SIZE(buffer) - pos, \"##?#%s#%s\", instance, class );\n    for (ptr = buffer + pos; *ptr; ptr++) if (*ptr == '\\\\') *ptr = '#';\n\n    hkey = reg_create_ascii_key( control_key, buffer, 0, NULL );\n    set_reg_ascii_value( hkey, \"DeviceInstance\", instance );\n\n    subkey = reg_create_ascii_key( hkey, \"#\", REG_OPTION_VOLATILE, NULL );\n    NtClose( hkey );\n    hkey = subkey;\n\n    snprintf( buffer, ARRAY_SIZE(buffer), \"\\\\\\\\?\\\\%s#%s\", instance, class );\n    for (ptr = buffer + 4; *ptr; ptr++) if (*ptr == '\\\\') *ptr = '#';\n    set_reg_ascii_value( hkey, \"SymbolicLink\", buffer );\n\n    if ((subkey = reg_create_ascii_key( hkey, \"Control\", REG_OPTION_VOLATILE, NULL )))\n    {\n        const DWORD linked = 1;\n        set_reg_value( subkey, linkedW, REG_DWORD, &linked, sizeof(linked) );\n        NtClose( subkey );\n    }\n}"
+  },
+  {
+   "name": "add_screen_size",
+   "file": "dlls/win32u/sysparams.c",
+   "start_line": 2055,
+   "end_line": 2065,
+   "static": true,
+   "called_from": [
+    "get_screen_sizes"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static UINT add_screen_size( SIZE *sizes, UINT count, SIZE size )",
+   "code": "static UINT add_screen_size( SIZE *sizes, UINT count, SIZE size )\n{\n    UINT i = 0;\n\n    while (i < count && memcmp( sizes + i, &size, sizeof(size) )) i++;\n    if (i < count) return 0;\n\n    TRACE( \"adding size %s\\n\", wine_dbgstr_point((POINT *)&size) );\n    sizes[i] = size;\n    return 1;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "device_manager_ctx",
+    "kind": "struct_decl",
+    "start_line": 1051,
+    "end_line": 1063,
+    "code": "struct device_manager_ctx\n{\n    UINT gpu_count;\n    UINT source_count;\n    UINT monitor_count;\n    HANDLE mutex;\n    struct list vulkan_gpus;\n    struct list opengl_gpus;\n    BOOL has_primary;\n    /* for the virtual desktop settings */\n    BOOL is_primary;\n    DEVMODEW primary;\n};"
+   },
+   {
+    "name": "edid_monitor_info",
+    "kind": "struct_decl",
+    "start_line": 134,
+    "end_line": 144,
+    "code": "struct edid_monitor_info\n{\n    unsigned int flags;\n    /* MONITOR_INFO_HAS_MONITOR_ID */\n    unsigned short manufacturer, product_code;\n    char monitor_id_string[8];\n    /* MONITOR_INFO_HAS_MONITOR_NAME */\n    WCHAR monitor_name[14];\n    /* MONITOR_INFO_HAS_PREFERRED_MODE */\n    unsigned int preferred_width, preferred_height;\n};"
+   },
+   {
+    "name": "gpu",
+    "kind": "struct_decl",
+    "start_line": 100,
+    "end_line": 111,
+    "code": "struct gpu\n{\n    LONG refcount;\n    struct list entry;\n    char path[MAX_PATH];\n    WCHAR name[128];\n    char guid[39];\n    LUID luid;\n    UINT index;\n    GUID uuid;\n    UINT source_count;\n};"
+   },
+   {
+    "name": "monitor",
+    "kind": "struct_decl",
+    "start_line": 146,
+    "end_line": 159,
+    "code": "struct monitor\n{\n    LONG refcount;\n    struct list entry;\n    char path[MAX_PATH];\n    struct source *source;\n    HANDLE handle;\n    unsigned int id;\n    unsigned int output_id;\n    RECT rc_work;\n    BOOL is_clone;\n    struct edid_monitor_info edid_info;\n    BOOL hdr_enabled;\n};"
+   },
+   {
+    "name": "source",
+    "kind": "struct_decl",
+    "start_line": 113,
+    "end_line": 129,
+    "code": "struct source\n{\n    LONG refcount;\n    struct list entry;\n    char path[MAX_PATH];\n    unsigned int id;\n    struct gpu *gpu;\n    HKEY key;\n    UINT dpi;\n    UINT depth; /* emulated depth */\n    UINT state_flags;\n    UINT monitor_count;\n    UINT mode_count;\n    DEVMODEW current;\n    DEVMODEW physical;\n    DEVMODEW *modes;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 39,
+    "end_line": 39,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(system);"
+   },
+   {
+    "name": "config_key",
+    "type": "HKEY",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "static HKEY video_key, enum_key, control_key, config_key, volatile_base_key;"
+   },
+   {
+    "name": "config_keyA",
+    "type": "const char[69]",
+    "static": true,
+    "start_line": 50,
+    "end_line": 50,
+    "code": "static const char config_keyA[] = \"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Hardware Profiles\\\\Current\";"
+   },
+   {
+    "name": "control_key",
+    "type": "HKEY",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "static HKEY video_key, enum_key, control_key, config_key, volatile_base_key;"
+   },
+   {
+    "name": "control_keyA",
+    "type": "const char[51]",
+    "static": true,
+    "start_line": 49,
+    "end_line": 49,
+    "code": "static const char control_keyA[] = \"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Control\";"
+   },
+   {
+    "name": "device_descW",
+    "type": "const WCHAR[11]",
+    "static": true,
+    "start_line": 73,
+    "end_line": 73,
+    "code": "static const WCHAR device_descW[] = {'D','e','v','i','c','e','D','e','s','c',0};"
+   },
+   {
+    "name": "device_manager",
+    "type": "const struct gdi_device_manager",
+    "static": true,
+    "start_line": 2261,
+    "end_line": 2267,
+    "code": "static const struct gdi_device_manager device_manager =\n{\n    add_gpu,\n    add_source,\n    add_monitor,\n    add_modes,\n};"
+   },
+   {
+    "name": "devicemap_video_keyA",
+    "type": "const char[43]",
+    "static": true,
+    "start_line": 47,
+    "end_line": 47,
+    "code": "static const char devicemap_video_keyA[] = \"\\\\Registry\\\\Machine\\\\HARDWARE\\\\DEVICEMAP\\\\VIDEO\";"
+   },
+   {
+    "name": "devpkey_device_bus_number",
+    "type": "const char[55]",
+    "static": true,
+    "start_line": 60,
+    "end_line": 60,
+    "code": "static const char devpkey_device_bus_number[] = \"Properties\\\\{A45C254E-DF1C-4EFD-8020-67D146A850E0}\\\\0017\";"
+   },
+   {
+    "name": "devpkey_device_driver_date",
+    "type": "const char[55]",
+    "static": true,
+    "start_line": 55,
+    "end_line": 55,
+    "code": "static const char devpkey_device_driver_date[] = \"Properties\\\\{A8B865DD-2E3D-4094-AD97-E593A70C75D6}\\\\0002\";"
+   },
+   {
+    "name": "devpkey_device_driver_desc",
+    "type": "const char[55]",
+    "static": true,
+    "start_line": 57,
+    "end_line": 57,
+    "code": "static const char devpkey_device_driver_desc[] = \"Properties\\\\{A8B865DD-2E3D-4094-AD97-E593A70C75D6}\\\\0004\";"
+   },
+   {
+    "name": "devpkey_device_driver_provider",
+    "type": "const char[55]",
+    "static": true,
+    "start_line": 59,
+    "end_line": 59,
+    "code": "static const char devpkey_device_driver_provider[] = \"Properties\\\\{A8B865DD-2E3D-4094-AD97-E593A70C75D6}\\\\0009\";"
+   },
+   {
+    "name": "devpkey_device_driver_version",
+    "type": "const char[55]",
+    "static": true,
+    "start_line": 56,
+    "end_line": 56,
+    "code": "static const char devpkey_device_driver_version[] = \"Properties\\\\{A8B865DD-2E3D-4094-AD97-E593A70C75D6}\\\\0003\";"
+   },
+   {
+    "name": "devpkey_device_matching_device_id",
+    "type": "const char[55]",
+    "static": true,
+    "start_line": 58,
+    "end_line": 58,
+    "code": "static const char devpkey_device_matching_device_id[] = \"Properties\\\\{A8B865DD-2E3D-4094-AD97-E593A70C75D6}\\\\0008\";"
+   },
+   {
+    "name": "devpkey_device_removal_policy",
+    "type": "const char[55]",
+    "static": true,
+    "start_line": 61,
+    "end_line": 61,
+    "code": "static const char devpkey_device_removal_policy[] = \"Properties\\\\{A45C254E-DF1C-4EFD-8020-67D146A850E0}\\\\0021\";"
+   },
+   {
+    "name": "devpropkey_device_ispresentA",
+    "type": "const char[55]",
+    "static": true,
+    "start_line": 62,
+    "end_line": 62,
+    "code": "static const char devpropkey_device_ispresentA[] = \"Properties\\\\{540B947E-8B40-45BC-A8A2-6A0B894CBDA2}\\\\0005\";"
+   },
+   {
+    "name": "devpropkey_gpu_luidA",
+    "type": "const char[55]",
+    "static": true,
+    "start_line": 54,
+    "end_line": 54,
+    "code": "static const char devpropkey_gpu_luidA[] = \"Properties\\\\{60B193CB-5276-4D0F-96FC-F173ABAD3EC6}\\\\0002\";"
+   },
+   {
+    "name": "devpropkey_gpu_uuidA",
+    "type": "const char[55]",
+    "static": true,
+    "start_line": 53,
+    "end_line": 53,
+    "code": "static const char devpropkey_gpu_uuidA[] = \"Properties\\\\{233A9EF3-AFC4-4ABD-B564-C32F21F1535C}\\\\0002\";"
+   },
+   {
+    "name": "devpropkey_monitor_gpu_luidA",
+    "type": "const char[55]",
+    "static": true,
+    "start_line": 63,
+    "end_line": 63,
+    "code": "static const char devpropkey_monitor_gpu_luidA[] = \"Properties\\\\{CA085853-16CE-48AA-B114-DE9C72334223}\\\\0001\";"
+   },
+   {
+    "name": "devpropkey_monitor_output_idA",
+    "type": "const char[55]",
+    "static": true,
+    "start_line": 64,
+    "end_line": 64,
+    "code": "static const char devpropkey_monitor_output_idA[] = \"Properties\\\\{CA085853-16CE-48AA-B114-DE9C72334223}\\\\0002\";"
+   },
+   {
+    "name": "directx_keyA",
+    "type": "const char[45]",
+    "static": true,
+    "start_line": 51,
+    "end_line": 51,
+    "code": "static const char directx_keyA[] = \"\\\\Registry\\\\Machine\\\\Software\\\\Microsoft\\\\DirectX\";"
+   },
+   {
+    "name": "display_lock",
+    "type": "pthread_mutex_t",
+    "static": true,
+    "start_line": 166,
+    "end_line": 166,
+    "code": "static pthread_mutex_t display_lock = PTHREAD_MUTEX_INITIALIZER;"
+   },
+   {
+    "name": "dpiW",
+    "type": "const WCHAR[4]",
+    "static": true,
+    "start_line": 79,
+    "end_line": 79,
+    "code": "static const WCHAR dpiW[] = {'D','p','i',0};"
+   },
+   {
+    "name": "driver_descW",
+    "type": "const WCHAR[11]",
+    "static": true,
+    "start_line": 74,
+    "end_line": 74,
+    "code": "static const WCHAR driver_descW[] = {'D','r','i','v','e','r','D','e','s','c',0};"
+   },
+   {
+    "name": "emulate_modeset",
+    "type": "BOOL",
+    "static": false,
+    "start_line": 168,
+    "end_line": 168,
+    "code": "BOOL emulate_modeset = FALSE;"
+   },
+   {
+    "name": "enum_key",
+    "type": "HKEY",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "static HKEY video_key, enum_key, control_key, config_key, volatile_base_key;"
+   },
+   {
+    "name": "enum_keyA",
+    "type": "const char[48]",
+    "static": true,
+    "start_line": 48,
+    "end_line": 48,
+    "code": "static const char enum_keyA[] = \"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Enum\";"
+   },
+   {
+    "name": "gpus",
+    "type": "struct list",
+    "static": true,
+    "start_line": 161,
+    "end_line": 161,
+    "code": "static struct list gpus = LIST_INIT(gpus);"
+   },
+   {
+    "name": "guid_devclass_displayA",
+    "type": "const char[39]",
+    "static": true,
+    "start_line": 83,
+    "end_line": 83,
+    "code": "static const char  guid_devclass_displayA[] = \"{4D36E968-E325-11CE-BFC1-08002BE10318}\";"
+   },
+   {
+    "name": "guid_devclass_displayW",
+    "type": "const WCHAR[39]",
+    "static": true,
+    "start_line": 84,
+    "end_line": 86,
+    "code": "static const WCHAR guid_devclass_displayW[] =\n    {'{','4','D','3','6','E','9','6','8','-','E','3','2','5','-','1','1','C','E','-',\n     'B','F','C','1','-','0','8','0','0','2','B','E','1','0','3','1','8','}',0};"
+   },
+   {
+    "name": "guid_devclass_monitorA",
+    "type": "const char[39]",
+    "static": true,
+    "start_line": 87,
+    "end_line": 87,
+    "code": "static const char  guid_devclass_monitorA[] = \"{4D36E96E-E325-11CE-BFC1-08002BE10318}\";"
+   },
+   {
+    "name": "guid_devclass_monitorW",
+    "type": "const WCHAR[39]",
+    "static": true,
+    "start_line": 88,
+    "end_line": 90,
+    "code": "static const WCHAR guid_devclass_monitorW[] =\n    {'{','4','D','3','6','E','9','6','E','-','E','3','2','5','-','1','1','C','E','-',\n     'B','F','C','1','-','0','8','0','0','2','B','E','1','0','3','1','8','}',0};"
+   },
+   {
+    "name": "guid_devinterface_display_adapterA",
+    "type": "const char[39]",
+    "static": true,
+    "start_line": 92,
+    "end_line": 92,
+    "code": "static const char guid_devinterface_display_adapterA[] = \"{5B45201D-F2F2-4F3B-85BB-30FF1F953599}\";"
+   },
+   {
+    "name": "guid_devinterface_monitorA",
+    "type": "const char[39]",
+    "static": true,
+    "start_line": 94,
+    "end_line": 94,
+    "code": "static const char guid_devinterface_monitorA[] = \"{E6F07B5F-EE97-4A90-B076-33F57BF4EAA7}\";"
+   },
+   {
+    "name": "guid_display_device_arrivalA",
+    "type": "const char[39]",
+    "static": true,
+    "start_line": 93,
+    "end_line": 93,
+    "code": "static const char guid_display_device_arrivalA[] = \"{1CA05180-A699-450A-9A0C-DE4FBE3DDD89}\";"
+   },
+   {
+    "name": "hardware_idW",
+    "type": "const WCHAR[11]",
+    "static": true,
+    "start_line": 72,
+    "end_line": 72,
+    "code": "static const WCHAR hardware_idW[] = {'H','a','r','d','w','a','r','e','I','D',0};"
+   },
+   {
+    "name": "last_query_display_time",
+    "type": "INT64",
+    "static": true,
+    "start_line": 164,
+    "end_line": 164,
+    "code": "static INT64 last_query_display_time;"
+   },
+   {
+    "name": "linkedW",
+    "type": "const WCHAR[7]",
+    "static": true,
+    "start_line": 68,
+    "end_line": 68,
+    "code": "static const WCHAR linkedW[] = {'L','i','n','k','e','d',0};"
+   },
+   {
+    "name": "mode_countW",
+    "type": "const WCHAR[10]",
+    "static": true,
+    "start_line": 78,
+    "end_line": 78,
+    "code": "static const WCHAR mode_countW[] = {'M','o','d','e','C','o','u','n','t',0};"
+   },
+   {
+    "name": "modesW",
+    "type": "const WCHAR[6]",
+    "static": true,
+    "start_line": 77,
+    "end_line": 77,
+    "code": "static const WCHAR modesW[] = {'M','o','d','e','s',0};"
+   },
+   {
+    "name": "monitor_update_serial",
+    "type": "UINT64",
+    "static": true,
+    "start_line": 165,
+    "end_line": 165,
+    "code": "static UINT64 monitor_update_serial;"
+   },
+   {
+    "name": "monitors",
+    "type": "struct list",
+    "static": true,
+    "start_line": 163,
+    "end_line": 163,
+    "code": "static struct list monitors = LIST_INIT(monitors);"
+   },
+   {
+    "name": "no_dpi",
+    "type": "const struct ratio",
+    "static": true,
+    "start_line": 295,
+    "end_line": 295,
+    "code": "static const struct ratio no_dpi;"
+   },
+   {
+    "name": "physicalW",
+    "type": "const WCHAR[9]",
+    "static": true,
+    "start_line": 81,
+    "end_line": 81,
+    "code": "static const WCHAR physicalW[] = {'P','h','y','s','i','c','a','l',0};"
+   },
+   {
+    "name": "qdc_retrieve_flags_mask",
+    "type": "const UINT32",
+    "static": true,
+    "start_line": 96,
+    "end_line": 96,
+    "code": "static const UINT32 qdc_retrieve_flags_mask = QDC_ALL_PATHS | QDC_ONLY_ACTIVE_PATHS | QDC_DATABASE_CURRENT;"
+   },
+   {
+    "name": "sources",
+    "type": "struct list",
+    "static": true,
+    "start_line": 162,
+    "end_line": 162,
+    "code": "static struct list sources = LIST_INIT(sources);"
+   },
+   {
+    "name": "state_flagsW",
+    "type": "const WCHAR[11]",
+    "static": true,
+    "start_line": 71,
+    "end_line": 71,
+    "code": "static const WCHAR state_flagsW[] = {'S','t','a','t','e','F','l','a','g','s',0};"
+   },
+   {
+    "name": "symbolic_link_valueW",
+    "type": "const WCHAR[18]",
+    "static": true,
+    "start_line": 69,
+    "end_line": 70,
+    "code": "static const WCHAR symbolic_link_valueW[] =\n    {'S','y','m','b','o','l','i','c','L','i','n','k','V','a','l','u','e',0};"
+   },
+   {
+    "name": "system_dpi",
+    "type": "UINT",
+    "static": false,
+    "start_line": 296,
+    "end_line": 296,
+    "code": "UINT system_dpi;"
+   },
+   {
+    "name": "video_key",
+    "type": "HKEY",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "static HKEY video_key, enum_key, control_key, config_key, volatile_base_key;"
+   },
+   {
+    "name": "virtual_monitor",
+    "type": "struct monitor",
+    "static": true,
+    "start_line": 173,
+    "end_line": 178,
+    "code": "static struct monitor virtual_monitor =\n{\n    .handle = VIRTUAL_HMONITOR,\n    .rc_work.right = 1024,\n    .rc_work.bottom = 768,\n};"
+   },
+   {
+    "name": "wine_devpropkey_monitor_hdr_enabledA",
+    "type": "const char[55]",
+    "static": true,
+    "start_line": 66,
+    "end_line": 66,
+    "code": "static const char wine_devpropkey_monitor_hdr_enabledA[] = \"Properties\\\\{233a9ef3-afc4-4abd-b564-c32f21f1535b}\\\\0006\";"
+   },
+   {
+    "name": "wine_devpropkey_monitor_rcworkA",
+    "type": "const char[55]",
+    "static": true,
+    "start_line": 65,
+    "end_line": 65,
+    "code": "static const char wine_devpropkey_monitor_rcworkA[] = \"Properties\\\\{233a9ef3-afc4-4abd-b564-c32f21f1535b}\\\\0004\";"
+   }
+  ],
+  "macros": [
+   {
+    "name": "DAYSPERNORMALQUADRENNIUM",
+    "start_line": 1019,
+    "end_line": 1019,
+    "code": "#define DAYSPERNORMALQUADRENNIUM (365 * 4 + 1)"
+   },
+   {
+    "name": "DAYSPERQUADRICENTENNIUM",
+    "start_line": 1018,
+    "end_line": 1018,
+    "code": "#define DAYSPERQUADRICENTENNIUM  (365 * 400 + 97)"
+   },
+   {
+    "name": "MONITOR_INFO_HAS_MONITOR_ID",
+    "start_line": 131,
+    "end_line": 131,
+    "code": "#define MONITOR_INFO_HAS_MONITOR_ID 0x00000001"
+   },
+   {
+    "name": "MONITOR_INFO_HAS_MONITOR_NAME",
+    "start_line": 132,
+    "end_line": 132,
+    "code": "#define MONITOR_INFO_HAS_MONITOR_NAME 0x00000002"
+   },
+   {
+    "name": "MONITOR_INFO_HAS_PREFERRED_MODE",
+    "start_line": 133,
+    "end_line": 133,
+    "code": "#define MONITOR_INFO_HAS_PREFERRED_MODE 0x00000004"
+   },
+   {
+    "name": "NEXT_DEVMODEW",
+    "start_line": 98,
+    "end_line": 98,
+    "code": "#define NEXT_DEVMODEW(mode) ((DEVMODEW *)((char *)((mode) + 1) + (mode)->dmDriverExtra))"
+   },
+   {
+    "name": "SECSPERDAY",
+    "start_line": 1017,
+    "end_line": 1017,
+    "code": "#define SECSPERDAY   86400"
+   },
+   {
+    "name": "TICKSPERSEC",
+    "start_line": 1016,
+    "end_line": 1016,
+    "code": "#define TICKSPERSEC  10000000"
+   },
+   {
+    "name": "WINE_ENUM_PHYSICAL_SETTINGS",
+    "start_line": 41,
+    "end_line": 41,
+    "code": "#define WINE_ENUM_PHYSICAL_SETTINGS  ((DWORD) -3)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "get_opengl_gpus",
+    "file": "dlls/win32u/opengl.c",
+    "start_line": 3509
+   },
+   {
+    "name": "get_shared_desktop",
+    "file": "dlls/win32u/winstation.c",
+    "start_line": 202
+   },
+   {
+    "name": "get_vulkan_gpus",
+    "file": "dlls/win32u/d3dkmt.c",
+    "start_line": 879
+   },
+   {
+    "name": "init_display_driver",
+    "file": "dlls/win32u/driver.c",
+    "start_line": 1059
+   },
+   {
+    "name": "is_virtual_desktop",
+    "file": "dlls/win32u/winstation.c",
+    "start_line": 337
+   },
+   {
+    "name": "muldiv",
+    "file": "dlls/win32u/mapping.c",
+    "start_line": 37
+   },
+   {
+    "name": "query_reg_ascii_value",
+    "file": "dlls/win32u/font.c",
+    "start_line": 619
+   },
+   {
+    "name": "query_reg_value",
+    "file": "dlls/win32u/font.c",
+    "start_line": 606
+   },
+   {
+    "name": "reg_create_ascii_key",
+    "file": "dlls/win32u/font.c",
+    "start_line": 579
+   },
+   {
+    "name": "reg_delete_tree",
+    "file": "dlls/win32u/font.c",
+    "start_line": 652
+   },
+   {
+    "name": "reg_delete_value",
+    "file": "dlls/win32u/font.c",
+    "start_line": 645
+   },
+   {
+    "name": "reg_open_ascii_key",
+    "file": "dlls/win32u/font.c",
+    "start_line": 524
+   },
+   {
+    "name": "reg_open_hkcu_key",
+    "file": "dlls/win32u/font.c",
+    "start_line": 587
+   },
+   {
+    "name": "reg_open_key",
+    "file": "dlls/win32u/font.c",
+    "start_line": 507
+   },
+   {
+    "name": "set_reg_ascii_value",
+    "file": "dlls/win32u/font.c",
+    "start_line": 599
+   },
+   {
+    "name": "set_reg_value",
+    "file": "dlls/win32u/font.c",
+    "start_line": 592
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "NtUserGetObjectInformation",
+    "impl": [
+     "dlls/win32u/winstation.c:683"
+    ]
+   },
+   {
+    "name": "NtUserGetProcessWindowStation",
+    "impl": [
+     "dlls/win32u/winstation.c:432"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtAllocateLocallyUniqueId",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/security.c:1104"
+    ]
+   },
+   {
+    "name": "NtClose",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/server.c:1940"
+    ]
+   },
+   {
+    "name": "NtCreateMutant",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/sync.c:1285"
+    ]
+   },
+   {
+    "name": "NtDeleteValueKey",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/registry.c:600"
+    ]
+   },
+   {
+    "name": "NtEnumerateKey",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/registry.c:357"
+    ]
+   },
+   {
+    "name": "NtEnumerateValueKey",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/registry.c:446"
+    ]
+   },
+   {
+    "name": "NtQueryKey",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/registry.c:369"
+    ]
+   },
+   {
+    "name": "NtQuerySystemInformation",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/system.c:3352"
+    ]
+   },
+   {
+    "name": "NtQuerySystemTime",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/sync.c:2485"
+    ]
+   },
+   {
+    "name": "NtReleaseMutant",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/sync.c:1343"
+    ]
+   },
+   {
+    "name": "NtWaitForSingleObject",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/sync.c:2347"
+    ]
+   },
+   {
+    "name": "RtlGetCurrentPeb",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/process.c:43"
+    ]
+   },
+   {
+    "name": "RtlUTF8ToUnicodeN",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/locale.c:1201"
+    ]
+   },
+   {
+    "name": "wine_server_call",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/loader.c:3436"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetRect",
+   "SetRectEmpty",
+   "ULongToHandle",
+   "_InterlockedDecrement",
+   "_InterlockedIncrement",
+   "debugstr_a",
+   "debugstr_guid",
+   "list_add_tail",
+   "list_count",
+   "list_empty",
+   "list_head",
+   "list_init",
+   "list_remove",
+   "list_tail",
+   "lstrlenW",
+   "ntdll_wcscmp",
+   "ntdll_wcslen",
+   "ntdll_wcsrchr",
+   "ntdll_wcstoul",
+   "wine_dbg_log",
+   "wine_dbg_sprintf",
+   "wine_dbgstr_point",
+   "wine_dbgstr_rect",
+   "wine_server_add_data",
+   "wine_server_rectangle"
+  ],
+  "system": [
+   "__assert_rtn",
+   "calloc",
+   "free",
+   "isspace",
+   "malloc",
+   "memcmp",
+   "pthread_mutex_lock",
+   "pthread_mutex_unlock",
+   "qsort",
+   "strcmp",
+   "strlen",
+   "strrchr"
+  ],
+  "unresolved": [
+   "asciiz_to_unicode",
+   "debugstr_ratio"
+  ],
+  "server_requests": [
+   {
+    "request": "set_winstation_monitors",
+    "handler": "server/winstation.c:617"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "user_driver->pUpdateDisplayDevices",
+    "in_function": "update_display_devices",
+    "at": "dlls/win32u/sysparams.c:2826",
+    "candidates": []
+   },
+   {
+    "expr": "callback",
+    "in_function": "enum_device_keys",
+    "at": "dlls/win32u/sysparams.c:2526",
+    "candidates": [
+     "callback @ dlls/win32u/message.c:2424",
+     "thunk_lock_callback @ dlls/win32u/message.c:3408",
+     "thunk_lock_callback @ dlls/win32u/message.c:3575"
+    ]
+   }
+  ]
+ }
+}

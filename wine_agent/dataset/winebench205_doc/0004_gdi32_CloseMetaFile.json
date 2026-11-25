@@ -1,0 +1,343 @@
+{
+ "id": "0004",
+ "function": {
+  "name": "CloseMetaFile",
+  "export_name": "CloseMetaFile",
+  "module": "gdi32",
+  "source_module": "gdi32",
+  "exported_by": [
+   "gdi.exe16",
+   "gdi32"
+  ],
+  "side": "PE",
+  "file": "dlls/gdi32/metadc.c",
+  "start_line": 1404,
+  "end_line": 1432,
+  "body_lines": 26,
+  "signature": "HMETAFILE WINAPI CloseMetaFile( HDC hdc )",
+  "header_comment": "/******************************************************************\n *           CloseMetaFile   (GDI32.@)\n *\n *  Stop recording graphics operations in metafile associated with\n *  hdc and retrieve metafile.\n */",
+  "code": "HMETAFILE WINAPI CloseMetaFile( HDC hdc )\n{\n    struct metadc *metadc;\n    DWORD bytes_written;\n    HMETAFILE hmf;\n\n    TRACE( \"(%p)\\n\", hdc );\n\n    if (!(metadc = get_metadc_ptr( hdc ))) return FALSE;\n\n    /* Construct the end of metafile record - this is documented\n     * in SDK Knowledgebase Q99334.\n     */\n    if (!metadc_param0( hdc, META_EOF )) return FALSE;\n    if (!NtGdiDeleteClientObj( hdc )) return FALSE;\n\n    if (metadc->hFile && !WriteFile( metadc->hFile, metadc->mh, metadc->mh->mtSize * sizeof(WORD),\n                                     &bytes_written, NULL ))\n    {\n        metadc_free( metadc );\n        return FALSE;\n    }\n\n    /* Now allocate a global handle for the metafile */\n    hmf = MF_Create_HMETAFILE( metadc->mh );\n    if (hmf) metadc->mh = NULL;  /* So it won't be deleted */\n    metadc_free( metadc );\n    return hmf;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"gdi_private.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wine/wingdi16.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "gdi32!CloseMetaFile [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdi32/tests/dc.c",
+   "dlls/gdi32/tests/gdiobj.c",
+   "dlls/gdi32/tests/metafile.c",
+   "dlls/gdi32/tests/palette.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 26
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "gdi.exe16",
+   "source_module": "gdi.exe16",
+   "exported_by": [
+    "gdi.exe16"
+   ],
+   "file": "dlls/gdi.exe16/metafile.c",
+   "start_line": 107,
+   "resolution": [
+    "gdi.exe16!CloseMetaFile [pascal -ret16] -> internal symbol CloseMetaFile16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 110,
+   "signature": "HMETAFILE16 WINAPI CloseMetaFile16(HDC16 hdc)",
+   "code": "HMETAFILE16 WINAPI CloseMetaFile16(HDC16 hdc)\n{\n    return create_metafile16( CloseMetaFile( HDC_32(hdc) ));\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-closemetafile.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-closemetafile",
+   "documented_name": "closemetafile",
+   "file": "docs/0004_sdk-api_nf-wingdi-closemetafile.md",
+   "text": "---\nUID: NF:wingdi.CloseMetaFile\ntitle: CloseMetaFile function (wingdi.h)\ndescription: The CloseMetaFile function closes a metafile device context and returns a handle that identifies a Windows-format metafile.\nhelpviewer_keywords: [\"CloseMetaFile\",\"CloseMetaFile function [Windows GDI]\",\"_win32_CloseMetaFile\",\"gdi.closemetafile\",\"wingdi/CloseMetaFile\"]\nold-location: gdi\\closemetafile.htm\ntech.root: gdi\nms.assetid: 8e50457a-8ef8-4e71-8c56-38cfb277f57d\nms.date: 12/05/2018\nms.keywords: CloseMetaFile, CloseMetaFile function [Windows GDI], _win32_CloseMetaFile, gdi.closemetafile, wingdi/CloseMetaFile\nreq.header: wingdi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CloseMetaFile\n - wingdi/CloseMetaFile\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - gdi32.dll\n - Ext-MS-Win-GDI-Metafile-l1-1-1.dll\n - ext-ms-win-gdi-metafile-l1-1-2.dll\n - GDI32Full.dll\napi_name:\n - CloseMetaFile\n---\n\n# CloseMetaFile function\n\n\n## -description\n\nThe <b>CloseMetaFile</b> function closes a metafile device context and returns a handle that identifies a Windows-format metafile.\n<div class=\"alert\"><b>Note</b>  This function is provided only for compatibility with Windows-format metafiles. Enhanced-format metafiles provide superior functionality and are recommended for new applications. The corresponding function for an enhanced-format metafile is <a href=\"/windows/desktop/api/wingdi/nf-wingdi-closeenhmetafile\">CloseEnhMetaFile</a>.</div><div> </div>\n\n## -parameters\n\n### -param hdc [in]\n\nHandle to a metafile device context used to create a Windows-format metafile.\n\n## -returns\n\nIf the function succeeds, the return value is a handle to a Windows-format metafile.\n\nIf the function fails, the return value is <b>NULL</b>.\n\n## -remarks\n\nTo convert a Windows-format metafile into a new enhanced-format metafile, use the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-setwinmetafilebits\">SetWinMetaFileBits</a> function.\n\nWhen an application no longer needs the Windows-format metafile handle, it should delete the handle by calling the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-deletemetafile\">DeleteMetaFile</a> function.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-closeenhmetafile\">CloseEnhMetaFile</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-copymetafilea\">CopyMetaFile</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-createmetafilea\">CreateMetaFile</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-deletemetafile\">DeleteMetaFile</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-enummetafile\">EnumMetaFile</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-getmetafilebitsex\">GetMetaFileBitsEx</a>\n\n\n\n<a href=\"/windows/desktop/gdi/metafile-functions\">Metafile Functions</a>\n\n\n\n<a href=\"/windows/desktop/gdi/metafiles\">Metafiles Overview</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-playmetafile\">PlayMetaFile</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-setwinmetafilebits\">SetWinMetaFileBits</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_metadc_ptr",
+   "file": "dlls/gdi32/metadc.c",
+   "start_line": 48,
+   "end_line": 53,
+   "static": false,
+   "called_from": [
+    "CloseMetaFile",
+    "metadc_record"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/metadc.c:677",
+    "dlls/gdi32/metadc.c:687",
+    "dlls/gdi32/metadc.c:698",
+    "dlls/gdi32/metadc.c:712",
+    "dlls/gdi32/metadc.c:977"
+   ],
+   "signature": "struct metadc *get_metadc_ptr( HDC hdc )",
+   "code": "struct metadc *get_metadc_ptr( HDC hdc )\n{\n    struct metadc *metafile = get_gdi_client_ptr( hdc, NTGDI_OBJ_METADC );\n    if (!metafile) SetLastError( ERROR_INVALID_HANDLE );\n    return metafile;\n}"
+  },
+  {
+   "name": "metadc_param0",
+   "file": "dlls/gdi32/metadc.c",
+   "start_line": 84,
+   "end_line": 91,
+   "static": true,
+   "called_from": [
+    "CloseMetaFile"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/metadc.c:186",
+    "dlls/gdi32/metadc.c:1231"
+   ],
+   "signature": "static BOOL metadc_param0( HDC hdc, short func )",
+   "code": "static BOOL metadc_param0( HDC hdc, short func )\n{\n    METARECORD mr;\n\n    mr.rdSize = FIELD_OFFSET(METARECORD, rdParm[0]) / sizeof(WORD);\n    mr.rdFunction = func;\n    return metadc_record( hdc, &mr, mr.rdSize * sizeof(WORD) );\n}"
+  },
+  {
+   "name": "metadc_free",
+   "file": "dlls/gdi32/metadc.c",
+   "start_line": 1288,
+   "end_line": 1299,
+   "static": true,
+   "called_from": [
+    "CloseMetaFile"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/metadc.c:1307"
+   ],
+   "signature": "static void metadc_free( struct metadc *metadc )",
+   "code": "static void metadc_free( struct metadc *metadc )\n{\n    DWORD index;\n\n    CloseHandle( metadc->hFile );\n    HeapFree( GetProcessHeap(), 0, metadc->mh );\n    for(index = 0; index < metadc->handles_size; index++)\n        if(metadc->handles[index])\n            GDI_hdc_not_using_object( metadc->handles[index], metadc->hdc );\n    HeapFree( GetProcessHeap(), 0, metadc->handles );\n    HeapFree( GetProcessHeap(), 0, metadc );\n}"
+  },
+  {
+   "name": "metadc_record",
+   "file": "dlls/gdi32/metadc.c",
+   "start_line": 76,
+   "end_line": 82,
+   "static": true,
+   "called_from": [
+    "metadc_param0"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/metadc.c:100",
+    "dlls/gdi32/metadc.c:112",
+    "dlls/gdi32/metadc.c:127",
+    "dlls/gdi32/metadc.c:143",
+    "dlls/gdi32/metadc.c:161"
+   ],
+   "signature": "static BOOL metadc_record( HDC hdc, METARECORD *mr, DWORD rlen )",
+   "code": "static BOOL metadc_record( HDC hdc, METARECORD *mr, DWORD rlen )\n{\n    struct metadc *metadc;\n\n    if (!(metadc = get_metadc_ptr( hdc ))) return FALSE;\n    return metadc_write_record( metadc, mr, rlen );\n}"
+  },
+  {
+   "name": "metadc_write_record",
+   "file": "dlls/gdi32/metadc.c",
+   "start_line": 55,
+   "end_line": 74,
+   "static": true,
+   "called_from": [
+    "metadc_record"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/metadc.c:574",
+    "dlls/gdi32/metadc.c:662",
+    "dlls/gdi32/metadc.c:1015",
+    "dlls/gdi32/metadc.c:1080",
+    "dlls/gdi32/metadc.c:1116"
+   ],
+   "signature": "static BOOL metadc_write_record( struct metadc *metadc, METARECORD *mr, unsigned int rlen )",
+   "code": "static BOOL metadc_write_record( struct metadc *metadc, METARECORD *mr, unsigned int rlen )\n{\n    DWORD len, size;\n    METAHEADER *mh;\n\n    len = metadc->mh->mtSize * sizeof(WORD) + rlen;\n    size = HeapSize( GetProcessHeap(), 0, metadc->mh );\n    if (len > size)\n    {\n        size += size / sizeof(WORD) + rlen;\n        mh = HeapReAlloc( GetProcessHeap(), 0, metadc->mh, size );\n        if (!mh) return FALSE;\n        metadc->mh = mh;\n    }\n    memcpy( (WORD *)metadc->mh + metadc->mh->mtSize, mr, rlen );\n\n    metadc->mh->mtSize += rlen / sizeof(WORD);\n    metadc->mh->mtMaxRecord = max( metadc->mh->mtMaxRecord, rlen / sizeof(WORD) );\n    return TRUE;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "metadc",
+    "kind": "struct_decl",
+    "start_line": 34,
+    "end_line": 44,
+    "code": "struct metadc\n{\n    HDC         hdc;\n    METAHEADER *mh;           /* Pointer to metafile header */\n    UINT        handles_size, cur_handles;\n    HGDIOBJ    *handles;\n    HANDLE      hFile;          /* Handle for disk based MetaFile */\n    HPEN        pen;\n    HBRUSH      brush;\n    HFONT       font;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 32,
+    "end_line": 32,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(metafile);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "GDI_hdc_not_using_object",
+    "file": "dlls/gdi32/objects.c",
+    "start_line": 289
+   },
+   {
+    "name": "MF_Create_HMETAFILE",
+    "file": "dlls/gdi32/metafile.c",
+    "start_line": 102
+   },
+   {
+    "name": "get_gdi_client_ptr",
+    "file": "dlls/gdi32/objects.c",
+    "start_line": 119
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "CloseHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "HeapReAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2229"
+    ]
+   },
+   {
+    "name": "HeapSize",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2349"
+    ]
+   },
+   {
+    "name": "NtGdiDeleteClientObj",
+    "module": "win32u",
+    "impl": [
+     "dlls/win32u/gdiobj.c:914"
+    ]
+   },
+   {
+    "name": "WriteFile",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:4027"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "SetLastError",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "gdi32.CloseMetaFile",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI",
+   "header": "wingdi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 29,
+   "body": 28,
+   "code": 15
+  },
+  "cyclomatic": 7,
+  "return_type": "HMETAFILE",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 26,
+   "n_tests": 33,
+   "n_tests_other": 7,
+   "own_test_functions": [
+    "dlls/gdi32/tests/dc.c::test_CreateCompatibleDC",
+    "dlls/gdi32/tests/dc.c::test_clip_box",
+    "dlls/gdi32/tests/gdiobj.c::test_shared_handle_table",
+    "dlls/gdi32/tests/metafile.c::create_converted_emf",
+    "dlls/gdi32/tests/metafile.c::test_CopyMetaFile",
+    "dlls/gdi32/tests/metafile.c::test_PlayMetaFile",
+    "dlls/gdi32/tests/metafile.c::test_SetWinMetaFileBits",
+    "dlls/gdi32/tests/metafile.c::test_gdiis",
+    "dlls/gdi32/tests/metafile.c::test_metafile_file",
+    "dlls/gdi32/tests/metafile.c::test_mf_Blank",
+    "dlls/gdi32/tests/metafile.c::test_mf_DCBrush",
+    "dlls/gdi32/tests/metafile.c::test_mf_ExtTextOut_on_path",
+    "dlls/gdi32/tests/metafile.c::test_mf_FloodFill",
+    "dlls/gdi32/tests/metafile.c::test_mf_GetPath",
+    "dlls/gdi32/tests/metafile.c::test_mf_Graphics",
+    "dlls/gdi32/tests/metafile.c::test_mf_PatternBrush",
+    "dlls/gdi32/tests/metafile.c::test_mf_SaveDC",
+    "dlls/gdi32/tests/metafile.c::test_mf_SetLayout",
+    "dlls/gdi32/tests/metafile.c::test_mf_SetPixel",
+    "dlls/gdi32/tests/metafile.c::test_mf_attrs",
+    "dlls/gdi32/tests/metafile.c::test_mf_blit",
+    "dlls/gdi32/tests/metafile.c::test_mf_clipping",
+    "dlls/gdi32/tests/metafile.c::test_mf_palette",
+    "dlls/gdi32/tests/metafile.c::test_mf_palette_brush",
+    "dlls/gdi32/tests/metafile.c::test_mf_select",
+    "dlls/gdi32/tests/palette.c::test_system_palette_entries"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-closemetafile",
+   "source": "win32",
+   "description": "The CloseMetaFile function closes a metafile device context and returns a handle that identifies a Windows-format metafile.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Gdi32.dll"
+  },
+  "exports": [
+   "gdi32.CloseMetaFile"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

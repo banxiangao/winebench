@@ -1,0 +1,192 @@
+{
+ "id": "0038",
+ "function": {
+  "name": "DispatchMessageW",
+  "export_name": "DispatchMessageW",
+  "module": "user32",
+  "source_module": "user32",
+  "exported_by": [
+   "unicows",
+   "user32"
+  ],
+  "side": "PE",
+  "file": "dlls/user32/message.c",
+  "start_line": 865,
+  "end_line": 893,
+  "body_lines": 26,
+  "signature": "LRESULT WINAPI DECLSPEC_HOTPATCH DispatchMessageW( const MSG* msg )",
+  "header_comment": "/***********************************************************************\n *\t\tDispatchMessageW (USER32.@) Process a message\n *\n * Process the message specified in the structure *_msg_.\n *\n * If the lpMsg parameter points to a WM_TIMER message and the\n * parameter of the WM_TIMER message is not NULL, the lParam parameter\n * points to the function that is called instead of the window\n * procedure. The function stored in lParam (timer callback) is protected\n * from causing page-faults.\n *\n * The message must be valid.\n *\n * RETURNS\n *\n *   DispatchMessage() returns the result of the window procedure invoked.\n *\n * CONFORMANCE\n *\n *   ECMA-234, Win32\n *\n */",
+  "code": "LRESULT WINAPI DECLSPEC_HOTPATCH DispatchMessageW( const MSG* msg )\n{\n    LRESULT retval;\n\n      /* Process timer messages */\n    if ((msg->message == WM_TIMER) || (msg->message == WM_SYSTIMER))\n    {\n        if (msg->lParam)\n        {\n            __TRY\n            {\n                retval = CallWindowProcW( (WNDPROC)msg->lParam, msg->hwnd,\n                                          msg->message, msg->wParam, GetTickCount() );\n            }\n            __EXCEPT_ALL\n            {\n                retval = 0;\n            }\n            __ENDTRY\n            return retval;\n        }\n    }\n\n    /* whenever possible, avoid using NtUserDispatchMessage to make the call unwindable */\n    if (msg->message != WM_SYSTIMER && msg->message != WM_PAINT)\n        return dispatch_message( msg, FALSE );\n\n    return NtUserDispatchMessage( msg );\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"user_private.h\"",
+   "#include \"controls.h\"",
+   "#include \"dde.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\""
+  ],
+  "resolution": [
+   "user32!DispatchMessageW [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/clipboard.c",
+   "dlls/user32/tests/msg.c",
+   "dlls/user32/tests/win.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 7
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-dispatchmessagew.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-dispatchmessagew",
+   "documented_name": "dispatchmessagew",
+   "file": "docs/0038_sdk-api_nf-winuser-dispatchmessagew.md",
+   "text": "---\nUID: NF:winuser.DispatchMessageW\ntitle: DispatchMessageW function (winuser.h)\ndescription: The DispatchMessageW (Unicode) function dispatches a message to a window procedure. It is typically used to dispatch a message retrieved by the GetMessage function.\nhelpviewer_keywords: [\"DispatchMessage\", \"DispatchMessage function [Windows and Messages]\", \"DispatchMessageW\", \"_win32_DispatchMessage\", \"_win32_dispatchmessage_cpp\", \"winmsg.dispatchmessage\", \"winui._win32_dispatchmessage\", \"winuser/DispatchMessage\", \"winuser/DispatchMessageW\"]\n\nold-location: winmsg\\dispatchmessage.htm\ntech.root: winmsg\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\windowing\\messagesandmessagequeues\\messagesandmessagequeuesreference\\messagesandmessagequeuesfunctions\\dispatchmessage.htm\nms.date: 08/02/2022\nms.keywords: DispatchMessage, DispatchMessage function [Windows and Messages], DispatchMessageA, DispatchMessageW, _win32_DispatchMessage, _win32_dispatchmessage_cpp, winmsg.dispatchmessage, winui._win32_dispatchmessage, winuser/DispatchMessage, winuser/DispatchMessageA, winuser/DispatchMessageW\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: DispatchMessageW (Unicode) and DispatchMessageA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - DispatchMessageW\n - winuser/DispatchMessageW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-rtcore-ntuser-window-ext-l1-1-1.dll\n - ext-ms-win-rtcore-ntuser-message-l1-1-0.dll\n - User32.dll\n - API-MS-Win-NTUser-IE-message-l1-1-0.dll\n - ie_shims.dll\n - API-MS-Win-RTCore-NTUser-Window-l1-1-0.dll\n - minuser.dll\n - Ext-MS-Win-NTUser-message-l1-1-0.dll\n - Ext-MS-Win-NTUser-message-l1-1-1.dll\n - Ext-MS-Win-RTCore-NTUser-Window-Ext-l1-1-0.dll\n - Ext-MS-Win-NTUser-Message-l1-1-2.dll\n - Ext-MS-Win-NTUser-Message-L1-1-3.dll\napi_name:\n - DispatchMessage\n - DispatchMessageA\n - DispatchMessageW\nreq.apiset: ext-ms-win-ntuser-message-l1-1-0 (introduced in Windows 8)\n---\n\n# DispatchMessageW function\n\n\n## -description\n\nDispatches a message to a window procedure. It is typically used to dispatch a message retrieved by the <a href=\"/windows/desktop/api/winuser/nf-winuser-getmessage\">GetMessage</a> function.\n\n## -parameters\n\n### -param lpMsg [in]\n\nType: <b>const <a href=\"/windows/desktop/api/winuser/ns-winuser-msg\">MSG</a>*</b>\n\nA pointer to a structure that contains the message.\n\n## -returns\n\nType: <b>LRESULT</b>\n\nThe return value specifies the value returned by the window procedure. Although its meaning depends on the message being dispatched, the return value generally is ignored.\n\n## -remarks\n\nThe <a href=\"/windows/desktop/api/winuser/ns-winuser-msg\">MSG</a> structure must contain valid message values. If the <i>lpmsg</i> parameter points to a <a href=\"/windows/desktop/winmsg/wm-timer\">WM_TIMER</a> message and the <i>lParam</i> parameter of the <b>WM_TIMER</b> message is not <b>NULL</b>, <i>lParam</i> points to a function that is called instead of the window procedure. \n\nNote that the application is responsible for retrieving and dispatching input messages to the dialog box. Most applications use the main message loop for this. However, to permit the user to move to and to select controls by using the keyboard, the application must call <a href=\"/windows/desktop/api/winuser/nf-winuser-isdialogmessagea\">IsDialogMessage</a>. For more information, see <a href=\"/windows/desktop/dlgbox/dlgbox-programming-considerations\">Dialog Box Keyboard Interface</a>.\n\n\n#### Examples\n\nFor an example, see <a href=\"/windows/desktop/winmsg/using-messages-and-message-queues\">Creating a Message Loop</a>.\n\n<div class=\"code\"></div>\n\n\n\n\n> [!NOTE]\n> The winuser.h header defines DispatchMessage as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-getmessage\">GetMessage</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-isdialogmessagea\">IsDialogMessage</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/ns-winuser-msg\">MSG</a>\n\n\n\n<a href=\"/windows/desktop/winmsg/messages-and-message-queues\">Messages and Message Queues</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-peekmessagea\">PeekMessage</a>\n\n\n\n<b>Reference</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-translatemessage\">TranslateMessage</a>\n\n\n\n<a href=\"/windows/desktop/winmsg/wm-timer\">WM_TIMER</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "dispatch_message",
+   "file": "dlls/user32/message.c",
+   "start_line": 795,
+   "end_line": 807,
+   "static": true,
+   "called_from": [
+    "DispatchMessageW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/user32/message.c:837"
+   ],
+   "signature": "static LRESULT dispatch_message( const MSG *msg, BOOL ansi )",
+   "code": "static LRESULT dispatch_message( const MSG *msg, BOOL ansi )\n{\n    struct win_proc_params params;\n    LRESULT retval = 0;\n\n    if (!NtUserMessageCall( msg->hwnd, msg->message, msg->wParam, msg->lParam,\n                            &params, NtUserGetDispatchParams, ansi )) return 0;\n\n    SPY_EnterMessage( SPY_DISPATCHMESSAGE, msg->hwnd, msg->message, msg->wParam, msg->lParam );\n    retval = dispatch_win_proc_params( &params );\n    SPY_ExitMessage( SPY_RESULT_OK, msg->hwnd, msg->message, retval, msg->wParam, msg->lParam );\n    return retval;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "SPY_EnterMessage",
+    "file": "dlls/user32/user_main.c",
+    "start_line": 343
+   },
+   {
+    "name": "SPY_ExitMessage",
+    "file": "dlls/user32/user_main.c",
+    "start_line": 348
+   },
+   {
+    "name": "dispatch_win_proc_params",
+    "file": "dlls/user32/winproc.c",
+    "start_line": 698
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "CallWindowProcW",
+    "impl": [
+     "dlls/user32/winproc.c:884"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "GetTickCount",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/sync.c:181"
+    ]
+   },
+   {
+    "name": "NtUserDispatchMessage",
+    "module": "win32u",
+    "impl": [
+     "dlls/win32u/message.c:4034"
+    ]
+   },
+   {
+    "name": "NtUserMessageCall",
+    "module": "win32u",
+    "impl": [
+     "dlls/win32u/message.c:4743"
+    ]
+   }
+  ],
+  "header_inline": [
+   "__wine_pop_frame",
+   "__wine_push_frame"
+  ],
+  "system": [],
+  "unresolved": [
+   "__wine_exception_handler_all",
+   "__wine_setjmpex"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "user32.DispatchMessageW",
+  "category": {
+   "l1": "User input and messaging",
+   "l2": "Windows and messages",
+   "header": "winuser.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 29,
+   "body": 28,
+   "code": 13
+  },
+  "cyclomatic": 6,
+  "return_type": "LRESULT",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 7,
+   "n_tests": 44,
+   "n_tests_other": 37,
+   "own_test_functions": [
+    "dlls/user32/tests/clipboard.c::check_messages_",
+    "dlls/user32/tests/clipboard.c::clipboard_thread",
+    "dlls/user32/tests/clipboard.c::run_thread",
+    "dlls/user32/tests/msg.c::foreground_window_thread",
+    "dlls/user32/tests/msg.c::test_unicode_wm_char",
+    "dlls/user32/tests/win.c::test_message_window_topmost",
+    "dlls/user32/tests/win.c::test_thread_exit_parent_thread"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-dispatchmessagew",
+   "source": "win32",
+   "description": "The DispatchMessageW (Unicode) function dispatches a message to a window procedure. It is typically used to dispatch a message retrieved by the GetMessage function.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "User32.dll"
+  },
+  "exports": [
+   "shlwapi.DispatchMessageWrapW",
+   "unicows.DispatchMessageW",
+   "user32.DispatchMessageW"
+  ],
+  "subset": {
+   "selected_by": "extra candidate 2026-11-25: loc.total > 10, 5 < n_tests_own <= 50, category with few samples"
+  }
+ }
+}

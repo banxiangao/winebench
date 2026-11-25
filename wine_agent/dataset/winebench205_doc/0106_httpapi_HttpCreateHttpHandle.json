@@ -1,0 +1,150 @@
+{
+ "id": "0106",
+ "function": {
+  "name": "HttpCreateHttpHandle",
+  "export_name": "HttpCreateHttpHandle",
+  "module": "httpapi",
+  "source_module": "httpapi",
+  "exported_by": [
+   "httpapi"
+  ],
+  "side": "PE",
+  "file": "dlls/httpapi/httpapi_main.c",
+  "start_line": 186,
+  "end_line": 200,
+  "body_lines": 12,
+  "signature": "ULONG WINAPI HttpCreateHttpHandle(HANDLE *handle, ULONG reserved)",
+  "header_comment": "/***********************************************************************\n *        HttpCreateHttpHandle     (HTTPAPI.@)\n *\n * Creates a handle to the HTTP request queue\n *\n * PARAMS\n *   handle     [O] handle to request queue\n *   reserved   [I] reserved, must be NULL\n *\n * RETURNS\n *   NO_ERROR if function succeeds, or error code if function fails\n *\n */",
+  "code": "ULONG WINAPI HttpCreateHttpHandle(HANDLE *handle, ULONG reserved)\n{\n    OBJECT_ATTRIBUTES attr = {sizeof(attr)};\n    UNICODE_STRING string = RTL_CONSTANT_STRING(L\"\\\\Device\\\\Http\\\\ReqQueue\");\n    IO_STATUS_BLOCK iosb;\n\n    TRACE(\"handle %p, reserved %#lx.\\n\", handle, reserved);\n\n    if (!handle)\n        return ERROR_INVALID_PARAMETER;\n\n    attr.ObjectName = &string;\n    return RtlNtStatusToDosError(NtCreateFile(handle, SYNCHRONIZE, &attr, &iosb, NULL,\n            FILE_ATTRIBUTE_NORMAL, 0, FILE_OPEN, FILE_NON_DIRECTORY_FILE, NULL, 0));\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"wine/http.h\"",
+   "#include \"winsvc.h\"",
+   "#include \"winternl.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\""
+  ],
+  "resolution": [
+   "httpapi!HttpCreateHttpHandle [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/httpapi/tests/httpapi.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 11
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "http",
+   "path": "sdk-api-src/content/http/nf-http-httpcreatehttphandle.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/http/nf-http-httpcreatehttphandle",
+   "documented_name": "httpcreatehttphandle",
+   "file": "docs/0106_sdk-api_nf-http-httpcreatehttphandle.md",
+   "text": "---\nUID: NF:http.HttpCreateHttpHandle\ntitle: HttpCreateHttpHandle function (http.h)\ndescription: Creates an HTTP request queue for the calling application and returns a handle to it.\nhelpviewer_keywords: [\"HttpCreateHttpHandle\",\"HttpCreateHttpHandle function [HTTP]\",\"_http_httpcreatehttphandle\",\"http.httpcreatehttphandle\",\"http/HttpCreateHttpHandle\"]\nold-location: http\\httpcreatehttphandle.htm\ntech.root: http\nms.assetid: c3741092-c23a-465f-9a65-5bcbf977fad3\nms.date: 12/05/2018\nms.keywords: HttpCreateHttpHandle, HttpCreateHttpHandle function [HTTP], _http_httpcreatehttphandle, http.httpcreatehttphandle, http/HttpCreateHttpHandle\nreq.header: http.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista, Windows XP with SP2 [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Httpapi.lib\nreq.dll: Httpapi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - HttpCreateHttpHandle\n - http/HttpCreateHttpHandle\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Httpapi.dll\napi_name:\n - HttpCreateHttpHandle\n---\n\n# HttpCreateHttpHandle function\n\n\n## -description\n\nThe \n<b>HttpCreateHttpHandle</b> function creates an HTTP request queue for the calling application and returns a handle to it.\n\nStarting with HTTP Server API Version 2.0,  applications should call <a href=\"/windows/desktop/api/http/nf-http-httpcreaterequestqueue\">HttpCreateRequestQueue</a> to create the request queue; <b>HttpCreateHttpHandle</b> should not be used.\n\n## -parameters\n\n### -param RequestQueueHandle [out]\n\nA pointer to a variable that receives a handle to the request queue.\n\n### -param Reserved [in]\n\nReserved. This parameter must be zero.\n\n## -returns\n\nIf the function succeeds, the return value is <b>NO_ERROR</b>.\n\nIf the function fails, the return value is one of the following error codes.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_DLL_INIT_FAILED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe calling application did not call \n<a href=\"/windows/desktop/api/http/nf-http-httpinitialize\">HttpInitialize</a> before calling this function.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>Other</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA <a href=\"/windows/desktop/Debug/system-error-codes\">system error code</a> defined in WinError.h.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe request queue enables the calling application to receive requests for particular URLs. The calling application uses the \n<a href=\"/windows/desktop/api/http/nf-http-httpaddurl\">HttpAddUrl</a> function to specify the URL for which it should receive requests.\n\nAn application should use a single request queue to receive requests. Using multiple request queues from a single process does not increase response time or throughput.\n\nWhen an application has finished receiving requests, it should call the \n<a href=\"/windows/desktop/api/handleapi/nf-handleapi-closehandle\">CloseHandle</a> function to close the handle.\n\n## -see-also\n\n<a href=\"/windows/desktop/Http/http-server-api-version-1-0-functions\">HTTP Server API Version 1.0 Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/http/nf-http-httpaddurl\">HttpAddUrl</a>\n\n\n\n<a href=\"/windows/desktop/api/http/nf-http-httpcreaterequestqueue\">HttpCreateRequestQueue</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 28,
+    "end_line": 28,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(http);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "NtCreateFile",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/file.c:4645"
+    ]
+   },
+   {
+    "name": "RtlNtStatusToDosError",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:77"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "httpapi.HttpCreateHttpHandle",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "HTTP Server",
+   "header": "http.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 15,
+   "body": 14,
+   "code": 9
+  },
+  "cyclomatic": 2,
+  "return_type": "ULONG",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 11,
+   "n_tests": 11,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/httpapi/tests/httpapi.c::test_v1_bad_request",
+    "dlls/httpapi/tests/httpapi.c::test_v1_completion_port",
+    "dlls/httpapi/tests/httpapi.c::test_v1_cooked_url",
+    "dlls/httpapi/tests/httpapi.c::test_v1_entity_body",
+    "dlls/httpapi/tests/httpapi.c::test_v1_multiple_requests",
+    "dlls/httpapi/tests/httpapi.c::test_v1_multiple_urls",
+    "dlls/httpapi/tests/httpapi.c::test_v1_relative_urls",
+    "dlls/httpapi/tests/httpapi.c::test_v1_server",
+    "dlls/httpapi/tests/httpapi.c::test_v1_short_buffer",
+    "dlls/httpapi/tests/httpapi.c::test_v1_unknown_tokens",
+    "dlls/httpapi/tests/httpapi.c::test_v1_urls"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/http/nf-http-httpcreatehttphandle",
+   "source": "win32",
+   "description": "Creates an HTTP request queue for the calling application and returns a handle to it.",
+   "min_windows": "Windows Vista, Windows XP with SP2 [desktop apps only]",
+   "documented_dll": "Httpapi.dll"
+  },
+  "exports": [
+   "httpapi.HttpCreateHttpHandle"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

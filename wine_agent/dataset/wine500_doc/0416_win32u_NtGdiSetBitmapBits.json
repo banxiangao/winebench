@@ -1,0 +1,170 @@
+{
+ "id": "0416",
+ "function": {
+  "name": "NtGdiSetBitmapBits",
+  "export_name": "SetBitmapBits",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "gdi.exe16",
+   "gdi32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/bitmap.c",
+  "start_line": 300,
+  "end_line": 402,
+  "body_lines": 100,
+  "signature": "LONG WINAPI NtGdiSetBitmapBits( HBITMAP hbitmap, /* [in] Handle to bitmap */ LONG count,        /* [in] Number of bytes in bitmap array */ LPCVOID bits)      /* [in] Address of array with bitmap bits */",
+  "header_comment": "/******************************************************************************\n *      NtGdiSetBitmapBits (win32u.@)\n *\n * Sets bits of color data for a bitmap.\n *\n * RETURNS\n *    Success: Number of bytes used in setting the bitmap bits\n *    Failure: 0\n */",
+  "code": "LONG WINAPI NtGdiSetBitmapBits(\n    HBITMAP hbitmap, /* [in] Handle to bitmap */\n    LONG count,        /* [in] Number of bytes in bitmap array */\n    LPCVOID bits)      /* [in] Address of array with bitmap bits */\n{\n    char buffer[FIELD_OFFSET( BITMAPINFO, bmiColors[256] )];\n    BITMAPINFO *info = (BITMAPINFO *)buffer;\n    BITMAPOBJ *bmp;\n    DWORD err;\n    int i, src_stride, dst_stride;\n    struct bitblt_coords src, dst;\n    struct gdi_image_bits src_bits;\n    HRGN clip = NULL;\n\n    if (!bits) return 0;\n\n    bmp = GDI_GetObjPtr( hbitmap, NTGDI_OBJ_BITMAP );\n    if (!bmp) return 0;\n\n    if (count < 0) {\n\tWARN(\"(%d): Negative number of bytes passed???\\n\", count );\n\tcount = -count;\n    }\n\n    src_stride = get_bitmap_stride( bmp->dib.dsBm.bmWidth, bmp->dib.dsBm.bmBitsPixel );\n    count = min( count, src_stride * bmp->dib.dsBm.bmHeight );\n\n    dst_stride = get_dib_stride( bmp->dib.dsBm.bmWidth, bmp->dib.dsBm.bmBitsPixel );\n\n    src.visrect.left   = src.x = 0;\n    src.visrect.top    = src.y = 0;\n    src.visrect.right  = src.width = bmp->dib.dsBm.bmWidth;\n    src.visrect.bottom = src.height = (count + src_stride - 1 ) / src_stride;\n    dst = src;\n\n    if (count % src_stride)\n    {\n        HRGN last_row;\n        int extra_pixels = ((count % src_stride) << 3) / bmp->dib.dsBm.bmBitsPixel;\n\n        if ((count % src_stride << 3) % bmp->dib.dsBm.bmBitsPixel)\n            FIXME( \"Unhandled partial pixel\\n\" );\n        clip = NtGdiCreateRectRgn( src.visrect.left, src.visrect.top,\n                                   src.visrect.right, src.visrect.bottom - 1 );\n        last_row = NtGdiCreateRectRgn( src.visrect.left, src.visrect.bottom - 1,\n                                       src.visrect.left + extra_pixels, src.visrect.bottom );\n        NtGdiCombineRgn( clip, clip, last_row, RGN_OR );\n        NtGdiDeleteObjectApp( last_row );\n    }\n\n    TRACE(\"(%p, %d, %p) %dx%d %d bpp fetched height: %d\\n\",\n          hbitmap, count, bits, bmp->dib.dsBm.bmWidth, bmp->dib.dsBm.bmHeight,\n          bmp->dib.dsBm.bmBitsPixel, src.height );\n\n    if (src_stride == dst_stride)\n    {\n        src_bits.ptr = (void *)bits;\n        src_bits.is_copy = FALSE;\n        src_bits.free = NULL;\n    }\n    else\n    {\n        if (!(src_bits.ptr = malloc( dst.height * dst_stride )))\n        {\n            GDI_ReleaseObj( hbitmap );\n            return 0;\n        }\n        src_bits.is_copy = TRUE;\n        src_bits.free = free_heap_bits;\n        for (i = 0; i < count / src_stride; i++)\n            memcpy( (char *)src_bits.ptr + i * dst_stride, (char *)bits + i * src_stride, src_stride );\n        if (count % src_stride)\n            memcpy( (char *)src_bits.ptr + i * dst_stride, (char *)bits + i * src_stride, count % src_stride );\n    }\n\n    /* query the color info */\n    info->bmiHeader.biSize          = sizeof(info->bmiHeader);\n    info->bmiHeader.biPlanes        = 1;\n    info->bmiHeader.biBitCount      = bmp->dib.dsBm.bmBitsPixel;\n    info->bmiHeader.biCompression   = BI_RGB;\n    info->bmiHeader.biXPelsPerMeter = 0;\n    info->bmiHeader.biYPelsPerMeter = 0;\n    info->bmiHeader.biClrUsed       = 0;\n    info->bmiHeader.biClrImportant  = 0;\n    info->bmiHeader.biWidth         = 0;\n    info->bmiHeader.biHeight        = 0;\n    info->bmiHeader.biSizeImage     = 0;\n    err = put_image_into_bitmap( bmp, 0, info, NULL, NULL, NULL );\n\n    if (!err || err == ERROR_BAD_FORMAT)\n    {\n        info->bmiHeader.biWidth     = bmp->dib.dsBm.bmWidth;\n        info->bmiHeader.biHeight    = -dst.height;\n        info->bmiHeader.biSizeImage = dst.height * dst_stride;\n        err = put_image_into_bitmap( bmp, clip, info, &src_bits, &src, &dst );\n    }\n    if (err) count = 0;\n\n    if (clip) NtGdiDeleteObjectApp( clip );\n    if (src_bits.free) src_bits.free( &src_bits );\n    GDI_ReleaseObj( hbitmap );\n    return count;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"ntgdi_private.h\"",
+   "#include \"wine/opengl_driver.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "gdi32!SetBitmapBits [stdcall] -> NtGdiSetBitmapBits implicitly imported from win32u",
+   "win32u!NtGdiSetBitmapBits [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdi32/tests/dib.c",
+   "dlls/gdi32/tests/pen.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "gdi.exe16",
+   "source_module": "gdi.exe16",
+   "exported_by": [
+    "gdi.exe16"
+   ],
+   "file": "dlls/gdi.exe16/gdi.c",
+   "start_line": 1876,
+   "resolution": [
+    "gdi.exe16!SetBitmapBits [pascal] -> internal symbol SetBitmapBits16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 1879,
+   "signature": "LONG WINAPI SetBitmapBits16( HBITMAP16 hbitmap, LONG count, LPCVOID buffer )",
+   "code": "LONG WINAPI SetBitmapBits16( HBITMAP16 hbitmap, LONG count, LPCVOID buffer )\n{\n    return SetBitmapBits( HBITMAP_32(hbitmap), count, buffer );\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-setbitmapbits.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-setbitmapbits",
+   "documented_name": "setbitmapbits",
+   "file": "docs/0416_sdk-api_nf-wingdi-setbitmapbits.md",
+   "text": "---\nUID: NF:wingdi.SetBitmapBits\ntitle: SetBitmapBits function (wingdi.h)\ndescription: The SetBitmapBits function sets the bits of color data for a bitmap to the specified values.\nhelpviewer_keywords: [\"SetBitmapBits\",\"SetBitmapBits function [Windows GDI]\",\"_win32_SetBitmapBits\",\"gdi.setbitmapbits\",\"wingdi/SetBitmapBits\"]\nold-location: gdi\\setbitmapbits.htm\ntech.root: gdi\nms.assetid: 3cab12a6-c408-4552-bec0-5ecfd8374757\nms.date: 12/05/2018\nms.keywords: SetBitmapBits, SetBitmapBits function [Windows GDI], _win32_SetBitmapBits, gdi.setbitmapbits, wingdi/SetBitmapBits\nreq.header: wingdi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SetBitmapBits\n - wingdi/SetBitmapBits\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - gdi32.dll\n - Ext-MS-Win-GDI-Internal-Desktop-L1-1-0.dll\n - GDI32Full.dll\napi_name:\n - SetBitmapBits\n---\n\n# SetBitmapBits function\n\n\n## -description\n\nThe <b>SetBitmapBits</b> function sets the bits of color data for a bitmap to the specified values.\n<div class=\"alert\"><b>Note</b>  This function is provided only for compatibility with 16-bit versions of Windows. Applications should use the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-setdibits\">SetDIBits</a> function.</div><div> </div>\n\n## -parameters\n\n### -param hbm [in]\n\nA handle to the bitmap to be set. This must be a compatible bitmap (DDB).\n\n### -param cb [in]\n\nThe number of bytes pointed to by the <i>lpBits</i> parameter.\n\n### -param pvBits [in]\n\nA pointer to an array of bytes that contain color data for the specified bitmap.\n\n## -returns\n\nIf the function succeeds, the return value is the number of bytes used in setting the bitmap bits.\n\nIf the function fails, the return value is zero.\n\n## -remarks\n\nThe array identified by <i>lpBits</i> must be WORD aligned.\n\n## -see-also\n\n<a href=\"/windows/desktop/gdi/bitmap-functions\">Bitmap Functions</a>\n\n\n\n<a href=\"/windows/desktop/gdi/bitmaps\">Bitmaps Overview</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-getbitmapbits\">GetBitmapBits</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-setdibits\">SetDIBits</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 37,
+    "end_line": 37,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(bitmap);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "GDI_GetObjPtr",
+    "file": "dlls/win32u/gdiobj.c",
+    "start_line": 821
+   },
+   {
+    "name": "GDI_ReleaseObj",
+    "file": "dlls/win32u/gdiobj.c",
+    "start_line": 837
+   },
+   {
+    "name": "free_heap_bits",
+    "file": "dlls/win32u/bitblt.c",
+    "start_line": 166
+   },
+   {
+    "name": "put_image_into_bitmap",
+    "file": "dlls/win32u/dibdrv/bitblt.c",
+    "start_line": 953
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "NtGdiCombineRgn",
+    "impl": [
+     "dlls/win32u/region.c:1179"
+    ]
+   },
+   {
+    "name": "NtGdiCreateRectRgn",
+    "impl": [
+     "dlls/win32u/region.c:606"
+    ]
+   },
+   {
+    "name": "NtGdiDeleteObjectApp",
+    "impl": [
+     "dlls/win32u/gdiobj.c:857"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [
+   "malloc"
+  ],
+  "unresolved": [
+   "get_bitmap_stride",
+   "get_dib_stride"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "src_bits.free",
+    "in_function": "NtGdiSetBitmapBits",
+    "at": "dlls/win32u/bitmap.c:399",
+    "candidates": [
+     "free_heap_bits @ dlls/win32u/bitblt.c:190",
+     "free_heap_bits @ dlls/win32u/bitblt.c:213",
+     "free_heap_bits @ dlls/win32u/bitblt.c:230",
+     "free_heap_bits @ dlls/win32u/bitblt.c:476",
+     "free_heap_bits @ dlls/win32u/bitmap.c:368",
+     "free_heap_bits @ dlls/win32u/brush.c:78",
+     "free_heap_bits @ dlls/win32u/dib.c:464",
+     "free_heap_bits @ dlls/win32u/dibdrv/bitblt.c:716",
+     "free_heap_bits @ dlls/win32u/dibdrv/bitblt.c:735",
+     "free_heap_bits @ dlls/win32u/dibdrv/objects.c:2027"
+    ]
+   }
+  ]
+ }
+}

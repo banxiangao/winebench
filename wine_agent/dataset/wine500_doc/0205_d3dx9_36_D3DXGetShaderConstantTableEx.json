@@ -1,0 +1,214 @@
+{
+ "id": "0205",
+ "function": {
+  "name": "D3DXGetShaderConstantTableEx",
+  "export_name": "D3DXGetShaderConstantTableEx",
+  "module": "d3dx9_36",
+  "source_module": "d3dx9_36",
+  "exported_by": [
+   "d3dx9_36",
+   "d3dx9_37",
+   "d3dx9_38",
+   "d3dx9_39",
+   "d3dx9_40",
+   "d3dx9_41",
+   "d3dx9_42",
+   "d3dx9_43"
+  ],
+  "side": "PE",
+  "file": "dlls/d3dx9_36/shader.c",
+  "start_line": 1989,
+  "end_line": 2107,
+  "body_lines": 116,
+  "signature": "HRESULT WINAPI D3DXGetShaderConstantTableEx(const DWORD *byte_code, DWORD flags, ID3DXConstantTable **constant_table)",
+  "header_comment": null,
+  "code": "HRESULT WINAPI D3DXGetShaderConstantTableEx(const DWORD *byte_code, DWORD flags, ID3DXConstantTable **constant_table)\n{\n    struct ID3DXConstantTableImpl *object = NULL;\n    const void *data;\n    HRESULT hr;\n    UINT size;\n    const D3DXSHADER_CONSTANTTABLE *ctab_header;\n    const D3DXSHADER_CONSTANTINFO *constant_info;\n    DWORD i;\n\n    TRACE(\"byte_code %p, flags %#lx, constant_table %p.\\n\", byte_code, flags, constant_table);\n\n    if (constant_table)\n        *constant_table = NULL;\n\n    if (!byte_code || !constant_table)\n    {\n        WARN(\"Invalid argument specified.\\n\");\n        return D3DERR_INVALIDCALL;\n    }\n\n    if (!is_valid_bytecode(*byte_code))\n    {\n        WARN(\"Invalid byte_code specified.\\n\");\n        return D3D_OK;\n    }\n\n    if (flags & ~D3DXCONSTTABLE_LARGEADDRESSAWARE)\n        FIXME(\"Flags %#lx not handled.\\n\", flags);\n\n    hr = D3DXFindShaderComment(byte_code, MAKEFOURCC('C','T','A','B'), &data, &size);\n    if (hr != D3D_OK)\n    {\n        WARN(\"CTAB not found.\\n\");\n        return D3DXERR_INVALIDDATA;\n    }\n\n    if (size < sizeof(*ctab_header))\n    {\n        WARN(\"Invalid CTAB size.\\n\");\n        return D3DXERR_INVALIDDATA;\n    }\n\n    ctab_header = (const D3DXSHADER_CONSTANTTABLE *)data;\n    if (ctab_header->Size != sizeof(*ctab_header))\n    {\n        WARN(\"Invalid D3DXSHADER_CONSTANTTABLE size.\\n\");\n        return D3DXERR_INVALIDDATA;\n    }\n\n    object = calloc(1, sizeof(*object));\n    if (!object)\n        return E_OUTOFMEMORY;\n\n    object->ID3DXConstantTable_iface.lpVtbl = &ID3DXConstantTable_Vtbl;\n    object->ref = 1;\n\n    object->ctab = malloc(size);\n    if (!object->ctab)\n    {\n        ERR(\"Out of memory\\n\");\n        free(object);\n        return E_OUTOFMEMORY;\n    }\n    object->size = size;\n    memcpy(object->ctab, data, object->size);\n\n    object->flags = flags;\n    object->desc.Creator = ctab_header->Creator ? object->ctab + ctab_header->Creator : NULL;\n    object->desc.Version = ctab_header->Version;\n    object->desc.Constants = ctab_header->Constants;\n    TRACE(\"Creator %s, Version %#lx, Constants %u, Target %s.\\n\",\n            debugstr_a(object->desc.Creator), object->desc.Version, object->desc.Constants,\n            debugstr_a(ctab_header->Target ? object->ctab + ctab_header->Target : NULL));\n\n    object->constants = calloc(object->desc.Constants, sizeof(*object->constants));\n    if (!object->constants)\n    {\n         ERR(\"Out of memory\\n\");\n         hr = E_OUTOFMEMORY;\n         goto error;\n    }\n\n    constant_info = (const D3DXSHADER_CONSTANTINFO *)(object->ctab + ctab_header->ConstantInfo);\n    for (i = 0; i < ctab_header->Constants; i++)\n    {\n        DWORD offset = constant_info[i].DefaultValue;\n\n        hr = parse_ctab_constant_type(object->ctab, constant_info[i].TypeInfo,\n                &object->constants[i], FALSE, constant_info[i].RegisterIndex,\n                constant_info[i].RegisterIndex + constant_info[i].RegisterCount,\n                offset ? &offset : NULL, constant_info[i].Name, constant_info[i].RegisterSet);\n        if (hr != D3D_OK)\n            goto error;\n\n        /*\n         * Set the register count, it may differ for D3DXRS_INT4, because somehow\n         * it makes the assumption that the register size is 1 instead of 4, so the\n         * count is 4 times bigger. This holds true only for toplevel shader\n         * constants. The count of elements and members is always based on a\n         * register size of 4.\n         */\n        if (object->constants[i].desc.RegisterSet == D3DXRS_INT4)\n        {\n            object->constants[i].desc.RegisterCount = constant_info[i].RegisterCount;\n        }\n        object->constants[i].constantinfo_reserved = constant_info[i].Reserved;\n    }\n\n    *constant_table = &object->ID3DXConstantTable_iface;\n\n    return D3D_OK;\n\nerror:\n    free_constant_table(object);\n    free(object);\n\n    return hr;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"d3dx9_private.h\"",
+   "#include \"d3dcommon.h\"",
+   "#include \"d3dcompiler.h\""
+  ],
+  "resolution": [
+   "d3dx9_36!D3DXGetShaderConstantTableEx [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/d3dx9_36/tests/shader.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "direct3d9",
+   "path": "desktop-src/direct3d9/d3dxgetshaderconstanttableex.md",
+   "url": "https://learn.microsoft.com/windows/win32/direct3d9/d3dxgetshaderconstanttableex",
+   "documented_name": "d3dxgetshaderconstanttableex",
+   "file": "docs/0205_win32_d3dxgetshaderconstanttableex.md",
+   "text": "---\ndescription: D3DXGetShaderConstantTableEx function - Gets the shader-constant table embedded inside a shader.\nms.assetid: f7e846e4-9cb4-4634-95e3-4b2a752978a8\ntitle: D3DXGetShaderConstantTableEx function (D3DX9Shader.h)\nms.topic: reference\nms.date: 05/31/2018\ntopic_type: \n- APIRef\n- kbSyntax\napi_name: \n- D3DXGetShaderConstantTableEx\napi_type: \n- LibDef\napi_location: \n- d3dx9.lib\n- d3dx9.dll\n---\n\n# D3DXGetShaderConstantTableEx function\n\nGets the shader-constant table embedded inside a shader.\n\n## Syntax\n\n\n```C++\nHRESULT D3DXGetShaderConstantTableEx(\n  _In_  const DWORD               *pFunction,\n  _In_        DWORD               Flags,\n  _Out_       LPD3DXCONSTANTTABLE * ppConstantTable\n);\n```\n\n\n\n## Parameters\n\n<dl> <dt>\n\n*pFunction* \\[in\\]\n</dt> <dd>\n\nType: **const [**DWORD**](../winprog/windows-data-types.md)\\***\n\nPointer to the function DWORD stream.\n\n</dd> <dt>\n\n*Flags* \\[in\\]\n</dt> <dd>\n\nType: **[**DWORD**](../winprog/windows-data-types.md)**\n\nUse the D3DXCONSTTABLE\\_LARGEADDRESSAWARE flag to access up to 4 GB of virtual address space (instead of the default of 2 GB). If you do not need the additional virtual address space, use [**D3DXGetShaderConstantTable**](d3dxgetshaderconstanttable.md).\n\n</dd> <dt>\n\n *ppConstantTable* \\[out\\]\n</dt> <dd>\n\nType: **[**LPD3DXCONSTANTTABLE**](id3dxconstanttable.md)\\***\n\nReturns the constant table interface (see [**ID3DXConstantTable**](id3dxconstanttable.md)) that manages the constant table.\n\n</dd> </dl>\n\n## Return value\n\nType: **[**HRESULT**](https://msdn.microsoft.com/library/Bb401631(v=MSDN.10).aspx)**\n\nIf the function succeeds, the return value is D3D\\_OK. If the function fails, the return value can be one of the following: D3DERR\\_INVALIDCALL, D3DXERR\\_INVALIDDATA, E\\_OUTOFMEMORY.\n\n## Remarks\n\nA constant table is generated by [**D3DXCompileShader**](d3dxcompileshader.md) and embedded in the shader body.\n\n## Requirements\n\n\n\n| Requirement | Value |\n|--------------------|------------------------------------------------------------------------------------------|\n| Header<br/>  | <dl> <dt>D3DX9Shader.h</dt> </dl> |\n| Library<br/> | <dl> <dt>D3dx9.lib</dt> </dl>     |\n\n\n\n## See also\n\n<dl> <dt>\n\n[Shader Functions](dx9-graphics-reference-d3dx-functions-shader.md)\n</dt> </dl>\n\n \n\n \n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "is_valid_bytecode",
+   "file": "dlls/d3dx9_36/shader.c",
+   "start_line": 29,
+   "end_line": 32,
+   "static": true,
+   "called_from": [
+    "D3DXGetShaderConstantTableEx"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static inline BOOL is_valid_bytecode(DWORD token)",
+   "code": "static inline BOOL is_valid_bytecode(DWORD token)\n{\n    return (token & 0xfffe0000) == 0xfffe0000;\n}"
+  },
+  {
+   "name": "parse_ctab_constant_type",
+   "file": "dlls/d3dx9_36/shader.c",
+   "start_line": 1851,
+   "end_line": 1987,
+   "static": true,
+   "called_from": [
+    "D3DXGetShaderConstantTableEx"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static HRESULT parse_ctab_constant_type(const char *ctab, DWORD typeoffset, struct ctab_constant *constant, BOOL is_element, WORD index, WORD max_index, DWORD *offset, DWORD nameoffset, UINT regset)",
+   "code": "static HRESULT parse_ctab_constant_type(const char *ctab, DWORD typeoffset, struct ctab_constant *constant,\n        BOOL is_element, WORD index, WORD max_index, DWORD *offset, DWORD nameoffset, UINT regset)\n{\n    const D3DXSHADER_TYPEINFO *type = (LPD3DXSHADER_TYPEINFO)(ctab + typeoffset);\n    const D3DXSHADER_STRUCTMEMBERINFO *memberinfo = NULL;\n    HRESULT hr = D3D_OK;\n    UINT i, count = 0;\n    WORD size = 0;\n\n    constant->desc.DefaultValue = offset ? ctab + *offset : NULL;\n    constant->desc.Class = type->Class;\n    constant->desc.Type = type->Type;\n    constant->desc.Rows = type->Rows;\n    constant->desc.Columns = type->Columns;\n    constant->desc.Elements = is_element ? 1 : type->Elements;\n    constant->desc.StructMembers = type->StructMembers;\n    constant->desc.Name = ctab + nameoffset;\n    constant->desc.RegisterSet = regset;\n    constant->desc.RegisterIndex = index;\n\n    TRACE(\"name %s, elements %u, index %u, defaultvalue %p, regset %s\\n\", constant->desc.Name,\n            constant->desc.Elements, index, constant->desc.DefaultValue,\n            debug_d3dxparameter_registerset(regset));\n    TRACE(\"class %s, type %s, rows %d, columns %d, elements %d, struct_members %d\\n\",\n            debug_d3dxparameter_class(type->Class), debug_d3dxparameter_type(type->Type),\n            type->Rows, type->Columns, type->Elements, type->StructMembers);\n\n    if (type->Elements > 1 && !is_element)\n    {\n        count = type->Elements;\n    }\n    else if ((type->Class == D3DXPC_STRUCT) && type->StructMembers)\n    {\n        memberinfo = (D3DXSHADER_STRUCTMEMBERINFO*)(ctab + type->StructMemberInfo);\n        count = type->StructMembers;\n    }\n\n    if (count)\n    {\n        constant->constants = calloc(count, sizeof(*constant->constants));\n        if (!constant->constants)\n        {\n             ERR(\"Out of memory\\n\");\n             hr = E_OUTOFMEMORY;\n             goto error;\n        }\n\n        for (i = 0; i < count; ++i)\n        {\n            hr = parse_ctab_constant_type(ctab, memberinfo ? memberinfo[i].TypeInfo : typeoffset,\n                    &constant->constants[i], memberinfo == NULL, index + size, max_index, offset,\n                    memberinfo ? memberinfo[i].Name : nameoffset, regset);\n            if (hr != D3D_OK)\n                goto error;\n\n            size += constant->constants[i].desc.RegisterCount;\n        }\n    }\n    else\n    {\n        WORD offsetdiff = type->Columns * type->Rows;\n        BOOL fail = FALSE;\n\n        size = type->Columns * type->Rows;\n\n        switch (regset)\n        {\n            case D3DXRS_BOOL:\n                fail = type->Class != D3DXPC_SCALAR && type->Class != D3DXPC_VECTOR\n                        && type->Class != D3DXPC_MATRIX_ROWS && type->Class != D3DXPC_MATRIX_COLUMNS;\n                break;\n\n            case D3DXRS_FLOAT4:\n            case D3DXRS_INT4:\n                switch (type->Class)\n                {\n                    case D3DXPC_VECTOR:\n                        size = 1;\n                        /* fall through */\n                    case D3DXPC_SCALAR:\n                        offsetdiff = type->Rows * 4;\n                        break;\n\n                    case D3DXPC_MATRIX_ROWS:\n                        offsetdiff = type->Rows * 4;\n                        size = type->Rows;\n                        break;\n\n                    case D3DXPC_MATRIX_COLUMNS:\n                        offsetdiff = type->Columns * 4;\n                        size = type->Columns;\n                        break;\n\n                    default:\n                        fail = TRUE;\n                        break;\n                }\n                break;\n\n            case D3DXRS_SAMPLER:\n                size = 1;\n                fail = type->Class != D3DXPC_OBJECT;\n                break;\n\n            default:\n                fail = TRUE;\n                break;\n        }\n\n        if (fail)\n        {\n            FIXME(\"Unhandled register set %s, type class %s\\n\", debug_d3dxparameter_registerset(regset),\n                    debug_d3dxparameter_class(type->Class));\n        }\n\n        /* offset in bytes => offsetdiff * sizeof(DWORD) */\n        if (offset) *offset += offsetdiff * 4;\n    }\n\n    constant->desc.RegisterCount = max(0, min(max_index - index, size));\n    constant->desc.Bytes = 4 * constant->desc.Elements * type->Rows * type->Columns;\n\n    return D3D_OK;\n\nerror:\n    if (constant->constants)\n    {\n        for (i = 0; i < count; ++i)\n        {\n            free_constant(&constant->constants[i]);\n        }\n        free(constant->constants);\n        constant->constants = NULL;\n    }\n\n    return hr;\n}"
+  },
+  {
+   "name": "free_constant_table",
+   "file": "dlls/d3dx9_36/shader.c",
+   "start_line": 740,
+   "end_line": 753,
+   "static": true,
+   "called_from": [
+    "D3DXGetShaderConstantTableEx"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/d3dx9_36/shader.c:940"
+   ],
+   "signature": "static void free_constant_table(struct ID3DXConstantTableImpl *table)",
+   "code": "static void free_constant_table(struct ID3DXConstantTableImpl *table)\n{\n    if (table->constants)\n    {\n        UINT i;\n\n        for (i = 0; i < table->desc.Constants; ++i)\n        {\n            free_constant(&table->constants[i]);\n        }\n        free(table->constants);\n    }\n    free(table->ctab);\n}"
+  },
+  {
+   "name": "free_constant",
+   "file": "dlls/d3dx9_36/shader.c",
+   "start_line": 726,
+   "end_line": 738,
+   "static": true,
+   "called_from": [
+    "free_constant_table",
+    "parse_ctab_constant_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void free_constant(struct ctab_constant *constant)",
+   "code": "static void free_constant(struct ctab_constant *constant)\n{\n    if (constant->constants)\n    {\n        UINT i, count = constant->desc.Elements > 1 ? constant->desc.Elements : constant->desc.StructMembers;\n\n        for (i = 0; i < count; ++i)\n        {\n            free_constant(&constant->constants[i]);\n        }\n        free(constant->constants);\n    }\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "ID3DXConstantTableImpl",
+    "kind": "struct_decl",
+    "start_line": 715,
+    "end_line": 724,
+    "code": "struct ID3DXConstantTableImpl\n{\n    ID3DXConstantTable ID3DXConstantTable_iface;\n    LONG ref;\n    char *ctab;\n    DWORD size;\n    DWORD flags;\n    D3DXCONSTANTTABLE_DESC desc;\n    struct ctab_constant *constants;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "ID3DXConstantTable_Vtbl",
+    "type": "const struct ID3DXConstantTableVtbl",
+    "static": true,
+    "start_line": 1817,
+    "end_line": 1849,
+    "code": "static const struct ID3DXConstantTableVtbl ID3DXConstantTable_Vtbl =\n{\n    /*** IUnknown methods ***/\n    ID3DXConstantTableImpl_QueryInterface,\n    ID3DXConstantTableImpl_AddRef,\n    ID3DXConstantTableImpl_Release,\n    /*** ID3DXBuffer methods ***/\n    ID3DXConstantTableImpl_GetBufferPointer,\n    ID3DXConstantTableImpl_GetBufferSize,\n    /*** ID3DXConstantTable methods ***/\n    ID3DXConstantTableImpl_GetDesc,\n    ID3DXConstantTableImpl_GetConstantDesc,\n    ID3DXConstantTableImpl_GetSamplerIndex,\n    ID3DXConstantTableImpl_GetConstant,\n    ID3DXConstantTableImpl_GetConstantByName,\n    ID3DXConstantTableImpl_GetConstantElement,\n    ID3DXConstantTableImpl_SetDefaults,\n    ID3DXConstantTableImpl_SetValue,\n    ID3DXConstantTableImpl_SetBool,\n    ID3DXConstantTableImpl_SetBoolArray,\n    ID3DXConstantTableImpl_SetInt,\n    ID3DXConstantTableImpl_SetIntArray,\n    ID3DXConstantTableImpl_SetFloat,\n    ID3DXConstantTableImpl_SetFloatArray,\n    ID3DXConstantTableImpl_SetVector,\n    ID3DXConstantTableImpl_SetVectorArray,\n    ID3DXConstantTableImpl_SetMatrix,\n    ID3DXConstantTableImpl_SetMatrixArray,\n    ID3DXConstantTableImpl_SetMatrixPointerArray,\n    ID3DXConstantTableImpl_SetMatrixTranspose,\n    ID3DXConstantTableImpl_SetMatrixTransposeArray,\n    ID3DXConstantTableImpl_SetMatrixTransposePointerArray\n};"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 27,
+    "end_line": 27,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(d3dx);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "debug_d3dxparameter_class",
+    "file": "dlls/d3dx9_36/util.c",
+    "start_line": 425
+   },
+   {
+    "name": "debug_d3dxparameter_registerset",
+    "file": "dlls/d3dx9_36/util.c",
+    "start_line": 471
+   },
+   {
+    "name": "debug_d3dxparameter_type",
+    "file": "dlls/d3dx9_36/util.c",
+    "start_line": 441
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "D3DXFindShaderComment",
+    "impl": [
+     "dlls/d3dx9_36/shader.c:141"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "calloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_a",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

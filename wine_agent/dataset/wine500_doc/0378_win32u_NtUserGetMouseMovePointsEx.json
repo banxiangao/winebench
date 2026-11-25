@@ -1,0 +1,99 @@
+{
+ "id": "0378",
+ "function": {
+  "name": "NtUserGetMouseMovePointsEx",
+  "export_name": "GetMouseMovePointsEx",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/input.c",
+  "start_line": 1689,
+  "end_line": 1748,
+  "body_lines": 57,
+  "signature": "int WINAPI NtUserGetMouseMovePointsEx( UINT size, MOUSEMOVEPOINT *ptin, MOUSEMOVEPOINT *ptout, int count, DWORD resolution )",
+  "header_comment": "/***********************************************************************\n *           NtUserGetMouseMovePointsEx    (win32u.@)\n */",
+  "code": "int WINAPI NtUserGetMouseMovePointsEx( UINT size, MOUSEMOVEPOINT *ptin, MOUSEMOVEPOINT *ptout,\n                                       int count, DWORD resolution )\n{\n    struct cursor_pos *pos, positions[64];\n    int copied;\n    unsigned int i;\n\n\n    TRACE( \"%d, %p, %p, %d, %d\\n\", size, ptin, ptout, count, resolution );\n\n    if ((size != sizeof(MOUSEMOVEPOINT)) || (count < 0) || (count > ARRAY_SIZE( positions )))\n    {\n        RtlSetLastWin32Error( ERROR_INVALID_PARAMETER );\n        return -1;\n    }\n\n    if (!ptin || (!ptout && count))\n    {\n        RtlSetLastWin32Error( ERROR_NOACCESS );\n        return -1;\n    }\n\n    if (resolution != GMMP_USE_DISPLAY_POINTS)\n    {\n        FIXME( \"only GMMP_USE_DISPLAY_POINTS is supported for now\\n\" );\n        RtlSetLastWin32Error( ERROR_POINT_NOT_FOUND );\n        return -1;\n    }\n\n    SERVER_START_REQ( get_cursor_history )\n    {\n        wine_server_set_reply( req, &positions, sizeof(positions) );\n        if (wine_server_call_err( req )) return -1;\n    }\n    SERVER_END_REQ;\n\n    for (i = 0; i < ARRAY_SIZE( positions ); i++)\n    {\n        pos = &positions[i];\n        if (ptin->x == pos->x && ptin->y == pos->y && (!ptin->time || ptin->time == pos->time))\n            break;\n    }\n\n    if (i == ARRAY_SIZE( positions ))\n    {\n        RtlSetLastWin32Error( ERROR_POINT_NOT_FOUND );\n        return -1;\n    }\n\n    for (copied = 0; copied < count && i < ARRAY_SIZE( positions ); copied++, i++)\n    {\n        pos = &positions[i];\n        ptout[copied].x = pos->x;\n        ptout[copied].y = pos->y;\n        ptout[copied].time = pos->time;\n        ptout[copied].dwExtraInfo = pos->info;\n    }\n\n    return copied;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"win32u_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"kbd.h\""
+  ],
+  "resolution": [
+   "user32!GetMouseMovePointsEx [stdcall] -> NtUserGetMouseMovePointsEx implicitly imported from win32u",
+   "win32u!NtUserGetMouseMovePointsEx [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/input.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-getmousemovepointsex.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getmousemovepointsex",
+   "documented_name": "getmousemovepointsex",
+   "file": "docs/0378_sdk-api_nf-winuser-getmousemovepointsex.md",
+   "text": "---\nUID: NF:winuser.GetMouseMovePointsEx\ntitle: GetMouseMovePointsEx function (winuser.h)\ndescription: Retrieves a history of up to 64 previous coordinates of the mouse or pen.\nhelpviewer_keywords: [\"GMMP_USE_DISPLAY_POINTS\",\"GMMP_USE_HIGH_RESOLUTION_POINTS\",\"GetMouseMovePointsEx\",\"GetMouseMovePointsEx function [Keyboard and Mouse Input]\",\"_win32_GetMouseMovePointsEx\",\"_win32_getmousemovepointsex_cpp\",\"inputdev.getmousemovepointsex\",\"winui._win32_getmousemovepointsex\",\"winuser/GetMouseMovePointsEx\"]\nold-location: inputdev\\getmousemovepointsex.htm\ntech.root: inputdev\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\userinput\\mouseinput\\mouseinputreference\\mouseinputfunctions\\getmousemovepointsex.htm\nms.date: 12/05/2018\nms.keywords: GMMP_USE_DISPLAY_POINTS, GMMP_USE_HIGH_RESOLUTION_POINTS, GetMouseMovePointsEx, GetMouseMovePointsEx function [Keyboard and Mouse Input], _win32_GetMouseMovePointsEx, _win32_getmousemovepointsex_cpp, inputdev.getmousemovepointsex, winui._win32_getmousemovepointsex, winuser/GetMouseMovePointsEx\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetMouseMovePointsEx\n - winuser/GetMouseMovePointsEx\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - User32.dll\napi_name:\n - GetMouseMovePointsEx\n---\n\n# GetMouseMovePointsEx function\n\n\n## -description\n\nRetrieves a history of up to 64 previous coordinates of the mouse or pen.\n\n## -parameters\n\n### -param cbSize [in]\n\nType: <b>UINT</b>\n\nThe size, in bytes, of the <a href=\"/windows/desktop/api/winuser/ns-winuser-mousemovepoint\">MOUSEMOVEPOINT</a> structure.\n\n### -param lppt [in]\n\nType: <b>LPMOUSEMOVEPOINT</b>\n\nA pointer to a <a href=\"/windows/desktop/api/winuser/ns-winuser-mousemovepoint\">MOUSEMOVEPOINT</a> structure containing valid mouse coordinates (in screen coordinates). It may also contain a time stamp. \n\nThe <b>GetMouseMovePointsEx</b> function searches for the point in the mouse coordinates history. If the function finds the point, it returns the last \n\t\t\t\t\t\t<i>nBufPoints</i> prior to and including the supplied point. \n\nIf your application supplies a time stamp, the <b>GetMouseMovePointsEx</b> function will use it to differentiate between two equal points that were recorded at different times. \n\nAn application should call this function using the mouse coordinates received from the <a href=\"/windows/desktop/inputdev/wm-mousemove\">WM_MOUSEMOVE</a> message and convert them to screen coordinates.\n\n### -param lpptBuf [out]\n\nType: <b>LPMOUSEMOVEPOINT</b>\n\nA pointer to a buffer that will receive the points. It should be at least \n\t\t\t\t\t<i>cbSize</i>*\n\t\t\t\t\t<i>nBufPoints</i> in size.\n\n### -param nBufPoints [in]\n\nType: <b>int</b>\n\nThe number of points to be retrieved.\n\n### -param resolution [in]\n\nType: <b>DWORD</b>\n\nThe resolution desired. This parameter can be one of the following values. \n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"GMMP_USE_DISPLAY_POINTS\"></a><a id=\"gmmp_use_display_points\"></a><dl>\n<dt><b>GMMP_USE_DISPLAY_POINTS</b></dt>\n<dt>1</dt>\n</dl>\n</td>\n<td width=\"60%\">\nRetrieves the points using the display resolution.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"GMMP_USE_HIGH_RESOLUTION_POINTS\"></a><a id=\"gmmp_use_high_resolution_points\"></a><dl>\n<dt><b>GMMP_USE_HIGH_RESOLUTION_POINTS</b></dt>\n<dt>2</dt>\n</dl>\n</td>\n<td width=\"60%\">\nRetrieves high resolution points. Points can range from zero to 65,535 (0xFFFF) in both x- and y-coordinates. This is the resolution provided by absolute coordinate pointing devices such as drawing tablets.\n\n</td>\n</tr>\n</table>\n\n## -returns\n\nType: <b>int</b>\n\nIf the function succeeds, the return value is the number of points in the buffer. Otherwise, the function returns \n\t\t\t\t\t\t–1. For extended error information, your application can call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThe system retains the last 64 mouse coordinates and their time stamps. If your application supplies a mouse coordinate to <b>GetMouseMovePointsEx</b> and the coordinate exists in the system's mouse coordinate history, the function retrieves the specified number of coordinates from the systems' history. You can also supply a time stamp, which will be used to differentiate between identical points in the history.\n\nThe <b>GetMouseMovePointsEx</b> function will return points that eventually were dispatched not only to the calling thread but also to other threads.\n\n<b>GetMouseMovePointsEx</b> may fail or return erroneous values in the following cases: \n\n<ul>\n<li>If negative coordinates are passed in the <a href=\"/windows/desktop/api/winuser/ns-winuser-mousemovepoint\">MOUSEMOVEPOINT</a> structure. </li>\n<li>If <b>GetMouseMovePointsEx</b> retrieves a coordinate with a negative value. </li>\n</ul>\nThese situations can occur if multiple monitors are present. To correct this, first call \n\t\t\t\t<a href=\"/windows/desktop/api/winuser/nf-winuser-getsystemmetrics\">GetSystemMetrics</a> to get the following values: \n\n<ul>\n<li>SM_XVIRTUALSCREEN, </li>\n<li>SM_YVIRTUALSCREEN, </li>\n<li>SM_CXVIRTUALSCREEN, and </li>\n<li>SM_CYVIRTUALSCREEN. </li>\n</ul>\nThen, for each point that is returned from <b>GetMouseMovePointsEx</b>, perform the following transform: \n\n\n```\nint nVirtualWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN) ;\nint nVirtualHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN) ;\nint nVirtualLeft = GetSystemMetrics(SM_XVIRTUALSCREEN) ;\nint nVirtualTop = GetSystemMetrics(SM_YVIRTUALSCREEN) ;\nint cpt = 0 ;\nint mode = GMMP_USE_DISPLAY_POINTS ;\n\nMOUSEMOVEPOINT mp_in ;\nMOUSEMOVEPOINT mp_out[64] ;\n\nZeroMemory(&mp_in, sizeof(mp_in)) ;\nmp_in.x = pt.x & 0x0000FFFF ;//Ensure that this number will pass through.\nmp_in.y = pt.y & 0x0000FFFF ;\ncpt = GetMouseMovePointsEx(&mp_in, &mp_out, 64, mode) ;\n\nfor (int i = 0; i < cpt; i++)\n{\n   switch(mode)\n   {\n   case GMMP_USE_DISPLAY_POINTS:\n      if (mp_out[i].x > 32767)\n         mp_out[i].x -= 65536 ;\n      if (mp_out[i].y > 32767)\n         mp_out[i].y -= 65536 ;\n      break ;\n   case GMMP_USE_HIGH_RESOLUTION_POINTS:\n      mp_out[i].x = ((mp_out[i].x * (nVirtualWidth - 1)) - (nVirtualLeft * 65536)) / nVirtualWidth ;\n      mp_out[i].y = ((mp_out[i].y * (nVirtualHeight - 1)) - (nVirtualTop * 65536)) / nVirtualHeight ;\n      break ;\n   }\n} \n```\n\n## -see-also\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/ns-winuser-mousemovepoint\">MOUSEMOVEPOINT</a>\n\n\n\n<a href=\"/windows/desktop/inputdev/mouse-input\">Mouse Input</a>\n\n\n\n<b>Reference</b>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(win);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "RtlSetLastWin32Error",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log",
+   "wine_server_call_err",
+   "wine_server_set_reply"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [
+   {
+    "request": "get_cursor_history",
+    "handler": "server/queue.c:4052"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

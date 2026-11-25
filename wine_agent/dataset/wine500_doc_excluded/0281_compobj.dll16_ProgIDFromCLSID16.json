@@ -1,0 +1,139 @@
+{
+ "id": "0281",
+ "function": {
+  "name": "ProgIDFromCLSID16",
+  "export_name": "ProgIDFromCLSID",
+  "module": "compobj.dll16",
+  "source_module": "compobj.dll16",
+  "exported_by": [
+   "combase",
+   "compobj.dll16",
+   "ole32"
+  ],
+  "side": "PE",
+  "file": "dlls/compobj.dll16/compobj.c",
+  "start_line": 454,
+  "end_line": 468,
+  "body_lines": 12,
+  "signature": "HRESULT WINAPI ProgIDFromCLSID16(REFCLSID clsid, SEGPTR *str)",
+  "header_comment": "/***********************************************************************\n *           ProgIDFromCLSID   [COMPOBJ.151]\n */",
+  "code": "HRESULT WINAPI ProgIDFromCLSID16(REFCLSID clsid, SEGPTR *str)\n{\n    LPOLESTR progid;\n    HRESULT ret;\n\n    ret = ProgIDFromCLSID( clsid, &progid );\n    if (ret == S_OK)\n    {\n        INT len = WideCharToMultiByte( CP_ACP, 0, progid, -1, NULL, 0, NULL, NULL );\n        if ((*str = CoMemAlloc(len, MEMCTX_TASK, 0)))\n            WideCharToMultiByte( CP_ACP, 0, progid, -1, MapSL(*str), len, NULL, NULL );\n        CoTaskMemFree( progid );\n    }\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdlib.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <string.h>",
+   "#include <assert.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winuser.h\"",
+   "#include \"objbase.h\"",
+   "#include \"ole2.h\"",
+   "#include \"rpc.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winreg.h\"",
+   "#include \"wownt32.h\"",
+   "#include \"wtypes.h\"",
+   "#include \"wine/winbase16.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "compobj.dll16!ProgIDFromCLSID [pascal] -> internal symbol ProgIDFromCLSID16"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ole32/tests/compobj.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "combase",
+   "source_module": "combase",
+   "exported_by": [
+    "combase",
+    "ole32"
+   ],
+   "file": "dlls/combase/combase.c",
+   "start_line": 1272,
+   "resolution": [
+    "combase!ProgIDFromCLSID [stdcall]"
+   ],
+   "macro_generated": false,
+   "win16": false,
+   "end_line": 1335,
+   "signature": "HRESULT WINAPI DECLSPEC_HOTPATCH ProgIDFromCLSID(REFCLSID clsid, LPOLESTR *progid)",
+   "code": "HRESULT WINAPI DECLSPEC_HOTPATCH ProgIDFromCLSID(REFCLSID clsid, LPOLESTR *progid)\n{\n    ACTCTX_SECTION_KEYED_DATA data;\n    LONG progidlen = 0;\n    HKEY hkey;\n    REGSAM opposite = (sizeof(void *) > sizeof(int)) ? KEY_WOW64_32KEY : KEY_WOW64_64KEY;\n    BOOL is_wow64;\n    HRESULT hr;\n\n    if (!progid)\n        return E_INVALIDARG;\n\n    *progid = NULL;\n\n    data.cbSize = sizeof(data);\n    if (FindActCtxSectionGuid(0, NULL, ACTIVATION_CONTEXT_SECTION_COM_SERVER_REDIRECTION,\n            clsid, &data))\n    {\n        struct comclassredirect_data *comclass = (struct comclassredirect_data *)data.lpData;\n        if (comclass->progid_len)\n        {\n            WCHAR *ptrW;\n\n            *progid = CoTaskMemAlloc(comclass->progid_len + sizeof(WCHAR));\n            if (!*progid) return E_OUTOFMEMORY;\n\n            ptrW = (WCHAR *)((BYTE *)comclass + comclass->progid_offset);\n            memcpy(*progid, ptrW, comclass->progid_len + sizeof(WCHAR));\n            return S_OK;\n        }\n        else\n            return REGDB_E_CLASSNOTREG;\n    }\n\n    hr = open_key_for_clsid(clsid, L\"ProgID\", KEY_READ, &hkey);\n    if (FAILED(hr) && (opposite == KEY_WOW64_32KEY || (IsWow64Process(GetCurrentProcess(), &is_wow64) && is_wow64)))\n    {\n        hr = open_key_for_clsid(clsid, L\"ProgID\", opposite | KEY_READ, &hkey);\n        if (FAILED(hr))\n            return hr;\n    }\n\n    if (RegQueryValueW(hkey, NULL, NULL, &progidlen))\n        hr = REGDB_E_CLASSNOTREG;\n\n    if (hr == S_OK)\n    {\n        *progid = CoTaskMemAlloc(progidlen * sizeof(WCHAR));\n        if (*progid)\n        {\n            if (RegQueryValueW(hkey, NULL, *progid, &progidlen))\n            {\n                hr = REGDB_E_CLASSNOTREG;\n                CoTaskMemFree(*progid);\n                *progid = NULL;\n            }\n        }\n        else\n            hr = E_OUTOFMEMORY;\n    }\n\n    RegCloseKey(hkey);\n    return hr;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "combaseapi",
+   "path": "sdk-api-src/content/combaseapi/nf-combaseapi-progidfromclsid.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/combaseapi/nf-combaseapi-progidfromclsid",
+   "documented_name": "progidfromclsid",
+   "file": "docs/0281_sdk-api_nf-combaseapi-progidfromclsid.md",
+   "text": "---\nUID: NF:combaseapi.ProgIDFromCLSID\ntitle: ProgIDFromCLSID function (combaseapi.h)\ndescription: Retrieves the ProgID for a given CLSID.\nhelpviewer_keywords: [\"ProgIDFromCLSID\",\"ProgIDFromCLSID function [COM]\",\"_com_ProgIDFromCLSID\",\"com.progidfromclsid\",\"combaseapi/ProgIDFromCLSID\"]\nold-location: com\\progidfromclsid.htm\ntech.root: com\nms.assetid: a863cbc2-f8ab-468a-8254-b273077a6a2b\nms.date: 12/05/2018\nms.keywords: ProgIDFromCLSID, ProgIDFromCLSID function [COM], _com_ProgIDFromCLSID, com.progidfromclsid, combaseapi/ProgIDFromCLSID\nreq.header: combaseapi.h\nreq.include-header: Objbase.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ole32.lib\nreq.dll: Ole32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ProgIDFromCLSID\n - combaseapi/ProgIDFromCLSID\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-com-l1-1-3.dll\n - api-ms-win-core-com-l1-1-2.dll\n - Ole32.dll\n - API-MS-Win-Core-Com-l1-1-0.dll\n - ComBase.dll\n - API-MS-Win-Core-Com-l1-1-1.dll\n - API-MS-Win-DownLevel-Ole32-l1-1-0.dll\n - API-MS-Win-DownLevel-Ole32-l1-1-1.dll\napi_name:\n - ProgIDFromCLSID\n---\n\n# ProgIDFromCLSID function\n\n\n## -description\n\nRetrieves the ProgID for a given CLSID.\n\n## -parameters\n\n### -param clsid [in]\n\nThe CLSID for which the ProgID is to be requested.\n\n### -param lplpszProgID [out]\n\nThe address of a pointer variable that receives the ProgID string. The string that represents <i>clsid</i> includes enclosing braces.\n\n## -returns\n\nThis function can return the following values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>S_OK</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe ProgID was returned successfully.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>REGDB_E_CLASSNOTREG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nClass not registered in the registry.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>REGDB_E_READREGDB</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThere was an error reading from the registry.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nEvery OLE object class listed in the <b>Insert Object</b> dialog box must have a programmatic identifier (ProgID), a string that uniquely identifies a given class, stored in the registry. In addition to determining the eligibility for the <b>Insert Object</b> dialog box, the ProgID can be used as an identifier in a macro programming language to identify a class. Finally, the ProgID is also the class name used for an object of an OLE class that is placed in an OLE 1 container.\n\n<b>ProgIDFromCLSID</b> uses entries in the registry to do the conversion. OLE application authors are responsible for ensuring that the registry is configured correctly in the application's setup program.\n\nThe ProgID string must be different than the class name of any OLE 1 application, including the OLE 1 version of the same application, if there is one. In addition, a ProgID string must not contain more than 39 characters, start with a digit, or, except for a single period, contain any punctuation (including underscores).\n\nThe ProgID must never be shown to the user in the user interface. If you need a short displayable string for an object, call <a href=\"/windows/desktop/api/ole2/nf-ole2-olereggetusertype\">IOleObject::GetUserType</a>.\n\n\n\nCall the <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-clsidfromprogid\">CLSIDFromProgID</a> function to find the CLSID associated with a given ProgID. Be sure to free the returned ProgID  when you are finished with it by calling the <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-cotaskmemfree\">CoTaskMemFree</a> function.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-clsidfromprogid\">CLSIDFromProgID</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "CoMemAlloc",
+    "impl": [
+     "dlls/compobj.dll16/compobj.c:305"
+    ]
+   },
+   {
+    "name": "ProgIDFromCLSID",
+    "impl": [
+     "dlls/compobj.dll16/compobj.c:454"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CoTaskMemFree",
+    "module": "ole32",
+    "impl": [
+     "dlls/combase/malloc.c:389"
+    ]
+   },
+   {
+    "name": "MapSL",
+    "module": "kernel32",
+    "impl": [
+     "dlls/krnl386.exe16/selector.c:636"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   }
+  ],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

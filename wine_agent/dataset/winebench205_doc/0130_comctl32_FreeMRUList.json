@@ -1,0 +1,255 @@
+{
+ "id": "0130",
+ "function": {
+  "name": "FreeMRUList",
+  "export_name": "FreeMRUList",
+  "module": "comctl32",
+  "source_module": "comctl32",
+  "exported_by": [
+   "comctl32",
+   "comctl32_v6"
+  ],
+  "side": "PE",
+  "file": "dlls/comctl32/commctrl.c",
+  "start_line": 1941,
+  "end_line": 1964,
+  "body_lines": 21,
+  "signature": "void WINAPI FreeMRUList(HANDLE hMRUList)",
+  "header_comment": "/**************************************************************************\n *              FreeMRUList [COMCTL32.152]\n *\n * Frees a most-recently-used items list.\n */",
+  "code": "void WINAPI FreeMRUList(HANDLE hMRUList)\n{\n    WINEMRULIST *mp = hMRUList;\n    unsigned int i;\n\n    TRACE(\"%p.\\n\", hMRUList);\n\n    if (!hMRUList)\n        return;\n\n    if (mp->wineFlags & WMRUF_CHANGED)\n    {\n        /* need to open key and then save the info */\n        MRU_SaveChanged(mp);\n    }\n\n    for (i = 0; i < mp->extview.uMax; ++i)\n        Free(mp->array[i]);\n\n    Free(mp->realMRU);\n    Free(mp->array);\n    Free(mp->extview.lpszSubKey);\n    Free(mp);\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winnls.h\"",
+   "#include \"commctrl.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winreg.h\"",
+   "#include \"comctl32.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "comctl32!FreeMRUList [stdcall -noname]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/comctl32/tests/mru.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 4
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "",
+   "path": "desktop-src/shell/freemrulist.md",
+   "url": "https://learn.microsoft.com/windows/win32/shell/freemrulist",
+   "documented_name": "freemrulist",
+   "file": "docs/0130_win32_freemrulist.md",
+   "text": "---\ndescription: Frees the handle associated with the most recently used (MRU) list and writes cached data to the registry.\ntitle: FreeMRUList function\nms.topic: reference\nms.date: 05/31/2018\ntopic_type: \n- APIRef\n- kbSyntax\napi_name: \n- FreeMRUList\napi_type: \n- DllExport\napi_location: \n- Comctl32.dll\nms.assetid: 51db9352-7188-4fb7-9c92-1d9579cd7250\n\n---\n\n# FreeMRUList function\n\nFrees the handle associated with the most recently used (MRU) list and writes cached data to the registry.\n\n## Syntax\n\n\n```C++\nint FreeMRUList(\n  _In_ HANDLE hMRU\n);\n```\n\n\n\n## Parameters\n\n<dl> <dt>\n\n*hMRU* \\[in\\]\n</dt> <dd>\n\nType: **HANDLE**\n\nThe handle of the MRU list to free.\n\n</dd> </dl>\n\n## Return value\n\nType: **int**\n\nReturns a non-negative value if successful, -1 otherwise.\n\n## Remarks\n\nIf the MRU list was created using the **MRU\\_CACHEWRITE** flag, calling **FreeMRUList** causes any changes not yet written to the version of the MRU list stored in registry to be written at this time.\n\nThis function is not included in a public header or library. It must be extracted from comctl32.dll by ordinal 152.\n\n## Requirements\n\n\n\n| Requirement | Value |\n|-------------------------------------|----------------------------------------------------------------------------------------------------------------|\n| Minimum supported client<br/> | Windows 2000 Professional \\[desktop apps only\\]<br/>                                                     |\n| Minimum supported server<br/> | Windows 2000 Server \\[desktop apps only\\]<br/>                                                           |\n| DLL<br/>                      | <dl> <dt>Comctl32.dll (version 5.0 or later)</dt> </dl> |\n\n\n\n \n\n \n\n\n\n\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "MRU_SaveChanged",
+   "file": "dlls/comctl32/commctrl.c",
+   "start_line": 1883,
+   "end_line": 1934,
+   "static": true,
+   "called_from": [
+    "FreeMRUList"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/comctl32/commctrl.c:2094"
+   ],
+   "signature": "static void MRU_SaveChanged(WINEMRULIST *mp)",
+   "code": "static void MRU_SaveChanged(WINEMRULIST *mp)\n{\n    UINT i, err;\n    HKEY newkey;\n    WCHAR realname[2];\n    WINEMRUITEM *witem;\n\n    /* or should we do the following instead of RegOpenKeyEx:\n     */\n\n    /* open the sub key */\n    if ((err = RegOpenKeyExW(mp->extview.hKey, mp->extview.lpszSubKey, 0, KEY_WRITE, &newkey)))\n    {\n        /* not present - what to do ??? */\n        ERR(\"Could not open key, error=%d, attempting to create\\n\", err);\n        if ((err = RegCreateKeyExW( mp->extview.hKey, mp->extview.lpszSubKey, 0, NULL, REG_OPTION_NON_VOLATILE,\n                KEY_READ | KEY_WRITE, 0, &newkey, 0)))\n        {\n            ERR(\"failed to create key /%s/, err=%d\\n\", debugstr_w(mp->extview.lpszSubKey), err);\n            return;\n        }\n    }\n\n    if (mp->wineFlags & WMRUF_CHANGED)\n    {\n        mp->wineFlags &= ~WMRUF_CHANGED;\n        if ((err = RegSetValueExW(newkey, strMRUList, 0, REG_SZ, (BYTE *)mp->realMRU,\n                (lstrlenW(mp->realMRU) + 1)*sizeof(WCHAR))))\n        {\n            ERR(\"error saving MRUList, err=%d\\n\", err);\n        }\n        TRACE(\"saving MRUList=/%s/\\n\", debugstr_w(mp->realMRU));\n    }\n\n    realname[1] = 0;\n    for (i = 0; i < mp->cursize; ++i)\n    {\n        witem = mp->array[i];\n        if (witem->itemFlag & WMRUIF_CHANGED)\n        {\n            witem->itemFlag &= ~WMRUIF_CHANGED;\n            realname[0] = 'a' + i;\n            if ((err = RegSetValueExW(newkey, realname, 0, (mp->extview.fFlags & MRU_BINARY) ?\n                    REG_BINARY : REG_SZ, &witem->datastart, witem->size)))\n            {\n                ERR(\"error saving /%s/, err=%d\\n\", debugstr_w(realname), err);\n            }\n            TRACE(\"saving value for name /%s/ size %ld\\n\", debugstr_w(realname), witem->size);\n        }\n    }\n    RegCloseKey(newkey);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "MRUINFOW",
+    "kind": "struct_decl",
+    "start_line": 1827,
+    "end_line": 1839,
+    "code": "struct MRUINFOW\n{\n    DWORD   cbSize;\n    UINT    uMax;\n    UINT    fFlags;\n    HKEY    hKey;\n    LPWSTR  lpszSubKey;\n    union\n    {\n        MRUStringCmpFnW string_cmpfn;\n        MRUBinaryCmpFn  binary_cmpfn;\n    } u;\n};"
+   },
+   {
+    "name": "WINEMRUITEM",
+    "kind": "typedef_decl",
+    "start_line": 1854,
+    "end_line": 1859,
+    "code": "typedef struct tagWINEMRUITEM\n{\n    DWORD          size;        /* size of data stored               */\n    DWORD          itemFlag;    /* flags                             */\n    BYTE           datastart;\n} WINEMRUITEM, *LPWINEMRUITEM;"
+   },
+   {
+    "name": "WINEMRULIST",
+    "kind": "typedef_decl",
+    "start_line": 1864,
+    "end_line": 1873,
+    "code": "typedef struct tagWINEMRULIST\n{\n    struct MRUINFOW extview;    /* original create information       */\n    BOOL           isUnicode;   /* is compare fn Unicode */\n    DWORD          wineFlags;   /* internal flags                    */\n    DWORD          cursize;     /* current size of realMRU           */\n    LPWSTR         realMRU;     /* pointer to string of index names  */\n    LPWINEMRUITEM  *array;      /* array of pointers to data         */\n                                /* in 'a' to 'z' order               */\n} WINEMRULIST, *LPWINEMRULIST;"
+   },
+   {
+    "name": "tagWINEMRUITEM",
+    "kind": "struct_decl",
+    "start_line": 1854,
+    "end_line": 1859,
+    "code": "typedef struct tagWINEMRUITEM\n{\n    DWORD          size;        /* size of data stored               */\n    DWORD          itemFlag;    /* flags                             */\n    BYTE           datastart;\n} WINEMRUITEM, *LPWINEMRUITEM;"
+   },
+   {
+    "name": "tagWINEMRULIST",
+    "kind": "struct_decl",
+    "start_line": 1864,
+    "end_line": 1873,
+    "code": "typedef struct tagWINEMRULIST\n{\n    struct MRUINFOW extview;    /* original create information       */\n    BOOL           isUnicode;   /* is compare fn Unicode */\n    DWORD          wineFlags;   /* internal flags                    */\n    DWORD          cursize;     /* current size of realMRU           */\n    LPWSTR         realMRU;     /* pointer to string of index names  */\n    LPWINEMRUITEM  *array;      /* array of pointers to data         */\n                                /* in 'a' to 'z' order               */\n} WINEMRULIST, *LPWINEMRULIST;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 73,
+    "end_line": 73,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(commctrl);"
+   },
+   {
+    "name": "strMRUList",
+    "type": "const WCHAR[8]",
+    "static": true,
+    "start_line": 1697,
+    "end_line": 1697,
+    "code": "static const WCHAR strMRUList[] = L\"MRUList\";"
+   }
+  ],
+  "macros": [
+   {
+    "name": "MRU_BINARY",
+    "start_line": 1843,
+    "end_line": 1843,
+    "code": "#define MRU_BINARY     1 /* list will contain binary data */"
+   },
+   {
+    "name": "WMRUF_CHANGED",
+    "start_line": 1876,
+    "end_line": 1876,
+    "code": "#define WMRUF_CHANGED  0x0001   /* MRU list has changed              */"
+   },
+   {
+    "name": "WMRUIF_CHANGED",
+    "start_line": 1862,
+    "end_line": 1862,
+    "code": "#define WMRUIF_CHANGED   0x0001 /* this dataitem changed             */"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "Free",
+    "impl": [
+     "dlls/comctl32/commctrl.c:1729"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "RegCloseKey",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1129"
+    ]
+   },
+   {
+    "name": "RegCreateKeyExW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:566"
+    ]
+   },
+   {
+    "name": "RegOpenKeyExW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:644"
+    ]
+   },
+   {
+    "name": "RegSetValueExW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1209"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_w",
+   "lstrlenW",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "comctl32.FreeMRUList",
+  "category": {
+   "l1": "Windows environment (Shell)",
+   "l2": "Windows Shell",
+   "header": "",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 24,
+   "body": 23,
+   "code": 13
+  },
+  "cyclomatic": 4,
+  "return_type": "void",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 4,
+   "n_tests": 4,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/comctl32/tests/mru.c::test_CreateMRUListLazyA",
+    "dlls/comctl32/tests/mru.c::test_CreateMRUListLazyW",
+    "dlls/comctl32/tests/mru.c::test_CreateMRUListW",
+    "dlls/comctl32/tests/mru.c::test_MRUListA"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/shell/freemrulist",
+   "source": "win32-conceptual",
+   "description": "Frees the handle associated with the most recently used (MRU) list and writes cached data to the registry.",
+   "min_windows": "",
+   "documented_dll": "Comctl32.dll"
+  },
+  "exports": [
+   "comctl32.FreeMRUList"
+  ],
+  "subset": {
+   "selected_by": "topup",
+   "lower_bound_used": 1,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

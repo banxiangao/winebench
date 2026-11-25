@@ -1,0 +1,347 @@
+{
+ "id": "0227",
+ "function": {
+  "name": "OleSetMenuDescriptor",
+  "export_name": "OleSetMenuDescriptor",
+  "module": "ole32",
+  "source_module": "ole32",
+  "exported_by": [
+   "ole2.dll16",
+   "ole32"
+  ],
+  "side": "PE",
+  "file": "dlls/ole32/ole2.c",
+  "start_line": 1862,
+  "end_line": 1930,
+  "body_lines": 66,
+  "signature": "HRESULT WINAPI OleSetMenuDescriptor( HOLEMENU               hOleMenu, HWND                   hwndFrame, HWND                   hwndActiveObject, LPOLEINPLACEFRAME        lpFrame, LPOLEINPLACEACTIVEOBJECT lpActiveObject)",
+  "header_comment": "/***********************************************************************\n * OleSetMenuDescriptor [OLE32.@]\n * Installs or removes OLE dispatching code for the containers frame window.\n *\n * PARAMS\n *     hOleMenu         Handle to composite menu descriptor\n *     hwndFrame        Handle to containers frame window\n *     hwndActiveObject Handle to objects in-place activation window\n *     lpFrame          Pointer to IOleInPlaceFrame on containers window\n *     lpActiveObject   Pointer to IOleInPlaceActiveObject on active in-place object\n *\n * RETURNS\n *      S_OK                               - menu installed correctly\n *      E_FAIL, E_INVALIDARG, E_UNEXPECTED - failure\n *\n * FIXME\n *      The lpFrame and lpActiveObject parameters are currently ignored\n *      OLE should install context sensitive help F1 filtering for the app when\n *      these are non null.\n */",
+  "code": "HRESULT WINAPI OleSetMenuDescriptor(\n    HOLEMENU               hOleMenu,\n    HWND                   hwndFrame,\n    HWND                   hwndActiveObject,\n    LPOLEINPLACEFRAME        lpFrame,\n    LPOLEINPLACEACTIVEOBJECT lpActiveObject)\n{\n    OleMenuDescriptor *pOleMenuDescriptor = NULL;\n\n    /* Check args */\n    if ( !hwndFrame || (hOleMenu && !hwndActiveObject) )\n        return E_INVALIDARG;\n\n    if ( lpFrame || lpActiveObject )\n    {\n        FIXME(\"(%p, %p, %p, %p, %p), Context sensitive help filtering not implemented!\\n\",\n        hOleMenu,\n        hwndFrame,\n        hwndActiveObject,\n        lpFrame,\n        lpActiveObject);\n    }\n\n    /* Set up a message hook to intercept the containers frame window messages.\n     * The message filter is responsible for dispatching menu messages from the\n     * shared menu which are intended for the object.\n     */\n\n    if ( hOleMenu )  /* Want to install dispatching code */\n    {\n        /* If OLEMenu hooks are already installed for this thread, fail\n         * Note: This effectively means that OleSetMenuDescriptor cannot\n         * be called twice in succession on the same frame window\n         * without first calling it with a null hOleMenu to uninstall\n         */\n        if ( OLEMenu_IsHookInstalled( GetCurrentThreadId() ) )\n            return E_FAIL;\n\n        /* Get the menu descriptor */\n        pOleMenuDescriptor = GlobalLock( hOleMenu );\n        if ( !pOleMenuDescriptor )\n            return E_UNEXPECTED;\n\n        /* Update the menu descriptor */\n        pOleMenuDescriptor->hwndFrame = hwndFrame;\n        pOleMenuDescriptor->hwndActiveObject = hwndActiveObject;\n\n        GlobalUnlock( hOleMenu );\n        pOleMenuDescriptor = NULL;\n\n        /* Add a menu descriptor windows property to the frame window */\n        SetPropW( hwndFrame, prop_olemenuW, hOleMenu );\n\n        /* Install thread scope message hooks for WH_GETMESSAGE and WH_CALLWNDPROC */\n        if ( !OLEMenu_InstallHooks( GetCurrentThreadId() ) )\n            return E_FAIL;\n    }\n    else  /* Want to uninstall dispatching code */\n    {\n        /* Uninstall the hooks */\n        if ( !OLEMenu_UnInstallHooks( GetCurrentThreadId() ) )\n            return E_FAIL;\n\n        /* Remove the menu descriptor property from the frame window */\n        RemovePropW( hwndFrame, prop_olemenuW );\n    }\n\n    return S_OK;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdlib.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <string.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winreg.h\"",
+   "#include \"ole2.h\"",
+   "#include \"ole2ver.h\"",
+   "#include \"compobj_private.h\"",
+   "#include \"olestd.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "ole32!OleSetMenuDescriptor [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ole32/tests/compobj.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "ole2.dll16",
+   "source_module": "ole2.dll16",
+   "exported_by": [
+    "ole2.dll16"
+   ],
+   "file": "dlls/ole2.dll16/ole2.c",
+   "start_line": 211,
+   "resolution": [
+    "ole2.dll16!OleSetMenuDescriptor [pascal] -> internal symbol OleSetMenuDescriptor16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 220,
+   "signature": "HRESULT WINAPI OleSetMenuDescriptor16( HOLEMENU               hOleMenu, HWND16                 hwndFrame, HWND16                 hwndActiveObject, LPOLEINPLACEFRAME        lpFrame, LPOLEINPLACEACTIVEOBJECT lpActiveObject)",
+   "code": "HRESULT WINAPI OleSetMenuDescriptor16(\n    HOLEMENU               hOleMenu,\n    HWND16                 hwndFrame,\n    HWND16                 hwndActiveObject,\n    LPOLEINPLACEFRAME        lpFrame,\n    LPOLEINPLACEACTIVEOBJECT lpActiveObject)\n{\n    FIXME(\"(%p, %x, %x, %p, %p), stub!\\n\", hOleMenu, hwndFrame, hwndActiveObject, lpFrame, lpActiveObject);\n    return E_NOTIMPL;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "ole2",
+   "path": "sdk-api-src/content/ole2/nf-ole2-olesetmenudescriptor.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/ole2/nf-ole2-olesetmenudescriptor",
+   "documented_name": "olesetmenudescriptor",
+   "file": "docs/0227_sdk-api_nf-ole2-olesetmenudescriptor.md",
+   "text": "---\nUID: NF:ole2.OleSetMenuDescriptor\ntitle: OleSetMenuDescriptor function (ole2.h)\ndescription: Installs or removes OLE dispatching code from the container's frame window.\nhelpviewer_keywords: [\"OleSetMenuDescriptor\",\"OleSetMenuDescriptor function [COM]\",\"_ole_OleSetMenuDescriptor\",\"com.olesetmenudescriptor\",\"ole2/OleSetMenuDescriptor\"]\nold-location: com\\olesetmenudescriptor.htm\ntech.root: com\nms.assetid: c80fe36d-5093-4814-83a9-0c11c5a7cf5f\nms.date: 12/05/2018\nms.keywords: OleSetMenuDescriptor, OleSetMenuDescriptor function [COM], _ole_OleSetMenuDescriptor, com.olesetmenudescriptor, ole2/OleSetMenuDescriptor\nreq.header: ole2.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ole32.lib\nreq.dll: Ole32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - OleSetMenuDescriptor\n - ole2/OleSetMenuDescriptor\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-com-ole32-l1-4-0.dll\n - ext-ms-win-com-ole32-l1-3-0.dll\n - ext-ms-win-com-ole32-l1-2-0.dll\n - Ole32.dll\napi_name:\n - OleSetMenuDescriptor\nreq.apiset: ext-ms-win-com-ole32-l1-1-5 (introduced in Windows 10, version 10.0.15063)\n---\n\n# OleSetMenuDescriptor function\n\n\n## -description\n\nInstalls or removes OLE dispatching code from the container's frame window.\n\n## -parameters\n\n### -param holemenu [in]\n\nHandle to the composite menu descriptor returned by the <a href=\"/windows/desktop/api/ole2/nf-ole2-olecreatemenudescriptor\">OleCreateMenuDescriptor</a> function. If <b>NULL</b>, the dispatching code is unhooked.\n\n### -param hwndFrame [in]\n\n Handle to the container's frame window where the in-place composite menu is to be installed.\n\n### -param hwndActiveObject [in]\n\nHandle to the object's in-place activation window. OLE dispatches menu messages and commands to this window.\n\n### -param lpFrame [in]\n\nPointer to the <a href=\"/windows/desktop/api/oleidl/nn-oleidl-ioleinplaceframe\">IOleInPlaceFrame</a> interface on the container's frame window.\n\n### -param lpActiveObj [in]\n\nPointer to the <a href=\"/windows/desktop/api/oleidl/nn-oleidl-ioleinplaceactiveobject\">IOleInPlaceActiveObject</a> interface on the active in-place object.\n\n## -returns\n\nThis function returns S_OK on success.\n\n## -remarks\n\nThe container should call <b>OleSetMenuDescriptor</b> to install the dispatching code on <i>hwndFrame</i> when the object calls the <a href=\"/windows/desktop/api/oleidl/nf-oleidl-ioleinplaceframe-setmenu\">IOleInPlaceFrame::SetMenu</a> method, or to remove the dispatching code by passing <b>NULL</b> as the value for <i>holemenu</i> to <b>OleSetMenuDescriptor</b>.\n\nIf both the <i>lpFrame</i> and <i>lpActiveObj</i> parameters are non-<b>NULL</b>, OLE installs the context-sensitive help F1 message filter for the application. Otherwise, the application must supply its own message filter.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/oleidl/nn-oleidl-ioleinplaceactiveobject\">IOleInPlaceActiveObject</a>\n\n\n\n<a href=\"/windows/desktop/api/oleidl/nf-oleidl-ioleinplaceframe-setmenu\">IOleInPlaceFrame::SetMenu</a>\n\n\n\n<a href=\"/windows/desktop/api/ole2/nf-ole2-olecreatemenudescriptor\">OleCreateMenuDescriptor</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "OLEMenu_IsHookInstalled",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 1510,
+   "end_line": 1523,
+   "static": true,
+   "called_from": [
+    "OLEMenu_CallWndProc",
+    "OLEMenu_GetMsgProc",
+    "OleSetMenuDescriptor"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static OleMenuHookItem * OLEMenu_IsHookInstalled( DWORD tid )",
+   "code": "static OleMenuHookItem * OLEMenu_IsHookInstalled( DWORD tid )\n{\n  OleMenuHookItem *pHookItem;\n\n  /* Do a simple linear search for an entry whose tid matches ours.\n   * We really need a map but efficiency is not a concern here. */\n  for (pHookItem = hook_list; pHookItem; pHookItem = pHookItem->next)\n  {\n    if ( tid == pHookItem->tid )\n      return pHookItem;\n  }\n\n  return NULL;\n}"
+  },
+  {
+   "name": "OLEMenu_InstallHooks",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 1418,
+   "end_line": 1459,
+   "static": true,
+   "called_from": [
+    "OleSetMenuDescriptor"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL OLEMenu_InstallHooks( DWORD tid )",
+   "code": "static BOOL OLEMenu_InstallHooks( DWORD tid )\n{\n  OleMenuHookItem *pHookItem;\n\n  /* Create an entry for the hook table */\n  if ( !(pHookItem = HeapAlloc(GetProcessHeap(), 0,\n                               sizeof(OleMenuHookItem)) ) )\n    return FALSE;\n\n  pHookItem->tid = tid;\n  pHookItem->hHeap = GetProcessHeap();\n  pHookItem->CallWndProc_hHook = NULL;\n\n  /* Install a thread scope message hook for WH_GETMESSAGE */\n  pHookItem->GetMsg_hHook = SetWindowsHookExW( WH_GETMESSAGE, OLEMenu_GetMsgProc,\n                                               0, GetCurrentThreadId() );\n  if ( !pHookItem->GetMsg_hHook )\n    goto CLEANUP;\n\n  /* Install a thread scope message hook for WH_CALLWNDPROC */\n  pHookItem->CallWndProc_hHook = SetWindowsHookExW( WH_CALLWNDPROC, OLEMenu_CallWndProc,\n                                                    0, GetCurrentThreadId() );\n  if ( !pHookItem->CallWndProc_hHook )\n    goto CLEANUP;\n\n  /* Insert the hook table entry */\n  pHookItem->next = hook_list;\n  hook_list = pHookItem;\n\n  return TRUE;\n\nCLEANUP:\n  /* Unhook any hooks */\n  if ( pHookItem->GetMsg_hHook )\n    UnhookWindowsHookEx( pHookItem->GetMsg_hHook );\n  if ( pHookItem->CallWndProc_hHook )\n    UnhookWindowsHookEx( pHookItem->CallWndProc_hHook );\n  /* Release the hook table entry */\n  HeapFree(pHookItem->hHeap, 0, pHookItem );\n\n  return FALSE;\n}"
+  },
+  {
+   "name": "OLEMenu_UnInstallHooks",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 1468,
+   "end_line": 1501,
+   "static": true,
+   "called_from": [
+    "OleSetMenuDescriptor"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL OLEMenu_UnInstallHooks( DWORD tid )",
+   "code": "static BOOL OLEMenu_UnInstallHooks( DWORD tid )\n{\n  OleMenuHookItem *pHookItem = NULL;\n  OleMenuHookItem **ppHook = &hook_list;\n\n  while (*ppHook)\n  {\n      if ((*ppHook)->tid == tid)\n      {\n          pHookItem = *ppHook;\n          *ppHook = pHookItem->next;\n          break;\n      }\n      ppHook = &(*ppHook)->next;\n  }\n  if (!pHookItem) return FALSE;\n\n  /* Uninstall the hooks installed for this thread */\n  if ( !UnhookWindowsHookEx( pHookItem->GetMsg_hHook ) )\n    goto CLEANUP;\n  if ( !UnhookWindowsHookEx( pHookItem->CallWndProc_hHook ) )\n    goto CLEANUP;\n\n  /* Release the hook table entry */\n  HeapFree(pHookItem->hHeap, 0, pHookItem );\n\n  return TRUE;\n\nCLEANUP:\n  /* Release the hook table entry */\n  HeapFree(pHookItem->hHeap, 0, pHookItem );\n\n  return FALSE;\n}"
+  },
+  {
+   "name": "OLEMenu_GetMsgProc",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 1720,
+   "end_line": 1787,
+   "static": true,
+   "called_from": [
+    "OLEMenu_InstallHooks"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static LRESULT CALLBACK OLEMenu_GetMsgProc(INT code, WPARAM wParam, LPARAM lParam)",
+   "code": "static LRESULT CALLBACK OLEMenu_GetMsgProc(INT code, WPARAM wParam, LPARAM lParam)\n{\n  LPMSG pMsg;\n  HOLEMENU hOleMenu = 0;\n  OleMenuDescriptor *pOleMenuDescriptor = NULL;\n  OleMenuHookItem *pHookItem = NULL;\n  WORD wCode;\n\n  TRACE(\"%i, %#Ix, %#Ix.\\n\", code, wParam, lParam );\n\n  /* Check if we're being asked to process a  messages */\n  if ( HC_ACTION != code )\n    goto NEXTHOOK;\n\n  /* Retrieve the current message being dispatched from lParam */\n  pMsg = (LPMSG)lParam;\n\n  /* Check if the message is destined for a window we are interested in:\n   * If the window has an OLEMenu property we may need to dispatch\n   * the menu message to its active objects window instead. */\n\n  hOleMenu = GetPropW( pMsg->hwnd, prop_olemenuW );\n  if ( !hOleMenu )\n    goto NEXTHOOK;\n\n  /* Process menu messages */\n  switch( pMsg->message )\n  {\n    case WM_COMMAND:\n    {\n      wCode = HIWORD(pMsg->wParam);  /* Get notification code */\n      if ( wCode )\n        goto NEXTHOOK;  /* Not a menu message */\n      break;\n    }\n    default:\n      goto NEXTHOOK;\n  }\n\n  /* Get the menu descriptor */\n  pOleMenuDescriptor = GlobalLock( hOleMenu );\n  if ( !pOleMenuDescriptor ) /* Bad descriptor! */\n    goto NEXTHOOK;\n\n  /* If the message was for the server dispatch it accordingly */\n  if ( pOleMenuDescriptor->bIsServerItem )\n  {\n    /* Change the hWnd in the message to the active objects hWnd.\n     * The message loop which reads this message will automatically\n     * dispatch it to the embedded objects window. */\n    pMsg->hwnd = pOleMenuDescriptor->hwndActiveObject;\n  }\n\nNEXTHOOK:\n  if ( pOleMenuDescriptor )\n    GlobalUnlock( hOleMenu );\n\n  /* Lookup the hook item for the current thread */\n  if ( !( pHookItem = OLEMenu_IsHookInstalled( GetCurrentThreadId() ) ) )\n  {\n    /* This should never fail!! */\n    WARN(\"could not retrieve hHook for current thread!\\n\" );\n    return FALSE;\n  }\n\n  /* Pass on the message to the next hooker */\n  return CallNextHookEx( pHookItem->GetMsg_hHook, code, wParam, lParam );\n}"
+  },
+  {
+   "name": "OLEMenu_CallWndProc",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 1615,
+   "end_line": 1713,
+   "static": true,
+   "called_from": [
+    "OLEMenu_InstallHooks"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static LRESULT CALLBACK OLEMenu_CallWndProc(INT code, WPARAM wParam, LPARAM lParam)",
+   "code": "static LRESULT CALLBACK OLEMenu_CallWndProc(INT code, WPARAM wParam, LPARAM lParam)\n{\n  LPCWPSTRUCT pMsg;\n  HOLEMENU hOleMenu = 0;\n  OleMenuDescriptor *pOleMenuDescriptor = NULL;\n  OleMenuHookItem *pHookItem = NULL;\n  WORD fuFlags;\n\n  TRACE(\"%i, %#Ix, %#Ix.\\n\", code, wParam, lParam );\n\n  /* Check if we're being asked to process the message */\n  if ( HC_ACTION != code )\n    goto NEXTHOOK;\n\n  /* Retrieve the current message being dispatched from lParam */\n  pMsg = (LPCWPSTRUCT)lParam;\n\n  /* Check if the message is destined for a window we are interested in:\n   * If the window has an OLEMenu property we may need to dispatch\n   * the menu message to its active objects window instead. */\n\n  hOleMenu = GetPropW( pMsg->hwnd, prop_olemenuW );\n  if ( !hOleMenu )\n    goto NEXTHOOK;\n\n  /* Get the menu descriptor */\n  pOleMenuDescriptor = GlobalLock( hOleMenu );\n  if ( !pOleMenuDescriptor ) /* Bad descriptor! */\n    goto NEXTHOOK;\n\n  /* Process menu messages */\n  switch( pMsg->message )\n  {\n    case WM_INITMENU:\n    {\n      /* Reset the menu descriptor state */\n      pOleMenuDescriptor->bIsServerItem = FALSE;\n\n      /* Send this message to the server as well */\n      SendMessageW( pOleMenuDescriptor->hwndActiveObject,\n                  pMsg->message, pMsg->wParam, pMsg->lParam );\n      goto NEXTHOOK;\n    }\n\n    case WM_INITMENUPOPUP:\n    {\n      /* Save the state for whether this is a server owned menu */\n      OLEMenu_SetIsServerMenu( (HMENU)pMsg->wParam, pOleMenuDescriptor );\n      break;\n    }\n\n    case WM_MENUSELECT:\n    {\n      fuFlags = HIWORD(pMsg->wParam);  /* Get flags */\n      if ( fuFlags & MF_SYSMENU )\n         goto NEXTHOOK;\n\n      /* Save the state for whether this is a server owned popup menu */\n      else if ( fuFlags & MF_POPUP )\n        OLEMenu_SetIsServerMenu( (HMENU)pMsg->lParam, pOleMenuDescriptor );\n\n      break;\n    }\n\n    case WM_DRAWITEM:\n    {\n      LPDRAWITEMSTRUCT lpdis = (LPDRAWITEMSTRUCT) pMsg->lParam;\n      if ( pMsg->wParam != 0 || lpdis->CtlType != ODT_MENU )\n        goto NEXTHOOK;  /* Not a menu message */\n\n      break;\n    }\n\n    default:\n      goto NEXTHOOK;\n  }\n\n  /* If the message was for the server dispatch it accordingly */\n  if ( pOleMenuDescriptor->bIsServerItem )\n  {\n    SendMessageW( pOleMenuDescriptor->hwndActiveObject,\n                  pMsg->message, pMsg->wParam, pMsg->lParam );\n  }\n\nNEXTHOOK:\n  if ( pOleMenuDescriptor )\n    GlobalUnlock( hOleMenu );\n\n  /* Lookup the hook item for the current thread */\n  if ( !( pHookItem = OLEMenu_IsHookInstalled( GetCurrentThreadId() ) ) )\n  {\n    /* This should never fail!! */\n    WARN(\"could not retrieve hHook for current thread!\\n\" );\n    return 0;\n  }\n\n  /* Pass on the message to the next hooker */\n  return CallNextHookEx( pHookItem->CallWndProc_hHook, code, wParam, lParam );\n}"
+  },
+  {
+   "name": "OLEMenu_SetIsServerMenu",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 1576,
+   "end_line": 1608,
+   "static": true,
+   "called_from": [
+    "OLEMenu_CallWndProc"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL OLEMenu_SetIsServerMenu( HMENU hmenu, OleMenuDescriptor *pOleMenuDescriptor )",
+   "code": "static BOOL OLEMenu_SetIsServerMenu( HMENU hmenu, OleMenuDescriptor *pOleMenuDescriptor )\n{\n  UINT nPos = 0, nWidth, i;\n\n  pOleMenuDescriptor->bIsServerItem = FALSE;\n\n  /* Don't bother searching if the popup is the combined menu itself */\n  if ( hmenu == pOleMenuDescriptor->hmenuCombined )\n    return FALSE;\n\n  /* Find the menu item index in the shared OLE menu that this item belongs to */\n  if ( !OLEMenu_FindMainMenuIndex( pOleMenuDescriptor->hmenuCombined, hmenu,  &nPos ) )\n    return FALSE;\n\n  /* The group widths array has counts for the number of elements\n   * in the groups File, Edit, Container, Object, Window, Help.\n   * The Edit, Object & Help groups belong to the server object\n   * and the other three belong to the container.\n   * Loop through the group widths and locate the group we are a member of.\n   */\n  for ( i = 0, nWidth = 0; i < 6; i++ )\n  {\n    nWidth += pOleMenuDescriptor->mgw.width[i];\n    if ( nPos < nWidth )\n    {\n      /* Odd elements are server menu widths */\n      pOleMenuDescriptor->bIsServerItem = i%2;\n      break;\n    }\n  }\n\n  return pOleMenuDescriptor->bIsServerItem;\n}"
+  },
+  {
+   "name": "OLEMenu_FindMainMenuIndex",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 1533,
+   "end_line": 1564,
+   "static": true,
+   "called_from": [
+    "OLEMenu_SetIsServerMenu"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL OLEMenu_FindMainMenuIndex( HMENU hMainMenu, HMENU hPopupMenu, UINT *pnPos )",
+   "code": "static BOOL OLEMenu_FindMainMenuIndex( HMENU hMainMenu, HMENU hPopupMenu, UINT *pnPos )\n{\n  INT i, nItems;\n\n  nItems = GetMenuItemCount( hMainMenu );\n\n  for (i = 0; i < nItems; i++)\n  {\n    HMENU hsubmenu;\n\n    /*  Is the current item a submenu? */\n    if ( (hsubmenu = GetSubMenu(hMainMenu, i)) )\n    {\n      /* If the handle is the same we're done */\n      if ( hsubmenu == hPopupMenu )\n      {\n        if (pnPos)\n          *pnPos = i;\n        return TRUE;\n      }\n      /* Recursively search without updating pnPos */\n      else if ( OLEMenu_FindMainMenuIndex( hsubmenu, hPopupMenu, NULL ) )\n      {\n        if (pnPos)\n          *pnPos = i;\n        return TRUE;\n      }\n    }\n  }\n\n  return FALSE;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "OleMenuDescriptor",
+    "kind": "typedef_decl",
+    "start_line": 77,
+    "end_line": 84,
+    "code": "typedef struct tagOleMenuDescriptor  /* OleMenuDescriptor */\n{\n  HWND               hwndFrame;         /* The containers frame window */\n  HWND               hwndActiveObject;  /* The active objects window */\n  OLEMENUGROUPWIDTHS mgw;               /* OLE menu group widths for the shared menu */\n  HMENU              hmenuCombined;     /* The combined menu */\n  BOOL               bIsServerItem;     /* True if the currently open popup belongs to the server */\n} OleMenuDescriptor;"
+   },
+   {
+    "name": "OleMenuHookItem",
+    "kind": "typedef_decl",
+    "start_line": 86,
+    "end_line": 93,
+    "code": "typedef struct tagOleMenuHookItem   /* OleMenu hook item in per thread hook list */\n{\n  DWORD tid;                /* Thread Id  */\n  HANDLE hHeap;             /* Heap this is allocated from */\n  HHOOK GetMsg_hHook;       /* message hook for WH_GETMESSAGE */\n  HHOOK CallWndProc_hHook;  /* message hook for WH_CALLWNDPROC */\n  struct tagOleMenuHookItem *next;\n} OleMenuHookItem;"
+   },
+   {
+    "name": "tagOleMenuDescriptor",
+    "kind": "struct_decl",
+    "start_line": 77,
+    "end_line": 84,
+    "code": "typedef struct tagOleMenuDescriptor  /* OleMenuDescriptor */\n{\n  HWND               hwndFrame;         /* The containers frame window */\n  HWND               hwndActiveObject;  /* The active objects window */\n  OLEMENUGROUPWIDTHS mgw;               /* OLE menu group widths for the shared menu */\n  HMENU              hmenuCombined;     /* The combined menu */\n  BOOL               bIsServerItem;     /* True if the currently open popup belongs to the server */\n} OleMenuDescriptor;"
+   },
+   {
+    "name": "tagOleMenuHookItem",
+    "kind": "struct_decl",
+    "start_line": 86,
+    "end_line": 93,
+    "code": "typedef struct tagOleMenuHookItem   /* OleMenu hook item in per thread hook list */\n{\n  DWORD tid;                /* Thread Id  */\n  HANDLE hHeap;             /* Heap this is allocated from */\n  HHOOK GetMsg_hHook;       /* message hook for WH_GETMESSAGE */\n  HHOOK CallWndProc_hHook;  /* message hook for WH_CALLWNDPROC */\n  struct tagOleMenuHookItem *next;\n} OleMenuHookItem;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 50,
+    "end_line": 50,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ole);"
+   },
+   {
+    "name": "hook_list",
+    "type": "OleMenuHookItem *",
+    "static": true,
+    "start_line": 95,
+    "end_line": 95,
+    "code": "static OleMenuHookItem *hook_list;"
+   },
+   {
+    "name": "prop_olemenuW",
+    "type": "const WCHAR[23]",
+    "static": true,
+    "start_line": 111,
+    "end_line": 111,
+    "code": "static const WCHAR prop_olemenuW[] = L\"PROP_OLEMenuDescriptor\";"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "CallNextHookEx",
+    "module": "user32",
+    "impl": [
+     "dlls/win32u/hook.c:362"
+    ]
+   },
+   {
+    "name": "GetMenuItemCount",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/menu.c:333"
+    ]
+   },
+   {
+    "name": "GetPropW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/property.c:116"
+    ]
+   },
+   {
+    "name": "GetSubMenu",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/menu.c:543"
+    ]
+   },
+   {
+    "name": "GlobalLock",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernel32/heap.c:145"
+    ]
+   },
+   {
+    "name": "GlobalUnlock",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernel32/heap.c:167"
+    ]
+   },
+   {
+    "name": "HeapAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "RemovePropW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/property.c:160"
+    ]
+   },
+   {
+    "name": "SendMessageW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/message.c:579"
+    ]
+   },
+   {
+    "name": "SetPropW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/property.c:138"
+    ]
+   },
+   {
+    "name": "SetWindowsHookExW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/hook.c:380"
+    ]
+   },
+   {
+    "name": "UnhookWindowsHookEx",
+    "module": "user32",
+    "impl": [
+     "dlls/win32u/hook.c:147"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetCurrentThreadId",
+   "GetProcessHeap",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

@@ -1,0 +1,174 @@
+{
+ "id": "0266",
+ "function": {
+  "name": "DefineDosDeviceW",
+  "export_name": "DefineDosDeviceW",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/volume.c",
+  "start_line": 365,
+  "end_line": 411,
+  "body_lines": 44,
+  "signature": "BOOL WINAPI DECLSPEC_HOTPATCH DefineDosDeviceW( DWORD flags, const WCHAR *device, const WCHAR *target )",
+  "header_comment": "/***********************************************************************\n *           DefineDosDeviceW       (kernelbase.@)\n */",
+  "code": "BOOL WINAPI DECLSPEC_HOTPATCH DefineDosDeviceW( DWORD flags, const WCHAR *device, const WCHAR *target )\n{\n    WCHAR *link_name;\n    UNICODE_STRING nt_name, nt_target;\n    OBJECT_ATTRIBUTES attr;\n    NTSTATUS status;\n    HANDLE handle;\n\n    TRACE(\"%#lx, %s, %s\\n\", flags, debugstr_w(device), debugstr_w(target));\n\n    if (flags & ~(DDD_RAW_TARGET_PATH | DDD_REMOVE_DEFINITION))\n        FIXME(\"Ignoring flags %#lx.\\n\", flags & ~(DDD_RAW_TARGET_PATH | DDD_REMOVE_DEFINITION));\n\n    if (!(link_name = HeapAlloc( GetProcessHeap(), 0, sizeof(L\"\\\\DosDevices\\\\\") + lstrlenW(device) * sizeof(WCHAR) )))\n    {\n        SetLastError(ERROR_OUTOFMEMORY);\n        return FALSE;\n    }\n\n    lstrcpyW( link_name, L\"\\\\DosDevices\\\\\" );\n    lstrcatW( link_name, device );\n    RtlInitUnicodeString( &nt_name, link_name );\n    InitializeObjectAttributes( &attr, &nt_name, OBJ_CASE_INSENSITIVE | OBJ_PERMANENT, 0, NULL );\n    if (flags & DDD_REMOVE_DEFINITION)\n    {\n        if (!(status = NtOpenSymbolicLinkObject( &handle, DELETE, &attr )))\n        {\n            status = NtMakeTemporaryObject( handle );\n            NtClose( handle );\n        }\n        goto done;\n    }\n\n    if (!(flags & DDD_RAW_TARGET_PATH))\n    {\n        status = RtlDosPathNameToNtPathName_U_WithStatus( target, &nt_target, NULL, NULL );\n        if (status) goto done;\n    }\n    else\n        RtlInitUnicodeString( &nt_target, target );\n\n    if (!(status = NtCreateSymbolicLinkObject( &handle, SYMBOLIC_LINK_ALL_ACCESS, &attr, &nt_target )))\n        NtClose( handle );\n done:\n    HeapFree( GetProcessHeap(), 0, link_name );\n    return set_ntstatus( status );\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <stdio.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"ntddcdrm.h\"",
+   "#include \"ddk/mountmgr.h\"",
+   "#include \"ddk/wdm.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!DefineDosDeviceW [stdcall -import] -> import from kernelbase",
+   "kernelbase!DefineDosDeviceW [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/volume.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "fileapi",
+   "path": "sdk-api-src/content/fileapi/nf-fileapi-definedosdevicew.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/fileapi/nf-fileapi-definedosdevicew",
+   "documented_name": "definedosdevicew",
+   "file": "docs/0266_sdk-api_nf-fileapi-definedosdevicew.md",
+   "text": "---\nUID: NF:fileapi.DefineDosDeviceW\ntitle: DefineDosDeviceW function (fileapi.h)\ndescription: Defines, redefines, or deletes MS-DOS device names. (DefineDosDeviceW)\nhelpviewer_keywords: [\"DDD_EXACT_MATCH_ON_REMOVE\",\"DDD_NO_BROADCAST_SYSTEM\",\"DDD_RAW_TARGET_PATH\",\"DDD_REMOVE_DEFINITION\",\"DefineDosDevice\",\"DefineDosDevice function [Files]\",\"DefineDosDeviceA\",\"DefineDosDeviceW\",\"_win32_definedosdevice\",\"base.definedosdevice\",\"fileapi/DefineDosDevice\",\"fileapi/DefineDosDeviceA\",\"fileapi/DefineDosDeviceW\",\"fs.definedosdevice\",\"winbase/DefineDosDevice\",\"winbase/DefineDosDeviceA\",\"winbase/DefineDosDeviceW\"]\nold-location: fs\\definedosdevice.htm\ntech.root: fs\nms.assetid: 924b1456-b2c5-4d52-aacf-6172608c73ea\nms.date: 12/05/2018\nms.keywords: DDD_EXACT_MATCH_ON_REMOVE, DDD_NO_BROADCAST_SYSTEM, DDD_RAW_TARGET_PATH, DDD_REMOVE_DEFINITION, DefineDosDevice, DefineDosDevice function [Files], DefineDosDeviceA, DefineDosDeviceW, _win32_definedosdevice, base.definedosdevice, fileapi/DefineDosDevice, fileapi/DefineDosDeviceA, fileapi/DefineDosDeviceW, fs.definedosdevice, winbase/DefineDosDevice, winbase/DefineDosDeviceA, winbase/DefineDosDeviceW\nreq.header: fileapi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: DefineDosDeviceW (Unicode) and DefineDosDeviceA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - DefineDosDeviceW\n - fileapi/DefineDosDeviceW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-file-l1-2-5.dll\n - api-ms-win-core-file-l1-2-4.dll\n - api-ms-win-core-file-l1-2-3.dll\n - Kernel32.dll\n - API-MS-Win-Core-File-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-File-l1-2-0.dll\n - API-MS-Win-Core-File-l1-2-1.dll\n - API-MS-Win-Core-File-l1-2-2.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\n - API-Ms-Win-Core-File-Ansi-L1-1-0.dll\n - Kernel32Legacy.dll\napi_name:\n - DefineDosDevice\n - DefineDosDeviceA\n - DefineDosDeviceW\n---\n\n# DefineDosDeviceW function\n\n\n## -description\n\nDefines, redefines, or deletes MS-DOS device names.\n\n## -parameters\n\n### -param dwFlags [in]\n\nThe controllable aspects of the <b>DefineDosDevice</b> function. This parameter \n      can be one or more of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"DDD_EXACT_MATCH_ON_REMOVE\"></a><a id=\"ddd_exact_match_on_remove\"></a><dl>\n<dt><b>DDD_EXACT_MATCH_ON_REMOVE</b></dt>\n<dt>0x00000004</dt>\n</dl>\n</td>\n<td width=\"60%\">\nIf this value is specified along with <b>DDD_REMOVE_DEFINITION</b>, the function will \n        use an exact match to determine which mapping to remove. Use this value to ensure that you do not delete \n        something that you did not define.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"DDD_NO_BROADCAST_SYSTEM\"></a><a id=\"ddd_no_broadcast_system\"></a><dl>\n<dt><b>DDD_NO_BROADCAST_SYSTEM</b></dt>\n<dt>0x00000008</dt>\n</dl>\n</td>\n<td width=\"60%\">\nDo not broadcast the <a href=\"/windows/desktop/winmsg/wm-settingchange\">WM_SETTINGCHANGE</a> message. \n        By default, this message is broadcast to notify the shell and applications of the change.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"DDD_RAW_TARGET_PATH\"></a><a id=\"ddd_raw_target_path\"></a><dl>\n<dt><b>DDD_RAW_TARGET_PATH</b></dt>\n<dt>0x00000001</dt>\n</dl>\n</td>\n<td width=\"60%\">\nUses the <i>lpTargetPath</i> string as is. Otherwise, it is converted from an MS-DOS \n        path to a path.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"DDD_REMOVE_DEFINITION\"></a><a id=\"ddd_remove_definition\"></a><dl>\n<dt><b>DDD_REMOVE_DEFINITION</b></dt>\n<dt>0x00000002</dt>\n</dl>\n</td>\n<td width=\"60%\">\nRemoves the specified definition for the specified device. To determine which definition to remove, the \n         function walks the list of mappings for the device, looking for a match of \n         <i>lpTargetPath</i> against a prefix of each mapping associated with this device. The \n         first mapping that matches is the one removed, and then the function returns.\n\nIf <i>lpTargetPath</i> is <b>NULL</b> or a pointer to a \n         <b>NULL</b> string, the function will remove the first mapping associated with the device \n         and pop the most recent one pushed. If there is nothing left to pop, the device name will be removed.\n\nIf this value is not specified, the string pointed to by the <i>lpTargetPath</i> \n         parameter will become the new mapping for this device.\n\n</td>\n</tr>\n</table>\n\n### -param lpDeviceName [in]\n\nA pointer to an MS-DOS device name string specifying the device the function is defining, redefining, or \n      deleting. The device name string must not have a colon as the last character, unless a drive letter is being \n      defined, redefined, or deleted. For example, drive C  would be the string \"C:\". In no case is a \n      trailing backslash (\\\\) allowed.\n\n### -param lpTargetPath [in, optional]\n\nA pointer to a path string that will implement this device. The string is an MS-DOS path string unless the \n      <b>DDD_RAW_TARGET_PATH</b> flag is specified, in which case this string is a path \n      string.\n\n## -returns\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero. To get extended error information, call \n       <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nMS-DOS device names are stored as junctions in the object namespace. The code that converts an MS-DOS path \n    into a corresponding path uses these junctions to map MS-DOS devices and drive letters. The \n    <b>DefineDosDevice</b> function enables an application to modify the junctions used to \n    implement the MS-DOS device namespace.\n\nTo retrieve the current mapping for a particular MS-DOS device name or to obtain a list of all MS-DOS devices \n    known to the system, use the <a href=\"/windows/desktop/api/fileapi/nf-fileapi-querydosdevicew\">QueryDosDevice</a> \n    function.\n\nTo define a drive letter assignment that is persistent across boots and not a network share, use the \n    <a href=\"/windows/desktop/api/winbase/nf-winbase-setvolumemountpointa\">SetVolumeMountPoint</a> function. If the volume to \n    be mounted already has a drive letter assigned to it, use the \n    <a href=\"/windows/desktop/api/fileapi/nf-fileapi-deletevolumemountpointw\">DeleteVolumeMountPoint</a> function to remove the \n    assignment.\n\nDrive letters and device names defined at system boot time are protected from redefinition and deletion unless \n    the user is an administrator.\n\nStarting with Windows XP, this function creates a device name for a caller that is not running in \n    the \"LocalSystem\" context in its own Local MS-DOS device namespace. If the caller  is running in \n    the \"LocalSystem\" context, the function creates the device name in the Global MS-DOS device \n    namespace. For more information, see \n    <a href=\"/windows/desktop/FileIO/defining-an-ms-dos-device-name\">Defining an MS DOS Device Name</a> and \n    <a href=\"/windows/desktop/FileIO/naming-a-file\">File Names, Paths, and Namespaces</a>.\n\nIn Windows 8 and Windows Server 2012, this function is supported by the following technologies.\n\n<table>\n<tr>\n<th>Technology</th>\n<th>Supported</th>\n</tr>\n<tr>\n<td>\nServer Message Block (SMB) 3.0 protocol\n\n</td>\n<td>\nNo\n\n</td>\n</tr>\n<tr>\n<td>\nSMB 3.0 Transparent Failover (TFO)\n\n</td>\n<td>\nNo\n\n</td>\n</tr>\n<tr>\n<td>\nSMB 3.0 with Scale-out File Shares (SO)\n\n</td>\n<td>\nNo\n\n</td>\n</tr>\n<tr>\n<td>\nCluster Shared Volume File System (CsvFS)\n\n</td>\n<td>\nNo\n\n</td>\n</tr>\n<tr>\n<td>\nResilient File System (ReFS)\n\n</td>\n<td>\nNo\n\n</td>\n</tr>\n</table>\n \n\nSMB does not support volume management functions. For CsvFs, a new name will not be replicated to the other nodes on the cluster.\n\n\n\n#### Examples\n\nFor an example, see \n     <a href=\"/windows/desktop/FileIO/editing-drive-letter-assignments\">Editing Drive Letter Assignments</a>.\n\n<div class=\"code\"></div>\n\n## -see-also\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-deletevolumemountpointw\">DeleteVolumeMountPoint</a>\n\n\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-querydosdevicew\">QueryDosDevice</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-setvolumemountpointa\">SetVolumeMountPoint</a>\n\n\n\n<a href=\"/windows/desktop/FileIO/volume-management-functions\">Volume Management Functions</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 42,
+    "end_line": 42,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(volume);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetProcessHeap",
+    "impl": [
+     "dlls/kernelbase/process.c:910"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   },
+   {
+    "name": "lstrlenW",
+    "impl": [
+     "dlls/kernelbase/string.c:166"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtClose",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/server.c:1940"
+    ]
+   },
+   {
+    "name": "NtCreateSymbolicLinkObject",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/sync.c:2027"
+    ]
+   },
+   {
+    "name": "NtMakeTemporaryObject",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/sync.c:2129"
+    ]
+   },
+   {
+    "name": "NtOpenSymbolicLinkObject",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/sync.c:2056"
+    ]
+   },
+   {
+    "name": "RtlAllocateHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "RtlDosPathNameToNtPathName_U_WithStatus",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/path.c:171"
+    ]
+   },
+   {
+    "name": "RtlFreeHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "RtlInitUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:173"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_w",
+   "lstrcatW",
+   "lstrcpyW",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "set_ntstatus"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

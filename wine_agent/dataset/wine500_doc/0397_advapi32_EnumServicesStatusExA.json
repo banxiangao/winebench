@@ -1,0 +1,123 @@
+{
+ "id": "0397",
+ "function": {
+  "name": "EnumServicesStatusExA",
+  "export_name": "EnumServicesStatusExA",
+  "module": "advapi32",
+  "source_module": "advapi32",
+  "exported_by": [
+   "advapi32"
+  ],
+  "side": "PE",
+  "file": "dlls/advapi32/service.c",
+  "start_line": 287,
+  "end_line": 352,
+  "body_lines": 63,
+  "signature": "EnumServicesStatusExA( SC_HANDLE hmngr, SC_ENUM_TYPE level, DWORD type, DWORD state, LPBYTE buffer, DWORD size, LPDWORD needed, LPDWORD returned, LPDWORD resume_handle, LPCSTR group )",
+  "header_comment": null,
+  "code": "EnumServicesStatusExA( SC_HANDLE hmngr, SC_ENUM_TYPE level, DWORD type, DWORD state,\n                       LPBYTE buffer, DWORD size, LPDWORD needed, LPDWORD returned,\n                       LPDWORD resume_handle, LPCSTR group )\n{\n    BOOL ret;\n    unsigned int i;\n    ENUM_SERVICE_STATUS_PROCESSA *services = (ENUM_SERVICE_STATUS_PROCESSA *)buffer;\n    ENUM_SERVICE_STATUS_PROCESSW *servicesW = NULL;\n    WCHAR *groupW = NULL;\n    DWORD sz, n;\n    char *p;\n\n    TRACE(\"%p %u 0x%lx 0x%lx %p %lu %p %p %p %s\\n\", hmngr, level, type, state, buffer,\n          size, needed, returned, resume_handle, debugstr_a(group));\n\n    sz = max( 2 * size, sizeof(*servicesW) );\n    if (!(servicesW = malloc( sz )))\n    {\n        SetLastError( ERROR_NOT_ENOUGH_MEMORY );\n        return FALSE;\n    }\n    if (group)\n    {\n        int len = MultiByteToWideChar( CP_ACP, 0, group, -1, NULL, 0 );\n        if (!(groupW = malloc( len * sizeof(WCHAR) )))\n        {\n            SetLastError( ERROR_NOT_ENOUGH_MEMORY );\n            free( servicesW );\n            return FALSE;\n        }\n        MultiByteToWideChar( CP_ACP, 0, group, -1, groupW, len * sizeof(WCHAR) );\n    }\n\n    ret = EnumServicesStatusExW( hmngr, level, type, state, (BYTE *)servicesW, sz,\n                                 needed, returned, resume_handle, groupW );\n    if (!ret) goto done;\n\n    p = (char *)services + *returned * sizeof(ENUM_SERVICE_STATUS_PROCESSA);\n    n = size - (p - (char *)services);\n    ret = FALSE;\n    for (i = 0; i < *returned; i++)\n    {\n        sz = WideCharToMultiByte( CP_ACP, 0, servicesW[i].lpServiceName, -1, p, n, NULL, NULL );\n        if (!sz) goto done;\n        services[i].lpServiceName = p;\n        p += sz;\n        n -= sz;\n        if (servicesW[i].lpDisplayName)\n        {\n            sz = WideCharToMultiByte( CP_ACP, 0, servicesW[i].lpDisplayName, -1, p, n, NULL, NULL );\n            if (!sz) goto done;\n            services[i].lpDisplayName = p;\n            p += sz;\n            n -= sz;\n        }\n        else services[i].lpDisplayName = NULL;\n        services[i].ServiceStatusProcess = servicesW[i].ServiceStatusProcess;\n    }\n\n    ret = TRUE;\n\ndone:\n    free( servicesW );\n    free( groupW );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winsvc.h\"",
+   "#include \"svcctl.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"advapi32_misc.h\""
+  ],
+  "resolution": [
+   "advapi32!EnumServicesStatusExA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/advapi32/tests/service.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winsvc",
+   "path": "sdk-api-src/content/winsvc/nf-winsvc-enumservicesstatusexa.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winsvc/nf-winsvc-enumservicesstatusexa",
+   "documented_name": "enumservicesstatusexa",
+   "file": "docs/0397_sdk-api_nf-winsvc-enumservicesstatusexa.md",
+   "text": "---\nUID: NF:winsvc.EnumServicesStatusExA\ntitle: EnumServicesStatusExA function (winsvc.h)\ndescription: Enumerates services in the specified service control manager database. The name and status of each service are provided, along with additional data based on the specified information level. (ANSI)\nhelpviewer_keywords: [\"EnumServicesStatusExA\", \"SERVICE_ACTIVE\", \"SERVICE_DRIVER\", \"SERVICE_FILE_SYSTEM_DRIVER\", \"SERVICE_INACTIVE\", \"SERVICE_KERNEL_DRIVER\", \"SERVICE_STATE_ALL\", \"SERVICE_WIN32\", \"SERVICE_WIN32_OWN_PROCESS\", \"SERVICE_WIN32_SHARE_PROCESS\", \"winsvc/EnumServicesStatusExA\"]\nold-location: base\\enumservicesstatusex.htm\ntech.root: security\nms.assetid: 7d7940c3-b562-455f-9a21-6d5fb5953030\nms.date: 12/05/2018\nms.keywords: EnumServicesStatusEx, EnumServicesStatusEx function, EnumServicesStatusExA, EnumServicesStatusExW, SERVICE_ACTIVE, SERVICE_DRIVER, SERVICE_FILE_SYSTEM_DRIVER, SERVICE_INACTIVE, SERVICE_KERNEL_DRIVER, SERVICE_STATE_ALL, SERVICE_WIN32, SERVICE_WIN32_OWN_PROCESS, SERVICE_WIN32_SHARE_PROCESS, _win32_enumservicesstatusex, base.enumservicesstatusex, winsvc/EnumServicesStatusEx, winsvc/EnumServicesStatusExA, winsvc/EnumServicesStatusExW\nreq.header: winsvc.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: EnumServicesStatusExW (Unicode) and EnumServicesStatusExA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Advapi32.lib\nreq.dll: Advapi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - EnumServicesStatusExA\n - winsvc/EnumServicesStatusExA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Advapi32.dll\n - API-MS-Win-DownLevel-AdvApi32-l2-1-1.dll\n - sechost.dll\n - API-MS-Win-Service-Core-l1-1-1.dll\n - AdvApi32Legacy.dll\n - API-Ms-Win-Service-Core-Ansi-L1-1-0.dll\n - API-Ms-Win-Service-Core-L1-1-2.dll\n - API-MS-Win-Service-Core-Ansi-L1-1-1.dll\napi_name:\n - EnumServicesStatusEx\n - EnumServicesStatusExA\n - EnumServicesStatusExW\n---\n\n# EnumServicesStatusExA function\n\n\n## -description\n\nEnumerates services in the specified service control manager database. The name and status of each service are provided, along with additional data based on the specified information level.\n\n## -parameters\n\n### -param hSCManager [in]\n\nA handle to the service control manager database. This handle is returned by the \n<a href=\"/windows/desktop/api/winsvc/nf-winsvc-openscmanagera\">OpenSCManager</a> function, and must have the <b>SC_MANAGER_ENUMERATE_SERVICE</b> access right. For more information, see \n<a href=\"/windows/desktop/Services/service-security-and-access-rights\">Service Security and Access Rights</a>.\n\n### -param InfoLevel [in]\n\nThe service attributes that are to be returned. Use <b>SC_ENUM_PROCESS_INFO</b> to retrieve the name and service status information for each service in the database. The <i>lpServices</i> parameter is a pointer to a buffer that receives an array of \n<a href=\"/windows/desktop/api/winsvc/ns-winsvc-enum_service_status_processa\">ENUM_SERVICE_STATUS_PROCESS</a> structures. The buffer must be large enough to hold the structures as well as the strings to which their members point.\n\nCurrently, no other information levels are defined.\n\n### -param dwServiceType [in]\n\nThe type of services to be enumerated. This parameter can be one or more of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SERVICE_DRIVER\"></a><a id=\"service_driver\"></a><dl>\n<dt><b>SERVICE_DRIVER</b></dt>\n<dt>0x0000000B</dt>\n</dl>\n</td>\n<td width=\"60%\">\nServices of type <b>SERVICE_KERNEL_DRIVER</b> and <b>SERVICE_FILE_SYSTEM_DRIVER</b>.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SERVICE_FILE_SYSTEM_DRIVER\"></a><a id=\"service_file_system_driver\"></a><dl>\n<dt><b>SERVICE_FILE_SYSTEM_DRIVER</b></dt>\n<dt>0x00000002</dt>\n</dl>\n</td>\n<td width=\"60%\">\nFile system driver services.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SERVICE_KERNEL_DRIVER\"></a><a id=\"service_kernel_driver\"></a><dl>\n<dt><b>SERVICE_KERNEL_DRIVER</b></dt>\n<dt>0x00000001</dt>\n</dl>\n</td>\n<td width=\"60%\">\nDriver services.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SERVICE_WIN32\"></a><a id=\"service_win32\"></a><dl>\n<dt><b>SERVICE_WIN32</b></dt>\n<dt>0x00000030</dt>\n</dl>\n</td>\n<td width=\"60%\">\nServices of type <b>SERVICE_WIN32_OWN_PROCESS</b> and <b>SERVICE_WIN32_SHARE_PROCESS</b>.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SERVICE_WIN32_OWN_PROCESS\"></a><a id=\"service_win32_own_process\"></a><dl>\n<dt><b>SERVICE_WIN32_OWN_PROCESS</b></dt>\n<dt>0x00000010</dt>\n</dl>\n</td>\n<td width=\"60%\">\nServices that run in their own processes.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SERVICE_WIN32_SHARE_PROCESS\"></a><a id=\"service_win32_share_process\"></a><dl>\n<dt><b>SERVICE_WIN32_SHARE_PROCESS</b></dt>\n<dt>0x00000020</dt>\n</dl>\n</td>\n<td width=\"60%\">\nServices that share a process with one or more other services. For more information, see <a href=\"/windows/desktop/Services/service-programs\">Service Programs</a>.\n\n</td>\n</tr>\n</table>\n\n### -param dwServiceState [in]\n\nThe state of the services to be enumerated. This parameter can be one of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SERVICE_ACTIVE\"></a><a id=\"service_active\"></a><dl>\n<dt><b>SERVICE_ACTIVE</b></dt>\n<dt>0x00000001</dt>\n</dl>\n</td>\n<td width=\"60%\">\nEnumerates services that are in the following states: <b>SERVICE_START_PENDING</b>, <b>SERVICE_STOP_PENDING</b>, <b>SERVICE_RUNNING</b>, <b>SERVICE_CONTINUE_PENDING</b>, <b>SERVICE_PAUSE_PENDING</b>, and <b>SERVICE_PAUSED</b>.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SERVICE_INACTIVE\"></a><a id=\"service_inactive\"></a><dl>\n<dt><b>SERVICE_INACTIVE</b></dt>\n<dt>0x00000002</dt>\n</dl>\n</td>\n<td width=\"60%\">\nEnumerates services that are in the <b>SERVICE_STOPPED</b> state.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"SERVICE_STATE_ALL\"></a><a id=\"service_state_all\"></a><dl>\n<dt><b>SERVICE_STATE_ALL</b></dt>\n<dt>0x00000003</dt>\n</dl>\n</td>\n<td width=\"60%\">\nCombines the <b>SERVICE_ACTIVE</b> and <b>SERVICE_INACTIVE</b> states.\n\n</td>\n</tr>\n</table>\n\n### -param lpServices [out, optional]\n\nA pointer to the buffer that receives the status information. The format of this data depends on the value of the <i>InfoLevel</i> parameter.\n\nThe maximum size of this array is 256K bytes. To determine the required size, specify <b>NULL</b> for this parameter and 0 for the <i>cbBufSize</i> parameter. The function will fail and <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> will return <b>ERROR_MORE_DATA</b>. The <i>pcbBytesNeeded</i> parameter will receive the required size.\n\n<b>Windows Server 2003 and Windows XP:  </b>The maximum size of this array is 64K bytes. This limit was increased as of Windows Server 2003 with SP1 and Windows XP with SP2.\n\n### -param cbBufSize [in]\n\nThe size of the buffer pointed to by the <i>lpServices</i> parameter, in bytes.\n\n### -param pcbBytesNeeded [out]\n\nA pointer to a variable that receives the number of bytes needed to return the remaining service entries, if the buffer is too small.\n\n### -param lpServicesReturned [out]\n\nA pointer to a variable that receives the number of service entries returned.\n\n### -param lpResumeHandle [in, out, optional]\n\nA pointer to a variable that, on input, specifies the starting point of enumeration. You must set this value to zero the first time the \n<b>EnumServicesStatusEx</b> function is called. On output, this value is zero if the function succeeds. However, if the function returns zero and the \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> function returns <b>ERROR_MORE_DATA</b>, this value indicates the next service entry to be read when the \n<b>EnumServicesStatusEx</b> function is called to retrieve the additional data.\n\n### -param pszGroupName [in, optional]\n\nThe load-order group name. If this parameter is a string, the only services enumerated are those that belong to the group that has the name specified by the string. If this parameter is an empty string, only services that do not belong to any group are enumerated. If this parameter is <b>NULL</b>, group membership is ignored and all services are enumerated.\n\n## -returns\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>. The following errors may be returned.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_ACCESS_DENIED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe handle does not have the <b>SC_MANAGER_ENUMERATE_SERVICE</b> access right.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_MORE_DATA</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe buffer is too small. Not all data in the active database could be returned. The <i>pcbBytesNeeded</i> parameter contains the number of bytes required to receive the remaining entries.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn illegal parameter value was used.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_HANDLE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe handle is invalid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_LEVEL</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <i>InfoLevel</i> parameter contains an unsupported value.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_SHUTDOWN_IN_PROGRESS</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe system is shutting down; this function cannot be called.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nIf the caller does not have the <b>SERVICE_QUERY_STATUS</b> access right to a service, the service is silently omitted from the list of services returned to the client.\n\n\n\n\n\n> [!NOTE]\n> The winsvc.h header defines EnumServicesStatusEx as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winsvc/ns-winsvc-enum_service_status_processa\">ENUM_SERVICE_STATUS_PROCESS</a>\n\n\n\n<a href=\"/windows/desktop/Services/service-functions\">Service Functions</a>\n\n\n\n<a href=\"/windows/desktop/Services/service-installation-removal-and-enumeration\">Service Installation, Removal, and Enumeration</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 33,
+    "end_line": 33,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(service);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "EnumServicesStatusExW",
+    "impl": [
+     "dlls/sechost/service.c:1136"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "MultiByteToWideChar",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7070"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "debugstr_a",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

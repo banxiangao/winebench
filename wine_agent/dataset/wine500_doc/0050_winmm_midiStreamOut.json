@@ -1,0 +1,189 @@
+{
+ "id": "0050",
+ "function": {
+  "name": "midiStreamOut",
+  "export_name": "midiStreamOut",
+  "module": "winmm",
+  "source_module": "winmm",
+  "exported_by": [
+   "mmsystem.dll16",
+   "winmm"
+  ],
+  "side": "PE",
+  "file": "dlls/winmm/winmm.c",
+  "start_line": 1441,
+  "end_line": 1475,
+  "body_lines": 32,
+  "signature": "MMRESULT WINAPI midiStreamOut(HMIDISTRM hMidiStrm, LPMIDIHDR lpMidiHdr, UINT cbMidiHdr)",
+  "header_comment": "/**************************************************************************\n * \t\t\t\tmidiStreamOut\t\t\t[WINMM.@]\n */",
+  "code": "MMRESULT WINAPI midiStreamOut(HMIDISTRM hMidiStrm, LPMIDIHDR lpMidiHdr,\n\t\t\t      UINT cbMidiHdr)\n{\n    WINE_MIDIStream*\tlpMidiStrm;\n    DWORD\t\tret = MMSYSERR_NOERROR;\n\n    TRACE(\"(%p, %p, %u)!\\n\", hMidiStrm, lpMidiHdr, cbMidiHdr);\n\n    if (cbMidiHdr < offsetof(MIDIHDR,dwOffset) || !lpMidiHdr || !lpMidiHdr->lpData\n\t|| lpMidiHdr->dwBufferLength < lpMidiHdr->dwBytesRecorded\n\t|| lpMidiHdr->dwBytesRecorded % 4 /* player expects DWORD padding */)\n\treturn MMSYSERR_INVALPARAM;\n    /* FIXME: Native additionally checks if the MIDIEVENTs in lpData\n     * exactly fit dwBytesRecorded. */\n\n    if (!(lpMidiHdr->dwFlags & MHDR_PREPARED))\n\treturn MIDIERR_UNPREPARED;\n\n    if (lpMidiHdr->dwFlags & MHDR_INQUEUE)\n\treturn MIDIERR_STILLPLAYING;\n\n    if (!MMSYSTEM_GetMidiStream(hMidiStrm, &lpMidiStrm, NULL)) {\n\tret = MMSYSERR_INVALHANDLE;\n    } else {\n\tlpMidiHdr->dwFlags |= MHDR_ISSTRM | MHDR_INQUEUE;\n\tlpMidiHdr->dwFlags &= ~MHDR_DONE;\n\tif (!PostThreadMessageA(lpMidiStrm->dwThreadID,\n                                WINE_MSM_HEADER, cbMidiHdr,\n                                (LPARAM)lpMidiHdr)) {\n\t    ERR(\"bad PostThreadMessageA\\n\");\n\t    ret = MMSYSERR_ERROR;\n\t}\n    }\n    return ret;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <stdio.h>",
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"mmsystem.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winemm.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/rbtree.h\""
+  ],
+  "resolution": [
+   "winmm!midiStreamOut [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/winmm/tests/midi.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "mmsystem.dll16",
+   "source_module": "mmsystem.dll16",
+   "exported_by": [
+    "mmsystem.dll16"
+   ],
+   "file": "dlls/mmsystem.dll16/mmsystem.c",
+   "start_line": 1113,
+   "resolution": [
+    "mmsystem.dll16!midiStreamOut [pascal] -> internal symbol midiStreamOut16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 1117,
+   "signature": "MMRESULT16 WINAPI midiStreamOut16(HMIDISTRM16 hMidiStrm, LPMIDIHDR16 lpMidiHdr, UINT16 cbMidiHdr)",
+   "code": "MMRESULT16 WINAPI midiStreamOut16(HMIDISTRM16 hMidiStrm, LPMIDIHDR16 lpMidiHdr, UINT16 cbMidiHdr)\n{\n    return midiStreamOut(HMIDISTRM_32(hMidiStrm), (LPMIDIHDR)lpMidiHdr,\n\t\t         cbMidiHdr);\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "mmeapi",
+   "path": "sdk-api-src/content/mmeapi/nf-mmeapi-midistreamout.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/mmeapi/nf-mmeapi-midistreamout",
+   "documented_name": "midistreamout",
+   "file": "docs/0050_sdk-api_nf-mmeapi-midistreamout.md",
+   "text": "---\nUID: NF:mmeapi.midiStreamOut\ntitle: midiStreamOut function (mmeapi.h)\ndescription: The midiStreamOut function plays or queues a stream (buffer) of MIDI data to a MIDI output device.\nhelpviewer_keywords: [\"_win32_midiStreamOut\",\"midiStreamOut\",\"midiStreamOut function [Windows Multimedia]\",\"mmeapi/midiStreamOut\",\"multimedia.midistreamout\"]\nold-location: multimedia\\midistreamout.htm\ntech.root: Multimedia\nms.assetid: f2ebc646-7d8b-4fde-a6fc-2455b02d3d8b\nms.date: 12/05/2018\nms.keywords: _win32_midiStreamOut, midiStreamOut, midiStreamOut function [Windows Multimedia], mmeapi/midiStreamOut, multimedia.midistreamout\nreq.header: mmeapi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Winmm.lib\nreq.dll: Winmm.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - midiStreamOut\n - mmeapi/midiStreamOut\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Winmm.dll\n - API-MS-Win-mm-mme-l1-1-0.dll\n - winmmbase.dll\napi_name:\n - midiStreamOut\n---\n\n# midiStreamOut function\n\n\n## -description\n\nThe <b>midiStreamOut</b> function plays or queues a stream (buffer) of MIDI data to a MIDI output device.\n\n## -parameters\n\n### -param hms\n\nHandle to a MIDI stream. This handle must have been returned by a call to the <a href=\"/previous-versions/dd798486(v=vs.85)\">midiStreamOpen</a> function. This handle identifies the output device.\n\n### -param pmh\n\nPointer to a <a href=\"/previous-versions/dd798449(v=vs.85)\">MIDIHDR</a> structure that identifies the MIDI buffer.\n\n### -param cbmh\n\nSize, in bytes, of the <a href=\"/previous-versions/dd798449(v=vs.85)\">MIDIHDR</a> structure.\n\n## -returns\n\nReturns MMSYSERR_NOERROR if successful or an error otherwise. Possible error values include the following.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>MMSYSERR_NOMEM</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe system is unable to allocate or lock memory.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>MIDIERR_STILLPLAYING</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe output buffer pointed to by <i>lpMidiHdr</i> is still playing or is queued from a previous call to <a href=\"/previous-versions/dd798487(v=vs.85)\">midiStreamOut</a>.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>MIDIERR_UNPREPARED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe header pointed to by <i>lpMidiHdr</i> has not been prepared.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>MMSYSERR_INVALHANDLE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe specified device handle is invalid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>MMSYSERR_INVALPARAM</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe pointer specified by <i>lpMidiHdr</i> is invalid.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nBefore the buffer is passed to <a href=\"/previous-versions/dd798486(v=vs.85)\">midiStreamOpen</a>, it must be prepared by using the <a href=\"/previous-versions/dd798477(v=vs.85)\">midiOutPrepareHeader</a> function.\n\nBecause the <a href=\"/previous-versions/dd798486(v=vs.85)\">midiStreamOpen</a> function opens the output device in paused mode, you must call the <a href=\"/previous-versions/dd798491(v=vs.85)\">midiStreamRestart</a> function before you can use <b>midiStreamOut</b> to start the playback.\n\nFor the current implementation of this function, the buffer must be smaller than 64K.\n\nThe buffer pointed to by the <a href=\"/previous-versions/dd798449(v=vs.85)\">MIDIHDR</a> structure contains one or more MIDI events, each of which is defined by a <a href=\"/previous-versions/dd798448(v=vs.85)\">MIDIEVENT</a> structure.\n\n## -see-also\n\n<a href=\"/windows/desktop/Multimedia/midi-functions\">MIDI Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "MMSYSTEM_GetMidiStream",
+   "file": "dlls/winmm/winmm.c",
+   "start_line": 983,
+   "end_line": 1001,
+   "static": true,
+   "called_from": [
+    "midiStreamOut"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winmm/winmm.c:1329",
+    "dlls/winmm/winmm.c:1516",
+    "dlls/winmm/winmm.c:1549",
+    "dlls/winmm/winmm.c:1602",
+    "dlls/winmm/winmm.c:1654"
+   ],
+   "signature": "static\tBOOL\tMMSYSTEM_GetMidiStream(HMIDISTRM hMidiStrm, WINE_MIDIStream** lpMidiStrm, WINE_MIDI** lplpwm)",
+   "code": "static\tBOOL\tMMSYSTEM_GetMidiStream(HMIDISTRM hMidiStrm, WINE_MIDIStream** lpMidiStrm, WINE_MIDI** lplpwm)\n{\n    WINE_MIDI* lpwm = (LPWINE_MIDI)MMDRV_Get(hMidiStrm, MMDRV_MIDIOUT, FALSE);\n    struct wine_rb_entry *entry;\n\n    if (lplpwm)\n\t*lplpwm = lpwm;\n\n    if (lpwm == NULL) {\n\treturn FALSE;\n    }\n\n    EnterCriticalSection(&WINMM_cs);\n    if ((entry = wine_rb_get(&wine_midi_streams, &lpwm->mod.rgIds.dwStreamID)))\n        *lpMidiStrm = WINE_RB_ENTRY_VALUE(entry, struct WINE_MIDIStream, entry);\n    LeaveCriticalSection(&WINMM_cs);\n\n    return *lpMidiStrm != NULL;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "WINE_MIDIStream",
+    "kind": "typedef_decl",
+    "start_line": 914,
+    "end_line": 932,
+    "code": "typedef struct WINE_MIDIStream {\n    HMIDIOUT\t\t\thDevice;\n    HANDLE\t\t\thThread;\n    DWORD\t\t\tdwThreadID;\n    CRITICAL_SECTION\t\tlock;\n    DWORD\t\t\tdwTempo;\n    DWORD\t\t\tdwTimeDiv;\n    ULONGLONG\t\t\tposition_usec;\n    DWORD\t\t\tdwPulses;\n    DWORD\t\t\tdwStartTicks;\n    DWORD\t\t\tdwElapsedMS;\n    DWORD\t\t\tdwLastPositionMS;\n    WORD\t\t\twFlags;\n    WORD\t\t\tstatus;\n    HANDLE\t\t\thEvent;\n    LPMIDIHDR\t\t\tlpMidiHdr;\n    DWORD\t\t\tdwStreamID;\n    struct wine_rb_entry\tentry;\n} WINE_MIDIStream;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "WINMM_cs",
+    "type": "CRITICAL_SECTION",
+    "static": false,
+    "start_line": 72,
+    "end_line": 72,
+    "code": "CRITICAL_SECTION WINMM_cs = { &critsect_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 57,
+    "end_line": 57,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(winmm);"
+   },
+   {
+    "name": "wine_midi_streams",
+    "type": "struct rb_tree",
+    "static": true,
+    "start_line": 74,
+    "end_line": 74,
+    "code": "static struct wine_rb_tree wine_midi_streams;"
+   }
+  ],
+  "macros": [
+   {
+    "name": "WINE_MSM_HEADER",
+    "start_line": 934,
+    "end_line": 934,
+    "code": "#define WINE_MSM_HEADER\t\t(WM_USER+0)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "MMDRV_Get",
+    "file": "dlls/winmm/lolvldrv.c",
+    "start_line": 242
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "PostThreadMessageA",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/message.c:700"
+    ]
+   }
+  ],
+  "header_inline": [
+   "rb_get",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

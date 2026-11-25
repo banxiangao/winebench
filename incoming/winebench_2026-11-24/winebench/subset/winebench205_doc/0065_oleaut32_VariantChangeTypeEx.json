@@ -1,0 +1,1537 @@
+{
+ "id": "0065",
+ "function": {
+  "name": "VariantChangeTypeEx",
+  "export_name": "VariantChangeTypeEx",
+  "module": "oleaut32",
+  "source_module": "oleaut32",
+  "exported_by": [
+   "ole2disp.dll16",
+   "oleaut32"
+  ],
+  "side": "PE",
+  "file": "dlls/oleaut32/variant.c",
+  "start_line": 966,
+  "end_line": 1022,
+  "body_lines": 54,
+  "signature": "HRESULT WINAPI VariantChangeTypeEx(VARIANTARG* pvargDest, const VARIANTARG* pvargSrc, LCID lcid, USHORT wFlags, VARTYPE vt)",
+  "header_comment": "/******************************************************************************\n *    VariantChangeTypeEx  [OLEAUT32.147]\n *\n * Change the type of a variant.\n *\n * PARAMS\n *  pvargDest [O] Destination for the converted variant\n *  pvargSrc  [O] Source variant to change the type of\n *  lcid      [I] LCID for the conversion\n *  wFlags    [I] VARIANT_ flags from \"oleauto.h\"\n *  vt        [I] Variant type to change pvargSrc into\n *\n * RETURNS\n *  Success: S_OK. pvargDest contains the converted value.\n *  Failure: An HRESULT error code describing the failure.\n *\n * NOTES\n *  pvargDest and pvargSrc can point to the same variant to perform an in-place\n *  conversion. If the conversion is successful, pvargSrc will be freed.\n */",
+  "code": "HRESULT WINAPI VariantChangeTypeEx(VARIANTARG* pvargDest, const VARIANTARG* pvargSrc,\n                                   LCID lcid, USHORT wFlags, VARTYPE vt)\n{\n  HRESULT res = S_OK;\n\n  TRACE(\"%s, %s, %#lx, 0x%04x, %s.\\n\", debugstr_variant(pvargDest),\n        debugstr_variant(pvargSrc), lcid, wFlags, debugstr_vt(vt));\n\n  if (vt == VT_CLSID)\n    res = DISP_E_BADVARTYPE;\n  else\n  {\n    res = VARIANT_ValidateType(V_VT(pvargSrc));\n\n    if (SUCCEEDED(res))\n    {\n      res = VARIANT_ValidateType(vt);\n\n      if (SUCCEEDED(res))\n      {\n        VARIANTARG vTmp, vSrcDeref;\n\n        if(V_ISBYREF(pvargSrc) && !V_BYREF(pvargSrc))\n          res = DISP_E_TYPEMISMATCH;\n        else\n        {\n          V_VT(&vTmp) = VT_EMPTY;\n          V_VT(&vSrcDeref) = VT_EMPTY;\n          VariantClear(&vTmp);\n          VariantClear(&vSrcDeref);\n        }\n\n        if (SUCCEEDED(res))\n        {\n          res = VariantCopyInd(&vSrcDeref, pvargSrc);\n          if (SUCCEEDED(res))\n          {\n            if (V_ISARRAY(&vSrcDeref) || (vt & VT_ARRAY))\n              res = VARIANT_CoerceArray(&vTmp, &vSrcDeref, vt);\n            else\n              res = VARIANT_Coerce(&vTmp, lcid, wFlags, &vSrcDeref, vt);\n\n            if (SUCCEEDED(res)) {\n                V_VT(&vTmp) = vt;\n                res = VariantCopy(pvargDest, &vTmp);\n            }\n            VariantClear(&vTmp);\n            VariantClear(&vSrcDeref);\n          }\n        }\n      }\n    }\n  }\n\n  TRACE(\"returning %#lx, %s\\n\", res, debugstr_variant(pvargDest));\n  return res;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <string.h>",
+   "#include <stdlib.h>",
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"variant.h\"",
+   "#include \"resource.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "oleaut32!VariantChangeTypeEx [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/oleaut32/tests/safearray.c",
+   "dlls/oleaut32/tests/vartype.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 12
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "ole2disp.dll16",
+   "source_module": "ole2disp.dll16",
+   "exported_by": [
+    "ole2disp.dll16"
+   ],
+   "file": "dlls/ole2disp.dll16/ole2disp.c",
+   "start_line": 513,
+   "resolution": [
+    "ole2disp.dll16!VariantChangeTypeEx [pascal] -> internal symbol VariantChangeTypeEx16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 517,
+   "signature": "HRESULT WINAPI VariantChangeTypeEx16(VARIANTARG *dest, const VARIANTARG *src, LCID lcid, USHORT flags, VARTYPE vt)",
+   "code": "HRESULT WINAPI VariantChangeTypeEx16(VARIANTARG *dest, const VARIANTARG *src, LCID lcid, USHORT flags, VARTYPE vt)\n{\n        FIXME(\"stub: %p %p %ld %d %d\\n\", dest, src, lcid, flags, vt);\n        return E_INVALIDARG;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "oleauto",
+   "path": "sdk-api-src/content/oleauto/nf-oleauto-variantchangetypeex.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/oleauto/nf-oleauto-variantchangetypeex",
+   "documented_name": "variantchangetypeex",
+   "file": "docs/0065_sdk-api_nf-oleauto-variantchangetypeex.md",
+   "text": "---\nUID: NF:oleauto.VariantChangeTypeEx\ntitle: VariantChangeTypeEx function (oleauto.h)\ndescription: Converts a variant from one type to another, using an LCID.\nhelpviewer_keywords: [\"VARIANT_ALPHABOOL\",\"VARIANT_LOCALBOOL\",\"VARIANT_NOUSEROVERRIDE\",\"VARIANT_NOVALUEPROP\",\"VariantChangeTypeEx\",\"VariantChangeTypeEx function [Automation]\",\"_oa96_VariantChangeTypeEx\",\"automat.variantchangetypeex\",\"oleauto/VariantChangeTypeEx\"]\nold-location: automat\\variantchangetypeex.htm\ntech.root: automat\nms.assetid: f2ef2e5f-e247-4abd-890f-f096d956cf4f\nms.date: 12/05/2018\nms.keywords: VARIANT_ALPHABOOL, VARIANT_LOCALBOOL, VARIANT_NOUSEROVERRIDE, VARIANT_NOVALUEPROP, VariantChangeTypeEx, VariantChangeTypeEx function [Automation], _oa96_VariantChangeTypeEx, automat.variantchangetypeex, oleauto/VariantChangeTypeEx\nreq.header: oleauto.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: OleAut32.lib\nreq.dll: OleAut32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - VariantChangeTypeEx\n - oleauto/VariantChangeTypeEx\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - OleAut32.dll\napi_name:\n - VariantChangeTypeEx\n---\n\n## -description\n\n> [!IMPORTANT]\n> This API is affected by the problem described in Microsoft Support topic [VarI8FromCy produces incorrect value when CY value is very large](https://support.microsoft.com/help/2282810).\n\nConverts a variant from one type to another, using an LCID.\n\n## -parameters\n\n### -param pvargDest [out]\n\nThe destination variant. If this is the same as <i>pvarSrc</i>, the variant will be converted in place.\n\n### -param pvarSrc [in]\n\nThe variant to convert.\n\n### -param lcid [in]\n\nThe locale identifier. The LCID is useful when the type of the source or destination VARIANTARG is VT_BSTR, VT_DISPATCH, or VT_DATE.\n\n### -param wFlags [in]\n\nFlags.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"VARIANT_NOVALUEPROP\"></a><a id=\"variant_novalueprop\"></a><dl>\n<dt><b>VARIANT_NOVALUEPROP</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nPrevents the function from attempting to coerce an object to a fundamental type by getting the Value property. Applications should set this flag only if necessary, because it makes their behavior inconsistent with other applications.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"VARIANT_ALPHABOOL\"></a><a id=\"variant_alphabool\"></a><dl>\n<dt><b>VARIANT_ALPHABOOL</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nConverts a VT_BOOL value to a string containing either \"True\" or \"False\". \n\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"VARIANT_NOUSEROVERRIDE\"></a><a id=\"variant_nouseroverride\"></a><dl>\n<dt><b>VARIANT_NOUSEROVERRIDE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nFor conversions to or from VT_BSTR, passes LOCALE_NOUSEROVERRIDE to the core coercion routines. \n\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"VARIANT_LOCALBOOL\"></a><a id=\"variant_localbool\"></a><dl>\n<dt><b>VARIANT_LOCALBOOL</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nFor conversions from VT_BOOL to VT_BSTR and back, uses the language specified by the locale in use on the local computer. \n\n</td>\n</tr>\n</table>\n\n### -param vt [in]\n\nThe type to convert to. If the return code is S_OK, the <b>vt</b> field of the *<i>pvargDest</i> is guaranteed to be equal to this value.\n\n## -returns\n\nThis function can return one of these values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>S_OK</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nSuccess.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>DISP_E_BADVARTYPE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe variant type is not a valid type of variant.\n\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>DISP_E_OVERFLOW</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe data pointed to by <i>pvarSrc</i> does not fit in the destination type.\n\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>DISP_E_TYPEMISMATCH</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe argument could not be coerced to the specified type.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_INVALIDARG\n</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOne of the arguments is not valid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_OUTOFMEMORY\n</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nInsufficient memory to complete the operation.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe <b>VariantChangeTypeEx</b> function handles coercions between the fundamental types (including numeric-to-string and string-to-numeric coercions). A variant that has VT_BYREF set is coerced to a value by obtaining the referenced value. An object is coerced to a value by invoking the object's <b>Value</b> property (DISPID_VALUE).\n\nTypically, the implementer of <a href=\"/previous-versions/windows/desktop/api/oaidl/nf-oaidl-idispatch-invoke\">IDispatch::Invoke</a> determines which member is being accessed, and then calls <a href=\"/previous-versions/windows/desktop/api/oleauto/nf-oleauto-variantchangetype\">VariantChangeType</a> to get the value of one or more arguments. For example, if the <a href=\"/previous-versions/windows/desktop/api/oaidl/nn-oaidl-idispatch\">IDispatch</a> call specifies a SetTitle member that takes one string argument, the implementer would call <b>VariantChangeTypeEx</b> to attempt to coerce the argument to VT_BSTR. \n\nIf <b>VariantChangeTypeEx</b> does not return an error, the argument could then be obtained directly from the <b>bstrVal</b> field of the VARIANTARG. If <b>VariantChangeTypeEx</b> returns DISP_E_TYPEMISMATCH, the implementer would set *puArgErr to 0 (indicating the argument in error) and return DISP_E_TYPEMISMATCH from <a href=\"/previous-versions/windows/desktop/api/oaidl/nf-oaidl-idispatch-invoke\">IDispatch::Invoke</a>.\n\nArrays of one type cannot be converted to arrays of another type with this function.\n\n<div class=\"alert\"><b>Note</b>  The type of a VARIANTARG should not be changed in the rgvarg array in place.</div>\n<div> </div>\n\n## -see-also\n\n<a href=\"/previous-versions/windows/desktop/automat/variant-manipulation-functions\">Variant Manipulation Functions</a>\n\n\n\n<a href=\"/previous-versions/windows/desktop/api/oleauto/nf-oleauto-variantchangetype\">VariantChangeType</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "VARIANT_ValidateType",
+   "file": "dlls/oleaut32/variant.c",
+   "start_line": 523,
+   "end_line": 540,
+   "static": true,
+   "called_from": [
+    "VariantChangeTypeEx"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/oleaut32/variant.c:560",
+    "dlls/oleaut32/variant.c:633",
+    "dlls/oleaut32/variant.c:732",
+    "dlls/oleaut32/variant.c:4520",
+    "dlls/oleaut32/variant.c:4947"
+   ],
+   "signature": "static inline HRESULT VARIANT_ValidateType(VARTYPE vt)",
+   "code": "static inline HRESULT VARIANT_ValidateType(VARTYPE vt)\n{\n  VARTYPE vtExtra = vt & VT_EXTRA_TYPE;\n\n  vt &= VT_TYPEMASK;\n\n  if (!(vtExtra & (VT_VECTOR|VT_RESERVED)))\n  {\n    if (vt < VT_VOID || vt == VT_RECORD || vt == VT_CLSID)\n    {\n      if ((vtExtra & (VT_BYREF|VT_ARRAY)) && vt <= VT_NULL)\n        return DISP_E_BADVARTYPE;\n      if (vt != (VARTYPE)15)\n        return S_OK;\n    }\n  }\n  return DISP_E_BADVARTYPE;\n}"
+  },
+  {
+   "name": "VARIANT_CoerceArray",
+   "file": "dlls/oleaut32/variant.c",
+   "start_line": 490,
+   "end_line": 502,
+   "static": true,
+   "called_from": [
+    "VariantChangeTypeEx"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static inline HRESULT VARIANT_CoerceArray(VARIANTARG* pd, VARIANTARG* ps, VARTYPE vt)",
+   "code": "static inline HRESULT VARIANT_CoerceArray(VARIANTARG* pd, VARIANTARG* ps, VARTYPE vt)\n{\n  if (vt == VT_BSTR && V_VT(ps) == (VT_ARRAY|VT_UI1))\n    return BstrFromVector(V_ARRAY(ps), &V_BSTR(pd));\n\n  if (V_VT(ps) == VT_BSTR && vt == (VT_ARRAY|VT_UI1))\n    return VectorFromBstr(V_BSTR(ps), &V_ARRAY(pd));\n\n  if (V_VT(ps) == vt)\n    return SafeArrayCopy(V_ARRAY(ps), &V_ARRAY(pd));\n\n  return DISP_E_TYPEMISMATCH;\n}"
+  },
+  {
+   "name": "VARIANT_Coerce",
+   "file": "dlls/oleaut32/variant.c",
+   "start_line": 44,
+   "end_line": 487,
+   "static": true,
+   "called_from": [
+    "VariantChangeTypeEx"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static inline HRESULT VARIANT_Coerce(VARIANTARG* pd, LCID lcid, USHORT wFlags, VARIANTARG* ps, VARTYPE vt)",
+   "code": "static inline HRESULT VARIANT_Coerce(VARIANTARG* pd, LCID lcid, USHORT wFlags,\n                                     VARIANTARG* ps, VARTYPE vt)\n{\n  HRESULT res = DISP_E_TYPEMISMATCH;\n  VARTYPE vtFrom =  V_TYPE(ps);\n  DWORD dwFlags = 0;\n\n  TRACE(\"%s, %#lx, 0x%04x, %s, %s.\\n\", debugstr_variant(pd), lcid, wFlags,\n        debugstr_variant(ps), debugstr_vt(vt));\n\n  if (vt == VT_BSTR || vtFrom == VT_BSTR)\n  {\n    /* All flags passed to low level function are only used for\n     * changing to or from strings. Map these here.\n     */\n    if (wFlags & VARIANT_LOCALBOOL)\n      dwFlags |= VAR_LOCALBOOL;\n    if (wFlags & VARIANT_CALENDAR_HIJRI)\n      dwFlags |= VAR_CALENDAR_HIJRI;\n    if (wFlags & VARIANT_CALENDAR_THAI)\n      dwFlags |= VAR_CALENDAR_THAI;\n    if (wFlags & VARIANT_CALENDAR_GREGORIAN)\n      dwFlags |= VAR_CALENDAR_GREGORIAN;\n    if (wFlags & VARIANT_NOUSEROVERRIDE)\n      dwFlags |= LOCALE_NOUSEROVERRIDE;\n    if (wFlags & VARIANT_USE_NLS)\n      dwFlags |= LOCALE_USE_NLS;\n  }\n\n  /* Map int/uint to i4/ui4 */\n  if (vt == VT_INT)\n    vt = VT_I4;\n  else if (vt == VT_UINT)\n    vt = VT_UI4;\n\n  if (vtFrom == VT_INT)\n    vtFrom = VT_I4;\n  else if (vtFrom == VT_UINT)\n    vtFrom = VT_UI4;\n\n  if (vt == vtFrom)\n     return VariantCopy(pd, ps);\n\n  if (wFlags & VARIANT_NOVALUEPROP && vtFrom == VT_DISPATCH && vt != VT_UNKNOWN)\n  {\n    /* VARIANT_NOVALUEPROP prevents IDispatch objects from being coerced by\n     * accessing the default object property.\n     */\n    return DISP_E_TYPEMISMATCH;\n  }\n\n  switch (vt)\n  {\n  case VT_EMPTY:\n    if (vtFrom == VT_NULL)\n      return DISP_E_TYPEMISMATCH;\n    /* ... Fall through */\n  case VT_NULL:\n    if (vtFrom <= VT_UINT && vtFrom != (VARTYPE)15 && vtFrom != VT_ERROR)\n    {\n      res = VariantClear( pd );\n      if (vt == VT_NULL && SUCCEEDED(res))\n        V_VT(pd) = VT_NULL;\n    }\n    return res;\n\n  case VT_I1:\n    switch (vtFrom)\n    {\n    case VT_EMPTY:    V_I1(pd) = 0; return S_OK;\n    case VT_I2:       return VarI1FromI2(V_I2(ps), &V_I1(pd));\n    case VT_I4:       return VarI1FromI4(V_I4(ps), &V_I1(pd));\n    case VT_UI1:      V_I1(pd) = V_UI1(ps); return S_OK;\n    case VT_UI2:      return VarI1FromUI2(V_UI2(ps), &V_I1(pd));\n    case VT_UI4:      return VarI1FromUI4(V_UI4(ps), &V_I1(pd));\n    case VT_I8:       return VarI1FromI8(V_I8(ps), &V_I1(pd));\n    case VT_UI8:      return VarI1FromUI8(V_UI8(ps), &V_I1(pd));\n    case VT_R4:       return VarI1FromR4(V_R4(ps), &V_I1(pd));\n    case VT_R8:       return VarI1FromR8(V_R8(ps), &V_I1(pd));\n    case VT_DATE:     return VarI1FromDate(V_DATE(ps), &V_I1(pd));\n    case VT_BOOL:     return VarI1FromBool(V_BOOL(ps), &V_I1(pd));\n    case VT_CY:       return VarI1FromCy(V_CY(ps), &V_I1(pd));\n    case VT_DECIMAL:  return VarI1FromDec(&V_DECIMAL(ps), &V_I1(pd) );\n    case VT_DISPATCH: return VarI1FromDisp(V_DISPATCH(ps), lcid, &V_I1(pd) );\n    case VT_BSTR:     return VarI1FromStr(V_BSTR(ps), lcid, dwFlags, &V_I1(pd) );\n    }\n    break;\n\n  case VT_I2:\n    switch (vtFrom)\n    {\n    case VT_EMPTY:    V_I2(pd) = 0; return S_OK;\n    case VT_I1:       return VarI2FromI1(V_I1(ps), &V_I2(pd));\n    case VT_I4:       return VarI2FromI4(V_I4(ps), &V_I2(pd));\n    case VT_UI1:      return VarI2FromUI1(V_UI1(ps), &V_I2(pd));\n    case VT_UI2:      V_I2(pd) = V_UI2(ps); return S_OK;\n    case VT_UI4:      return VarI2FromUI4(V_UI4(ps), &V_I2(pd));\n    case VT_I8:       return VarI2FromI8(V_I8(ps), &V_I2(pd));\n    case VT_UI8:      return VarI2FromUI8(V_UI8(ps), &V_I2(pd));\n    case VT_R4:       return VarI2FromR4(V_R4(ps), &V_I2(pd));\n    case VT_R8:       return VarI2FromR8(V_R8(ps), &V_I2(pd));\n    case VT_DATE:     return VarI2FromDate(V_DATE(ps), &V_I2(pd));\n    case VT_BOOL:     return VarI2FromBool(V_BOOL(ps), &V_I2(pd));\n    case VT_CY:       return VarI2FromCy(V_CY(ps), &V_I2(pd));\n    case VT_DECIMAL:  return VarI2FromDec(&V_DECIMAL(ps), &V_I2(pd));\n    case VT_DISPATCH: return VarI2FromDisp(V_DISPATCH(ps), lcid, &V_I2(pd));\n    case VT_BSTR:     return VarI2FromStr(V_BSTR(ps), lcid, dwFlags, &V_I2(pd));\n    }\n    break;\n\n  case VT_I4:\n    switch (vtFrom)\n    {\n    case VT_EMPTY:    V_I4(pd) = 0; return S_OK;\n    case VT_I1:       return VarI4FromI1(V_I1(ps), &V_I4(pd));\n    case VT_I2:       return VarI4FromI2(V_I2(ps), &V_I4(pd));\n    case VT_UI1:      return VarI4FromUI1(V_UI1(ps), &V_I4(pd));\n    case VT_UI2:      return VarI4FromUI2(V_UI2(ps), &V_I4(pd));\n    case VT_UI4:      V_I4(pd) = V_UI4(ps); return S_OK;\n    case VT_I8:       return VarI4FromI8(V_I8(ps), &V_I4(pd));\n    case VT_UI8:      return VarI4FromUI8(V_UI8(ps), &V_I4(pd));\n    case VT_R4:       return VarI4FromR4(V_R4(ps), &V_I4(pd));\n    case VT_R8:       return VarI4FromR8(V_R8(ps), &V_I4(pd));\n    case VT_DATE:     return VarI4FromDate(V_DATE(ps), &V_I4(pd));\n    case VT_BOOL:     return VarI4FromBool(V_BOOL(ps), &V_I4(pd));\n    case VT_CY:       return VarI4FromCy(V_CY(ps), &V_I4(pd));\n    case VT_DECIMAL:  return VarI4FromDec(&V_DECIMAL(ps), &V_I4(pd));\n    case VT_DISPATCH: return VarI4FromDisp(V_DISPATCH(ps), lcid, &V_I4(pd));\n    case VT_BSTR:     return VarI4FromStr(V_BSTR(ps), lcid, dwFlags, &V_I4(pd));\n    }\n    break;\n\n  case VT_UI1:\n    switch (vtFrom)\n    {\n    case VT_EMPTY:    V_UI1(pd) = 0; return S_OK;\n    case VT_I1:       V_UI1(pd) = V_I1(ps); return S_OK;\n    case VT_I2:       return VarUI1FromI2(V_I2(ps), &V_UI1(pd));\n    case VT_I4:       return VarUI1FromI4(V_I4(ps), &V_UI1(pd));\n    case VT_UI2:      return VarUI1FromUI2(V_UI2(ps), &V_UI1(pd));\n    case VT_UI4:      return VarUI1FromUI4(V_UI4(ps), &V_UI1(pd));\n    case VT_I8:       return VarUI1FromI8(V_I8(ps), &V_UI1(pd));\n    case VT_UI8:      return VarUI1FromUI8(V_UI8(ps), &V_UI1(pd));\n    case VT_R4:       return VarUI1FromR4(V_R4(ps), &V_UI1(pd));\n    case VT_R8:       return VarUI1FromR8(V_R8(ps), &V_UI1(pd));\n    case VT_DATE:     return VarUI1FromDate(V_DATE(ps), &V_UI1(pd));\n    case VT_BOOL:     return VarUI1FromBool(V_BOOL(ps), &V_UI1(pd));\n    case VT_CY:       return VarUI1FromCy(V_CY(ps), &V_UI1(pd));\n    case VT_DECIMAL:  return VarUI1FromDec(&V_DECIMAL(ps), &V_UI1(pd));\n    case VT_DISPATCH: return VarUI1FromDisp(V_DISPATCH(ps), lcid, &V_UI1(pd));\n    case VT_BSTR:     return VarUI1FromStr(V_BSTR(ps), lcid, dwFlags, &V_UI1(pd));\n    }\n    break;\n\n  case VT_UI2:\n    switch (vtFrom)\n    {\n    case VT_EMPTY:    V_UI2(pd) = 0; return S_OK;\n    case VT_I1:       return VarUI2FromI1(V_I1(ps), &V_UI2(pd));\n    case VT_I2:       V_UI2(pd) = V_I2(ps); return S_OK;\n    case VT_I4:       return VarUI2FromI4(V_I4(ps), &V_UI2(pd));\n    case VT_UI1:      return VarUI2FromUI1(V_UI1(ps), &V_UI2(pd));\n    case VT_UI4:      return VarUI2FromUI4(V_UI4(ps), &V_UI2(pd));\n    case VT_I8:       return VarUI2FromI8(V_I8(ps), &V_UI2(pd));\n    case VT_UI8:      return VarUI2FromUI8(V_UI8(ps), &V_UI2(pd));\n    case VT_R4:       return VarUI2FromR4(V_R4(ps), &V_UI2(pd));\n    case VT_R8:       return VarUI2FromR8(V_R8(ps), &V_UI2(pd));\n    case VT_DATE:     return VarUI2FromDate(V_DATE(ps), &V_UI2(pd));\n    case VT_BOOL:     return VarUI2FromBool(V_BOOL(ps), &V_UI2(pd));\n    case VT_CY:       return VarUI2FromCy(V_CY(ps), &V_UI2(pd));\n    case VT_DECIMAL:  return VarUI2FromDec(&V_DECIMAL(ps), &V_UI2(pd));\n    case VT_DISPATCH: return VarUI2FromDisp(V_DISPATCH(ps), lcid, &V_UI2(pd));\n    case VT_BSTR:     return VarUI2FromStr(V_BSTR(ps), lcid, dwFlags, &V_UI2(pd));\n    }\n    break;\n\n  case VT_UI4:\n    switch (vtFrom)\n    {\n    case VT_EMPTY:    V_UI4(pd) = 0; return S_OK;\n    case VT_I1:       return VarUI4FromI1(V_I1(ps), &V_UI4(pd));\n    case VT_I2:       return VarUI4FromI2(V_I2(ps), &V_UI4(pd));\n    case VT_I4:       V_UI4(pd) = V_I4(ps); return S_OK;\n    case VT_UI1:      return VarUI4FromUI1(V_UI1(ps), &V_UI4(pd));\n    case VT_UI2:      return VarUI4FromUI2(V_UI2(ps), &V_UI4(pd));\n    case VT_I8:       return VarUI4FromI8(V_I8(ps), &V_UI4(pd));\n    case VT_UI8:      return VarUI4FromUI8(V_UI8(ps), &V_UI4(pd));\n    case VT_R4:       return VarUI4FromR4(V_R4(ps), &V_UI4(pd));\n    case VT_R8:       return VarUI4FromR8(V_R8(ps), &V_UI4(pd));\n    case VT_DATE:     return VarUI4FromDate(V_DATE(ps), &V_UI4(pd));\n    case VT_BOOL:     return VarUI4FromBool(V_BOOL(ps), &V_UI4(pd));\n    case VT_CY:       return VarUI4FromCy(V_CY(ps), &V_UI4(pd));\n    case VT_DECIMAL:  return VarUI4FromDec(&V_DECIMAL(ps), &V_UI4(pd));\n    case VT_DISPATCH: return VarUI4FromDisp(V_DISPATCH(ps), lcid, &V_UI4(pd));\n    case VT_BSTR:     return VarUI4FromStr(V_BSTR(ps), lcid, dwFlags, &V_UI4(pd));\n    }\n    break;\n\n  case VT_UI8:\n    switch (vtFrom)\n    {\n    case VT_EMPTY:    V_UI8(pd) = 0; return S_OK;\n    case VT_I4:       if (V_I4(ps) < 0) return DISP_E_OVERFLOW; V_UI8(pd) = V_I4(ps); return S_OK;\n    case VT_I1:       return VarUI8FromI1(V_I1(ps), &V_UI8(pd));\n    case VT_I2:       return VarUI8FromI2(V_I2(ps), &V_UI8(pd));\n    case VT_UI1:      return VarUI8FromUI1(V_UI1(ps), &V_UI8(pd));\n    case VT_UI2:      return VarUI8FromUI2(V_UI2(ps), &V_UI8(pd));\n    case VT_UI4:      return VarUI8FromUI4(V_UI4(ps), &V_UI8(pd));\n    case VT_I8:       V_UI8(pd) = V_I8(ps); return S_OK;\n    case VT_R4:       return VarUI8FromR4(V_R4(ps), &V_UI8(pd));\n    case VT_R8:       return VarUI8FromR8(V_R8(ps), &V_UI8(pd));\n    case VT_DATE:     return VarUI8FromDate(V_DATE(ps), &V_UI8(pd));\n    case VT_BOOL:     return VarUI8FromBool(V_BOOL(ps), &V_UI8(pd));\n    case VT_CY:       return VarUI8FromCy(V_CY(ps), &V_UI8(pd));\n    case VT_DECIMAL:  return VarUI8FromDec(&V_DECIMAL(ps), &V_UI8(pd));\n    case VT_DISPATCH: return VarUI8FromDisp(V_DISPATCH(ps), lcid, &V_UI8(pd));\n    case VT_BSTR:     return VarUI8FromStr(V_BSTR(ps), lcid, dwFlags, &V_UI8(pd));\n    }\n    break;\n\n  case VT_I8:\n    switch (vtFrom)\n    {\n    case VT_EMPTY:    V_I8(pd) = 0; return S_OK;\n    case VT_I4:       V_I8(pd) = V_I4(ps); return S_OK;\n    case VT_I1:       return VarI8FromI1(V_I1(ps), &V_I8(pd));\n    case VT_I2:       return VarI8FromI2(V_I2(ps), &V_I8(pd));\n    case VT_UI1:      return VarI8FromUI1(V_UI1(ps), &V_I8(pd));\n    case VT_UI2:      return VarI8FromUI2(V_UI2(ps), &V_I8(pd));\n    case VT_UI4:      return VarI8FromUI4(V_UI4(ps), &V_I8(pd));\n    case VT_UI8:      V_I8(pd) = V_UI8(ps); return S_OK;\n    case VT_R4:       return VarI8FromR4(V_R4(ps), &V_I8(pd));\n    case VT_R8:       return VarI8FromR8(V_R8(ps), &V_I8(pd));\n    case VT_DATE:     return VarI8FromDate(V_DATE(ps), &V_I8(pd));\n    case VT_BOOL:     return VarI8FromBool(V_BOOL(ps), &V_I8(pd));\n    case VT_CY:       return VarI8FromCy(V_CY(ps), &V_I8(pd));\n    case VT_DECIMAL:  return VarI8FromDec(&V_DECIMAL(ps), &V_I8(pd));\n    case VT_DISPATCH: return VarI8FromDisp(V_DISPATCH(ps), lcid, &V_I8(pd));\n    case VT_BSTR:     return VarI8FromStr(V_BSTR(ps), lcid, dwFlags, &V_I8(pd));\n    }\n    break;\n\n  case VT_R4:\n    switch (vtFrom)\n    {\n    case VT_EMPTY:    V_R4(pd) = 0.0f; return S_OK;\n    case VT_I1:       return VarR4FromI1(V_I1(ps), &V_R4(pd));\n    case VT_I2:       return VarR4FromI2(V_I2(ps), &V_R4(pd));\n    case VT_I4:       return VarR4FromI4(V_I4(ps), &V_R4(pd));\n    case VT_UI1:      return VarR4FromUI1(V_UI1(ps), &V_R4(pd));\n    case VT_UI2:      return VarR4FromUI2(V_UI2(ps), &V_R4(pd));\n    case VT_UI4:      return VarR4FromUI4(V_UI4(ps), &V_R4(pd));\n    case VT_I8:       return VarR4FromI8(V_I8(ps), &V_R4(pd));\n    case VT_UI8:      return VarR4FromUI8(V_UI8(ps), &V_R4(pd));\n    case VT_R8:       return VarR4FromR8(V_R8(ps), &V_R4(pd));\n    case VT_DATE:     return VarR4FromDate(V_DATE(ps), &V_R4(pd));\n    case VT_BOOL:     return VarR4FromBool(V_BOOL(ps), &V_R4(pd));\n    case VT_CY:       return VarR4FromCy(V_CY(ps), &V_R4(pd));\n    case VT_DECIMAL:  return VarR4FromDec(&V_DECIMAL(ps), &V_R4(pd));\n    case VT_DISPATCH: return VarR4FromDisp(V_DISPATCH(ps), lcid, &V_R4(pd));\n    case VT_BSTR:     return VarR4FromStr(V_BSTR(ps), lcid, dwFlags, &V_R4(pd));\n    }\n    break;\n\n  case VT_R8:\n    switch (vtFrom)\n    {\n    case VT_EMPTY:    V_R8(pd) = 0.0; return S_OK;\n    case VT_I1:       return VarR8FromI1(V_I1(ps), &V_R8(pd));\n    case VT_I2:       return VarR8FromI2(V_I2(ps), &V_R8(pd));\n    case VT_I4:       return VarR8FromI4(V_I4(ps), &V_R8(pd));\n    case VT_UI1:      return VarR8FromUI1(V_UI1(ps), &V_R8(pd));\n    case VT_UI2:      return VarR8FromUI2(V_UI2(ps), &V_R8(pd));\n    case VT_UI4:      return VarR8FromUI4(V_UI4(ps), &V_R8(pd));\n    case VT_I8:       return VarR8FromI8(V_I8(ps), &V_R8(pd));\n    case VT_UI8:      return VarR8FromUI8(V_UI8(ps), &V_R8(pd));\n    case VT_R4:       return VarR8FromR4(V_R4(ps), &V_R8(pd));\n    case VT_DATE:     return VarR8FromDate(V_DATE(ps), &V_R8(pd));\n    case VT_BOOL:     return VarR8FromBool(V_BOOL(ps), &V_R8(pd));\n    case VT_CY:       return VarR8FromCy(V_CY(ps), &V_R8(pd));\n    case VT_DECIMAL:  return VarR8FromDec(&V_DECIMAL(ps), &V_R8(pd));\n    case VT_DISPATCH: return VarR8FromDisp(V_DISPATCH(ps), lcid, &V_R8(pd));\n    case VT_BSTR:     return VarR8FromStr(V_BSTR(ps), lcid, dwFlags, &V_R8(pd));\n    }\n    break;\n\n  case VT_DATE:\n    switch (vtFrom)\n    {\n    case VT_EMPTY:    V_DATE(pd) = 0.0; return S_OK;\n    case VT_I1:       return VarDateFromI1(V_I1(ps), &V_DATE(pd));\n    case VT_I2:       return VarDateFromI2(V_I2(ps), &V_DATE(pd));\n    case VT_I4:       return VarDateFromI4(V_I4(ps), &V_DATE(pd));\n    case VT_UI1:      return VarDateFromUI1(V_UI1(ps), &V_DATE(pd));\n    case VT_UI2:      return VarDateFromUI2(V_UI2(ps), &V_DATE(pd));\n    case VT_UI4:      return VarDateFromUI4(V_UI4(ps), &V_DATE(pd));\n    case VT_I8:       return VarDateFromI8(V_I8(ps), &V_DATE(pd));\n    case VT_UI8:      return VarDateFromUI8(V_UI8(ps), &V_DATE(pd));\n    case VT_R4:       return VarDateFromR4(V_R4(ps), &V_DATE(pd));\n    case VT_R8:       return VarDateFromR8(V_R8(ps), &V_DATE(pd));\n    case VT_BOOL:     return VarDateFromBool(V_BOOL(ps), &V_DATE(pd));\n    case VT_CY:       return VarDateFromCy(V_CY(ps), &V_DATE(pd));\n    case VT_DECIMAL:  return VarDateFromDec(&V_DECIMAL(ps), &V_DATE(pd));\n    case VT_DISPATCH: return VarDateFromDisp(V_DISPATCH(ps), lcid, &V_DATE(pd));\n    case VT_BSTR:     return VarDateFromStr(V_BSTR(ps), lcid, dwFlags, &V_DATE(pd));\n    }\n    break;\n\n  case VT_BOOL:\n    switch (vtFrom)\n    {\n    case VT_EMPTY:    V_BOOL(pd) = 0; return S_OK;\n    case VT_I1:       return VarBoolFromI1(V_I1(ps), &V_BOOL(pd));\n    case VT_I2:       return VarBoolFromI2(V_I2(ps), &V_BOOL(pd));\n    case VT_I4:       return VarBoolFromI4(V_I4(ps), &V_BOOL(pd));\n    case VT_UI1:      return VarBoolFromUI1(V_UI1(ps), &V_BOOL(pd));\n    case VT_UI2:      return VarBoolFromUI2(V_UI2(ps), &V_BOOL(pd));\n    case VT_UI4:      return VarBoolFromUI4(V_UI4(ps), &V_BOOL(pd));\n    case VT_I8:       return VarBoolFromI8(V_I8(ps), &V_BOOL(pd));\n    case VT_UI8:      return VarBoolFromUI8(V_UI8(ps), &V_BOOL(pd));\n    case VT_R4:       return VarBoolFromR4(V_R4(ps), &V_BOOL(pd));\n    case VT_R8:       return VarBoolFromR8(V_R8(ps), &V_BOOL(pd));\n    case VT_DATE:     return VarBoolFromDate(V_DATE(ps), &V_BOOL(pd));\n    case VT_CY:       return VarBoolFromCy(V_CY(ps), &V_BOOL(pd));\n    case VT_DECIMAL:  return VarBoolFromDec(&V_DECIMAL(ps), &V_BOOL(pd));\n    case VT_DISPATCH: return VarBoolFromDisp(V_DISPATCH(ps), lcid, &V_BOOL(pd));\n    case VT_BSTR:     return VarBoolFromStr(V_BSTR(ps), lcid, dwFlags, &V_BOOL(pd));\n    }\n    break;\n\n  case VT_BSTR:\n    switch (vtFrom)\n    {\n    case VT_EMPTY:\n      V_BSTR(pd) = SysAllocStringLen(NULL, 0);\n      return V_BSTR(pd) ? S_OK : E_OUTOFMEMORY;\n    case VT_BOOL:\n      if (wFlags & (VARIANT_ALPHABOOL|VARIANT_LOCALBOOL))\n         return VarBstrFromBool(V_BOOL(ps), lcid, dwFlags, &V_BSTR(pd));\n      return VarBstrFromI2(V_BOOL(ps), lcid, dwFlags, &V_BSTR(pd));\n    case VT_I1:       return VarBstrFromI1(V_I1(ps), lcid, dwFlags, &V_BSTR(pd));\n    case VT_I2:       return VarBstrFromI2(V_I2(ps), lcid, dwFlags, &V_BSTR(pd));\n    case VT_I4:       return VarBstrFromI4(V_I4(ps), lcid, dwFlags, &V_BSTR(pd));\n    case VT_UI1:      return VarBstrFromUI1(V_UI1(ps), lcid, dwFlags, &V_BSTR(pd));\n    case VT_UI2:      return VarBstrFromUI2(V_UI2(ps), lcid, dwFlags, &V_BSTR(pd));\n    case VT_UI4:      return VarBstrFromUI4(V_UI4(ps), lcid, dwFlags, &V_BSTR(pd));\n    case VT_I8:       return VarBstrFromI8(V_I8(ps), lcid, dwFlags, &V_BSTR(pd));\n    case VT_UI8:      return VarBstrFromUI8(V_UI8(ps), lcid, dwFlags, &V_BSTR(pd));\n    case VT_R4:       return VarBstrFromR4(V_R4(ps), lcid, dwFlags, &V_BSTR(pd));\n    case VT_R8:       return VarBstrFromR8(V_R8(ps), lcid, dwFlags, &V_BSTR(pd));\n    case VT_DATE:     return VarBstrFromDate(V_DATE(ps), lcid, dwFlags, &V_BSTR(pd));\n    case VT_CY:       return VarBstrFromCy(V_CY(ps), lcid, dwFlags, &V_BSTR(pd));\n    case VT_DECIMAL:  return VarBstrFromDec(&V_DECIMAL(ps), lcid, dwFlags, &V_BSTR(pd));\n    case VT_DISPATCH: return VarBstrFromDisp(V_DISPATCH(ps), lcid, dwFlags, &V_BSTR(pd));\n    }\n    break;\n\n  case VT_CY:\n    switch (vtFrom)\n    {\n    case VT_EMPTY:    V_CY(pd).int64 = 0; return S_OK;\n    case VT_I1:       return VarCyFromI1(V_I1(ps), &V_CY(pd));\n    case VT_I2:       return VarCyFromI2(V_I2(ps), &V_CY(pd));\n    case VT_I4:       return VarCyFromI4(V_I4(ps), &V_CY(pd));\n    case VT_UI1:      return VarCyFromUI1(V_UI1(ps), &V_CY(pd));\n    case VT_UI2:      return VarCyFromUI2(V_UI2(ps), &V_CY(pd));\n    case VT_UI4:      return VarCyFromUI4(V_UI4(ps), &V_CY(pd));\n    case VT_I8:       return VarCyFromI8(V_I8(ps), &V_CY(pd));\n    case VT_UI8:      return VarCyFromUI8(V_UI8(ps), &V_CY(pd));\n    case VT_R4:       return VarCyFromR4(V_R4(ps), &V_CY(pd));\n    case VT_R8:       return VarCyFromR8(V_R8(ps), &V_CY(pd));\n    case VT_DATE:     return VarCyFromDate(V_DATE(ps), &V_CY(pd));\n    case VT_BOOL:     return VarCyFromBool(V_BOOL(ps), &V_CY(pd));\n    case VT_DECIMAL:  return VarCyFromDec(&V_DECIMAL(ps), &V_CY(pd));\n    case VT_DISPATCH: return VarCyFromDisp(V_DISPATCH(ps), lcid, &V_CY(pd));\n    case VT_BSTR:     return VarCyFromStr(V_BSTR(ps), lcid, dwFlags, &V_CY(pd));\n    }\n    break;\n\n  case VT_DECIMAL:\n    switch (vtFrom)\n    {\n    case VT_EMPTY:\n    case VT_BOOL:\n       V_DECIMAL(pd).sign = DECIMAL_POS;\n       V_DECIMAL(pd).scale = 0;\n       V_DECIMAL(pd).Hi32 = 0;\n        /* VarDecFromBool() coerces to -1/0, ChangeTypeEx() coerces to 1/0.\n         * VT_NULL and VT_EMPTY always give a 0 value.\n         */\n       V_DECIMAL(pd).Lo64 = vtFrom == VT_BOOL && V_BOOL(ps) ? 1 : 0;\n       return S_OK;\n    case VT_I1:       return VarDecFromI1(V_I1(ps), &V_DECIMAL(pd));\n    case VT_I2:       return VarDecFromI2(V_I2(ps), &V_DECIMAL(pd));\n    case VT_I4:       return VarDecFromI4(V_I4(ps), &V_DECIMAL(pd));\n    case VT_UI1:      return VarDecFromUI1(V_UI1(ps), &V_DECIMAL(pd));\n    case VT_UI2:      return VarDecFromUI2(V_UI2(ps), &V_DECIMAL(pd));\n    case VT_UI4:      return VarDecFromUI4(V_UI4(ps), &V_DECIMAL(pd));\n    case VT_I8:       return VarDecFromI8(V_I8(ps), &V_DECIMAL(pd));\n    case VT_UI8:      return VarDecFromUI8(V_UI8(ps), &V_DECIMAL(pd));\n    case VT_R4:       return VarDecFromR4(V_R4(ps), &V_DECIMAL(pd));\n    case VT_R8:       return VarDecFromR8(V_R8(ps), &V_DECIMAL(pd));\n    case VT_DATE:     return VarDecFromDate(V_DATE(ps), &V_DECIMAL(pd));\n    case VT_CY:       return VarDecFromCy(V_CY(ps), &V_DECIMAL(pd));\n    case VT_DISPATCH: return VarDecFromDisp(V_DISPATCH(ps), lcid, &V_DECIMAL(pd));\n    case VT_BSTR:     return VarDecFromStr(V_BSTR(ps), lcid, dwFlags, &V_DECIMAL(pd));\n    }\n    break;\n\n  case VT_UNKNOWN:\n    switch (vtFrom)\n    {\n    case VT_DISPATCH:\n      if (V_DISPATCH(ps) == NULL)\n      {\n        V_UNKNOWN(pd) = NULL;\n        res = S_OK;\n      }\n      else\n        res = IDispatch_QueryInterface(V_DISPATCH(ps), &IID_IUnknown, (LPVOID*)&V_UNKNOWN(pd));\n      break;\n    }\n    break;\n\n  case VT_DISPATCH:\n    switch (vtFrom)\n    {\n    case VT_UNKNOWN:\n      if (V_UNKNOWN(ps) == NULL)\n      {\n        V_DISPATCH(pd) = NULL;\n        res = S_OK;\n      }\n      else\n        res = IUnknown_QueryInterface(V_UNKNOWN(ps), &IID_IDispatch, (LPVOID*)&V_DISPATCH(pd));\n      break;\n    }\n    break;\n\n  case VT_RECORD:\n    break;\n  }\n  return res;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(variant);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "BstrFromVector",
+    "impl": [
+     "dlls/oleaut32/safearray.c:1740"
+    ]
+   },
+   {
+    "name": "SafeArrayCopy",
+    "impl": [
+     "dlls/oleaut32/safearray.c:1379"
+    ]
+   },
+   {
+    "name": "SysAllocStringLen",
+    "impl": [
+     "dlls/oleaut32/oleaut.c:341"
+    ]
+   },
+   {
+    "name": "VarBoolFromCy",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6089"
+    ]
+   },
+   {
+    "name": "VarBoolFromDate",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6071"
+    ]
+   },
+   {
+    "name": "VarBoolFromDec",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6316"
+    ]
+   },
+   {
+    "name": "VarBoolFromDisp",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6244"
+    ]
+   },
+   {
+    "name": "VarBoolFromI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6261"
+    ]
+   },
+   {
+    "name": "VarBoolFromI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:5999"
+    ]
+   },
+   {
+    "name": "VarBoolFromI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6017"
+    ]
+   },
+   {
+    "name": "VarBoolFromI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6340"
+    ]
+   },
+   {
+    "name": "VarBoolFromR4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6035"
+    ]
+   },
+   {
+    "name": "VarBoolFromR8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6053"
+    ]
+   },
+   {
+    "name": "VarBoolFromStr",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6155"
+    ]
+   },
+   {
+    "name": "VarBoolFromUI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:5981"
+    ]
+   },
+   {
+    "name": "VarBoolFromUI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6279"
+    ]
+   },
+   {
+    "name": "VarBoolFromUI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6297"
+    ]
+   },
+   {
+    "name": "VarBoolFromUI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6358"
+    ]
+   },
+   {
+    "name": "VarBstrFromBool",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6917"
+    ]
+   },
+   {
+    "name": "VarBstrFromCy",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6673"
+    ]
+   },
+   {
+    "name": "VarBstrFromDate",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6843"
+    ]
+   },
+   {
+    "name": "VarBstrFromDec",
+    "impl": [
+     "dlls/oleaut32/vartype.c:7056"
+    ]
+   },
+   {
+    "name": "VarBstrFromDisp",
+    "impl": [
+     "dlls/oleaut32/vartype.c:7152"
+    ]
+   },
+   {
+    "name": "VarBstrFromI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6986"
+    ]
+   },
+   {
+    "name": "VarBstrFromI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6455"
+    ]
+   },
+   {
+    "name": "VarBstrFromI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6483"
+    ]
+   },
+   {
+    "name": "VarBstrFromI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:7103"
+    ]
+   },
+   {
+    "name": "VarBstrFromR4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6631"
+    ]
+   },
+   {
+    "name": "VarBstrFromR8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6652"
+    ]
+   },
+   {
+    "name": "VarBstrFromUI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:6434"
+    ]
+   },
+   {
+    "name": "VarBstrFromUI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:7014"
+    ]
+   },
+   {
+    "name": "VarBstrFromUI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:7035"
+    ]
+   },
+   {
+    "name": "VarBstrFromUI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:7131"
+    ]
+   },
+   {
+    "name": "VarCyFromBool",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3614"
+    ]
+   },
+   {
+    "name": "VarCyFromDate",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3547"
+    ]
+   },
+   {
+    "name": "VarCyFromDec",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3698"
+    ]
+   },
+   {
+    "name": "VarCyFromDisp",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3590"
+    ]
+   },
+   {
+    "name": "VarCyFromI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3635"
+    ]
+   },
+   {
+    "name": "VarCyFromI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3435"
+    ]
+   },
+   {
+    "name": "VarCyFromI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3456"
+    ]
+   },
+   {
+    "name": "VarCyFromI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3736"
+    ]
+   },
+   {
+    "name": "VarCyFromR4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3477"
+    ]
+   },
+   {
+    "name": "VarCyFromR8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3497"
+    ]
+   },
+   {
+    "name": "VarCyFromStr",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3569"
+    ]
+   },
+   {
+    "name": "VarCyFromUI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3414"
+    ]
+   },
+   {
+    "name": "VarCyFromUI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3656"
+    ]
+   },
+   {
+    "name": "VarCyFromUI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3677"
+    ]
+   },
+   {
+    "name": "VarCyFromUI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3758"
+    ]
+   },
+   {
+    "name": "VarDateFromBool",
+    "impl": [
+     "dlls/oleaut32/vartype.c:7397"
+    ]
+   },
+   {
+    "name": "VarDateFromCy",
+    "impl": [
+     "dlls/oleaut32/vartype.c:7414"
+    ]
+   },
+   {
+    "name": "VarDateFromDec",
+    "impl": [
+     "dlls/oleaut32/vartype.c:8078"
+    ]
+   },
+   {
+    "name": "VarDateFromDisp",
+    "impl": [
+     "dlls/oleaut32/vartype.c:7380"
+    ]
+   },
+   {
+    "name": "VarDateFromI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:8027"
+    ]
+   },
+   {
+    "name": "VarDateFromI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:7306"
+    ]
+   },
+   {
+    "name": "VarDateFromI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:7323"
+    ]
+   },
+   {
+    "name": "VarDateFromI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:8096"
+    ]
+   },
+   {
+    "name": "VarDateFromR4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:7340"
+    ]
+   },
+   {
+    "name": "VarDateFromR8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:7357"
+    ]
+   },
+   {
+    "name": "VarDateFromStr",
+    "impl": [
+     "dlls/oleaut32/vartype.c:7667"
+    ]
+   },
+   {
+    "name": "VarDateFromUI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:7289"
+    ]
+   },
+   {
+    "name": "VarDateFromUI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:8044"
+    ]
+   },
+   {
+    "name": "VarDateFromUI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:8061"
+    ]
+   },
+   {
+    "name": "VarDateFromUI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:8116"
+    ]
+   },
+   {
+    "name": "VarDecFromCy",
+    "impl": [
+     "dlls/oleaut32/vartype.c:4234"
+    ]
+   },
+   {
+    "name": "VarDecFromDate",
+    "impl": [
+     "dlls/oleaut32/vartype.c:4217"
+    ]
+   },
+   {
+    "name": "VarDecFromDisp",
+    "impl": [
+     "dlls/oleaut32/vartype.c:4286"
+    ]
+   },
+   {
+    "name": "VarDecFromI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:4335"
+    ]
+   },
+   {
+    "name": "VarDecFromI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:4108"
+    ]
+   },
+   {
+    "name": "VarDecFromI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:4125"
+    ]
+   },
+   {
+    "name": "VarDecFromI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:4390"
+    ]
+   },
+   {
+    "name": "VarDecFromR4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:4173"
+    ]
+   },
+   {
+    "name": "VarDecFromR8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:4195"
+    ]
+   },
+   {
+    "name": "VarDecFromStr",
+    "impl": [
+     "dlls/oleaut32/vartype.c:4267"
+    ]
+   },
+   {
+    "name": "VarDecFromUI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:4091"
+    ]
+   },
+   {
+    "name": "VarDecFromUI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:4352"
+    ]
+   },
+   {
+    "name": "VarDecFromUI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:4369"
+    ]
+   },
+   {
+    "name": "VarDecFromUI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:4420"
+    ]
+   },
+   {
+    "name": "VarI1FromBool",
+    "impl": [
+     "dlls/oleaut32/vartype.c:459"
+    ]
+   },
+   {
+    "name": "VarI1FromCy",
+    "impl": [
+     "dlls/oleaut32/vartype.c:396"
+    ]
+   },
+   {
+    "name": "VarI1FromDate",
+    "impl": [
+     "dlls/oleaut32/vartype.c:377"
+    ]
+   },
+   {
+    "name": "VarI1FromDec",
+    "impl": [
+     "dlls/oleaut32/vartype.c:517"
+    ]
+   },
+   {
+    "name": "VarI1FromDisp",
+    "impl": [
+     "dlls/oleaut32/vartype.c:442"
+    ]
+   },
+   {
+    "name": "VarI1FromI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:295"
+    ]
+   },
+   {
+    "name": "VarI1FromI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:314"
+    ]
+   },
+   {
+    "name": "VarI1FromI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:543"
+    ]
+   },
+   {
+    "name": "VarI1FromR4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:333"
+    ]
+   },
+   {
+    "name": "VarI1FromR8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:355"
+    ]
+   },
+   {
+    "name": "VarI1FromStr",
+    "impl": [
+     "dlls/oleaut32/vartype.c:421"
+    ]
+   },
+   {
+    "name": "VarI1FromUI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:478"
+    ]
+   },
+   {
+    "name": "VarI1FromUI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:498"
+    ]
+   },
+   {
+    "name": "VarI1FromUI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:562"
+    ]
+   },
+   {
+    "name": "VarI2FromBool",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1053"
+    ]
+   },
+   {
+    "name": "VarI2FromCy",
+    "impl": [
+     "dlls/oleaut32/vartype.c:972"
+    ]
+   },
+   {
+    "name": "VarI2FromDate",
+    "impl": [
+     "dlls/oleaut32/vartype.c:993"
+    ]
+   },
+   {
+    "name": "VarI2FromDec",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1125"
+    ]
+   },
+   {
+    "name": "VarI2FromDisp",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1036"
+    ]
+   },
+   {
+    "name": "VarI2FromI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1070"
+    ]
+   },
+   {
+    "name": "VarI2FromI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:912"
+    ]
+   },
+   {
+    "name": "VarI2FromI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1150"
+    ]
+   },
+   {
+    "name": "VarI2FromR4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:930"
+    ]
+   },
+   {
+    "name": "VarI2FromR8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:951"
+    ]
+   },
+   {
+    "name": "VarI2FromStr",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1015"
+    ]
+   },
+   {
+    "name": "VarI2FromUI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:894"
+    ]
+   },
+   {
+    "name": "VarI2FromUI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1106"
+    ]
+   },
+   {
+    "name": "VarI2FromUI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1168"
+    ]
+   },
+   {
+    "name": "VarI4FromBool",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1643"
+    ]
+   },
+   {
+    "name": "VarI4FromCy",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1564"
+    ]
+   },
+   {
+    "name": "VarI4FromDate",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1583"
+    ]
+   },
+   {
+    "name": "VarI4FromDec",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1714"
+    ]
+   },
+   {
+    "name": "VarI4FromDisp",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1626"
+    ]
+   },
+   {
+    "name": "VarI4FromI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1660"
+    ]
+   },
+   {
+    "name": "VarI4FromI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1504"
+    ]
+   },
+   {
+    "name": "VarI4FromI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1739"
+    ]
+   },
+   {
+    "name": "VarI4FromR4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1522"
+    ]
+   },
+   {
+    "name": "VarI4FromR8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1543"
+    ]
+   },
+   {
+    "name": "VarI4FromStr",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1605"
+    ]
+   },
+   {
+    "name": "VarI4FromUI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1485"
+    ]
+   },
+   {
+    "name": "VarI4FromUI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1677"
+    ]
+   },
+   {
+    "name": "VarI4FromUI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1757"
+    ]
+   },
+   {
+    "name": "VarI8FromBool",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2259"
+    ]
+   },
+   {
+    "name": "VarI8FromCy",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2168"
+    ]
+   },
+   {
+    "name": "VarI8FromDate",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2199"
+    ]
+   },
+   {
+    "name": "VarI8FromDec",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2329"
+    ]
+   },
+   {
+    "name": "VarI8FromDisp",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2242"
+    ]
+   },
+   {
+    "name": "VarI8FromI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2276"
+    ]
+   },
+   {
+    "name": "VarI8FromI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2087"
+    ]
+   },
+   {
+    "name": "VarI8FromR4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2106"
+    ]
+   },
+   {
+    "name": "VarI8FromR8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2142"
+    ]
+   },
+   {
+    "name": "VarI8FromStr",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2221"
+    ]
+   },
+   {
+    "name": "VarI8FromUI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2069"
+    ]
+   },
+   {
+    "name": "VarI8FromUI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2293"
+    ]
+   },
+   {
+    "name": "VarI8FromUI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2310"
+    ]
+   },
+   {
+    "name": "VarR4FromBool",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2862"
+    ]
+   },
+   {
+    "name": "VarR4FromCy",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2784"
+    ]
+   },
+   {
+    "name": "VarR4FromDate",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2803"
+    ]
+   },
+   {
+    "name": "VarR4FromDec",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2940"
+    ]
+   },
+   {
+    "name": "VarR4FromDisp",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2845"
+    ]
+   },
+   {
+    "name": "VarR4FromI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2882"
+    ]
+   },
+   {
+    "name": "VarR4FromI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2729"
+    ]
+   },
+   {
+    "name": "VarR4FromI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2746"
+    ]
+   },
+   {
+    "name": "VarR4FromI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2980"
+    ]
+   },
+   {
+    "name": "VarR4FromR8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2764"
+    ]
+   },
+   {
+    "name": "VarR4FromStr",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2824"
+    ]
+   },
+   {
+    "name": "VarR4FromUI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2712"
+    ]
+   },
+   {
+    "name": "VarR4FromUI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2902"
+    ]
+   },
+   {
+    "name": "VarR4FromUI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2922"
+    ]
+   },
+   {
+    "name": "VarR4FromUI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2997"
+    ]
+   },
+   {
+    "name": "VarR8FromBool",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3183"
+    ]
+   },
+   {
+    "name": "VarR8FromCy",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3107"
+    ]
+   },
+   {
+    "name": "VarR8FromDate",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3124"
+    ]
+   },
+   {
+    "name": "VarR8FromDec",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3261"
+    ]
+   },
+   {
+    "name": "VarR8FromDisp",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3166"
+    ]
+   },
+   {
+    "name": "VarR8FromI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3203"
+    ]
+   },
+   {
+    "name": "VarR8FromI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3056"
+    ]
+   },
+   {
+    "name": "VarR8FromI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3073"
+    ]
+   },
+   {
+    "name": "VarR8FromI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3300"
+    ]
+   },
+   {
+    "name": "VarR8FromR4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3090"
+    ]
+   },
+   {
+    "name": "VarR8FromStr",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3145"
+    ]
+   },
+   {
+    "name": "VarR8FromUI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3039"
+    ]
+   },
+   {
+    "name": "VarR8FromUI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3223"
+    ]
+   },
+   {
+    "name": "VarR8FromUI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3243"
+    ]
+   },
+   {
+    "name": "VarR8FromUI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3317"
+    ]
+   },
+   {
+    "name": "VarUI1FromBool",
+    "impl": [
+     "dlls/oleaut32/vartype.c:752"
+    ]
+   },
+   {
+    "name": "VarUI1FromCy",
+    "impl": [
+     "dlls/oleaut32/vartype.c:670"
+    ]
+   },
+   {
+    "name": "VarUI1FromDate",
+    "impl": [
+     "dlls/oleaut32/vartype.c:692"
+    ]
+   },
+   {
+    "name": "VarUI1FromDec",
+    "impl": [
+     "dlls/oleaut32/vartype.c:828"
+    ]
+   },
+   {
+    "name": "VarUI1FromDisp",
+    "impl": [
+     "dlls/oleaut32/vartype.c:735"
+    ]
+   },
+   {
+    "name": "VarUI1FromI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:584"
+    ]
+   },
+   {
+    "name": "VarUI1FromI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:603"
+    ]
+   },
+   {
+    "name": "VarUI1FromI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:854"
+    ]
+   },
+   {
+    "name": "VarUI1FromR4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:623"
+    ]
+   },
+   {
+    "name": "VarUI1FromR8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:645"
+    ]
+   },
+   {
+    "name": "VarUI1FromStr",
+    "impl": [
+     "dlls/oleaut32/vartype.c:714"
+    ]
+   },
+   {
+    "name": "VarUI1FromUI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:790"
+    ]
+   },
+   {
+    "name": "VarUI1FromUI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:809"
+    ]
+   },
+   {
+    "name": "VarUI1FromUI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:873"
+    ]
+   },
+   {
+    "name": "VarUI2FromBool",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1367"
+    ]
+   },
+   {
+    "name": "VarUI2FromCy",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1305"
+    ]
+   },
+   {
+    "name": "VarUI2FromDate",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1284"
+    ]
+   },
+   {
+    "name": "VarUI2FromDec",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1422"
+    ]
+   },
+   {
+    "name": "VarUI2FromDisp",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1350"
+    ]
+   },
+   {
+    "name": "VarUI2FromI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1385"
+    ]
+   },
+   {
+    "name": "VarUI2FromI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1224"
+    ]
+   },
+   {
+    "name": "VarUI2FromI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1447"
+    ]
+   },
+   {
+    "name": "VarUI2FromR4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1242"
+    ]
+   },
+   {
+    "name": "VarUI2FromR8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1263"
+    ]
+   },
+   {
+    "name": "VarUI2FromStr",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1329"
+    ]
+   },
+   {
+    "name": "VarUI2FromUI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1188"
+    ]
+   },
+   {
+    "name": "VarUI2FromUI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1403"
+    ]
+   },
+   {
+    "name": "VarUI2FromUI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1465"
+    ]
+   },
+   {
+    "name": "VarUI4FromBool",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1952"
+    ]
+   },
+   {
+    "name": "VarUI4FromCy",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1891"
+    ]
+   },
+   {
+    "name": "VarUI4FromDate",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1873"
+    ]
+   },
+   {
+    "name": "VarUI4FromDec",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2006"
+    ]
+   },
+   {
+    "name": "VarUI4FromDisp",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1935"
+    ]
+   },
+   {
+    "name": "VarUI4FromI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1970"
+    ]
+   },
+   {
+    "name": "VarUI4FromI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1795"
+    ]
+   },
+   {
+    "name": "VarUI4FromI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2031"
+    ]
+   },
+   {
+    "name": "VarUI4FromR4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1831"
+    ]
+   },
+   {
+    "name": "VarUI4FromR8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1852"
+    ]
+   },
+   {
+    "name": "VarUI4FromStr",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1914"
+    ]
+   },
+   {
+    "name": "VarUI4FromUI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1777"
+    ]
+   },
+   {
+    "name": "VarUI4FromUI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:1987"
+    ]
+   },
+   {
+    "name": "VarUI4FromUI8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2049"
+    ]
+   },
+   {
+    "name": "VarUI8FromBool",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2588"
+    ]
+   },
+   {
+    "name": "VarUI8FromCy",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2492"
+    ]
+   },
+   {
+    "name": "VarUI8FromDate",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2527"
+    ]
+   },
+   {
+    "name": "VarUI8FromDec",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2664"
+    ]
+   },
+   {
+    "name": "VarUI8FromDisp",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2570"
+    ]
+   },
+   {
+    "name": "VarUI8FromI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2605"
+    ]
+   },
+   {
+    "name": "VarUI8FromI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2427"
+    ]
+   },
+   {
+    "name": "VarUI8FromR4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2445"
+    ]
+   },
+   {
+    "name": "VarUI8FromR8",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2467"
+    ]
+   },
+   {
+    "name": "VarUI8FromStr",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2549"
+    ]
+   },
+   {
+    "name": "VarUI8FromUI1",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2410"
+    ]
+   },
+   {
+    "name": "VarUI8FromUI2",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2622"
+    ]
+   },
+   {
+    "name": "VarUI8FromUI4",
+    "impl": [
+     "dlls/oleaut32/vartype.c:2639"
+    ]
+   },
+   {
+    "name": "VariantClear",
+    "impl": [
+     "dlls/oleaut32/variant.c:627"
+    ]
+   },
+   {
+    "name": "VariantCopy",
+    "impl": [
+     "dlls/oleaut32/variant.c:725"
+    ]
+   },
+   {
+    "name": "VariantCopyInd",
+    "impl": [
+     "dlls/oleaut32/variant.c:824"
+    ]
+   },
+   {
+    "name": "VectorFromBstr",
+    "impl": [
+     "dlls/oleaut32/safearray.c:1699"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "IDispatch_QueryInterface",
+   "debugstr_variant",
+   "debugstr_vt",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "oleaut32.VariantChangeTypeEx",
+  "category": {
+   "l1": "System services",
+   "l2": "COM (Automation)",
+   "header": "oleauto.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 57,
+   "body": 55,
+   "code": 32
+  },
+  "cyclomatic": 11,
+  "return_type": "HRESULT",
+  "n_params": 5,
+  "tests": {
+   "n_tests_own": 12,
+   "n_tests": 14,
+   "n_tests_other": 2,
+   "own_test_functions": [
+    "dlls/oleaut32/tests/safearray.c::test_SafeArrayChangeTypeEx",
+    "dlls/oleaut32/tests/safearray.c::test_safearray",
+    "dlls/oleaut32/tests/vartype.c::test_ChangeType_keep_dst",
+    "dlls/oleaut32/tests/vartype.c::test_EmptyChangeTypeEx",
+    "dlls/oleaut32/tests/vartype.c::test_ErrorChangeTypeEx",
+    "dlls/oleaut32/tests/vartype.c::test_IDispatchChangeTypeEx",
+    "dlls/oleaut32/tests/vartype.c::test_IUnknownChangeTypeEx",
+    "dlls/oleaut32/tests/vartype.c::test_NullByRef",
+    "dlls/oleaut32/tests/vartype.c::test_NullChangeTypeEx",
+    "dlls/oleaut32/tests/vartype.c::test_UintChangeTypeEx",
+    "dlls/oleaut32/tests/vartype.c::test_VarDateChangeTypeEx",
+    "dlls/oleaut32/tests/vartype.c::test_VarUI1FromDisp"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/oleauto/nf-oleauto-variantchangetypeex",
+   "source": "win32",
+   "description": "Converts a variant from one type to another, using an LCID.",
+   "min_windows": "",
+   "documented_dll": "OleAut32.dll"
+  },
+  "exports": [
+   "oleaut32.VariantChangeTypeEx"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

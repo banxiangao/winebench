@@ -1,0 +1,334 @@
+{
+ "id": "0235",
+ "function": {
+  "name": "MFCreateMediaBufferFromMediaType",
+  "export_name": "MFCreateMediaBufferFromMediaType",
+  "module": "mfplat",
+  "source_module": "mfplat",
+  "exported_by": [
+   "mfplat"
+  ],
+  "side": "PE",
+  "file": "dlls/mfplat/buffer.c",
+  "start_line": 2257,
+  "end_line": 2333,
+  "body_lines": 74,
+  "signature": "HRESULT WINAPI MFCreateMediaBufferFromMediaType(IMFMediaType *media_type, LONGLONG duration, DWORD min_length, DWORD alignment, IMFMediaBuffer **buffer)",
+  "header_comment": null,
+  "code": "HRESULT WINAPI MFCreateMediaBufferFromMediaType(IMFMediaType *media_type, LONGLONG duration, DWORD min_length,\n        DWORD alignment, IMFMediaBuffer **buffer)\n{\n    UINT32 length = 0, block_alignment;\n    LONGLONG avg_length;\n    GUID major, subtype;\n    UINT64 frame_size;\n    BOOL is_yuv;\n    HRESULT hr;\n\n    TRACE(\"%p, %s, %lu, %lu, %p.\\n\", media_type, debugstr_time(duration), min_length, alignment, buffer);\n\n    if (!media_type)\n        return E_INVALIDARG;\n\n    if (FAILED(hr = IMFMediaType_GetMajorType(media_type, &major)))\n        return hr;\n\n    if (IsEqualGUID(&major, &MFMediaType_Audio))\n    {\n        block_alignment = 0;\n        if (FAILED(IMFMediaType_GetUINT32(media_type, &MF_MT_AUDIO_BLOCK_ALIGNMENT, &block_alignment)))\n            WARN(\"Block alignment was not specified.\\n\");\n\n        alignment = max(16, alignment);\n\n        if (block_alignment)\n        {\n            avg_length = 0;\n\n            if (duration)\n            {\n                length = 0;\n                if (SUCCEEDED(IMFMediaType_GetUINT32(media_type, &MF_MT_AUDIO_AVG_BYTES_PER_SECOND, &length)))\n                {\n                    /* 100 ns -> 1 s */\n                    avg_length = length * duration / (10 * 1000 * 1000);\n                }\n            }\n\n            length = buffer_get_aligned_length(avg_length + 1, alignment);\n            length = buffer_get_aligned_length(length, block_alignment);\n        }\n        else\n            length = 0;\n\n        length = max(length, min_length);\n\n        return create_1d_buffer(length, alignment - 1, buffer);\n    }\n\n    if (IsEqualGUID(&major, &MFMediaType_Video))\n    {\n        if (SUCCEEDED(hr = IMFMediaType_GetGUID(media_type, &MF_MT_SUBTYPE, &subtype))\n                && SUCCEEDED(hr = IMFMediaType_GetUINT64(media_type, &MF_MT_FRAME_SIZE, &frame_size))\n                && mf_format_get_stride(&subtype, frame_size >> 32, &is_yuv))\n        {\n            BOOL bottom_up = FALSE;\n            UINT32 stride;\n\n            if (!is_yuv && SUCCEEDED(IMFMediaType_GetUINT32(media_type, &MF_MT_DEFAULT_STRIDE, &stride)))\n                bottom_up = (int)stride < 0;\n\n            if (SUCCEEDED(hr = create_2d_buffer(frame_size >> 32, (UINT32)frame_size, subtype.Data1, bottom_up, buffer)))\n                return hr;\n        }\n\n        if (!min_length)\n            return FAILED(hr) ? hr : E_INVALIDARG;\n\n        alignment = max(16, alignment);\n        return create_1d_buffer(min_length, alignment - 1, buffer);\n    }\n\n    FIXME(\"Major type %s is not supported.\\n\", debugstr_guid(&major));\n    return E_NOTIMPL;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <malloc.h>",
+   "#include \"mfplat_private.h\"",
+   "#include \"rtworkq.h\"",
+   "#include \"d3d11.h\"",
+   "#include \"mfd3d12.h\"",
+   "#include \"initguid.h\"",
+   "#include \"d3d9.h\"",
+   "#include \"evr.h\""
+  ],
+  "resolution": [
+   "mfplat!MFCreateMediaBufferFromMediaType [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/mfplat/tests/mfplat.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "mfapi",
+   "path": "sdk-api-src/content/mfapi/nf-mfapi-mfcreatemediabufferfrommediatype.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/mfapi/nf-mfapi-mfcreatemediabufferfrommediatype",
+   "documented_name": "mfcreatemediabufferfrommediatype",
+   "file": "docs/0235_sdk-api_nf-mfapi-mfcreatemediabufferfrommediatype.md",
+   "text": "---\nUID: NF:mfapi.MFCreateMediaBufferFromMediaType\ntitle: MFCreateMediaBufferFromMediaType function (mfapi.h)\ndescription: Allocates a system-memory buffer that is optimal for a specified media type.\nhelpviewer_keywords: [\"MFCreateMediaBufferFromMediaType\",\"MFCreateMediaBufferFromMediaType function [Media Foundation]\",\"mf.mfcreatemediabufferfrommediatype\",\"mfapi/MFCreateMediaBufferFromMediaType\"]\nold-location: mf\\mfcreatemediabufferfrommediatype.htm\ntech.root: mf\nms.assetid: 1EBDB616-6FA9-4E4E-9BC6-CA1E382A08D9\nms.date: 12/05/2018\nms.keywords: MFCreateMediaBufferFromMediaType, MFCreateMediaBufferFromMediaType function [Media Foundation], mf.mfcreatemediabufferfrommediatype, mfapi/MFCreateMediaBufferFromMediaType\nreq.header: mfapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 8 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2012 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Mfplat.lib\nreq.dll: Mfplat.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - MFCreateMediaBufferFromMediaType\n - mfapi/MFCreateMediaBufferFromMediaType\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - mfplat.dll\napi_name:\n - MFCreateMediaBufferFromMediaType\n---\n\n# MFCreateMediaBufferFromMediaType function\n\n\n## -description\n\nAllocates a system-memory buffer that is optimal for a specified media type.\n\n## -parameters\n\n### -param pMediaType [in]\n\nA pointer to the <a href=\"/windows/desktop/api/mfobjects/nn-mfobjects-imfmediatype\">IMFMediaType</a> interface of the media type.\n\n### -param llDuration [in]\n\nThe sample duration. This value is required for audio formats.\n\n### -param dwMinLength [in]\n\nThe minimum size of the buffer, in bytes. The actual buffer size might be larger. Specify zero to allocate the default buffer size for the media type.\n\n### -param dwMinAlignment [in]\n\nThe minimum memory alignment for the buffer. Specify zero to use the default memory alignment.\n\n### -param ppBuffer [out]\n\nReceives a pointer to the <a href=\"/windows/desktop/api/mfobjects/nn-mfobjects-imfmediabuffer\">IMFMediaBuffer</a> interface. The caller must release the interface.\n\n## -returns\n\nIf this function succeeds, it returns <b>S_OK</b>. Otherwise, it returns an <b>HRESULT</b> error code.\n\n## -remarks\n\nFor video formats, if the format is recognized, the function creates a 2-D buffer that implements the <a href=\"/windows/desktop/api/mfobjects/nn-mfobjects-imf2dbuffer2\">IMF2DBuffer2</a> interface. Otherwise it creates a linear buffer. To get the  <b>IMF2DBuffer2</b> interface, call <a href=\"/windows/desktop/api/unknwn/nf-unknwn-iunknown-queryinterface(q)\">QueryInterface</a> on the pointer returned in <i>ppBuffer</i>. If the <b>QueryInterface</b> method fails, use the <a href=\"/windows/desktop/api/mfobjects/nn-mfobjects-imfmediabuffer\">IMFMediaBuffer</a> interface to access the buffer memory.\n\nFor audio formats, the function allocates a buffer that is large enough to contain <i>llDuration</i> audio samples, or <i>dwMinLength</i>, whichever is larger.\n\nThis function always allocates system memory. For Direct3D surfaces, use the <a href=\"/windows/desktop/api/mfapi/nf-mfapi-mfcreatedxgisurfacebuffer\">MFCreateDXGISurfaceBuffer</a> or <a href=\"/windows/desktop/api/mfapi/nf-mfapi-mfcreatedxsurfacebuffer\">MFCreateDXSurfaceBuffer</a> function.\n\n## -see-also\n\n<a href=\"/windows/desktop/medfound/media-foundation-functions\">Media Foundation Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "buffer_get_aligned_length",
+   "file": "dlls/mfplat/buffer.c",
+   "start_line": 2249,
+   "end_line": 2255,
+   "static": true,
+   "called_from": [
+    "MFCreateMediaBufferFromMediaType"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static unsigned int buffer_get_aligned_length(unsigned int length, unsigned int alignment)",
+   "code": "static unsigned int buffer_get_aligned_length(unsigned int length, unsigned int alignment)\n{\n    length = (length + alignment) / alignment;\n    length *= alignment;\n\n    return length;\n}"
+  },
+  {
+   "name": "create_1d_buffer",
+   "file": "dlls/mfplat/buffer.c",
+   "start_line": 1834,
+   "end_line": 1857,
+   "static": true,
+   "called_from": [
+    "MFCreateMediaBufferFromMediaType"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/mfplat/buffer.c:2197",
+    "dlls/mfplat/buffer.c:2207"
+   ],
+   "signature": "static HRESULT create_1d_buffer(DWORD max_length, DWORD alignment, IMFMediaBuffer **buffer)",
+   "code": "static HRESULT create_1d_buffer(DWORD max_length, DWORD alignment, IMFMediaBuffer **buffer)\n{\n    struct buffer *object;\n    HRESULT hr;\n\n    if (!buffer)\n        return E_POINTER;\n\n    *buffer = NULL;\n\n    if (!(object = calloc(1, sizeof(*object))))\n        return E_OUTOFMEMORY;\n\n    hr = memory_buffer_init(object, max_length, alignment, &memory_1d_buffer_vtbl);\n    if (FAILED(hr))\n    {\n        free(object);\n        return hr;\n    }\n\n    *buffer = &object->IMFMediaBuffer_iface;\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "create_2d_buffer",
+   "file": "dlls/mfplat/buffer.c",
+   "start_line": 1884,
+   "end_line": 1992,
+   "static": true,
+   "called_from": [
+    "MFCreateMediaBufferFromMediaType"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/mfplat/buffer.c:2217"
+   ],
+   "signature": "static HRESULT create_2d_buffer(DWORD width, DWORD height, DWORD fourcc, BOOL bottom_up, IMFMediaBuffer **buffer)",
+   "code": "static HRESULT create_2d_buffer(DWORD width, DWORD height, DWORD fourcc, BOOL bottom_up, IMFMediaBuffer **buffer)\n{\n    unsigned int stride, max_length;\n    unsigned int row_alignment;\n    struct buffer *object;\n    DWORD plane_size;\n    GUID subtype;\n    BOOL is_yuv;\n    HRESULT hr;\n    int pitch;\n\n    if (!buffer)\n        return E_POINTER;\n\n    *buffer = NULL;\n\n    memcpy(&subtype, &MFVideoFormat_Base, sizeof(subtype));\n    subtype.Data1 = fourcc;\n\n    if (!(stride = mf_format_get_stride(&subtype, width, &is_yuv)))\n        return MF_E_INVALIDMEDIATYPE;\n\n    if (is_yuv && bottom_up)\n        return MF_E_INVALIDMEDIATYPE;\n\n    switch (fourcc)\n    {\n        case MAKEFOURCC('I','M','C','1'):\n        case MAKEFOURCC('I','M','C','3'):\n            plane_size = stride * height * 2;\n            break;\n        case MAKEFOURCC('I','M','C','2'):\n        case MAKEFOURCC('I','M','C','4'):\n        case MAKEFOURCC('N','V','1','1'):\n        case MAKEFOURCC('Y','V','1','2'):\n        case MAKEFOURCC('I','4','2','0'):\n        case MAKEFOURCC('I','Y','U','V'):\n            plane_size = stride * 3 / 2 * height;\n            break;\n        case MAKEFOURCC('N','V','1','2'):\n            plane_size = stride * height * 3 / 2;\n            break;\n        case MAKEFOURCC('P','0','1','0'):\n            plane_size = width * height * 3;\n            break;\n        default:\n            plane_size = stride * height;\n    }\n\n    if (!(object = calloc(1, sizeof(*object))))\n        return E_OUTOFMEMORY;\n\n    switch (fourcc)\n    {\n        case MAKEFOURCC('I','M','C','1'):\n        case MAKEFOURCC('I','M','C','2'):\n        case MAKEFOURCC('I','M','C','3'):\n        case MAKEFOURCC('I','M','C','4'):\n        case MAKEFOURCC('Y','V','1','2'):\n        case MAKEFOURCC('N','V','1','1'):\n        case MAKEFOURCC('I','4','2','0'):\n        case MAKEFOURCC('I','Y','U','V'):\n            row_alignment = MF_128_BYTE_ALIGNMENT;\n            break;\n        default:\n            row_alignment = MF_64_BYTE_ALIGNMENT;\n    }\n\n    pitch = ALIGN_SIZE(stride, row_alignment);\n\n    switch (fourcc)\n    {\n        case MAKEFOURCC('I','M','C','1'):\n        case MAKEFOURCC('I','M','C','3'):\n            max_length = pitch * height * 2;\n            break;\n        case MAKEFOURCC('N','V','1','2'):\n        case MAKEFOURCC('Y','V','1','2'):\n        case MAKEFOURCC('I','M','C','2'):\n        case MAKEFOURCC('I','M','C','4'):\n        case MAKEFOURCC('N','V','1','1'):\n        case MAKEFOURCC('I','4','2','0'):\n        case MAKEFOURCC('I','Y','U','V'):\n        case MAKEFOURCC('P','0','1','0'):\n            max_length = pitch * height * 3 / 2;\n            break;\n        default:\n            max_length = pitch * height;\n    }\n\n    if (FAILED(hr = memory_buffer_init(object, max_length, row_alignment, &memory_1d_2d_buffer_vtbl)))\n    {\n        free(object);\n        return hr;\n    }\n\n    object->IMF2DBuffer2_iface.lpVtbl = &memory_2d_buffer_vtbl;\n    object->IMFGetService_iface.lpVtbl = &memory_2d_buffer_gs_vtbl;\n    object->_2d.plane_size = plane_size;\n    object->_2d.width = stride;\n    object->_2d.height = height;\n    object->_2d.pitch = bottom_up ? -pitch : pitch;\n    object->_2d.scanline0 = bottom_up ? object->data + pitch * (object->_2d.height - 1) : object->data;\n    object->_2d.copy_image = get_2d_buffer_copy_func(fourcc);\n\n    *buffer = &object->IMFMediaBuffer_iface;\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "memory_buffer_init",
+   "file": "dlls/mfplat/buffer.c",
+   "start_line": 1803,
+   "end_line": 1832,
+   "static": true,
+   "called_from": [
+    "create_1d_buffer",
+    "create_2d_buffer"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT memory_buffer_init(struct buffer *buffer, DWORD max_length, DWORD alignment, const IMFMediaBufferVtbl *vtbl)",
+   "code": "static HRESULT memory_buffer_init(struct buffer *buffer, DWORD max_length, DWORD alignment,\n        const IMFMediaBufferVtbl *vtbl)\n{\n    if (alignment < MF_16_BYTE_ALIGNMENT)\n        alignment = MF_16_BYTE_ALIGNMENT;\n    alignment++;\n\n    if (alignment & (alignment - 1))\n    {\n        alignment--;\n        alignment |= alignment >> 1;\n        alignment |= alignment >> 2;\n        alignment |= alignment >> 4;\n        alignment |= alignment >> 8;\n        alignment |= alignment >> 16;\n        alignment++;\n    }\n\n    if (!(buffer->data = _aligned_malloc(max_length, alignment)))\n        return E_OUTOFMEMORY;\n    memset(buffer->data, 0, max_length);\n\n    buffer->IMFMediaBuffer_iface.lpVtbl = vtbl;\n    buffer->refcount = 1;\n    buffer->max_length = max_length;\n    buffer->current_length = 0;\n    InitializeCriticalSection(&buffer->cs);\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "get_2d_buffer_copy_func",
+   "file": "dlls/mfplat/buffer.c",
+   "start_line": 1859,
+   "end_line": 1882,
+   "static": true,
+   "called_from": [
+    "create_2d_buffer"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/mfplat/buffer.c:2026",
+    "dlls/mfplat/buffer.c:2081",
+    "dlls/mfplat/buffer.c:2160"
+   ],
+   "signature": "static p_copy_image_func get_2d_buffer_copy_func(DWORD fourcc)",
+   "code": "static p_copy_image_func get_2d_buffer_copy_func(DWORD fourcc)\n{\n    switch (fourcc)\n    {\n        case MAKEFOURCC('I','M','C','1'):\n        case MAKEFOURCC('I','M','C','3'):\n            return copy_image_imc1;\n\n        case MAKEFOURCC('I','M','C','2'):\n        case MAKEFOURCC('I','M','C','4'):\n        case MAKEFOURCC('N','V','1','1'):\n        case MAKEFOURCC('Y','V','1','2'):\n        case MAKEFOURCC('I','4','2','0'):\n        case MAKEFOURCC('I','Y','U','V'):\n            return copy_image_imc2;\n\n        case MAKEFOURCC('N','V','1','2'):\n        case MAKEFOURCC('P','0','1','0'):\n            return copy_image_nv12;\n\n        default:\n            return NULL;\n    }\n}"
+  },
+  {
+   "name": "copy_image_imc1",
+   "file": "dlls/mfplat/buffer.c",
+   "start_line": 119,
+   "end_line": 122,
+   "static": true,
+   "called_from": [
+    "get_2d_buffer_copy_func"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void copy_image_imc1(BYTE *dest, LONG dest_stride, const BYTE *src, LONG src_stride, DWORD width, DWORD lines)",
+   "code": "static void copy_image_imc1(BYTE *dest, LONG dest_stride, const BYTE *src, LONG src_stride, DWORD width, DWORD lines)\n{\n    MFCopyImage(dest, dest_stride, src, src_stride, width / 2, lines);\n}"
+  },
+  {
+   "name": "copy_image_imc2",
+   "file": "dlls/mfplat/buffer.c",
+   "start_line": 124,
+   "end_line": 127,
+   "static": true,
+   "called_from": [
+    "get_2d_buffer_copy_func"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void copy_image_imc2(BYTE *dest, LONG dest_stride, const BYTE *src, LONG src_stride, DWORD width, DWORD lines)",
+   "code": "static void copy_image_imc2(BYTE *dest, LONG dest_stride, const BYTE *src, LONG src_stride, DWORD width, DWORD lines)\n{\n    MFCopyImage(dest, dest_stride / 2, src, src_stride / 2, width / 2, lines);\n}"
+  },
+  {
+   "name": "copy_image_nv12",
+   "file": "dlls/mfplat/buffer.c",
+   "start_line": 114,
+   "end_line": 117,
+   "static": true,
+   "called_from": [
+    "get_2d_buffer_copy_func"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void copy_image_nv12(BYTE *dest, LONG dest_stride, const BYTE *src, LONG src_stride, DWORD width, DWORD lines)",
+   "code": "static void copy_image_nv12(BYTE *dest, LONG dest_stride, const BYTE *src, LONG src_stride, DWORD width, DWORD lines)\n{\n    MFCopyImage(dest, dest_stride, src, src_stride, width, lines / 2);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "buffer",
+    "kind": "struct_decl",
+    "start_line": 38,
+    "end_line": 99,
+    "code": "struct buffer\n{\n    IMFMediaBuffer IMFMediaBuffer_iface;\n    IMF2DBuffer2 IMF2DBuffer2_iface;\n    IMFDXGIBuffer IMFDXGIBuffer_iface;\n    IMFGetService IMFGetService_iface;\n    LONG refcount;\n\n    BYTE *data;\n    DWORD max_length;\n    DWORD current_length;\n\n    struct\n    {\n        BYTE *linear_buffer;\n        DWORD plane_size;\n\n        BYTE *scanline0;\n        unsigned int width;\n        unsigned int height;\n        int pitch;\n        unsigned int locks;\n        MF2DBuffer_LockFlags lock_flags;\n        p_copy_image_func copy_image;\n    } _2d;\n    struct\n    {\n        IDirect3DSurface9 *surface;\n        D3DLOCKED_RECT rect;\n    } d3d9_surface;\n    struct\n    {\n        ID3D11Texture2D *texture;\n        unsigned int sub_resource_idx;\n        ID3D11Texture2D *rb_texture;\n        D3D11_MAPPED_SUBRESOURCE map_desc;\n        struct attributes attributes;\n    } dxgi_surface;\n    struct\n    {\n        ID3D12Device *device;\n        ID3D12Resource *resource;\n        IMFD3D12SynchronizationObject *sync_obj;\n        IMFD3D12SynchronizationObjectCommands *sync_cmd;\n        D3D12_PLACED_SUBRESOURCE_FOOTPRINT layout;\n        void *data;\n        BOOL keep_transfer;\n        ID3D12Resource *upload, *readback, *transfer;\n        ID3D12CommandQueue *queue;\n        ID3D12Fence *fence;\n        UINT64 fence_value;\n        size_t alloc_index;\n        ID3D12GraphicsCommandList *list;\n        struct d3d12_list_allocator\n        {\n            UINT64 free_value;\n            ID3D12CommandAllocator *allocator;\n        } alloc[2];\n    } d3d12_surface;\n\n    CRITICAL_SECTION cs;\n};"
+   },
+   {
+    "name": "p_copy_image_func",
+    "kind": "typedef_decl",
+    "start_line": 36,
+    "end_line": 36,
+    "code": "typedef void (*p_copy_image_func)(BYTE *dest, LONG dest_stride, const BYTE *src, LONG src_stride, DWORD width, DWORD lines);"
+   },
+   {
+    "name": "struct (unnamed at /Users/xingangao/wine_fuzz/wine_src/wine/dlls/mfplat/buffer.c:50:5)",
+    "kind": "struct_decl",
+    "start_line": 50,
+    "end_line": 62,
+    "code": "    struct\n    {\n        BYTE *linear_buffer;\n        DWORD plane_size;\n\n        BYTE *scanline0;\n        unsigned int width;\n        unsigned int height;\n        int pitch;\n        unsigned int locks;\n        MF2DBuffer_LockFlags lock_flags;\n        p_copy_image_func copy_image;\n    } _2d;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 32,
+    "end_line": 32,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(mfplat);"
+   },
+   {
+    "name": "memory_1d_2d_buffer_vtbl",
+    "type": "const IMFMediaBufferVtbl",
+    "static": true,
+    "start_line": 404,
+    "end_line": 414,
+    "code": "static const IMFMediaBufferVtbl memory_1d_2d_buffer_vtbl =\n{\n    memory_1d_2d_buffer_QueryInterface,\n    memory_buffer_AddRef,\n    memory_buffer_Release,\n    memory_1d_2d_buffer_Lock,\n    memory_1d_2d_buffer_Unlock,\n    memory_buffer_GetCurrentLength,\n    memory_buffer_SetCurrentLength,\n    memory_buffer_GetMaxLength,\n};"
+   },
+   {
+    "name": "memory_1d_buffer_vtbl",
+    "type": "const IMFMediaBufferVtbl",
+    "static": true,
+    "start_line": 287,
+    "end_line": 297,
+    "code": "static const IMFMediaBufferVtbl memory_1d_buffer_vtbl =\n{\n    memory_buffer_QueryInterface,\n    memory_buffer_AddRef,\n    memory_buffer_Release,\n    memory_buffer_Lock,\n    memory_buffer_Unlock,\n    memory_buffer_GetCurrentLength,\n    memory_buffer_SetCurrentLength,\n    memory_buffer_GetMaxLength,\n};"
+   },
+   {
+    "name": "memory_2d_buffer_gs_vtbl",
+    "type": "const IMFGetServiceVtbl",
+    "static": true,
+    "start_line": 913,
+    "end_line": 919,
+    "code": "static const IMFGetServiceVtbl memory_2d_buffer_gs_vtbl =\n{\n    memory_2d_buffer_gs_QueryInterface,\n    memory_2d_buffer_gs_AddRef,\n    memory_2d_buffer_gs_Release,\n    memory_2d_buffer_gs_GetService,\n};"
+   },
+   {
+    "name": "memory_2d_buffer_vtbl",
+    "type": "const IMF2DBuffer2Vtbl",
+    "static": true,
+    "start_line": 734,
+    "end_line": 748,
+    "code": "static const IMF2DBuffer2Vtbl memory_2d_buffer_vtbl =\n{\n    memory_2d_buffer_QueryInterface,\n    memory_2d_buffer_AddRef,\n    memory_2d_buffer_Release,\n    memory_2d_buffer_Lock2D,\n    memory_2d_buffer_Unlock2D,\n    memory_2d_buffer_GetScanline0AndPitch,\n    memory_2d_buffer_IsContiguousFormat,\n    memory_2d_buffer_GetContiguousLength,\n    memory_2d_buffer_ContiguousCopyTo,\n    memory_2d_buffer_ContiguousCopyFrom,\n    memory_2d_buffer_Lock2DSize,\n    memory_2d_buffer_Copy2DTo,\n};"
+   }
+  ],
+  "macros": [
+   {
+    "name": "ALIGN_SIZE",
+    "start_line": 34,
+    "end_line": 34,
+    "code": "#define ALIGN_SIZE(size, alignment) (((size) + (alignment)) & ~((alignment)))"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "mf_format_get_stride",
+    "file": "dlls/mfplat/mediatype.c",
+    "start_line": 2775
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "MFCopyImage",
+    "impl": [
+     "dlls/mfplat/main.c:1621"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "InitializeCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:200"
+    ]
+   },
+   {
+    "name": "_aligned_malloc",
+    "module": "msvcr80",
+    "impl": [
+     "dlls/msvcrt/heap.c:609"
+    ]
+   },
+   {
+    "name": "calloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "IMFMediaType_GetGUID",
+   "IMFMediaType_GetMajorType",
+   "IMFMediaType_GetUINT32",
+   "IMFMediaType_GetUINT64",
+   "debugstr_guid",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "debugstr_time"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

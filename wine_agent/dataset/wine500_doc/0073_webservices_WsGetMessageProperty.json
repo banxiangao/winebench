@@ -1,0 +1,124 @@
+{
+ "id": "0073",
+ "function": {
+  "name": "WsGetMessageProperty",
+  "export_name": "WsGetMessageProperty",
+  "module": "webservices",
+  "source_module": "webservices",
+  "exported_by": [
+   "webservices"
+  ],
+  "side": "PE",
+  "file": "dlls/webservices/msg.c",
+  "start_line": 324,
+  "end_line": 399,
+  "body_lines": 73,
+  "signature": "HRESULT WINAPI WsGetMessageProperty( WS_MESSAGE *handle, WS_MESSAGE_PROPERTY_ID id, void *buf, ULONG size, WS_ERROR *error )",
+  "header_comment": "/**************************************************************************\n *          WsGetMessageProperty\t\t[webservices.@]\n */",
+  "code": "HRESULT WINAPI WsGetMessageProperty( WS_MESSAGE *handle, WS_MESSAGE_PROPERTY_ID id, void *buf,\n                                     ULONG size, WS_ERROR *error )\n{\n    struct msg *msg = (struct msg *)handle;\n    HRESULT hr = S_OK;\n\n    TRACE( \"%p %u %p %lu %p\\n\", handle, id, buf, size, error );\n    if (error) FIXME( \"ignoring error parameter\\n\" );\n\n    if (!msg) return E_INVALIDARG;\n\n    EnterCriticalSection( &msg->cs );\n\n    if (msg->magic != MSG_MAGIC)\n    {\n        LeaveCriticalSection( &msg->cs );\n        return E_INVALIDARG;\n    }\n\n    switch (id)\n    {\n    case WS_MESSAGE_PROPERTY_STATE:\n        if (!buf || size != sizeof(msg->state)) hr = E_INVALIDARG;\n        else *(WS_MESSAGE_STATE *)buf = msg->state;\n        break;\n\n    case WS_MESSAGE_PROPERTY_HEAP:\n        if (!buf || size != sizeof(msg->heap)) hr = E_INVALIDARG;\n        else *(WS_HEAP **)buf = msg->heap;\n        break;\n\n    case WS_MESSAGE_PROPERTY_ENVELOPE_VERSION:\n        if (!buf || size != sizeof(msg->version_env)) hr = E_INVALIDARG;\n        else *(WS_ENVELOPE_VERSION *)buf = msg->version_env;\n        break;\n\n    case WS_MESSAGE_PROPERTY_ADDRESSING_VERSION:\n        if (!buf || size != sizeof(msg->version_addr)) hr = E_INVALIDARG;\n        else *(WS_ADDRESSING_VERSION *)buf = msg->version_addr;\n        break;\n\n    case WS_MESSAGE_PROPERTY_HEADER_BUFFER:\n        if (!buf || size != sizeof(msg->buf)) hr = E_INVALIDARG;\n        else *(WS_XML_BUFFER **)buf = msg->buf;\n        break;\n\n    case WS_MESSAGE_PROPERTY_BODY_READER:\n        if (!buf || size != sizeof(msg->reader_body)) hr = E_INVALIDARG;\n        else *(WS_XML_READER **)buf = msg->reader_body;\n        break;\n\n    case WS_MESSAGE_PROPERTY_BODY_WRITER:\n        if (!buf || size != sizeof(msg->writer_body)) hr = E_INVALIDARG;\n        else *(WS_XML_WRITER **)buf = msg->writer_body;\n        break;\n\n    case WS_MESSAGE_PROPERTY_IS_ADDRESSED:\n        if (msg->state < WS_MESSAGE_STATE_INITIALIZED) hr = WS_E_INVALID_OPERATION;\n        else *(BOOL *)buf = msg->is_addressed;\n        break;\n\n    case WS_MESSAGE_PROPERTY_HEAP_PROPERTIES:\n    case WS_MESSAGE_PROPERTY_XML_READER_PROPERTIES:\n    case WS_MESSAGE_PROPERTY_XML_WRITER_PROPERTIES:\n        FIXME( \"property %u not supported\\n\", id );\n        hr = E_NOTIMPL;\n        break;\n\n    default:\n        hr = prop_get( msg->prop, msg->prop_count, id, buf, size );\n    }\n\n    LeaveCriticalSection( &msg->cs );\n    TRACE( \"returning %#lx\\n\", hr );\n    return hr;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winuser.h\"",
+   "#include \"rpc.h\"",
+   "#include \"webservices.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"webservices_private.h\""
+  ],
+  "resolution": [
+   "webservices!WsGetMessageProperty [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/webservices/tests/msg.c",
+   "dlls/webservices/tests/proxy.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "webservices",
+   "path": "sdk-api-src/content/webservices/nf-webservices-wsgetmessageproperty.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/webservices/nf-webservices-wsgetmessageproperty",
+   "documented_name": "wsgetmessageproperty",
+   "file": "docs/0073_sdk-api_nf-webservices-wsgetmessageproperty.md",
+   "text": "---\nUID: NF:webservices.WsGetMessageProperty\ntitle: WsGetMessageProperty function (webservices.h)\ndescription: Retrieves a specified Message object property. The property to retrieve is identified by a WS_MESSAGE_PROPERTY_ID input parameter.\nhelpviewer_keywords: [\"WsGetMessageProperty\",\"WsGetMessageProperty function [Web Services for Windows]\",\"webservices/WsGetMessageProperty\",\"wsw.wsgetmessageproperty\"]\nold-location: wsw\\wsgetmessageproperty.htm\ntech.root: wsw\nms.assetid: 369f7690-6d70-401a-84aa-e5761dc874b5\nms.date: 12/05/2018\nms.keywords: WsGetMessageProperty, WsGetMessageProperty function [Web Services for Windows], webservices/WsGetMessageProperty, wsw.wsgetmessageproperty\nreq.header: webservices.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 7 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 R2 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: WebServices.lib\nreq.dll: WebServices.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - WsGetMessageProperty\n - webservices/WsGetMessageProperty\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - WebServices.dll\napi_name:\n - WsGetMessageProperty\n---\n\n# WsGetMessageProperty function\n\n\n## -description\n\nRetrieves a specified Message object  property.  The property to retrieve is identified by a  <a href=\"/windows/desktop/api/webservices/ne-webservices-ws_message_property_id\">WS_MESSAGE_PROPERTY_ID</a> input parameter.\n\n## -parameters\n\n### -param message [in]\n\nA pointer to a <b>Message</b> object containing the desired property.  This parameter must be a valid <a href=\"/windows/desktop/wsw/ws-listener\">WS_LISTENER</a> object.\n\n### -param id [in]\n\nThis is a <b>WS_MESSAGE_PROPERTY_ID</b> enumerator value that identifies the desired property.\n\n### -param value\n\nA reference to a location for storing the retrieved property value.\n                    The pointer must have an alignment compatible with the type\n                    of the property.\n\n### -param valueSize [in]\n\nThe byte-length buffer size allocated by the caller to store the retrieved property value.\n\n### -param error [in, optional]\n\nA  pointer to a <a href=\"/windows/desktop/wsw/ws-error\">WS_ERROR</a> object where additional information about the error should be stored if the function fails.\n\n## -returns\n\nThis function can return one of these values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_INVALIDARG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe property id was not supported for this object or the specified buffer was not large enough for the value.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_OUTOFMEMORY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe application has run out of memory.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b> Other Errors </b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThis function may return other errors not listed above.\n\n</td>\n</tr>\n</table>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "msg",
+    "kind": "struct_decl",
+    "start_line": 64,
+    "end_line": 90,
+    "code": "struct msg\n{\n    ULONG                               magic;\n    CRITICAL_SECTION                    cs;\n    WS_MESSAGE_INITIALIZATION           init;\n    WS_MESSAGE_STATE                    state;\n    GUID                                id;\n    GUID                                id_req;\n    WS_ENVELOPE_VERSION                 version_env;\n    WS_ADDRESSING_VERSION               version_addr;\n    BOOL                                is_addressed;\n    WS_STRING                           addr;\n    WS_XML_STRING                      *action;\n    WS_HEAP                            *heap;\n    WS_XML_BUFFER                      *buf;\n    WS_XML_WRITER                      *writer;\n    WS_XML_WRITER                      *writer_body;\n    WS_XML_READER                      *reader;\n    WS_XML_READER                      *reader_body;\n    ULONG                               header_count;\n    ULONG                               header_size;\n    struct header                     **header;\n    WS_PROXY_MESSAGE_CALLBACK_CONTEXT   ctx_send;\n    WS_PROXY_MESSAGE_CALLBACK_CONTEXT   ctx_receive;\n    ULONG                               prop_count;\n    struct prop                         prop[ARRAY_SIZE( msg_props )];\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 32,
+    "end_line": 32,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(webservices);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "MSG_MAGIC",
+    "start_line": 92,
+    "end_line": 92,
+    "code": "#define MSG_MAGIC (('M' << 24) | ('E' << 16) | ('S' << 8) | 'S')"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "prop_get",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 64
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

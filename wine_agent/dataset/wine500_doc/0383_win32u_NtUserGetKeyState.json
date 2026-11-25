@@ -1,0 +1,137 @@
+{
+ "id": "0383",
+ "function": {
+  "name": "NtUserGetKeyState",
+  "export_name": "GetKeyState",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "user.exe16",
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/input.c",
+  "start_line": 1124,
+  "end_line": 1157,
+  "body_lines": 31,
+  "signature": "SHORT WINAPI NtUserGetKeyState( INT vkey )",
+  "header_comment": "/**********************************************************************\n *\t     NtUserGetKeyState    (win32u.@)\n *\n * An application calls the GetKeyState function in response to a\n * keyboard-input message.  This function retrieves the state of the key\n * at the time the input message was generated.\n */",
+  "code": "SHORT WINAPI NtUserGetKeyState( INT vkey )\n{\n    struct object_lock lock = OBJECT_LOCK_INIT;\n    const input_shm_t *input_shm;\n    UINT64 keystate_serial = 0;\n    BOOL ret = FALSE;\n    SHORT retval = 0;\n    NTSTATUS status;\n\n    while ((status = get_shared_input( GetCurrentThreadId(), &lock, &input_shm )) == STATUS_PENDING)\n    {\n        ret = !!input_shm->keystate_lock; /* needs a request for sync_input_keystate if desktop keystate differs. */\n        keystate_serial = input_shm->keystate_serial;\n        retval = (signed char)(input_shm->keystate[vkey & 0xff] & 0x81);\n    }\n\n    if (!ret)\n    {\n        struct object_lock lock = OBJECT_LOCK_INIT;\n        const desktop_shm_t *desktop_shm;\n\n        while ((status = get_shared_desktop( &lock, &desktop_shm )) == STATUS_PENDING)\n            ret = keystate_serial == desktop_shm->keystate_serial;\n    }\n\n    if (!ret) SERVER_START_REQ( get_key_state )\n    {\n        req->key = vkey;\n        if (!wine_server_call( req )) retval = (signed char)(reply->state & 0x81);\n    }\n    SERVER_END_REQ;\n    TRACE(\"key (0x%x) -> %x\\n\", vkey, retval);\n    return retval;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"win32u_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"kbd.h\""
+  ],
+  "resolution": [
+   "user32!GetKeyState [stdcall -import] -> NtUserGetKeyState implicitly imported from win32u",
+   "win32u!NtUserGetKeyState [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/input.c",
+   "dlls/user32/tests/msg.c",
+   "dlls/user32/tests/win.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "user.exe16",
+   "source_module": "user.exe16",
+   "exported_by": [
+    "user.exe16"
+   ],
+   "file": "dlls/user.exe16/message.c",
+   "start_line": 1844,
+   "resolution": [
+    "user.exe16!GetKeyState [pascal -ret16] -> internal symbol GetKeyState16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 1847,
+   "signature": "INT16 WINAPI GetKeyState16(INT16 vkey)",
+   "code": "INT16 WINAPI GetKeyState16(INT16 vkey)\n{\n    return GetKeyState(vkey);\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-getkeystate.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getkeystate",
+   "documented_name": "getkeystate",
+   "file": "docs/0383_sdk-api_nf-winuser-getkeystate.md",
+   "text": "---\nUID: NF:winuser.GetKeyState\ntitle: GetKeyState function (winuser.h)\ndescription: Retrieves the status of the specified virtual key. The status specifies whether the key is up, down, or toggled (on, off alternating each time the key is pressed).\nhelpviewer_keywords: [\"GetKeyState\",\"GetKeyState function [Keyboard and Mouse Input]\",\"_win32_GetKeyState\",\"_win32_getkeystate_cpp\",\"inputdev.getkeystate\",\"winui._win32_getkeystate\",\"winuser/GetKeyState\"]\nold-location: inputdev\\getkeystate.htm\ntech.root: inputdev\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\userinput\\keyboardinput\\keyboardinputreference\\keyboardinputfunctions\\getkeystate.htm\nms.date: 12/05/2018\nms.keywords: GetKeyState, GetKeyState function [Keyboard and Mouse Input], _win32_GetKeyState, _win32_getkeystate_cpp, inputdev.getkeystate, winui._win32_getkeystate, winuser/GetKeyState\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetKeyState\n - winuser/GetKeyState\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-rtcore-ntuser-keyboard-l1-1-0.dll\n - ext-ms-win-ntuser-keyboard-l1-3-2.dll\n - ext-ms-win-ntuser-keyboard-l1-3-1.dll\n - User32.dll\n - Ext-MS-Win-NTUser-Keyboard-l1-1-0.dll\n - Ext-MS-Win-NTUser-Keyboard-l1-1-1.dll\n - api-ms-win-ntuser-ie-keyboard-l1-1-0.dll\n - ie_stubs.dll\n - ext-ms-win-ntuser-keyboard-l1-1-2.dll\n - Ext-MS-Win-NTUser-Keyboard-L1-2-0.dll\n - Ext-MS-Win-NTUser-Keyboard-L1-2-1.dll\n - Ext-MS-Win-NTUser-Keyboard-L1-3-0.dll\napi_name:\n - GetKeyState\n---\n\n# GetKeyState function\n\n\n## -description\n\nRetrieves the status of the specified virtual key. The status specifies whether the key is up, down, or toggled (on, off—alternating each time the key is pressed).\n\n## -parameters\n\n### -param nVirtKey [in]\n\nType: <b>int</b>\n\nA virtual key. If the desired virtual key is a letter or digit (A through Z, a through z, or 0 through 9), \n     <i>nVirtKey</i> must be set to the ASCII value of that character. For other keys, it must be a virtual-key code.\n\nIf a non-English keyboard layout is used, virtual keys with values in the range ASCII A through Z and 0 through 9 are used to specify most of the character keys. For example, for the German keyboard layout, the virtual key of value ASCII O (0x4F) refers to the \"o\" key, whereas VK_OEM_1 refers to the \"o with umlaut\" key.\n\n## -returns\n\nType: <b>SHORT</b>\n\nThe return value specifies the status of the specified virtual key, as follows:\n\n<ul>\n<li>If the high-order bit is 1, the key is down; otherwise, it is up.</li>\n<li>If the low-order bit is 1, the key is toggled. A key, such as the CAPS LOCK key, is toggled if it is turned on. The key is off and untoggled if the low-order bit is 0. A toggle key's indicator light (if any) on the keyboard will be on when the key is toggled, and off when the key is untoggled.</li>\n</ul>\n\n## -remarks\n\nThe key status returned from this function changes as a thread reads key messages from its message queue. The status does not reflect the interrupt-level state associated with the hardware. Use the <a href=\"/windows/desktop/api/winuser/nf-winuser-getasynckeystate\">GetAsyncKeyState</a> function to retrieve that information.\n\nAn application calls <b>GetKeyState</b> in response to a keyboard-input message. This function retrieves the state of the key when the input message was generated.\n\nTo retrieve state information for all the virtual keys, use the <a href=\"/windows/desktop/api/winuser/nf-winuser-getkeyboardstate\">GetKeyboardState</a> function.\n\nAn application can use the <a href=\"/windows/desktop/inputdev/virtual-key-codes\">virtual key code</a> constants <b>VK_SHIFT</b>, <b>VK_CONTROL</b>, and <b>VK_MENU</b> as values for the \n    <i>nVirtKey</i> parameter. This gives the status of the SHIFT, CTRL, or ALT keys without distinguishing between left and right. An application can also use the following virtual-key code constants as values for \n    <i>nVirtKey</i> to distinguish between the left and right instances of those keys:\n\n<b>VK_LSHIFT</b>\n<b>VK_RSHIFT</b>\n<b>VK_LCONTROL</b>\n<b>VK_RCONTROL</b>\n<b>VK_LMENU</b>\n<b>VK_RMENU</b>\nThese left- and right-distinguishing constants are available to an application only through the <a href=\"/windows/desktop/api/winuser/nf-winuser-getkeyboardstate\">GetKeyboardState</a>, <a href=\"/windows/desktop/api/winuser/nf-winuser-setkeyboardstate\">SetKeyboardState</a>, <a href=\"/windows/desktop/api/winuser/nf-winuser-getasynckeystate\">GetAsyncKeyState</a>, <b>GetKeyState</b>, and <a href=\"/windows/desktop/api/winuser/nf-winuser-mapvirtualkeya\">MapVirtualKey</a> functions.\n\n\n#### Examples\n\nFor an example, see <a href=\"/windows/desktop/inputdev/using-keyboard-input\">Displaying Keyboard Input</a>.\n\n<div class=\"code\"></div>\n\n## -see-also\n\n- <a href=\"/windows/desktop/api/winuser/nf-winuser-getasynckeystate\">GetAsyncKeyState</a>\n- <a href=\"/windows/desktop/api/winuser/nf-winuser-getkeystate\">GetKeyState</a>\n- <a href=\"/windows/desktop/api/winuser/nf-winuser-getkeyboardstate\">GetKeyboardState</a>\n- <a href=\"/windows/desktop/api/winuser/nf-winuser-mapvirtualkeya\">MapVirtualKey</a>\n- <a href=\"/windows/desktop/api/winuser/nf-winuser-setkeyboardstate\">SetKeyboardState</a>\n- <a href=\"/windows/desktop/inputdev/keyboard-input\">Keyboard Input</a>\n\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(win);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "get_shared_desktop",
+    "file": "dlls/win32u/winstation.c",
+    "start_line": 202
+   },
+   {
+    "name": "get_shared_input",
+    "file": "dlls/win32u/winstation.c",
+    "start_line": 316
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "PsGetCurrentThreadId",
+    "module": "ntoskrnl.exe",
+    "impl": [
+     "dlls/ntoskrnl.exe/ntoskrnl.c:3454"
+    ]
+   },
+   {
+    "name": "wine_server_call",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/loader.c:3436"
+    ]
+   }
+  ],
+  "header_inline": [
+   "HandleToULong",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [
+   {
+    "request": "get_key_state",
+    "handler": "server/queue.c:3734"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

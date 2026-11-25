@@ -1,0 +1,306 @@
+{
+ "id": "0423",
+ "function": {
+  "name": "mmioClose",
+  "export_name": "mmioClose",
+  "module": "winmm",
+  "source_module": "winmm",
+  "exported_by": [
+   "mmsystem.dll16",
+   "winmm"
+  ],
+  "side": "PE",
+  "file": "dlls/winmm/mmio.c",
+  "start_line": 771,
+  "end_line": 797,
+  "body_lines": 24,
+  "signature": "MMRESULT WINAPI mmioClose(HMMIO hmmio, UINT uFlags)",
+  "header_comment": "/**************************************************************************\n * \t\t\t\tmmioClose      \t\t[WINMM.@]\n */",
+  "code": "MMRESULT WINAPI mmioClose(HMMIO hmmio, UINT uFlags)\n{\n    LPWINE_MMIO\twm;\n    MMRESULT \tresult;\n\n    TRACE(\"(%p, %04X);\\n\", hmmio, uFlags);\n\n    if ((wm = MMIO_Get(hmmio)) == NULL)\n\treturn MMSYSERR_INVALHANDLE;\n\n    if ((result = MMIO_Flush(wm, 0)) != MMSYSERR_NOERROR)\n\treturn result;\n\n    result = send_message(wm->ioProc, &wm->info, MMIOM_CLOSE, uFlags, 0, FALSE);\n\n    MMIO_SetBuffer(wm, NULL, 0, 0);\n\n    wm->ioProc->count--;\n\n    if (wm->bTmpIOProc)\n\tMMIO_InstallIOProc(wm->info.fccIOProc, wm->ioProc->pIOProc,\n                           MMIO_REMOVEPROC, wm->ioProc->is_unicode);\n\n    MMIO_Destroy(wm);\n\n    return result;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <ctype.h>",
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include <errno.h>",
+   "#include <assert.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"mmsystem.h\"",
+   "#include \"winemm.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "winmm!mmioClose [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/winmm/tests/mmio.c",
+   "dlls/winmm/tests/wave.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "mmsystem.dll16",
+   "source_module": "mmsystem.dll16",
+   "exported_by": [
+    "mmsystem.dll16"
+   ],
+   "file": "dlls/mmsystem.dll16/mmio16.c",
+   "start_line": 295,
+   "resolution": [
+    "mmsystem.dll16!mmioClose [pascal] -> internal symbol mmioClose16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 314,
+   "signature": "MMRESULT16 WINAPI mmioClose16(HMMIO16 hmmio, UINT16 uFlags)",
+   "code": "MMRESULT16 WINAPI mmioClose16(HMMIO16 hmmio, UINT16 uFlags)\n{\n    MMRESULT ret;\n\n    EnterCriticalSection(&mmio_cs);\n    ret = mmioClose(HMMIO_32(hmmio), uFlags);\n    if (ret == MMSYSERR_NOERROR)\n    {\n        struct mmio_thunk* thunk;\n\n        if ((thunk = MMIO_HasThunk(HMMIO_32(hmmio))))\n        {\n            MMIO_SetSegmentedBuffer(thunk, 0, TRUE);\n            thunk->pfn16 = NULL;\n            thunk->hMmio = NULL;\n        }\n    }\n    LeaveCriticalSection(&mmio_cs);\n    return ret;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "mmiscapi",
+   "path": "sdk-api-src/content/mmiscapi/nf-mmiscapi-mmioclose.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/mmiscapi/nf-mmiscapi-mmioclose",
+   "documented_name": "mmioclose",
+   "file": "docs/0423_sdk-api_nf-mmiscapi-mmioclose.md",
+   "text": "---\nUID: NF:mmiscapi.mmioClose\ntitle: mmioClose function (mmiscapi.h)\ndescription: The mmioClose function closes a file that was opened by using the mmioOpen function.\nhelpviewer_keywords: [\"_win32_mmioClose\",\"mmioClose\",\"mmioClose function [Windows Multimedia]\",\"mmsystem/mmioClose\",\"multimedia.mmioclose\"]\nold-location: multimedia\\mmioclose.htm\ntech.root: Multimedia\nms.assetid: 90cc83b5-cd2c-41f1-8bb1-b51bcc894f80\nms.date: 12/05/2018\nms.keywords: _win32_mmioClose, mmioClose, mmioClose function [Windows Multimedia], mmsystem/mmioClose, multimedia.mmioclose\nreq.header: mmiscapi.h\nreq.include-header: Mmiscapi.h, Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Winmm.lib\nreq.dll: Winmm.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - mmioClose\n - mmiscapi/mmioClose\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-mm-io-l1-1-0.dll\n - Winmm.dll\n - API-MS-Win-mm-misc-l1-1-0.dll\n - winmmbase.dll\n - API-MS-Win-mm-misc-l1-1-1.dll\napi_name:\n - mmioClose\n---\n\n# mmioClose function\n\n\n## -description\n\nThe <b>mmioClose</b> function closes a file that was opened by using the <a href=\"/previous-versions/dd757331(v=vs.85)\">mmioOpen</a> function.\n\n## -parameters\n\n### -param hmmio\n\nFile handle of the file to close.\n\n### -param fuClose\n\nFlags for the close operation. The following value is defined.\n\n<table>\n<tr>\n<th>Value\n</th>\n<th>Meaning\n</th>\n</tr>\n<tr>\n<td>MMIO_FHOPEN</td>\n<td>If the file was opened by passing a file handle whose type is not <b>HMMIO</b>, using this flag tells the <b>mmioClose</b> function to close the multimedia file handle, but not the standard file handle.</td>\n</tr>\n</table>\n\n## -returns\n\nReturns zero if successful or an error otherwise. The error value can originate from the <a href=\"/previous-versions/dd757319(v=vs.85)\">mmioFlush</a> function or from the I/O procedure. Possible error values include the following.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>MMIOERR_CANNOTWRITE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe contents of the buffer could not be written to disk.\n\n</td>\n</tr>\n</table>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "MMIO_Get",
+   "file": "dlls/winmm/mmio.c",
+   "start_line": 480,
+   "end_line": 491,
+   "static": true,
+   "called_from": [
+    "mmioClose"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winmm/mmio.c:507",
+    "dlls/winmm/mmio.c:809",
+    "dlls/winmm/mmio.c:862",
+    "dlls/winmm/mmio.c:915",
+    "dlls/winmm/mmio.c:985"
+   ],
+   "signature": "static LPWINE_MMIO      MMIO_Get(HMMIO h)",
+   "code": "static LPWINE_MMIO      MMIO_Get(HMMIO h)\n{\n    LPWINE_MMIO\t\twm = NULL;\n\n    EnterCriticalSection(&WINMM_cs);\n    for (wm = MMIOList; wm; wm = wm->lpNext) {\n\tif (wm->info.hmmio == h)\n\t    break;\n    }\n    LeaveCriticalSection(&WINMM_cs);\n    return wm;\n}"
+  },
+  {
+   "name": "MMIO_Flush",
+   "file": "dlls/winmm/mmio.c",
+   "start_line": 542,
+   "end_line": 559,
+   "static": true,
+   "called_from": [
+    "MMIO_SetBuffer",
+    "mmioClose"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winmm/mmio.c:890",
+    "dlls/winmm/mmio.c:960",
+    "dlls/winmm/mmio.c:1046",
+    "dlls/winmm/mmio.c:1070"
+   ],
+   "signature": "static\tMMRESULT MMIO_Flush(WINE_MMIO* wm, UINT uFlags)",
+   "code": "static\tMMRESULT MMIO_Flush(WINE_MMIO* wm, UINT uFlags)\n{\n    if (wm->info.cchBuffer && (wm->info.fccIOProc != FOURCC_MEM)) {\n\t/* not quite sure what to do here, but I'll guess */\n\tif (wm->info.dwFlags & MMIO_DIRTY) {\n            /* FIXME: error handling */\n\t    send_message(wm->ioProc, &wm->info, MMIOM_SEEK, wm->info.lBufOffset, SEEK_SET, FALSE);\n\t    send_message(wm->ioProc, &wm->info, MMIOM_WRITE,\n                         (LPARAM)wm->info.pchBuffer,\n                         wm->info.pchNext - wm->info.pchBuffer, FALSE);\n\t}\n\tif (uFlags & MMIO_EMPTYBUF)\n\t    wm->info.pchNext = wm->info.pchEndRead = wm->info.pchBuffer;\n    }\n    wm->info.dwFlags &= ~MMIO_DIRTY;\n\n    return MMSYSERR_NOERROR;\n}"
+  },
+  {
+   "name": "send_message",
+   "file": "dlls/winmm/mmio.c",
+   "start_line": 392,
+   "end_line": 417,
+   "static": true,
+   "called_from": [
+    "MMIO_Flush",
+    "mmioClose"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winmm/mmio.c:578",
+    "dlls/winmm/mmio.c:712",
+    "dlls/winmm/mmio.c:716",
+    "dlls/winmm/mmio.c:718",
+    "dlls/winmm/mmio.c:720"
+   ],
+   "signature": "static LRESULT\tsend_message(struct IOProcList* ioProc, LPMMIOINFO mmioinfo, DWORD wMsg, LPARAM lParam1, LPARAM lParam2, BOOL is_unicode)",
+   "code": "static LRESULT\tsend_message(struct IOProcList* ioProc, LPMMIOINFO mmioinfo,\n                             DWORD wMsg, LPARAM lParam1,\n                             LPARAM lParam2, BOOL is_unicode)\n{\n    LRESULT \t\tresult = MMSYSERR_ERROR;\n    LPARAM\t\tlp1 = lParam1, lp2 = lParam2;\n\n    if (!ioProc) {\n\tERR(\"ioProc NULL\\n\");\n\treturn MMSYSERR_INVALPARAM;\n    }\n\n    if (ioProc->is_unicode != is_unicode) {\n        /* map (lParam1, lParam2) into (lp1, lp2) 32 A<=>W */\n        FIXME(\"NIY 32 A<=>W mapping\\n\");\n    }\n    result = (ioProc->pIOProc)((LPSTR)mmioinfo, wMsg, lp1, lp2);\n\n#if 0\n    if (ioProc->is_unicode != is_unicode) {\n\t    /* unmap (lParam1, lParam2) into (lp1, lp2) 32 A<=>W */\n\t}\n#endif\n\n    return result;\n}"
+  },
+  {
+   "name": "MMIO_SetBuffer",
+   "file": "dlls/winmm/mmio.c",
+   "start_line": 592,
+   "end_line": 628,
+   "static": true,
+   "called_from": [
+    "mmioClose"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winmm/mmio.c:698",
+    "dlls/winmm/mmio.c:703",
+    "dlls/winmm/mmio.c:1031"
+   ],
+   "signature": "static MMRESULT MMIO_SetBuffer(WINE_MMIO* wm, void* pchBuffer, LONG cchBuffer, UINT uFlags)",
+   "code": "static MMRESULT MMIO_SetBuffer(WINE_MMIO* wm, void* pchBuffer, LONG cchBuffer,\n\t\t\t       UINT uFlags)\n{\n    TRACE(\"(%p %p %ld %u)\\n\", wm, pchBuffer, cchBuffer, uFlags);\n\n    if (cchBuffer > 0xFFFF)\n\tWARN(\"Untested handling of huge mmio buffers (%ld >= 64k)\\n\", cchBuffer);\n\n    if (MMIO_Flush(wm, 0) != MMSYSERR_NOERROR)\n\treturn MMIOERR_CANNOTWRITE;\n\n    /* free previous buffer if allocated */\n    if (wm->info.dwFlags & MMIO_ALLOCBUF) {\n        free(wm->info.pchBuffer);\n        wm->info.pchBuffer = NULL;\n\twm->info.dwFlags &= ~MMIO_ALLOCBUF;\n    }\n\n    if (pchBuffer) {\n        wm->info.pchBuffer = pchBuffer;\n    } else if (cchBuffer) {\n\tif (!(wm->info.pchBuffer = malloc(cchBuffer)))\n\t    return MMIOERR_OUTOFMEMORY;\n\twm->info.dwFlags |= MMIO_ALLOCBUF;\n    } else {\n\twm->info.pchBuffer = NULL;\n    }\n\n    wm->info.cchBuffer = cchBuffer;\n    wm->info.pchNext = wm->info.pchBuffer;\n    wm->info.pchEndRead = wm->info.pchBuffer;\n    wm->info.pchEndWrite = wm->info.pchBuffer + cchBuffer;\n    wm->info.lBufOffset = wm->info.lDiskOffset;\n    wm->bBufferLoaded = (wm->info.fccIOProc == FOURCC_MEM);\n\n    return MMSYSERR_NOERROR;\n}"
+  },
+  {
+   "name": "MMIO_InstallIOProc",
+   "file": "dlls/winmm/mmio.c",
+   "start_line": 308,
+   "end_line": 387,
+   "static": true,
+   "called_from": [
+    "mmioClose"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winmm/mmio.c:686",
+    "dlls/winmm/mmio.c:1138",
+    "dlls/winmm/mmio.c:1147"
+   ],
+   "signature": "static LPMMIOPROC MMIO_InstallIOProc(FOURCC fccIOProc, LPMMIOPROC pIOProc, DWORD dwFlags, BOOL is_unicode)",
+   "code": "static LPMMIOPROC MMIO_InstallIOProc(FOURCC fccIOProc, LPMMIOPROC pIOProc,\n                                     DWORD dwFlags, BOOL is_unicode)\n{\n    LPMMIOPROC\t        lpProc = NULL;\n    struct IOProcList*  pListNode;\n    struct IOProcList** ppListNode;\n\n    TRACE(\"(%08lx, %p, %08lX, %s)\\n\", fccIOProc, pIOProc, dwFlags, is_unicode ? \"unicode\" : \"ansi\");\n\n    if (dwFlags & MMIO_GLOBALPROC)\n\tFIXME(\"Global procedures not implemented\\n\");\n\n    /* just handle the known procedures for now */\n    switch (dwFlags & (MMIO_INSTALLPROC|MMIO_REMOVEPROC|MMIO_FINDPROC)) {\n    case MMIO_INSTALLPROC:\n\t/* Create new entry for the IOProc list */\n\tpListNode = malloc(sizeof(*pListNode));\n\tif (pListNode) {\n\t    /* Fill in this node */\n\t    pListNode->fourCC = fccIOProc;\n\t    pListNode->pIOProc = pIOProc;\n\t    pListNode->is_unicode = is_unicode;\n\t    pListNode->count = 0;\n\n\t    /* Stick it on the end of the list */\n\t    pListNode->pNext = pIOProcListAnchor;\n\t    pIOProcListAnchor = pListNode;\n\n\t    /* Return this IOProc - that's how the caller knows we succeeded */\n\t    lpProc = pIOProc;\n\t}\n\tbreak;\n\n    case MMIO_REMOVEPROC:\n\t/*\n\t * Search for the node that we're trying to remove\n         * We search for a matching fourCC code if it's non null, or the proc\n         * address otherwise\n         * note that this method won't find the first item on the list, but\n\t * since the first two items on this list are ones we won't\n\t * let the user delete anyway, that's okay\n\t */\n\tppListNode = &pIOProcListAnchor;\n\twhile ((*ppListNode) && \n               ((fccIOProc != 0) ? \n                (*ppListNode)->fourCC != fccIOProc : \n                (*ppListNode)->pIOProc != pIOProc))\n\t    ppListNode = &((*ppListNode)->pNext);\n\n\tif (*ppListNode) { /* found it */\n\t    /* FIXME: what should be done if an open mmio object uses this proc ?\n\t     * shall we return an error, nuke the mmio object ?\n\t     */\n\t    if ((*ppListNode)->count) {\n\t\tERR(\"Cannot remove a mmIOProc while in use\\n\");\n\t\tbreak;\n\t    }\n\t    /* remove it, but only if it isn't builtin */\n\t    if ((*ppListNode) >= defaultProcs &&\n\t\t(*ppListNode) < defaultProcs + ARRAY_SIZE(defaultProcs)) {\n\t\tWARN(\"Tried to remove built-in mmio proc. Skipping\\n\");\n\t    } else {\n\t\t/* Okay, nuke it */\n\t\tstruct IOProcList*  ptmpNode = *ppListNode;\n\t\tlpProc = (*ppListNode)->pIOProc;\n\t\t*ppListNode = (*ppListNode)->pNext;\n\t\tfree(ptmpNode);\n\t    }\n\t}\n\tbreak;\n\n    case MMIO_FINDPROC:\n\tif ((pListNode = MMIO_FindProcNode(fccIOProc))) {\n\t    lpProc = pListNode->pIOProc;\n\t}\n\tbreak;\n    }\n\n    return lpProc;\n}"
+  },
+  {
+   "name": "MMIO_Destroy",
+   "file": "dlls/winmm/mmio.c",
+   "start_line": 521,
+   "end_line": 537,
+   "static": true,
+   "called_from": [
+    "mmioClose"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winmm/mmio.c:731"
+   ],
+   "signature": "static\tBOOL\t\tMMIO_Destroy(LPWINE_MMIO wm)",
+   "code": "static\tBOOL\t\tMMIO_Destroy(LPWINE_MMIO wm)\n{\n    LPWINE_MMIO*\tm;\n\n    EnterCriticalSection(&WINMM_cs);\n    /* search for the matching one... */\n    m = &MMIOList;\n    while (*m && *m != wm) m = &(*m)->lpNext;\n    /* ...and destroy */\n    if (*m) {\n\t*m = (*m)->lpNext;\n\tfree(wm);\n\twm = NULL;\n    }\n    LeaveCriticalSection(&WINMM_cs);\n    return !wm;\n}"
+  },
+  {
+   "name": "MMIO_FindProcNode",
+   "file": "dlls/winmm/mmio.c",
+   "start_line": 293,
+   "end_line": 303,
+   "static": true,
+   "called_from": [
+    "MMIO_InstallIOProc"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winmm/mmio.c:671",
+    "dlls/winmm/mmio.c:680",
+    "dlls/winmm/mmio.c:688",
+    "dlls/winmm/mmio.c:1368",
+    "dlls/winmm/mmio.c:1376"
+   ],
+   "signature": "static struct IOProcList*\tMMIO_FindProcNode(FOURCC fccIOProc)",
+   "code": "static struct IOProcList*\tMMIO_FindProcNode(FOURCC fccIOProc)\n{\n    struct IOProcList*\tpListNode;\n\n    for (pListNode = pIOProcListAnchor; pListNode; pListNode = pListNode->pNext) {\n\tif (pListNode->fourCC == fccIOProc) {\n\t    return pListNode;\n\t}\n    }\n    return NULL;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "MMIOList",
+    "type": "WINE_MMIO *",
+    "static": true,
+    "start_line": 51,
+    "end_line": 51,
+    "code": "static WINE_MMIO *MMIOList;"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 49,
+    "end_line": 49,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(mmio);"
+   },
+   {
+    "name": "defaultProcs",
+    "type": "struct IOProcList[2]",
+    "static": true,
+    "start_line": 281,
+    "end_line": 284,
+    "code": "static struct IOProcList defaultProcs[] = {\n    {&defaultProcs[1], FOURCC_DOS, (LPMMIOPROC)mmioDosIOProc, FALSE, 0},\n    {NULL,             FOURCC_MEM, (LPMMIOPROC)mmioMemIOProc, FALSE, 0},\n};"
+   },
+   {
+    "name": "pIOProcListAnchor",
+    "type": "struct IOProcList *",
+    "static": true,
+    "start_line": 286,
+    "end_line": 286,
+    "code": "static struct IOProcList*\tpIOProcListAnchor = &defaultProcs[0];"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "(ioProc->pIOProc)",
+    "in_function": "send_message",
+    "at": "dlls/winmm/mmio.c:408",
+    "candidates": []
+   }
+  ]
+ }
+}

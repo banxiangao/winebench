@@ -1,0 +1,527 @@
+{
+ "id": "0192",
+ "function": {
+  "name": "NtGdiCombineRgn",
+  "export_name": "CombineRgn",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "gdi.exe16",
+   "gdi32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/region.c",
+  "start_line": 1179,
+  "end_line": 1239,
+  "body_lines": 58,
+  "signature": "INT WINAPI NtGdiCombineRgn( HRGN hDest, HRGN hSrc1, HRGN hSrc2, INT mode )",
+  "header_comment": "/***********************************************************************\n *           NtGdiCombineRgn   (win32u.@)\n *\n * Combines two regions with the specified operation and stores the result\n * in the specified destination region.\n *\n * PARAMS\n *   hDest [I] The region that receives the combined result.\n *   hSrc1 [I] The first source region.\n *   hSrc2 [I] The second source region.\n *   mode  [I] The way in which the source regions will be combined. See notes.\n *\n * RETURNS\n *   Success:\n *     NULLREGION - The new region is empty.\n *     SIMPLEREGION - The new region can be represented by one rectangle.\n *     COMPLEXREGION - The new region can only be represented by more than\n *                     one rectangle.\n *   Failure: ERROR\n *\n * NOTES\n *   The two source regions can be the same region.\n *   The mode can be one of the following:\n *|  RGN_AND - Intersection of the regions\n *|  RGN_OR - Union of the regions\n *|  RGN_XOR - Unions of the regions minus any intersection.\n *|  RGN_DIFF - Difference (subtraction) of the regions.\n */",
+  "code": "INT WINAPI NtGdiCombineRgn( HRGN hDest, HRGN hSrc1, HRGN hSrc2, INT mode )\n{\n    WINEREGION *destObj = GDI_GetObjPtr( hDest, NTGDI_OBJ_REGION );\n    INT result = ERROR;\n\n    TRACE(\" %p,%p -> %p mode=%x\\n\", hSrc1, hSrc2, hDest, mode );\n    if (destObj)\n    {\n        WINEREGION *src1Obj = GDI_GetObjPtr( hSrc1, NTGDI_OBJ_REGION );\n\n\tif (src1Obj)\n\t{\n\t    TRACE(\"dump src1Obj:\\n\");\n\t    if(TRACE_ON(region))\n\t      REGION_DumpRegion(src1Obj);\n\t    if (mode == RGN_COPY)\n\t    {\n\t\tif (REGION_CopyRegion( destObj, src1Obj ))\n                    result = get_region_type( destObj );\n\t    }\n\t    else\n\t    {\n                WINEREGION *src2Obj = GDI_GetObjPtr( hSrc2, NTGDI_OBJ_REGION );\n\n\t\tif (src2Obj)\n\t\t{\n\t\t    TRACE(\"dump src2Obj:\\n\");\n\t\t    if(TRACE_ON(region))\n\t\t        REGION_DumpRegion(src2Obj);\n\t\t    switch (mode)\n\t\t    {\n\t\t    case RGN_AND:\n\t\t\tif (REGION_IntersectRegion( destObj, src1Obj, src2Obj ))\n                            result = get_region_type( destObj );\n\t\t\tbreak;\n\t\t    case RGN_OR:\n\t\t\tif (REGION_UnionRegion( destObj, src1Obj, src2Obj ))\n                            result = get_region_type( destObj );\n\t\t\tbreak;\n\t\t    case RGN_XOR:\n\t\t\tif (REGION_XorRegion( destObj, src1Obj, src2Obj ))\n                            result = get_region_type( destObj );\n\t\t\tbreak;\n\t\t    case RGN_DIFF:\n\t\t\tif (REGION_SubtractRegion( destObj, src1Obj, src2Obj ))\n                            result = get_region_type( destObj );\n\t\t\tbreak;\n\t\t    }\n\t\t    GDI_ReleaseObj( hSrc2 );\n\t\t}\n\t    }\n\t    GDI_ReleaseObj( hSrc1 );\n\t}\n\tTRACE(\"dump destObj:\\n\");\n\tif(TRACE_ON(region))\n\t  REGION_DumpRegion(destObj);\n\n\tGDI_ReleaseObj( hDest );\n    }\n    return result;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"ntgdi_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "gdi32!CombineRgn [stdcall] -> NtGdiCombineRgn implicitly imported from win32u",
+   "win32u!NtGdiCombineRgn [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdi32/tests/dc.c",
+   "dlls/gdi32/tests/dib.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "gdi.exe16",
+   "source_module": "gdi.exe16",
+   "exported_by": [
+    "gdi.exe16"
+   ],
+   "file": "dlls/gdi.exe16/gdi.c",
+   "start_line": 1118,
+   "resolution": [
+    "gdi.exe16!CombineRgn [pascal -ret16] -> internal symbol CombineRgn16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 1121,
+   "signature": "INT16 WINAPI CombineRgn16(HRGN16 hDest, HRGN16 hSrc1, HRGN16 hSrc2, INT16 mode)",
+   "code": "INT16 WINAPI CombineRgn16(HRGN16 hDest, HRGN16 hSrc1, HRGN16 hSrc2, INT16 mode)\n{\n    return CombineRgn( HRGN_32(hDest), HRGN_32(hSrc1), HRGN_32(hSrc2), mode );\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-combinergn.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-combinergn",
+   "documented_name": "combinergn",
+   "file": "docs/0192_sdk-api_nf-wingdi-combinergn.md",
+   "text": "---\nUID: NF:wingdi.CombineRgn\ntitle: CombineRgn function (wingdi.h)\ndescription: The CombineRgn function combines two regions and stores the result in a third region. The two regions are combined according to the specified mode.\nhelpviewer_keywords: [\"CombineRgn\",\"CombineRgn function [Windows GDI]\",\"RGN_AND\",\"RGN_COPY\",\"RGN_DIFF\",\"RGN_OR\",\"RGN_XOR\",\"_win32_CombineRgn\",\"gdi.combinergn\",\"wingdi/CombineRgn\"]\nold-location: gdi\\combinergn.htm\ntech.root: gdi\nms.assetid: ef9fc4f3-737e-4c10-a80b-8ae2097c17d1\nms.date: 12/05/2018\nms.keywords: CombineRgn, CombineRgn function [Windows GDI], RGN_AND, RGN_COPY, RGN_DIFF, RGN_OR, RGN_XOR, _win32_CombineRgn, gdi.combinergn, wingdi/CombineRgn\nreq.header: wingdi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CombineRgn\n - wingdi/CombineRgn\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - gdi32.dll\n - Ext-MS-Win-RTCore-GDI-rgn-l1-1-0.dll\n - api-ms-win-gdi-ie-rgn-l1-1-0.dll\n - ie_shims.dll\n - ext-ms-win-rtcore-gdi-rgn-l1-1-1.dll\napi_name:\n - CombineRgn\n---\n\n# CombineRgn function\n\n\n## -description\n\nThe <b>CombineRgn</b> function combines two regions and stores the result in a third region. The two regions are combined according to the specified mode.\n\n## -parameters\n\n### -param hrgnDst [in]\n\nA handle to a new region with dimensions defined by combining two other regions. (This region must exist before <b>CombineRgn</b> is called.)\n\n### -param hrgnSrc1 [in]\n\nA handle to the first of two regions to be combined.\n\n### -param hrgnSrc2 [in]\n\nA handle to the second of two regions to be combined.\n\n### -param iMode [in]\n\nA mode indicating how the two regions will be combined. This parameter can be one of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"RGN_AND\"></a><a id=\"rgn_and\"></a><dl>\n<dt><b>RGN_AND</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nCreates the intersection of the two combined regions.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"RGN_COPY\"></a><a id=\"rgn_copy\"></a><dl>\n<dt><b>RGN_COPY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nCreates a copy of the region identified by <i>hrgnSrc1</i>.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"RGN_DIFF\"></a><a id=\"rgn_diff\"></a><dl>\n<dt><b>RGN_DIFF</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nCombines the parts of <i>hrgnSrc1</i> that are not part of <i>hrgnSrc2</i>.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"RGN_OR\"></a><a id=\"rgn_or\"></a><dl>\n<dt><b>RGN_OR</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nCreates the union of two combined regions.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"RGN_XOR\"></a><a id=\"rgn_xor\"></a><dl>\n<dt><b>RGN_XOR</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nCreates the union of two combined regions except for any overlapping areas.\n\n</td>\n</tr>\n</table>\n\n## -returns\n\nThe return value specifies the type of the resulting region. It can be one of the following values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>NULLREGION</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe region is empty.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>SIMPLEREGION</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe region is a single rectangle.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>COMPLEXREGION</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe region is more than a single rectangle.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nNo region is created.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe three regions need not be distinct. For example, the <i>hrgnSrc1</i> parameter can equal the <i>hrgnDest</i> parameter.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-createellipticrgn\">CreateEllipticRgn</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-createellipticrgnindirect\">CreateEllipticRgnIndirect</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-createpolypolygonrgn\">CreatePolyPolygonRgn</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-createpolygonrgn\">CreatePolygonRgn</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-createrectrgn\">CreateRectRgn</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-createrectrgnindirect\">CreateRectRgnIndirect</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-createroundrectrgn\">CreateRoundRectRgn</a>\n\n\n\n<a href=\"/windows/desktop/gdi/region-functions\">Region Functions</a>\n\n\n\n<a href=\"/windows/desktop/gdi/regions\">Regions Overview</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "REGION_DumpRegion",
+   "file": "dlls/win32u/region.c",
+   "start_line": 388,
+   "end_line": 396,
+   "static": true,
+   "called_from": [
+    "NtGdiCombineRgn"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void REGION_DumpRegion(WINEREGION *pReg)",
+   "code": "static void REGION_DumpRegion(WINEREGION *pReg)\n{\n    RECT *pRect, *pRectEnd = pReg->rects + pReg->numRects;\n\n    TRACE(\"Region %p: %s %d rects\\n\", pReg, wine_dbgstr_rect(&pReg->extents), pReg->numRects);\n    for(pRect = pReg->rects; pRect < pRectEnd; pRect++)\n        TRACE(\"\\t%s\\n\", wine_dbgstr_rect(pRect));\n    return;\n}"
+  },
+  {
+   "name": "REGION_CopyRegion",
+   "file": "dlls/win32u/region.c",
+   "start_line": 1287,
+   "end_line": 1302,
+   "static": true,
+   "called_from": [
+    "NtGdiCombineRgn",
+    "REGION_SubtractRegion",
+    "REGION_UnionRegion"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/region.c:496"
+   ],
+   "signature": "static BOOL REGION_CopyRegion(WINEREGION *dst, WINEREGION *src)",
+   "code": "static BOOL REGION_CopyRegion(WINEREGION *dst, WINEREGION *src)\n{\n    if (dst != src) /*  don't want to copy to itself */\n    {\n\tif (dst->size < src->numRects && !grow_region( dst, src->numRects ))\n            return FALSE;\n\n\tdst->numRects = src->numRects;\n\tdst->extents.left = src->extents.left;\n\tdst->extents.top = src->extents.top;\n\tdst->extents.right = src->extents.right;\n\tdst->extents.bottom = src->extents.bottom;\n        memcpy(dst->rects, src->rects, src->numRects * sizeof(RECT));\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "get_region_type",
+   "file": "dlls/win32u/region.c",
+   "start_line": 373,
+   "end_line": 381,
+   "static": true,
+   "called_from": [
+    "NtGdiCombineRgn"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/region.c:549",
+    "dlls/win32u/region.c:583",
+    "dlls/win32u/region.c:1365"
+   ],
+   "signature": "static inline INT get_region_type( const WINEREGION *obj )",
+   "code": "static inline INT get_region_type( const WINEREGION *obj )\n{\n    switch(obj->numRects)\n    {\n    case 0:  return NULLREGION;\n    case 1:  return SIMPLEREGION;\n    default: return COMPLEXREGION;\n    }\n}"
+  },
+  {
+   "name": "REGION_IntersectRegion",
+   "file": "dlls/win32u/region.c",
+   "start_line": 1854,
+   "end_line": 1873,
+   "static": true,
+   "called_from": [
+    "NtGdiCombineRgn"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/region.c:1135",
+    "dlls/win32u/region.c:1137",
+    "dlls/win32u/region.c:1139"
+   ],
+   "signature": "static BOOL REGION_IntersectRegion(WINEREGION *newReg, WINEREGION *reg1, WINEREGION *reg2)",
+   "code": "static BOOL REGION_IntersectRegion(WINEREGION *newReg, WINEREGION *reg1,\n\t\t\t\t   WINEREGION *reg2)\n{\n   /* check for trivial reject */\n    if ( (!(reg1->numRects)) || (!(reg2->numRects))  ||\n\t(!overlapping(&reg1->extents, &reg2->extents)))\n\tnewReg->numRects = 0;\n    else\n\tif (!REGION_RegionOp (newReg, reg1, reg2, REGION_IntersectO, NULL, NULL)) return FALSE;\n\n    /*\n     * Can't alter newReg's extents before we call miRegionOp because\n     * it might be one of the source regions and miRegionOp depends\n     * on the extents of those regions being the same. Besides, this\n     * way there's no checking against rectangles that will be nuked\n     * due to coalescing, so we have to examine fewer rectangles.\n     */\n    REGION_SetExtents(newReg);\n    return TRUE;\n}"
+  },
+  {
+   "name": "REGION_UnionRegion",
+   "file": "dlls/win32u/region.c",
+   "start_line": 1966,
+   "end_line": 2028,
+   "static": true,
+   "called_from": [
+    "NtGdiCombineRgn",
+    "REGION_XorRegion"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/region.c:1096"
+   ],
+   "signature": "static BOOL REGION_UnionRegion(WINEREGION *newReg, WINEREGION *reg1, WINEREGION *reg2)",
+   "code": "static BOOL REGION_UnionRegion(WINEREGION *newReg, WINEREGION *reg1, WINEREGION *reg2)\n{\n    BOOL ret = TRUE;\n\n    /*  checks all the simple cases */\n\n    /*\n     * Region 1 and 2 are the same or region 1 is empty\n     */\n    if ( (reg1 == reg2) || (!(reg1->numRects)) )\n    {\n\tif (newReg != reg2)\n\t    ret = REGION_CopyRegion(newReg, reg2);\n\treturn ret;\n    }\n\n    /*\n     * if nothing to union (region 2 empty)\n     */\n    if (!(reg2->numRects))\n    {\n\tif (newReg != reg1)\n\t    ret = REGION_CopyRegion(newReg, reg1);\n\treturn ret;\n    }\n\n    /*\n     * Region 1 completely subsumes region 2\n     */\n    if ((reg1->numRects == 1) &&\n\t(reg1->extents.left <= reg2->extents.left) &&\n\t(reg1->extents.top <= reg2->extents.top) &&\n\t(reg1->extents.right >= reg2->extents.right) &&\n\t(reg1->extents.bottom >= reg2->extents.bottom))\n    {\n\tif (newReg != reg1)\n\t    ret = REGION_CopyRegion(newReg, reg1);\n\treturn ret;\n    }\n\n    /*\n     * Region 2 completely subsumes region 1\n     */\n    if ((reg2->numRects == 1) &&\n\t(reg2->extents.left <= reg1->extents.left) &&\n\t(reg2->extents.top <= reg1->extents.top) &&\n\t(reg2->extents.right >= reg1->extents.right) &&\n\t(reg2->extents.bottom >= reg1->extents.bottom))\n    {\n\tif (newReg != reg2)\n\t    ret = REGION_CopyRegion(newReg, reg2);\n\treturn ret;\n    }\n\n    if ((ret = REGION_RegionOp (newReg, reg1, reg2, REGION_UnionO, REGION_UnionNonO, REGION_UnionNonO)))\n    {\n        newReg->extents.left = min(reg1->extents.left, reg2->extents.left);\n        newReg->extents.top = min(reg1->extents.top, reg2->extents.top);\n        newReg->extents.right = max(reg1->extents.right, reg2->extents.right);\n        newReg->extents.bottom = max(reg1->extents.bottom, reg2->extents.bottom);\n    }\n    return ret;\n}"
+  },
+  {
+   "name": "REGION_XorRegion",
+   "file": "dlls/win32u/region.c",
+   "start_line": 2202,
+   "end_line": 2217,
+   "static": true,
+   "called_from": [
+    "NtGdiCombineRgn"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL REGION_XorRegion(WINEREGION *dr, WINEREGION *sra, WINEREGION *srb)",
+   "code": "static BOOL REGION_XorRegion(WINEREGION *dr, WINEREGION *sra, WINEREGION *srb)\n{\n    WINEREGION tra, trb;\n    BOOL ret;\n\n    if (!init_region( &tra, sra->numRects + 1 )) return FALSE;\n    if ((ret = init_region( &trb, srb->numRects + 1 )))\n    {\n        ret = REGION_SubtractRegion(&tra,sra,srb) &&\n              REGION_SubtractRegion(&trb,srb,sra) &&\n              REGION_UnionRegion(dr,&tra,&trb);\n        destroy_region(&trb);\n    }\n    destroy_region(&tra);\n    return ret;\n}"
+  },
+  {
+   "name": "REGION_SubtractRegion",
+   "file": "dlls/win32u/region.c",
+   "start_line": 2178,
+   "end_line": 2197,
+   "static": true,
+   "called_from": [
+    "NtGdiCombineRgn",
+    "REGION_XorRegion"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/region.c:1140"
+   ],
+   "signature": "static BOOL REGION_SubtractRegion(WINEREGION *regD, WINEREGION *regM, WINEREGION *regS )",
+   "code": "static BOOL REGION_SubtractRegion(WINEREGION *regD, WINEREGION *regM, WINEREGION *regS )\n{\n   /* check for trivial reject */\n    if ( (!(regM->numRects)) || (!(regS->numRects))  ||\n\t(!overlapping(&regM->extents, &regS->extents)) )\n\treturn REGION_CopyRegion(regD, regM);\n\n    if (!REGION_RegionOp (regD, regM, regS, REGION_SubtractO, REGION_SubtractNonO1, NULL))\n        return FALSE;\n\n    /*\n     * Can't alter newReg's extents before we call miRegionOp because\n     * it might be one of the source regions and miRegionOp depends\n     * on the extents of those regions being the unaltered. Besides, this\n     * way there's no checking against rectangles that will be nuked\n     * due to coalescing, so we have to examine fewer rectangles.\n     */\n    REGION_SetExtents (regD);\n    return TRUE;\n}"
+  },
+  {
+   "name": "grow_region",
+   "file": "dlls/win32u/region.c",
+   "start_line": 125,
+   "end_line": 145,
+   "static": true,
+   "called_from": [
+    "REGION_CopyRegion",
+    "add_rect"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/region.c:1316"
+   ],
+   "signature": "static BOOL grow_region( WINEREGION *rgn, int size )",
+   "code": "static BOOL grow_region( WINEREGION *rgn, int size )\n{\n    RECT *new_rects;\n\n    if (size <= rgn->size) return TRUE;\n\n    if (rgn->rects == rgn->rects_buf)\n    {\n        new_rects = malloc( size * sizeof(RECT) );\n        if (!new_rects) return FALSE;\n        memcpy( new_rects, rgn->rects, rgn->numRects * sizeof(RECT) );\n    }\n    else\n    {\n        new_rects = realloc( rgn->rects, size * sizeof(RECT) );\n        if (!new_rects) return FALSE;\n    }\n    rgn->rects = new_rects;\n    rgn->size = size;\n    return TRUE;\n}"
+  },
+  {
+   "name": "overlapping",
+   "file": "dlls/win32u/region.c",
+   "start_line": 119,
+   "end_line": 123,
+   "static": true,
+   "called_from": [
+    "REGION_IntersectRegion",
+    "REGION_SubtractRegion"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/region.c:1011"
+   ],
+   "signature": "static inline BOOL overlapping( const RECT *r1, const RECT *r2 )",
+   "code": "static inline BOOL overlapping( const RECT *r1, const RECT *r2 )\n{\n    return (r1->right > r2->left && r1->left < r2->right &&\n            r1->bottom > r2->top && r1->top < r2->bottom);\n}"
+  },
+  {
+   "name": "REGION_RegionOp",
+   "file": "dlls/win32u/region.c",
+   "start_line": 1568,
+   "end_line": 1787,
+   "static": true,
+   "called_from": [
+    "REGION_IntersectRegion",
+    "REGION_SubtractRegion",
+    "REGION_UnionRegion"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL REGION_RegionOp( WINEREGION *destReg, /* Place to store result */ WINEREGION *reg1,   /* First region in operation */ WINEREGION *reg2,   /* 2nd region in operation */ BOOL (*overlapFunc)(WINEREGION*, RECT*, RECT*, RECT*, RECT*, INT, INT),     /* Function to call for over-lapping bands */ BOOL (*nonOverlap1Func)(WINEREGION*, RECT*, RECT*, INT, INT), /* Function to call for non-overlapping bands in region 1 */ BOOL (*nonOverlap2Func)(WINEREGION*, RECT*, RECT*, INT, INT)  /* Function to call for non-overlapping bands in region 2 */ ) { WINEREGION newReg; RECT *r1;                         /* Pointer into first region */ RECT *r2;                         /* Pointer into 2d region */ RECT *r1End;                      /* End of 1st region */ RECT *r2End;                      /* End of 2d region */ INT ybot;                         /* Bottom of intersection */ INT ytop;                         /* Top of intersection */ INT prevBand;                     /* Index of start of * previous band in newReg */ INT curBand;                      /* Index of start of current * band in newReg */ RECT *r1BandEnd;                  /* End of current band in r1 */ RECT *r2BandEnd;                  /* End of current band in r2 */",
+   "code": "static BOOL REGION_RegionOp(\n\t    WINEREGION *destReg, /* Place to store result */\n\t    WINEREGION *reg1,   /* First region in operation */\n            WINEREGION *reg2,   /* 2nd region in operation */\n\t    BOOL (*overlapFunc)(WINEREGION*, RECT*, RECT*, RECT*, RECT*, INT, INT),     /* Function to call for over-lapping bands */\n\t    BOOL (*nonOverlap1Func)(WINEREGION*, RECT*, RECT*, INT, INT), /* Function to call for non-overlapping bands in region 1 */\n\t    BOOL (*nonOverlap2Func)(WINEREGION*, RECT*, RECT*, INT, INT)  /* Function to call for non-overlapping bands in region 2 */\n) {\n    WINEREGION newReg;\n    RECT *r1;                         /* Pointer into first region */\n    RECT *r2;                         /* Pointer into 2d region */\n    RECT *r1End;                      /* End of 1st region */\n    RECT *r2End;                      /* End of 2d region */\n    INT ybot;                         /* Bottom of intersection */\n    INT ytop;                         /* Top of intersection */\n    INT prevBand;                     /* Index of start of\n\t\t\t\t\t\t * previous band in newReg */\n    INT curBand;                      /* Index of start of current\n\t\t\t\t\t\t * band in newReg */\n    RECT *r1BandEnd;                  /* End of current band in r1 */\n    RECT *r2BandEnd;                  /* End of current band in r2 */\n    INT top;                          /* Top of non-overlapping band */\n    INT bot;                          /* Bottom of non-overlapping band */\n\n    /*\n     * Initialization:\n     *  set r1, r2, r1End and r2End appropriately, preserve the important\n     * parts of the destination region until the end in case it's one of\n     * the two source regions, then mark the \"new\" region empty, allocating\n     * another array of rectangles for it to use.\n     */\n    r1 = reg1->rects;\n    r2 = reg2->rects;\n    r1End = r1 + reg1->numRects;\n    r2End = r2 + reg2->numRects;\n\n    /*\n     * Allocate a reasonable number of rectangles for the new region. The idea\n     * is to allocate enough so the individual functions don't need to\n     * reallocate and copy the array, which is time consuming, yet we don't\n     * have to worry about using too much memory. I hope to be able to\n     * nuke the Xrealloc() at the end of this function eventually.\n     */\n    if (!init_region( &newReg, max(reg1->numRects,reg2->numRects) * 2 )) return FALSE;\n\n    /*\n     * Initialize ybot and ytop.\n     * In the upcoming loop, ybot and ytop serve different functions depending\n     * on whether the band being handled is an overlapping or non-overlapping\n     * band.\n     *  In the case of a non-overlapping band (only one of the regions\n     * has points in the band), ybot is the bottom of the most recent\n     * intersection and thus clips the top of the rectangles in that band.\n     * ytop is the top of the next intersection between the two regions and\n     * serves to clip the bottom of the rectangles in the current band.\n     *  For an overlapping band (where the two regions intersect), ytop clips\n     * the top of the rectangles of both regions and ybot clips the bottoms.\n     */\n    if (reg1->extents.top < reg2->extents.top)\n\tybot = reg1->extents.top;\n    else\n\tybot = reg2->extents.top;\n\n    /*\n     * prevBand serves to mark the start of the previous band so rectangles\n     * can be coalesced into larger rectangles. qv. miCoalesce, above.\n     * In the beginning, there is no previous band, so prevBand == curBand\n     * (curBand is set later on, of course, but the first band will always\n     * start at index 0). prevBand and curBand must be indices because of\n     * the possible expansion, and resultant moving, of the new region's\n     * array of rectangles.\n     */\n    prevBand = 0;\n\n    do\n    {\n\tcurBand = newReg.numRects;\n\n\t/*\n\t * This algorithm proceeds one source-band (as opposed to a\n\t * destination band, which is determined by where the two regions\n\t * intersect) at a time. r1BandEnd and r2BandEnd serve to mark the\n\t * rectangle after the last one in the current band for their\n\t * respective regions.\n\t */\n\tr1BandEnd = r1;\n\twhile ((r1BandEnd != r1End) && (r1BandEnd->top == r1->top))\n\t{\n\t    r1BandEnd++;\n\t}\n\n\tr2BandEnd = r2;\n\twhile ((r2BandEnd != r2End) && (r2BandEnd->top == r2->top))\n\t{\n\t    r2BandEnd++;\n\t}\n\n\t/*\n\t * First handle the band that doesn't intersect, if any.\n\t *\n\t * Note that attention is restricted to one band in the\n\t * non-intersecting region at once, so if a region has n\n\t * bands between the current position and the next place it overlaps\n\t * the other, this entire loop will be passed through n times.\n\t */\n\tif (r1->top < r2->top)\n\t{\n\t    top = max(r1->top,ybot);\n\t    bot = min(r1->bottom,r2->top);\n\n            if ((top != bot) && (nonOverlap1Func != NULL))\n\t    {\n\t\tif (!nonOverlap1Func(&newReg, r1, r1BandEnd, top, bot)) return FALSE;\n\t    }\n\n\t    ytop = r2->top;\n\t}\n\telse if (r2->top < r1->top)\n\t{\n\t    top = max(r2->top,ybot);\n\t    bot = min(r2->bottom,r1->top);\n\n            if ((top != bot) && (nonOverlap2Func != NULL))\n\t    {\n\t\tif (!nonOverlap2Func(&newReg, r2, r2BandEnd, top, bot)) return FALSE;\n\t    }\n\n\t    ytop = r1->top;\n\t}\n\telse\n\t{\n\t    ytop = r1->top;\n\t}\n\n\t/*\n\t * If any rectangles got added to the region, try and coalesce them\n\t * with rectangles from the previous band. Note we could just do\n\t * this test in miCoalesce, but some machines incur a not\n\t * inconsiderable cost for function calls, so...\n\t */\n\tif (newReg.numRects != curBand)\n\t{\n\t    prevBand = REGION_Coalesce (&newReg, prevBand, curBand);\n\t}\n\n\t/*\n\t * Now see if we've hit an intersecting band. The two bands only\n\t * intersect if ybot > ytop\n\t */\n\tybot = min(r1->bottom, r2->bottom);\n\tcurBand = newReg.numRects;\n\tif (ybot > ytop)\n\t{\n\t    if (!overlapFunc(&newReg, r1, r1BandEnd, r2, r2BandEnd, ytop, ybot)) return FALSE;\n\t}\n\n\tif (newReg.numRects != curBand)\n\t{\n\t    prevBand = REGION_Coalesce (&newReg, prevBand, curBand);\n\t}\n\n\t/*\n\t * If we've finished with a band (bottom == ybot) we skip forward\n\t * in the region to the next band.\n\t */\n\tif (r1->bottom == ybot)\n\t{\n\t    r1 = r1BandEnd;\n\t}\n\tif (r2->bottom == ybot)\n\t{\n\t    r2 = r2BandEnd;\n\t}\n    } while ((r1 != r1End) && (r2 != r2End));\n\n    /*\n     * Deal with whichever region still has rectangles left.\n     */\n    curBand = newReg.numRects;\n    if (r1 != r1End)\n    {\n        if (nonOverlap1Func != NULL)\n\t{\n\t    do\n\t    {\n\t\tr1BandEnd = r1;\n\t\twhile ((r1BandEnd < r1End) && (r1BandEnd->top == r1->top))\n\t\t{\n\t\t    r1BandEnd++;\n\t\t}\n\t\tif (!nonOverlap1Func(&newReg, r1, r1BandEnd, max(r1->top,ybot), r1->bottom))\n                    return FALSE;\n\t\tr1 = r1BandEnd;\n\t    } while (r1 != r1End);\n\t}\n    }\n    else if ((r2 != r2End) && (nonOverlap2Func != NULL))\n    {\n\tdo\n\t{\n\t    r2BandEnd = r2;\n\t    while ((r2BandEnd < r2End) && (r2BandEnd->top == r2->top))\n\t    {\n\t\t r2BandEnd++;\n\t    }\n\t    if (!nonOverlap2Func(&newReg, r2, r2BandEnd, max(r2->top,ybot), r2->bottom))\n                return FALSE;\n\t    r2 = r2BandEnd;\n\t} while (r2 != r2End);\n    }\n\n    if (newReg.numRects != curBand)\n    {\n\tREGION_Coalesce (&newReg, prevBand, curBand);\n    }\n\n    REGION_compact( &newReg );\n    move_rects( destReg, &newReg );\n    return TRUE;\n}"
+  },
+  {
+   "name": "REGION_IntersectO",
+   "file": "dlls/win32u/region.c",
+   "start_line": 1806,
+   "end_line": 1849,
+   "static": true,
+   "called_from": [
+    "REGION_IntersectRegion"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL REGION_IntersectO(WINEREGION *pReg,  RECT *r1, RECT *r1End, RECT *r2, RECT *r2End, INT top, INT bottom) ",
+   "code": "static BOOL REGION_IntersectO(WINEREGION *pReg,  RECT *r1, RECT *r1End,\n                              RECT *r2, RECT *r2End, INT top, INT bottom)\n\n{\n    INT       left, right;\n\n    while ((r1 != r1End) && (r2 != r2End))\n    {\n\tleft = max(r1->left, r2->left);\n\tright =\tmin(r1->right, r2->right);\n\n\t/*\n\t * If there's any overlap between the two rectangles, add that\n\t * overlap to the new region.\n\t * There's no need to check for subsumption because the only way\n\t * such a need could arise is if some region has two rectangles\n\t * right next to each other. Since that should never happen...\n\t */\n\tif (left < right)\n        {\n            if (!add_rect( pReg, left, top, right, bottom )) return FALSE;\n        }\n\n\t/*\n\t * Need to advance the pointers. Shift the one that extends\n\t * to the right the least, since the other still has a chance to\n\t * overlap with that region's next rectangle, if you see what I mean.\n\t */\n\tif (r1->right < r2->right)\n\t{\n\t    r1++;\n\t}\n\telse if (r2->right < r1->right)\n\t{\n\t    r2++;\n\t}\n\telse\n\t{\n\t    r1++;\n\t    r2++;\n\t}\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "REGION_SetExtents",
+   "file": "dlls/win32u/region.c",
+   "start_line": 1245,
+   "end_line": 1282,
+   "static": true,
+   "called_from": [
+    "REGION_IntersectRegion",
+    "REGION_SubtractRegion"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void REGION_SetExtents (WINEREGION *pReg)",
+   "code": "static void REGION_SetExtents (WINEREGION *pReg)\n{\n    RECT *pRect, *pRectEnd, *pExtents;\n\n    if (pReg->numRects == 0)\n    {\n\tpReg->extents.left = 0;\n\tpReg->extents.top = 0;\n\tpReg->extents.right = 0;\n\tpReg->extents.bottom = 0;\n\treturn;\n    }\n\n    pExtents = &pReg->extents;\n    pRect = pReg->rects;\n    pRectEnd = &pRect[pReg->numRects - 1];\n\n    /*\n     * Since pRect is the first rectangle in the region, it must have the\n     * smallest top and since pRectEnd is the last rectangle in the region,\n     * it must have the largest bottom, because of banding. Initialize left and\n     * right from pRect and pRectEnd, resp., as good things to initialize them\n     * to...\n     */\n    pExtents->left = pRect->left;\n    pExtents->top = pRect->top;\n    pExtents->right = pRectEnd->right;\n    pExtents->bottom = pRectEnd->bottom;\n\n    while (pRect <= pRectEnd)\n    {\n\tif (pRect->left < pExtents->left)\n\t    pExtents->left = pRect->left;\n\tif (pRect->right > pExtents->right)\n\t    pExtents->right = pRect->right;\n\tpRect++;\n    }\n}"
+  },
+  {
+   "name": "REGION_UnionO",
+   "file": "dlls/win32u/region.c",
+   "start_line": 1918,
+   "end_line": 1961,
+   "static": true,
+   "called_from": [
+    "REGION_UnionRegion"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL REGION_UnionO (WINEREGION *pReg, RECT *r1, RECT *r1End, RECT *r2, RECT *r2End, INT top, INT bottom)",
+   "code": "static BOOL REGION_UnionO (WINEREGION *pReg, RECT *r1, RECT *r1End,\n\t\t\t   RECT *r2, RECT *r2End, INT top, INT bottom)\n{\n#define MERGERECT(r) \\\n    if ((pReg->numRects != 0) &&  \\\n\t(pReg->rects[pReg->numRects-1].top == top) &&  \\\n\t(pReg->rects[pReg->numRects-1].bottom == bottom) &&  \\\n\t(pReg->rects[pReg->numRects-1].right >= r->left))  \\\n    {  \\\n\tif (pReg->rects[pReg->numRects-1].right < r->right)  \\\n\t    pReg->rects[pReg->numRects-1].right = r->right;  \\\n    }  \\\n    else  \\\n    { \\\n        if (!add_rect( pReg, r->left, top, r->right, bottom )) return FALSE; \\\n    } \\\n    r++;\n\n    while ((r1 != r1End) && (r2 != r2End))\n    {\n\tif (r1->left < r2->left)\n\t{\n\t    MERGERECT(r1);\n\t}\n\telse\n\t{\n\t    MERGERECT(r2);\n\t}\n    }\n\n    if (r1 != r1End)\n    {\n\tdo\n\t{\n\t    MERGERECT(r1);\n\t} while (r1 != r1End);\n    }\n    else while (r2 != r2End)\n    {\n\tMERGERECT(r2);\n    }\n    return TRUE;\n#undef MERGERECT\n}"
+  },
+  {
+   "name": "REGION_UnionNonO",
+   "file": "dlls/win32u/region.c",
+   "start_line": 1894,
+   "end_line": 1902,
+   "static": true,
+   "called_from": [
+    "REGION_UnionRegion"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL REGION_UnionNonO(WINEREGION *pReg, RECT *r, RECT *rEnd, INT top, INT bottom)",
+   "code": "static BOOL REGION_UnionNonO(WINEREGION *pReg, RECT *r, RECT *rEnd, INT top, INT bottom)\n{\n    while (r != rEnd)\n    {\n        if (!add_rect( pReg, r->left, top, r->right, bottom )) return FALSE;\n\tr++;\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "init_region",
+   "file": "dlls/win32u/region.c",
+   "start_line": 404,
+   "end_line": 420,
+   "static": true,
+   "called_from": [
+    "REGION_RegionOp",
+    "REGION_XorRegion",
+    "move_rects"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/region.c:447",
+    "dlls/win32u/region.c:1093",
+    "dlls/win32u/region.c:1131",
+    "dlls/win32u/region.c:1322"
+   ],
+   "signature": "static BOOL init_region( WINEREGION *pReg, INT n )",
+   "code": "static BOOL init_region( WINEREGION *pReg, INT n )\n{\n    n = max( n, RGN_DEFAULT_RECTS );\n\n    if (n > RGN_DEFAULT_RECTS)\n    {\n        if (n > INT_MAX / sizeof(RECT)) return FALSE;\n        if (!(pReg->rects = malloc( n * sizeof( RECT ) )))\n            return FALSE;\n    }\n    else\n        pReg->rects = pReg->rects_buf;\n\n    pReg->size = n;\n    empty_region(pReg);\n    return TRUE;\n}"
+  },
+  {
+   "name": "destroy_region",
+   "file": "dlls/win32u/region.c",
+   "start_line": 425,
+   "end_line": 429,
+   "static": true,
+   "called_from": [
+    "REGION_XorRegion",
+    "move_rects"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/region.c:436",
+    "dlls/win32u/region.c:1144"
+   ],
+   "signature": "static void destroy_region( WINEREGION *pReg )",
+   "code": "static void destroy_region( WINEREGION *pReg )\n{\n    if (pReg->rects != pReg->rects_buf)\n        free( pReg->rects );\n}"
+  },
+  {
+   "name": "REGION_SubtractO",
+   "file": "dlls/win32u/region.c",
+   "start_line": 2071,
+   "end_line": 2163,
+   "static": true,
+   "called_from": [
+    "REGION_SubtractRegion"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL REGION_SubtractO (WINEREGION *pReg, RECT *r1, RECT *r1End, RECT *r2, RECT *r2End, INT top, INT bottom)",
+   "code": "static BOOL REGION_SubtractO (WINEREGION *pReg, RECT *r1, RECT *r1End,\n                              RECT *r2, RECT *r2End, INT top, INT bottom)\n{\n    INT left = r1->left;\n\n    while ((r1 != r1End) && (r2 != r2End))\n    {\n\tif (r2->right <= left)\n\t{\n\t    /*\n\t     * Subtrahend missed the boat: go to next subtrahend.\n\t     */\n\t    r2++;\n\t}\n\telse if (r2->left <= left)\n\t{\n\t    /*\n\t     * Subtrahend precedes minuend: nuke left edge of minuend.\n\t     */\n\t    left = r2->right;\n\t    if (left >= r1->right)\n\t    {\n\t\t/*\n\t\t * Minuend completely covered: advance to next minuend and\n\t\t * reset left fence to edge of new minuend.\n\t\t */\n\t\tr1++;\n\t\tif (r1 != r1End)\n\t\t    left = r1->left;\n\t    }\n\t    else\n\t    {\n\t\t/*\n\t\t * Subtrahend now used up since it doesn't extend beyond\n\t\t * minuend\n\t\t */\n\t\tr2++;\n\t    }\n\t}\n\telse if (r2->left < r1->right)\n\t{\n\t    /*\n\t     * Left part of subtrahend covers part of minuend: add uncovered\n\t     * part of minuend to region and skip to next subtrahend.\n\t     */\n            if (!add_rect( pReg, left, top, r2->left, bottom )) return FALSE;\n\t    left = r2->right;\n\t    if (left >= r1->right)\n\t    {\n\t\t/*\n\t\t * Minuend used up: advance to new...\n\t\t */\n\t\tr1++;\n\t\tif (r1 != r1End)\n\t\t    left = r1->left;\n\t    }\n\t    else\n\t    {\n\t\t/*\n\t\t * Subtrahend used up\n\t\t */\n\t\tr2++;\n\t    }\n\t}\n\telse\n\t{\n\t    /*\n\t     * Minuend used up: add any remaining piece before advancing.\n\t     */\n\t    if (r1->right > left)\n\t    {\n                if (!add_rect( pReg, left, top, r1->right, bottom )) return FALSE;\n\t    }\n\t    r1++;\n\t    if (r1 != r1End)\n\t        left = r1->left;\n\t}\n    }\n\n    /*\n     * Add remaining minuend rectangles to region.\n     */\n    while (r1 != r1End)\n    {\n        if (!add_rect( pReg, left, top, r1->right, bottom )) return FALSE;\n\tr1++;\n\tif (r1 != r1End)\n\t{\n\t    left = r1->left;\n\t}\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "REGION_SubtractNonO1",
+   "file": "dlls/win32u/region.c",
+   "start_line": 2047,
+   "end_line": 2055,
+   "static": true,
+   "called_from": [
+    "REGION_SubtractRegion"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL REGION_SubtractNonO1 (WINEREGION *pReg, RECT *r, RECT *rEnd, INT top, INT bottom)",
+   "code": "static BOOL REGION_SubtractNonO1 (WINEREGION *pReg, RECT *r, RECT *rEnd, INT top, INT bottom)\n{\n    while (r != rEnd)\n    {\n        if (!add_rect( pReg, r->left, top, r->right, bottom )) return FALSE;\n\tr++;\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "REGION_Coalesce",
+   "file": "dlls/win32u/region.c",
+   "start_line": 1400,
+   "end_line": 1519,
+   "static": true,
+   "called_from": [
+    "REGION_RegionOp"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/region.c:2563",
+    "dlls/win32u/region.c:2612"
+   ],
+   "signature": "static INT REGION_Coalesce ( WINEREGION *pReg, /* Region to coalesce */ INT prevStart,  /* Index of start of previous band */ INT curStart    /* Index of start of current band */ ) { RECT *pPrevRect;          /* Current rect in previous band */ RECT *pCurRect;           /* Current rect in current band */ RECT *pRegEnd;            /* End of region */ INT curNumRects;          /* Number of rectangles in current band */ INT prevNumRects;         /* Number of rectangles in previous band */ INT bandtop;               /* top coordinate for current band */  pRegEnd = &pReg->rects[pReg->numRects];  pPrevRect = &pReg->rects[prevStart]; prevNumRects = curStart - prevStart;  /* * Figure out how many rectangles are in the current band. Have to do * this because multiple bands could have been added in REGION_RegionOp * at the end when one region has been exhausted.",
+   "code": "static INT REGION_Coalesce (\n\t     WINEREGION *pReg, /* Region to coalesce */\n\t     INT prevStart,  /* Index of start of previous band */\n\t     INT curStart    /* Index of start of current band */\n) {\n    RECT *pPrevRect;          /* Current rect in previous band */\n    RECT *pCurRect;           /* Current rect in current band */\n    RECT *pRegEnd;            /* End of region */\n    INT curNumRects;          /* Number of rectangles in current band */\n    INT prevNumRects;         /* Number of rectangles in previous band */\n    INT bandtop;               /* top coordinate for current band */\n\n    pRegEnd = &pReg->rects[pReg->numRects];\n\n    pPrevRect = &pReg->rects[prevStart];\n    prevNumRects = curStart - prevStart;\n\n    /*\n     * Figure out how many rectangles are in the current band. Have to do\n     * this because multiple bands could have been added in REGION_RegionOp\n     * at the end when one region has been exhausted.\n     */\n    pCurRect = &pReg->rects[curStart];\n    bandtop = pCurRect->top;\n    for (curNumRects = 0;\n\t (pCurRect != pRegEnd) && (pCurRect->top == bandtop);\n\t curNumRects++)\n    {\n\tpCurRect++;\n    }\n\n    if (pCurRect != pRegEnd)\n    {\n\t/*\n\t * If more than one band was added, we have to find the start\n\t * of the last band added so the next coalescing job can start\n\t * at the right place... (given when multiple bands are added,\n\t * this may be pointless -- see above).\n\t */\n\tpRegEnd--;\n\twhile (pRegEnd[-1].top == pRegEnd->top)\n\t{\n\t    pRegEnd--;\n\t}\n\tcurStart = pRegEnd - pReg->rects;\n\tpRegEnd = pReg->rects + pReg->numRects;\n    }\n\n    if ((curNumRects == prevNumRects) && (curNumRects != 0)) {\n\tpCurRect -= curNumRects;\n\t/*\n\t * The bands may only be coalesced if the bottom of the previous\n\t * matches the top scanline of the current.\n\t */\n\tif (pPrevRect->bottom == pCurRect->top)\n\t{\n\t    /*\n\t     * Make sure the bands have rects in the same places. This\n\t     * assumes that rects have been added in such a way that they\n\t     * cover the most area possible. I.e. two rects in a band must\n\t     * have some horizontal space between them.\n\t     */\n\t    do\n\t    {\n\t\tif ((pPrevRect->left != pCurRect->left) ||\n\t\t    (pPrevRect->right != pCurRect->right))\n\t\t{\n\t\t    /*\n\t\t     * The bands don't line up so they can't be coalesced.\n\t\t     */\n\t\t    return (curStart);\n\t\t}\n\t\tpPrevRect++;\n\t\tpCurRect++;\n\t\tprevNumRects -= 1;\n\t    } while (prevNumRects != 0);\n\n\t    pReg->numRects -= curNumRects;\n\t    pCurRect -= curNumRects;\n\t    pPrevRect -= curNumRects;\n\n\t    /*\n\t     * The bands may be merged, so set the bottom of each rect\n\t     * in the previous band to that of the corresponding rect in\n\t     * the current band.\n\t     */\n\t    do\n\t    {\n\t\tpPrevRect->bottom = pCurRect->bottom;\n\t\tpPrevRect++;\n\t\tpCurRect++;\n\t\tcurNumRects -= 1;\n\t    } while (curNumRects != 0);\n\n\t    /*\n\t     * If only one band was added to the region, we have to backup\n\t     * curStart to the start of the previous band.\n\t     *\n\t     * If more than one band was added to the region, copy the\n\t     * other bands down. The assumption here is that the other bands\n\t     * came from the same region as the current one and no further\n\t     * coalescing can be done on them since it's all been done\n\t     * already... curStart is already in the right place.\n\t     */\n\t    if (pCurRect == pRegEnd)\n\t    {\n\t\tcurStart = prevStart;\n\t    }\n\t    else\n\t    {\n\t\tdo\n\t\t{\n\t\t    *pPrevRect++ = *pCurRect++;\n\t\t} while (pCurRect != pRegEnd);\n\t    }\n\n\t}\n    }\n    return (curStart);\n}"
+  },
+  {
+   "name": "REGION_compact",
+   "file": "dlls/win32u/region.c",
+   "start_line": 1530,
+   "end_line": 1541,
+   "static": true,
+   "called_from": [
+    "REGION_RegionOp"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/region.c:2632"
+   ],
+   "signature": "static void REGION_compact( WINEREGION *reg )",
+   "code": "static void REGION_compact( WINEREGION *reg )\n{\n    if ((reg->numRects < reg->size / 2) && (reg->numRects > RGN_DEFAULT_RECTS))\n    {\n        RECT *new_rects = realloc( reg->rects, reg->numRects * sizeof(RECT) );\n        if (new_rects)\n        {\n            reg->rects = new_rects;\n            reg->size = reg->numRects;\n        }\n    }\n}"
+  },
+  {
+   "name": "move_rects",
+   "file": "dlls/win32u/region.c",
+   "start_line": 460,
+   "end_line": 473,
+   "static": true,
+   "called_from": [
+    "REGION_RegionOp"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/region.c:1348"
+   ],
+   "signature": "static inline void move_rects( WINEREGION *dst, WINEREGION *src )",
+   "code": "static inline void move_rects( WINEREGION *dst, WINEREGION *src )\n{\n    destroy_region( dst );\n    if (src->rects == src->rects_buf)\n    {\n        dst->rects = dst->rects_buf;\n        memcpy( dst->rects, src->rects, src->numRects * sizeof(RECT) );\n    }\n    else\n        dst->rects = src->rects;\n    dst->size = src->size;\n    dst->numRects = src->numRects;\n    init_region( src, 0 );\n}"
+  },
+  {
+   "name": "add_rect",
+   "file": "dlls/win32u/region.c",
+   "start_line": 147,
+   "end_line": 159,
+   "static": true,
+   "called_from": [
+    "REGION_IntersectO",
+    "REGION_SubtractNonO1",
+    "REGION_SubtractO",
+    "REGION_UnionNonO",
+    "REGION_UnionO"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "referenced through a macro (conservatively shared)"
+   ],
+   "signature": "static BOOL add_rect( WINEREGION *reg, INT left, INT top, INT right, INT bottom )",
+   "code": "static BOOL add_rect( WINEREGION *reg, INT left, INT top, INT right, INT bottom )\n{\n    RECT *rect;\n    if (reg->numRects >= reg->size && !grow_region( reg, 2 * reg->size ))\n        return FALSE;\n\n    rect = reg->rects + reg->numRects++;\n    rect->left = left;\n    rect->top = top;\n    rect->right = right;\n    rect->bottom = bottom;\n    return TRUE;\n}"
+  },
+  {
+   "name": "empty_region",
+   "file": "dlls/win32u/region.c",
+   "start_line": 161,
+   "end_line": 165,
+   "static": true,
+   "called_from": [
+    "init_region"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/region.c:663"
+   ],
+   "signature": "static inline void empty_region( WINEREGION *reg )",
+   "code": "static inline void empty_region( WINEREGION *reg )\n{\n    reg->numRects = 0;\n    reg->extents.left = reg->extents.top = reg->extents.right = reg->extents.bottom = 0;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 106,
+    "end_line": 106,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(region);"
+   },
+   {
+    "name": "__wine_dbch_region",
+    "type": "struct __wine_debug_channel",
+    "static": true,
+    "start_line": 106,
+    "end_line": 106,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(region);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "MERGERECT",
+    "start_line": 1921,
+    "end_line": 1934,
+    "code": "#define MERGERECT(r) \\\n    if ((pReg->numRects != 0) &&  \\\n\t(pReg->rects[pReg->numRects-1].top == top) &&  \\\n\t(pReg->rects[pReg->numRects-1].bottom == bottom) &&  \\\n\t(pReg->rects[pReg->numRects-1].right >= r->left))  \\\n    {  \\\n\tif (pReg->rects[pReg->numRects-1].right < r->right)  \\\n\t    pReg->rects[pReg->numRects-1].right = r->right;  \\\n    }  \\\n    else  \\\n    { \\\n        if (!add_rect( pReg, r->left, top, r->right, bottom )) return FALSE; \\\n    } \\\n    r++;"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "GDI_GetObjPtr",
+    "file": "dlls/win32u/gdiobj.c",
+    "start_line": 821
+   },
+   {
+    "name": "GDI_ReleaseObj",
+    "file": "dlls/win32u/gdiobj.c",
+    "start_line": 837
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "__wine_dbg_get_channel_flags",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/thread.c:93"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log",
+   "wine_dbgstr_rect"
+  ],
+  "system": [
+   "free",
+   "malloc",
+   "realloc"
+  ],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "nonOverlap1Func",
+    "in_function": "REGION_RegionOp",
+    "at": "dlls/win32u/region.c:1680",
+    "candidates": []
+   },
+   {
+    "expr": "nonOverlap2Func",
+    "in_function": "REGION_RegionOp",
+    "at": "dlls/win32u/region.c:1692",
+    "candidates": []
+   },
+   {
+    "expr": "overlapFunc",
+    "in_function": "REGION_RegionOp",
+    "at": "dlls/win32u/region.c:1721",
+    "candidates": []
+   }
+  ]
+ }
+}

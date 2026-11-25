@@ -1,0 +1,263 @@
+{
+ "id": "0009",
+ "function": {
+  "name": "EnumMetaFile",
+  "export_name": "EnumMetaFile",
+  "module": "gdi32",
+  "source_module": "gdi32",
+  "exported_by": [
+   "gdi.exe16",
+   "gdi32"
+  ],
+  "side": "PE",
+  "file": "dlls/gdi32/metafile.c",
+  "start_line": 452,
+  "end_line": 510,
+  "body_lines": 56,
+  "signature": "BOOL WINAPI EnumMetaFile(HDC hdc, HMETAFILE hmf, MFENUMPROC lpEnumFunc, LPARAM lpData)",
+  "header_comment": "/******************************************************************\n *            EnumMetaFile   (GDI32.@)\n *\n *  Loop through the metafile records in hmf, calling the user-specified\n *  function for each one, stopping when the user's function returns FALSE\n *  (which is considered to be failure)\n *  or when no records are left (which is considered to be success).\n *\n * RETURNS\n *  TRUE on success, FALSE on failure.\n */",
+  "code": "BOOL WINAPI EnumMetaFile(HDC hdc, HMETAFILE hmf, MFENUMPROC lpEnumFunc, LPARAM lpData)\n{\n    METAHEADER *mh = get_metafile_bits( hmf );\n    METARECORD *mr;\n    HANDLETABLE *ht;\n    BOOL result = TRUE;\n    int i;\n    unsigned int offset = 0;\n    HPEN hPen;\n    HBRUSH hBrush;\n    HFONT hFont;\n\n    TRACE(\"(%p,%p,%p,%Ix)\\n\", hdc, hmf, lpEnumFunc, lpData);\n\n    if (!mh) return FALSE;\n\n    /* save the current pen, brush and font */\n    hPen = GetCurrentObject(hdc, OBJ_PEN);\n    hBrush = GetCurrentObject(hdc, OBJ_BRUSH);\n    hFont = GetCurrentObject(hdc, OBJ_FONT);\n\n    ht = HeapAlloc( GetProcessHeap(), HEAP_ZERO_MEMORY,\n\t\t\t    sizeof(HANDLETABLE) * mh->mtNoObjects);\n\n    /* loop through metafile records */\n    offset = mh->mtHeaderSize * 2;\n\n    while (offset < (mh->mtSize * 2))\n    {\n\tmr = (METARECORD *)((char *)mh + offset);\n\tif(mr->rdFunction == META_EOF) {\n\t    TRACE(\"Got META_EOF so stopping\\n\");\n\t    break;\n\t}\n\tTRACE(\"Calling EnumFunc with record type %x\\n\",\n\t      mr->rdFunction);\n        if (!lpEnumFunc( hdc, ht, mr, mh->mtNoObjects, lpData ))\n\t{\n\t    result = FALSE;\n\t    break;\n\t}\n\n\toffset += (mr->rdSize * 2);\n    }\n\n    /* restore pen, brush and font */\n    SelectObject(hdc, hBrush);\n    SelectObject(hdc, hPen);\n    SelectObject(hdc, hFont);\n\n    /* free objects in handle table */\n    for(i = 0; i < mh->mtNoObjects; i++)\n      if(*(ht->objectHandle + i) != 0)\n        DeleteObject(*(ht->objectHandle + i));\n\n    HeapFree( GetProcessHeap(), 0, ht);\n    HeapFree( GetProcessHeap(), 0, mh);\n    return result;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include <fcntl.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"gdi_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "gdi32!EnumMetaFile [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdi32/tests/metafile.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 18
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "gdi.exe16",
+   "source_module": "gdi.exe16",
+   "exported_by": [
+    "gdi.exe16"
+   ],
+   "file": "dlls/gdi.exe16/metafile.c",
+   "start_line": 185,
+   "resolution": [
+    "gdi.exe16!EnumMetaFile [pascal -ret16] -> internal symbol EnumMetaFile16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 264,
+   "signature": "BOOL16 WINAPI EnumMetaFile16( HDC16 hdc16, HMETAFILE16 hmf, MFENUMPROC16 lpEnumFunc, LPARAM lpData )",
+   "code": "BOOL16 WINAPI EnumMetaFile16( HDC16 hdc16, HMETAFILE16 hmf,\n\t\t\t      MFENUMPROC16 lpEnumFunc, LPARAM lpData )\n{\n    METAHEADER *mh = MF_GetMetaHeader16(hmf);\n    METARECORD *mr;\n    HANDLETABLE16 *ht;\n    HDC hdc = HDC_32(hdc16);\n    HGLOBAL16 hHT;\n    SEGPTR spht;\n    unsigned int offset = 0;\n    WORD i, seg;\n    HPEN hPen;\n    HBRUSH hBrush;\n    HFONT hFont;\n    WORD args[8];\n    BOOL16 result = TRUE;\n\n    TRACE(\"(%p, %04x, %p, %08Ix)\\n\", hdc, hmf, lpEnumFunc, lpData);\n\n    if(!mh) return FALSE;\n\n    /* save the current pen, brush and font */\n    hPen = GetCurrentObject(hdc, OBJ_PEN);\n    hBrush = GetCurrentObject(hdc, OBJ_BRUSH);\n    hFont = GetCurrentObject(hdc, OBJ_FONT);\n\n    /* create the handle table */\n\n    hHT = GlobalAlloc16(GMEM_MOVEABLE | GMEM_ZEROINIT,\n            FIELD_OFFSET(HANDLETABLE16, objectHandle[mh->mtNoObjects]));\n    spht = WOWGlobalLock16(hHT);\n\n    seg = hmf | 7;\n    offset = mh->mtHeaderSize * 2;\n\n    /* loop through metafile records */\n\n    args[7] = hdc16;\n    args[6] = SELECTOROF(spht);\n    args[5] = OFFSETOF(spht);\n    args[4] = seg + (HIWORD(offset) << __AHSHIFT);\n    args[3] = LOWORD(offset);\n    args[2] = mh->mtNoObjects;\n    args[1] = HIWORD(lpData);\n    args[0] = LOWORD(lpData);\n\n    while (offset < (mh->mtSize * 2))\n    {\n        DWORD ret;\n\n\tmr = (METARECORD *)((char *)mh + offset);\n\n        WOWCallback16Ex( (DWORD)lpEnumFunc, WCB16_PASCAL, sizeof(args), args, &ret );\n        if (!LOWORD(ret))\n\t{\n\t    result = FALSE;\n\t    break;\n\t}\n\n\toffset += (mr->rdSize * 2);\n        args[4] = seg + (HIWORD(offset) << __AHSHIFT);\n        args[3] = LOWORD(offset);\n    }\n\n    SelectObject(hdc, hBrush);\n    SelectObject(hdc, hPen);\n    SelectObject(hdc, hFont);\n\n    ht = GlobalLock16(hHT);\n\n    /* free objects in handle table */\n    for(i = 0; i < mh->mtNoObjects; i++)\n      if(*(ht->objectHandle + i) != 0)\n        DeleteObject( (HGDIOBJ)(ULONG_PTR)(*(ht->objectHandle + i) ));\n\n    /* free handle table */\n    GlobalFree16(hHT);\n    MF_ReleaseMetaHeader16(hmf);\n    return result;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-enummetafile.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-enummetafile",
+   "documented_name": "enummetafile",
+   "file": "docs/0009_sdk-api_nf-wingdi-enummetafile.md",
+   "text": "---\nUID: NF:wingdi.EnumMetaFile\ntitle: EnumMetaFile function (wingdi.h)\ndescription: The EnumMetaFile function enumerates the records within a Windows-format metafile by retrieving each record and passing it to the specified callback function.\nhelpviewer_keywords: [\"EnumMetaFile\",\"EnumMetaFile function [Windows GDI]\",\"_win32_EnumMetaFile\",\"gdi.enummetafile\",\"wingdi/EnumMetaFile\"]\nold-location: gdi\\enummetafile.htm\ntech.root: gdi\nms.assetid: b11c7467-64a9-442b-8dee-26e15f64a26b\nms.date: 12/05/2018\nms.keywords: EnumMetaFile, EnumMetaFile function [Windows GDI], _win32_EnumMetaFile, gdi.enummetafile, wingdi/EnumMetaFile\nreq.header: wingdi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - EnumMetaFile\n - wingdi/EnumMetaFile\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - gdi32.dll\n - Ext-MS-Win-GDI-Metafile-l1-1-1.dll\n - ext-ms-win-gdi-metafile-l1-1-2.dll\n - GDI32Full.dll\napi_name:\n - EnumMetaFile\n---\n\n# EnumMetaFile function\n\n\n## -description\n\nThe <b>EnumMetaFile</b> function enumerates the records within a Windows-format metafile by retrieving each record and passing it to the specified callback function. The application-supplied callback function processes each record as required. The enumeration continues until the last record is processed or when the callback function returns zero.\n<div class=\"alert\"><b>Note</b>  This function is provided only for compatibility with Windows-format metafiles. Enhanced-format metafiles provide superior functionality and are recommended for new applications. The corresponding function for an enhanced-format metafile is <a href=\"/windows/desktop/api/wingdi/nf-wingdi-enumenhmetafile\">EnumEnhMetaFile</a>.</div><div> </div>\n\n## -parameters\n\n### -param hdc [in]\n\nHandle to a device context. This handle is passed to the callback function.\n\n### -param hmf [in]\n\nHandle to a Windows-format metafile.\n\n### -param proc [in]\n\nPointer to an application-supplied callback function. For more information, see <a href=\"/previous-versions/dd162630(v=vs.85)\">EnumMetaFileProc</a>.\n\n### -param param [in]\n\nPointer to optional data.\n\n## -returns\n\nIf the callback function successfully enumerates all the records in the Windows-format metafile, the return value is nonzero.\n\nIf the callback function does not successfully enumerate all the records in the Windows-format metafile, the return value is zero.\n\n## -remarks\n\nTo convert a Windows-format metafile into an enhanced-format metafile, use the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-setwinmetafilebits\">SetWinMetaFileBits</a> function.\n\nYou can use the <b>EnumMetaFile</b> function to embed one Windows-format metafile within another.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-enumenhmetafile\">EnumEnhMetaFile</a>\n\n\n\n<a href=\"/previous-versions/dd162630(v=vs.85)\">EnumMetaFileProc</a>\n\n\n\n<a href=\"/windows/desktop/gdi/metafile-functions\">Metafile Functions</a>\n\n\n\n<a href=\"/windows/desktop/gdi/metafiles\">Metafiles Overview</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-playmetafile\">PlayMetaFile</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-playmetafilerecord\">PlayMetaFileRecord</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-setwinmetafilebits\">SetWinMetaFileBits</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_metafile_bits",
+   "file": "dlls/gdi32/metafile.c",
+   "start_line": 271,
+   "end_line": 285,
+   "static": true,
+   "called_from": [
+    "EnumMetaFile"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/metafile.c:306",
+    "dlls/gdi32/metafile.c:364"
+   ],
+   "signature": "static METAHEADER *get_metafile_bits( HMETAFILE hmf )",
+   "code": "static METAHEADER *get_metafile_bits( HMETAFILE hmf )\n{\n    METAHEADER *ret = NULL, *metafile;\n\n    EnterCriticalSection( &metafile_cs );\n    if ((metafile = get_gdi_client_ptr( hmf, NTGDI_OBJ_METAFILE )))\n    {\n        ret = HeapAlloc( GetProcessHeap(), 0, metafile->mtSize * 2 );\n        if (ret) memcpy( ret, metafile, metafile->mtSize * 2 );\n    }\n    else SetLastError( ERROR_INVALID_HANDLE );\n    LeaveCriticalSection( &metafile_cs );\n\n    return ret;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 62,
+    "end_line": 62,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(metafile);"
+   },
+   {
+    "name": "metafile_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 72,
+    "end_line": 72,
+    "code": "static CRITICAL_SECTION metafile_cs = { &critsect_debug, -1, 0, 0, 0, 0 };"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "get_gdi_client_ptr",
+    "file": "dlls/gdi32/objects.c",
+    "start_line": 119
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "DeleteObject",
+    "impl": [
+     "dlls/gdi32/objects.c:194"
+    ]
+   },
+   {
+    "name": "GetCurrentObject",
+    "impl": [
+     "dlls/gdi32/objects.c:394"
+    ]
+   },
+   {
+    "name": "SelectObject",
+    "impl": [
+     "dlls/gdi32/objects.c:324"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "HeapAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "SetLastError",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "lpEnumFunc",
+    "in_function": "EnumMetaFile",
+    "at": "dlls/gdi32/metafile.c:488",
+    "candidates": []
+   }
+  ]
+ },
+ "winebench": {
+  "id": "gdi32.EnumMetaFile",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI",
+   "header": "wingdi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 59,
+   "body": 58,
+   "code": 37
+  },
+  "cyclomatic": 7,
+  "return_type": "BOOL",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 18,
+   "n_tests": 18,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/gdi32/tests/metafile.c::create_converted_emf",
+    "dlls/gdi32/tests/metafile.c::test_CopyMetaFile",
+    "dlls/gdi32/tests/metafile.c::test_PlayMetaFile",
+    "dlls/gdi32/tests/metafile.c::test_SetMetaFileBits",
+    "dlls/gdi32/tests/metafile.c::test_metafile_file",
+    "dlls/gdi32/tests/metafile.c::test_mf_Blank",
+    "dlls/gdi32/tests/metafile.c::test_mf_DCBrush",
+    "dlls/gdi32/tests/metafile.c::test_mf_ExtTextOut_on_path",
+    "dlls/gdi32/tests/metafile.c::test_mf_FloodFill",
+    "dlls/gdi32/tests/metafile.c::test_mf_GetPath",
+    "dlls/gdi32/tests/metafile.c::test_mf_Graphics",
+    "dlls/gdi32/tests/metafile.c::test_mf_PatternBrush",
+    "dlls/gdi32/tests/metafile.c::test_mf_SetLayout",
+    "dlls/gdi32/tests/metafile.c::test_mf_blit",
+    "dlls/gdi32/tests/metafile.c::test_mf_clipping",
+    "dlls/gdi32/tests/metafile.c::test_mf_palette",
+    "dlls/gdi32/tests/metafile.c::test_mf_palette_brush",
+    "dlls/gdi32/tests/metafile.c::test_mf_select"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-enummetafile",
+   "source": "win32",
+   "description": "The EnumMetaFile function enumerates the records within a Windows-format metafile by retrieving each record and passing it to the specified callback function.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Gdi32.dll"
+  },
+  "exports": [
+   "gdi32.EnumMetaFile"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

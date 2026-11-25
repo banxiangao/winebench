@@ -1,0 +1,181 @@
+{
+ "id": "0083",
+ "function": {
+  "name": "ScriptFreeCache",
+  "export_name": "ScriptFreeCache",
+  "module": "gdi32",
+  "source_module": "gdi32",
+  "exported_by": [
+   "gdi32",
+   "usp10"
+  ],
+  "side": "PE",
+  "file": "dlls/gdi32/uniscribe/usp10.c",
+  "start_line": 994,
+  "end_line": 1051,
+  "body_lines": 55,
+  "signature": "HRESULT WINAPI ScriptFreeCache(SCRIPT_CACHE *psc)",
+  "header_comment": "/***********************************************************************\n *      ScriptFreeCache (USP10.@)\n *\n * Free a script cache.\n *\n * PARAMS\n *   psc [I/O] Script cache.\n *\n * RETURNS\n *  Success: S_OK\n *  Failure: Non-zero HRESULT value.\n */",
+  "code": "HRESULT WINAPI ScriptFreeCache(SCRIPT_CACHE *psc)\n{\n    TRACE(\"%p\\n\", psc);\n\n    if (psc && *psc)\n    {\n        ScriptCache *sc = *psc;\n        unsigned int i;\n        INT n;\n\n        EnterCriticalSection(&cs_script_cache);\n        if (--sc->refcount > 0)\n        {\n            LeaveCriticalSection(&cs_script_cache);\n            *psc = NULL;\n            return S_OK;\n        }\n        list_remove(&sc->entry);\n        LeaveCriticalSection(&cs_script_cache);\n\n        for (i = 0; i < GLYPH_MAX / GLYPH_BLOCK_SIZE; i++)\n        {\n            free(sc->widths[i]);\n        }\n        for (i = 0; i < NUM_PAGES; i++)\n        {\n            unsigned int j;\n            if (sc->page[i])\n                for (j = 0; j < GLYPH_MAX / GLYPH_BLOCK_SIZE; j++)\n                    free(sc->page[i]->glyphs[j]);\n            free(sc->page[i]);\n        }\n        free(sc->GSUB_Table);\n        free(sc->GDEF_Table);\n        free(sc->CMAP_Table);\n        free(sc->GPOS_Table);\n        for (n = 0; n < sc->script_count; n++)\n        {\n            int j;\n            for (j = 0; j < sc->scripts[n].language_count; j++)\n            {\n                int k;\n                for (k = 0; k < sc->scripts[n].languages[j].feature_count; k++)\n                    free(sc->scripts[n].languages[j].features[k].lookups);\n                free(sc->scripts[n].languages[j].features);\n            }\n            for (j = 0; j < sc->scripts[n].default_language.feature_count; j++)\n                free(sc->scripts[n].default_language.features[j].lookups);\n            free(sc->scripts[n].default_language.features);\n            free(sc->scripts[n].languages);\n        }\n        free(sc->scripts);\n        free(sc->otm);\n        free(sc);\n        *psc = NULL;\n    }\n    return S_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <math.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"ntgdi.h\"",
+   "#include \"ntuser.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winreg.h\"",
+   "#include \"usp10.h\"",
+   "#include \"usp10_internal.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "usp10!ScriptFreeCache [stdcall] -> forward gdi32.ScriptFreeCache",
+   "gdi32!ScriptFreeCache [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/usp10/tests/usp10.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 14
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "usp10",
+   "path": "sdk-api-src/content/usp10/nf-usp10-scriptfreecache.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/usp10/nf-usp10-scriptfreecache",
+   "documented_name": "scriptfreecache",
+   "file": "docs/0083_sdk-api_nf-usp10-scriptfreecache.md",
+   "text": "---\nUID: NF:usp10.ScriptFreeCache\ntitle: ScriptFreeCache function (usp10.h)\ndescription: Frees a script cache.\nhelpviewer_keywords: [\"ScriptFreeCache\",\"ScriptFreeCache function [Internationalization for Windows Applications]\",\"_win32_ScriptFreeCache\",\"intl.scriptfreecache\",\"usp10/ScriptFreeCache\"]\nold-location: intl\\scriptfreecache.htm\ntech.root: Intl\nms.assetid: a30a6c5a-157a-47ad-b946-502d583733c8\nms.date: 12/05/2018\nms.keywords: ScriptFreeCache, ScriptFreeCache function [Internationalization for Windows Applications], _win32_ScriptFreeCache, intl.scriptfreecache, usp10/ScriptFreeCache\nreq.header: usp10.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Usp10.lib\nreq.dll: Usp10.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: Internet Explorer 5 or later on Windows Me/98/95\nms.custom: 19H1\nf1_keywords:\n - ScriptFreeCache\n - usp10/ScriptFreeCache\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - usp10.dll\n - Ext-MS-Win-usp10-l1-1-0.dll\n - GDI32.dll\n - GDI32Full.dll\napi_name:\n - ScriptFreeCache\n---\n\n# ScriptFreeCache function\n\n\n## -description\n\nFrees a script cache.\n\n## -parameters\n\n### -param psc [in, out]\n\nPointer to the <a href=\"/windows/desktop/Intl/script-cache\">SCRIPT_CACHE</a> structure.\n\n## -returns\n\nReturns 0 if successful. The function returns a nonzero HRESULT value if it does not succeed. The application cant test the return value with the <b>SUCCEEDED</b> and <b>FAILED</b> macros.\n\n## -remarks\n\nAn application can free the script cache at any time, with certain limitations if the application is multi-threaded. Uniscribe maintains reference counts in its <a href=\"/windows/desktop/Intl/caching\">font and shaper caches</a> and frees font data only when all sizes of the font are free. It frees shaper data only when all supported fonts are freed.\n\nThe application should free the script cache for a style when it discards that style.\n\n<b>ScriptFreeCache</b> always sets its parameter to <b>NULL</b> to help avoid misreferencing.\n\nUniscribe functions are re-entrant. Cache creation is interlocked through a single process-wide semaphore. <b>ScriptFreeCache</b> should not be called at a time when another thread might be accessing the particular cache to free. For performance reasons, the cache is not locked during <a href=\"/windows/desktop/api/usp10/nf-usp10-scriptshape\">ScriptShape</a> or <a href=\"/windows/desktop/api/usp10/nf-usp10-scriptplace\">ScriptPlace</a>.\n\n<div class=\"alert\"><b>Important</b>  Starting with Windows 8: To maintain the ability to run on Windows 7, a module that uses Uniscribe must specify Usp10.lib before gdi32.lib in its library list.</div>\n<div> </div>\n\n## -see-also\n\n<a href=\"/windows/desktop/Intl/caching\">Caching</a>\n\n\n\n<a href=\"/windows/desktop/Intl/script-cache\">SCRIPT_CACHE</a>\n\n\n\n<a href=\"/windows/desktop/Intl/uniscribe\">Uniscribe</a>\n\n\n\n<a href=\"/windows/desktop/Intl/uniscribe-functions\">Uniscribe Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(uniscribe);"
+   },
+   {
+    "name": "cs_script_cache",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 604,
+    "end_line": 604,
+    "code": "static CRITICAL_SECTION cs_script_cache = { &cs_script_cache_dbg, -1, 0, 0, 0, 0 };"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   }
+  ],
+  "header_inline": [
+   "list_remove",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "gdi32.ScriptFreeCache",
+  "category": {
+   "l1": "User interface",
+   "l2": "Internationalization (NLS, IME, Uniscribe)",
+   "header": "usp10.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 58,
+   "body": 57,
+   "code": 40
+  },
+  "cyclomatic": 12,
+  "return_type": "HRESULT",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 14,
+   "n_tests": 14,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/usp10/tests/usp10.c::_test_shape_ok",
+    "dlls/usp10/tests/usp10.c::test_ScriptCacheGetHeight",
+    "dlls/usp10/tests/usp10.c::test_ScriptGetCMap",
+    "dlls/usp10/tests/usp10.c::test_ScriptGetFontFunctions",
+    "dlls/usp10/tests/usp10.c::test_ScriptGetFontProperties",
+    "dlls/usp10/tests/usp10.c::test_ScriptGetGlyphABCWidth",
+    "dlls/usp10/tests/usp10.c::test_ScriptItemIzeShapePlace",
+    "dlls/usp10/tests/usp10.c::test_ScriptPlace",
+    "dlls/usp10/tests/usp10.c::test_ScriptShape",
+    "dlls/usp10/tests/usp10.c::test_ScriptShapeOpenType",
+    "dlls/usp10/tests/usp10.c::test_ScriptTextOut",
+    "dlls/usp10/tests/usp10.c::test_ScriptTextOut2",
+    "dlls/usp10/tests/usp10.c::test_ScriptTextOut3",
+    "dlls/usp10/tests/usp10.c::test_script_cache_reuse"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/usp10/nf-usp10-scriptfreecache",
+   "source": "win32",
+   "description": "Frees a script cache.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Usp10.dll"
+  },
+  "exports": [
+   "gdi32.ScriptFreeCache",
+   "usp10.ScriptFreeCache"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

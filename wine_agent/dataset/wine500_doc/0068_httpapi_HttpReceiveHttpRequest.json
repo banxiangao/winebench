@@ -1,0 +1,113 @@
+{
+ "id": "0068",
+ "function": {
+  "name": "HttpReceiveHttpRequest",
+  "export_name": "HttpReceiveHttpRequest",
+  "module": "httpapi",
+  "source_module": "httpapi",
+  "exported_by": [
+   "httpapi"
+  ],
+  "side": "PE",
+  "file": "dlls/httpapi/httpapi_main.c",
+  "start_line": 319,
+  "end_line": 366,
+  "body_lines": 45,
+  "signature": "ULONG WINAPI HttpReceiveHttpRequest(HANDLE queue, HTTP_REQUEST_ID id, ULONG flags, HTTP_REQUEST *request, ULONG size, ULONG *ret_size, OVERLAPPED *ovl)",
+  "header_comment": "/***********************************************************************\n *        HttpReceiveHttpRequest     (HTTPAPI.@)\n */",
+  "code": "ULONG WINAPI HttpReceiveHttpRequest(HANDLE queue, HTTP_REQUEST_ID id, ULONG flags,\n        HTTP_REQUEST *request, ULONG size, ULONG *ret_size, OVERLAPPED *ovl)\n{\n    struct http_receive_request_params params =\n    {\n        .addr = (ULONG_PTR)request,\n        .id = id,\n        .flags = flags,\n        .bits = sizeof(void *) * 8,\n    };\n    ULONG ret = ERROR_SUCCESS;\n    ULONG local_ret_size;\n    OVERLAPPED sync_ovl;\n\n    TRACE(\"queue %p, id %s, flags %#lx, request %p, size %#lx, ret_size %p, ovl %p.\\n\",\n            queue, wine_dbgstr_longlong(id), flags, request, size, ret_size, ovl);\n\n    if (flags & ~HTTP_RECEIVE_REQUEST_FLAG_COPY_BODY)\n        FIXME(\"Ignoring flags %#lx.\\n\", flags & ~HTTP_RECEIVE_REQUEST_FLAG_COPY_BODY);\n\n    if (size < sizeof(HTTP_REQUEST_V1))\n        return ERROR_INSUFFICIENT_BUFFER;\n\n    if (!ovl)\n    {\n        sync_ovl.hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);\n        ovl = &sync_ovl;\n    }\n\n    if (!ret_size)\n        ret_size = &local_ret_size;\n\n    if (!DeviceIoControl(queue, IOCTL_HTTP_RECEIVE_REQUEST, &params, sizeof(params), request, size, ret_size, ovl))\n        ret = GetLastError();\n\n    if (ovl == &sync_ovl)\n    {\n        if (ret == ERROR_IO_PENDING)\n        {\n            ret = ERROR_SUCCESS;\n            if (!GetOverlappedResult(queue, ovl, ret_size, TRUE))\n                ret = GetLastError();\n        }\n        CloseHandle(sync_ovl.hEvent);\n    }\n\n    return ret;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include \"wine/http.h\"",
+   "#include \"winsvc.h\"",
+   "#include \"winternl.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\""
+  ],
+  "resolution": [
+   "httpapi!HttpReceiveHttpRequest [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/httpapi/tests/httpapi.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "http",
+   "path": "sdk-api-src/content/http/nf-http-httpreceivehttprequest.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/http/nf-http-httpreceivehttprequest",
+   "documented_name": "httpreceivehttprequest",
+   "file": "docs/0068_sdk-api_nf-http-httpreceivehttprequest.md",
+   "text": "---\nUID: NF:http.HttpReceiveHttpRequest\ntitle: HttpReceiveHttpRequest function (http.h)\ndescription: Retrieves the next available HTTP request from the specified request queue either synchronously or asynchronously.\nhelpviewer_keywords: [\"0 (zero)\",\"HTTP_RECEIVE_REQUEST_FLAG_COPY_BODY\",\"HTTP_RECEIVE_REQUEST_FLAG_FLUSH_BODY\",\"HttpReceiveHttpRequest\",\"HttpReceiveHttpRequest function [HTTP]\",\"_http_httpreceivehttprequest\",\"http.httpreceivehttprequest\",\"http/HttpReceiveHttpRequest\"]\nold-location: http\\httpreceivehttprequest.htm\ntech.root: http\nms.assetid: ad9e80f7-04c4-4108-a7ab-40eb57d00e3b\nms.date: 12/05/2018\nms.keywords: 0 (zero), HTTP_RECEIVE_REQUEST_FLAG_COPY_BODY, HTTP_RECEIVE_REQUEST_FLAG_FLUSH_BODY, HttpReceiveHttpRequest, HttpReceiveHttpRequest function [HTTP], _http_httpreceivehttprequest, http.httpreceivehttprequest, http/HttpReceiveHttpRequest\nreq.header: http.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista, Windows XP with SP2 [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Httpapi.lib\nreq.dll: Httpapi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - HttpReceiveHttpRequest\n - http/HttpReceiveHttpRequest\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Httpapi.dll\napi_name:\n - HttpReceiveHttpRequest\n---\n\n# HttpReceiveHttpRequest function\n\n\n## -description\n\nThe \n<b>HttpReceiveHttpRequest</b> function retrieves the next available HTTP request from the specified request queue either synchronously or asynchronously.\n\n## -parameters\n\n### -param RequestQueueHandle [in]\n\nA handle to the request queue from which to retrieve the next available request. A request queue is created and its handle returned by a call to the \n<a href=\"/windows/desktop/api/http/nf-http-httpcreaterequestqueue\">HttpCreateRequestQueue</a> function.\n\n<b>Windows Server 2003 with SP1 and Windows XP with SP2:  </b>The handle to the request queue is created by the <a href=\"/windows/desktop/api/http/nf-http-httpcreatehttphandle\">HttpCreateHttpHandle</a> function.\n\n### -param RequestId [in]\n\nOn the first call to retrieve a request, this parameter should be <b>HTTP_NULL_ID</b>. Then, if more than one call is required to retrieve the entire request, \n<b>HttpReceiveHttpRequest</b> or \n<a href=\"/windows/desktop/api/http/nf-http-httpreceiverequestentitybody\">HttpReceiveRequestEntityBody</a> can be called with <i>RequestID</i> set to the value returned in the <b>RequestId</b> member of the \n<a href=\"/previous-versions/windows/desktop/legacy/aa364545(v=vs.85)\">HTTP_REQUEST</a> structure pointed to by <i>pRequestBuffer</i>.\n\n### -param Flags [in]\n\nA parameter that can be one of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"0__zero_\"></a><a id=\"0__ZERO_\"></a><dl>\n<dt><b>0 (zero)</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOnly the request headers are retrieved; the entity body is not copied.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"HTTP_RECEIVE_REQUEST_FLAG_COPY_BODY\"></a><a id=\"http_receive_request_flag_copy_body\"></a><dl>\n<dt><b>HTTP_RECEIVE_REQUEST_FLAG_COPY_BODY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe available entity body is copied along with the request headers. The <b>pEntityChunks</b> member of the \n<a href=\"/previous-versions/windows/desktop/legacy/aa364545(v=vs.85)\">HTTP_REQUEST</a> structure points to the entity body.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"HTTP_RECEIVE_REQUEST_FLAG_FLUSH_BODY\"></a><a id=\"http_receive_request_flag_flush_body\"></a><dl>\n<dt><b>HTTP_RECEIVE_REQUEST_FLAG_FLUSH_BODY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAll of the entity bodies are copied along with the request headers. The <b>pEntityChunks</b> member of the \n<a href=\"/previous-versions/windows/desktop/legacy/aa364545(v=vs.85)\">HTTP_REQUEST</a> structure points to the entity body.\n\n</td>\n</tr>\n</table>\n\n### -param RequestBuffer [out]\n\nA pointer to a buffer into which the function copies an \n<a href=\"/previous-versions/windows/desktop/legacy/aa364545(v=vs.85)\">HTTP_REQUEST</a> structure and entity body for the HTTP request. <b>HTTP_REQUEST.RequestId</b> contains the identifier for this HTTP request, which the application can use in subsequent calls <a href=\"/windows/desktop/api/http/nf-http-httpreceiverequestentitybody\">HttpReceiveRequestEntityBody</a>, \n<a href=\"/windows/desktop/api/http/nf-http-httpsendhttpresponse\">HttpSendHttpResponse</a>, or \n<a href=\"/windows/desktop/api/http/nf-http-httpsendresponseentitybody\">HttpSendResponseEntityBody</a>.\n\n### -param RequestBufferLength [in]\n\nSize, in bytes, of the  <i>pRequestBuffer</i> buffer.\n\n### -param BytesReturned [out, optional]\n\nOptional. A pointer to a variable that receives the size, in bytes, of the entity body, or of the remaining part of the entity body. \n\n\n\n\nWhen making an asynchronous call using <i>pOverlapped</i>, set <i>pBytesReceived</i> to <b>NULL</b>. Otherwise, when <i>pOverlapped</i> is set to <b>NULL</b>, <i>pBytesReceived</i> must contain a valid memory address, and not be set to <b>NULL</b>.\n\n### -param Overlapped [in, optional]\n\nFor asynchronous calls, set <i>pOverlapped</i> to point to an \n<a href=\"/windows/desktop/api/minwinbase/ns-minwinbase-overlapped\">OVERLAPPED</a> structure; for synchronous calls, set it to <b>NULL</b>. \n\n\n\n\nA synchronous call blocks until a request has arrived in the specified queue and some or all of it has been retrieved, whereas an asynchronous call immediately returns <b>ERROR_IO_PENDING</b> and the calling application then uses \n<a href=\"/windows/desktop/api/ioapiset/nf-ioapiset-getoverlappedresult\">GetOverlappedResult</a> or I/O completion ports to determine when the operation is completed. For more information about using \n<a href=\"/windows/desktop/api/minwinbase/ns-minwinbase-overlapped\">OVERLAPPED</a> structures for synchronization, see  \n<a href=\"/windows/desktop/Sync/synchronization-and-overlapped-input-and-output\">Synchronization and Overlapped Input and Output</a>.\n\n## -returns\n\nIf the function succeeds, the return value is <b>NO_ERROR</b>.\n\nIf the function is being used asynchronously, a return value of <b>ERROR_IO_PENDING</b> indicates that the next request is not yet ready and will be retrieved later through normal overlapped I/O completion mechanisms.\n\nIf the function fails, the return value is one of the following error codes.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOne or more of the supplied parameters is in an unusable form.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOACCESS</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOne or more of the supplied parameters points to an invalid or unaligned memory buffer.  The <i>pRequestBuffer</i> parameter must point to a valid memory buffer with a memory alignment equal or greater to the memory alignment requirement for an <b>HTTP_REQUEST</b> structure.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_MORE_DATA</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe value of <i>RequestBufferLength</i> is greater than or equal to the size of the request header received, but is not as large as the combined size of the request structure and entity body. The buffer size required to read the remaining part of the entity body is returned in the <i>pBytesReceived</i> parameter if this is non-<b>NULL</b> and if the call is synchronous. Call the function again with a large enough buffer to retrieve all data.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_HANDLE_EOF</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe specified request has already been completely retrieved; in this case, the value pointed to by <i>pBytesReceived</i> is not meaningful, and <i>pRequestBuffer</i> should not be examined.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>Other</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA <a href=\"/windows/desktop/Debug/system-error-codes\">system error code</a> defined in WinError.h.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nMore than one call can be required to retrieve a given request. When the <i>Flags</i> parameter is set to zero, for example, \n<b>HttpReceiveHttpRequest</b> only copies the request header structure into the buffer, and does not attempt to copy any of the entity body. In this case, the \n<a href=\"/windows/desktop/api/http/nf-http-httpreceiverequestentitybody\">HttpReceiveRequestEntityBody</a> function can be used to retrieve the entity body, or a second call can be made to \n<b>HttpReceiveHttpRequest</b>.\n\nAlternatively, the buffer provided by the application may be insufficiently large to receive all or part of the request. To be sure of receiving at least part of the request, it is recommended that an application provide at least a buffer of 4 KB, which accommodates most HTTP requests. Alternately, authentication headers, parsed as unknown headers, can add up to 12 KB to that, so if authentication/authorization is used, a buffer size of at least 16 KB is recommended.\n\nIf \n<b>HttpReceiveHttpRequest</b> returns <b>ERROR_MORE_DATA</b>, the application continues to make additional calls, identifying the request in each additional call by passing in the <b>HTTP_REQUEST.RequestId</b> value returned by the first call until <b>ERROR_HANDLE_EOF</b> is returned.\n\n<div class=\"alert\"><b>Note</b>  The application must examine all relevant request headers, including content-negotiation headers if used, and fail the request as appropriate based on the header content. <b>HttpReceiveHttpRequest</b> ensures only that the header line is properly terminated and does not contain illegal characters.</div>\n<div> </div>\n\n## -see-also\n\n<a href=\"/windows/desktop/Http/http-server-api-version-1-0-functions\">HTTP Server API Version 1.0 Functions</a>\n\n\n\n<a href=\"/previous-versions/windows/desktop/legacy/aa364545(v=vs.85)\">HTTP_REQUEST</a>\n\n\n\n<a href=\"/windows/desktop/api/http/nf-http-httpreceiverequestentitybody\">HttpReceiveRequestEntityBody</a>\n\n\n\n<a href=\"/windows/desktop/api/http/nf-http-httpsendhttpresponse\">HttpSendHttpResponse</a>\n\n\n\n<a href=\"/windows/desktop/api/http/nf-http-httpsendresponseentitybody\">HttpSendResponseEntityBody</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 28,
+    "end_line": 28,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(http);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "CloseHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "CreateEventW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/sync.c:566"
+    ]
+   },
+   {
+    "name": "DeviceIoControl",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:4378"
+    ]
+   },
+   {
+    "name": "GetOverlappedResult",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:3352"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetLastError",
+   "wine_dbg_log",
+   "wine_dbgstr_longlong"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

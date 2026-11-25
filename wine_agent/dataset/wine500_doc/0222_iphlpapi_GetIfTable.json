@@ -1,0 +1,213 @@
+{
+ "id": "0222",
+ "function": {
+  "name": "GetIfTable",
+  "export_name": "GetIfTable",
+  "module": "iphlpapi",
+  "source_module": "iphlpapi",
+  "exported_by": [
+   "iphlpapi"
+  ],
+  "side": "PE",
+  "file": "dlls/iphlpapi/iphlpapi_main.c",
+  "start_line": 1678,
+  "end_line": 1717,
+  "body_lines": 37,
+  "signature": "DWORD WINAPI GetIfTable( MIB_IFTABLE *table, ULONG *size, BOOL sort )",
+  "header_comment": "/******************************************************************\n *    GetIfTable (IPHLPAPI.@)\n *\n * Get a table of local interfaces.\n *\n * PARAMS\n *  table [Out]    buffer for local interfaces table\n *  size  [In/Out] length of output buffer\n *  sort  [In]     whether to sort the table\n *\n * RETURNS\n *  Success: NO_ERROR\n *  Failure: error code from winerror.h\n *\n * NOTES\n *  If size is less than required, the function will return\n *  ERROR_INSUFFICIENT_BUFFER, and *pdwSize will be set to the required byte\n *  size.\n *  If sort is true, the returned table will be sorted by interface index.\n */",
+  "code": "DWORD WINAPI GetIfTable( MIB_IFTABLE *table, ULONG *size, BOOL sort )\n{\n    DWORD i, count, needed, err;\n    NET_LUID *keys;\n    struct nsi_ndis_ifinfo_rw *rw;\n    struct nsi_ndis_ifinfo_dynamic *dyn;\n    struct nsi_ndis_ifinfo_static *stat;\n\n    if (!size) return ERROR_INVALID_PARAMETER;\n\n    /* While this could be implemented on top of GetIfTable2(), it would require\n       an additional copy of the data */\n    err = NsiAllocateAndGetTable( 1, &NPI_MS_NDIS_MODULEID, NSI_NDIS_IFINFO_TABLE, (void **)&keys, sizeof(*keys),\n                                  (void **)&rw, sizeof(*rw), (void **)&dyn, sizeof(*dyn),\n                                  (void **)&stat, sizeof(*stat), &count, 0 );\n    if (err) return err;\n\n    needed = FIELD_OFFSET( MIB_IFTABLE, table[count] );\n\n    if (!table || *size < needed)\n    {\n        *size = needed;\n        err = ERROR_INSUFFICIENT_BUFFER;\n        goto err;\n    }\n\n    table->dwNumEntries = count;\n    for (i = 0; i < count; i++)\n    {\n        MIB_IFROW *row = table->table + i;\n\n        if_row_fill( row, rw + i, dyn + i, stat + i );\n    }\n\n    if (sort) qsort( table->table, count, sizeof(MIB_IFROW), ifrow_cmp );\n\nerr:\n    NsiFreeTable( keys, rw, dyn, stat );\n    return err;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winsock2.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ws2ipdef.h\"",
+   "#include \"windns.h\"",
+   "#include \"iphlpapi.h\"",
+   "#include \"ipifcons.h\"",
+   "#include \"fltdefs.h\"",
+   "#include \"ifdef.h\"",
+   "#include \"netioapi.h\"",
+   "#include \"ip2string.h\"",
+   "#include \"netiodef.h\"",
+   "#include \"icmpapi.h\"",
+   "#include \"psapi.h\"",
+   "#include \"wine/nsi.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "iphlpapi!GetIfTable [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/iphlpapi/tests/iphlpapi.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "iphlpapi",
+   "path": "sdk-api-src/content/iphlpapi/nf-iphlpapi-getiftable.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/iphlpapi/nf-iphlpapi-getiftable",
+   "documented_name": "getiftable",
+   "file": "docs/0222_sdk-api_nf-iphlpapi-getiftable.md",
+   "text": "---\nUID: NF:iphlpapi.GetIfTable\ntitle: GetIfTable function (iphlpapi.h)\ndescription: The GetIfTable function retrieves the MIB-II interface table.\nhelpviewer_keywords: [\"GetIfTable\",\"GetIfTable function [IP Helper]\",\"_iphlp_getiftable\",\"iphlp.getiftable\",\"iphlpapi/GetIfTable\"]\nold-location: iphlp\\getiftable.htm\ntech.root: IpHlp\nms.assetid: 6a46c1df-b274-415e-b842-fc1adf6fa206\nms.date: 12/05/2018\nms.keywords: GetIfTable, GetIfTable function [IP Helper], _iphlp_getiftable, iphlp.getiftable, iphlpapi/GetIfTable\nreq.header: iphlpapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Iphlpapi.lib\nreq.dll: Iphlpapi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetIfTable\n - iphlpapi/GetIfTable\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Iphlpapi.dll\napi_name:\n - GetIfTable\n---\n\n# GetIfTable function\n\n\n## -description\n\nThe \n<b>GetIfTable</b> function retrieves the MIB-II interface table.\n\n## -parameters\n\n### -param pIfTable [out]\n\nA pointer to a buffer that receives the interface table as a \n<a href=\"/windows/desktop/api/ifmib/ns-ifmib-mib_iftable\">MIB_IFTABLE</a> structure.\n\n### -param pdwSize [in, out]\n\nOn input, specifies the size in bytes of the buffer pointed to by the <i>pIfTable</i> parameter.\n\nOn output, if the buffer is not large enough to hold the returned interface table, the function sets this parameter equal to the required buffer size in bytes.\n\n### -param bOrder [in]\n\nA Boolean value that specifies whether the returned interface table should be sorted in ascending order by interface index. If this parameter is <b>TRUE</b>, the table is sorted.\n\n## -returns\n\nIf the function succeeds, the return value is NO_ERROR.\n\nIf the function fails, the return value is one of the following error codes.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INSUFFICIENT_BUFFER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe buffer pointed to by the <i>pIfTable</i> parameter is not large enough. The required size is returned in the <b>DWORD</b> variable pointed to by the <i>pdwSize</i> parameter.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <i>pdwSize</i> parameter is <b>NULL</b>, or \n<a href=\"/windows/desktop/api/iphlpapi/nf-iphlpapi-getiftable\">GetIfTable</a> is unable to write to the memory pointed to by the <i>pdwSize</i> parameter.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOT_SUPPORTED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThis function is not supported on the operating system in use on the local system.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>Other</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nUse \nthe <a href=\"/windows/desktop/api/winbase/nf-winbase-formatmessage\">FormatMessage</a> function to obtain the message string for the returned error.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe  \n<b>GetIfTable</b> function enumerates physical interfaces on a local system and returns this information in a <a href=\"/windows/desktop/api/ifmib/ns-ifmib-mib_iftable\">MIB_IFTABLE</a> structure. The physical interfaces include the software loopback interface. \n\nThe <a href=\"/windows/desktop/api/netioapi/nf-netioapi-getiftable2\">GetIfTable2</a> and <a href=\"/windows/desktop/api/netioapi/nf-netioapi-getiftable2ex\">GetIfTable2Ex</a> functions available on Windows Vista and later are an enhanced version of the <b>GetIfTable</b> function that enumerate both the physical and logical interfaces on a local system. Logical interfaces include various WAN Miniport interfaces used for L2TP, PPTP, PPOE, and other tunnel encapsulations.\n\nInterfaces are returned in a <a href=\"/windows/desktop/api/ifmib/ns-ifmib-mib_iftable\">MIB_IFTABLE</a> structure in the buffer pointed to by the <i>pIfTable</i> parameter. The <b>MIB_IFTABLE</b> structure contains an interface count and an array of <a href=\"/windows/desktop/api/ifmib/ns-ifmib-mib_ifrow\">MIB_IFROW</a> structures for each interface. \n\nNote that the returned <a href=\"/windows/desktop/api/ifmib/ns-ifmib-mib_iftable\">MIB_IFTABLE</a> structure pointed to by the <i>pIfTable</i> parameter may contain padding for alignment between the <b>dwNumEntries</b> member and the first <a href=\"/windows/desktop/api/ifmib/ns-ifmib-mib_ifrow\">MIB_IFROW</a> array entry in the <b>table</b> member of the <b>MIB_IFTABLE</b> structure. Padding for alignment may also be present between the <b>MIB_IFROW</b> array entries. Any access to a <b>MIB_IFROW</b> array entry should assume  padding may exist. \n\n\n\n\n#### Examples\n\nThe following example retrieves the interface table and prints the number of entries in the table and some data on each entry.\n\n\n```cpp\n#include <winsock2.h>\n#include <ws2tcpip.h>\n#pragma comment(lib, \"IPHLPAPI.lib\")\n\n#include <iphlpapi.h>\n\n#include <stdio.h>\n#include <stdlib.h>\n\n#define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))\n#define FREE(x) HeapFree(GetProcessHeap(), 0, (x))\n\n/* Note: could also use malloc() and free() */\n\nint main()\n{\n\n    // Declare and initialize variables.\n\n    DWORD dwSize = 0;\n    DWORD dwRetVal = 0;\n\n    unsigned int i, j;\n\n    /* variables used for GetIfTable and GetIfEntry */\n    MIB_IFTABLE *pIfTable;\n    MIB_IFROW *pIfRow;\n\n    // Allocate memory for our pointers.\n    pIfTable = (MIB_IFTABLE *) MALLOC(sizeof (MIB_IFTABLE));\n    if (pIfTable == NULL) {\n        printf(\"Error allocating memory needed to call GetIfTable\\n\");\n        return 1;\n    }\n    // Make an initial call to GetIfTable to get the\n    // necessary size into dwSize\n    dwSize = sizeof (MIB_IFTABLE);\n    if (GetIfTable(pIfTable, &dwSize, FALSE) == ERROR_INSUFFICIENT_BUFFER) {\n        FREE(pIfTable);\n        pIfTable = (MIB_IFTABLE *) MALLOC(dwSize);\n        if (pIfTable == NULL) {\n            printf(\"Error allocating memory needed to call GetIfTable\\n\");\n            return 1;\n        }\n    }\n    // Make a second call to GetIfTable to get the actual\n    // data we want.\n    if ((dwRetVal = GetIfTable(pIfTable, &dwSize, FALSE)) == NO_ERROR) {\n        printf(\"\\tNum Entries: %ld\\n\\n\", pIfTable->dwNumEntries);\n        for (i = 0; i < pIfTable->dwNumEntries; i++) {\n            pIfRow = (MIB_IFROW *) & pIfTable->table[i];\n            printf(\"\\tIndex[%d]:\\t %ld\\n\", i, pIfRow->dwIndex);\n            printf(\"\\tInterfaceName[%d]:\\t %ws\", i, pIfRow->wszName);\n            printf(\"\\n\");\n            printf(\"\\tDescription[%d]:\\t \", i);\n            for (j = 0; j < pIfRow->dwDescrLen; j++)\n                printf(\"%c\", pIfRow->bDescr[j]);\n            printf(\"\\n\");\n            printf(\"\\tType[%d]:\\t \", i);\n            switch (pIfRow->dwType) {\n            case IF_TYPE_OTHER:\n                printf(\"Other\\n\");\n                break;\n            case IF_TYPE_ETHERNET_CSMACD:\n                printf(\"Ethernet\\n\");\n                break;\n            case IF_TYPE_ISO88025_TOKENRING:\n                printf(\"Token Ring\\n\");\n                break;\n            case IF_TYPE_PPP:\n                printf(\"PPP\\n\");\n                break;\n            case IF_TYPE_SOFTWARE_LOOPBACK:\n                printf(\"Software Lookback\\n\");\n                break;\n            case IF_TYPE_ATM:\n                printf(\"ATM\\n\");\n                break;\n            case IF_TYPE_IEEE80211:\n                printf(\"IEEE 802.11 Wireless\\n\");\n                break;\n            case IF_TYPE_TUNNEL:\n                printf(\"Tunnel type encapsulation\\n\");\n                break;\n            case IF_TYPE_IEEE1394:\n                printf(\"IEEE 1394 Firewire\\n\");\n                break;\n            default:\n                printf(\"Unknown type %ld\\n\", pIfRow->dwType);\n                break;\n            }\n            printf(\"\\tMtu[%d]:\\t\\t %ld\\n\", i, pIfRow->dwMtu);\n            printf(\"\\tSpeed[%d]:\\t %ld\\n\", i, pIfRow->dwSpeed);\n            printf(\"\\tPhysical Addr:\\t \");\n            if (pIfRow->dwPhysAddrLen == 0)\n                printf(\"\\n\");\n            for (j = 0; j < pIfRow->dwPhysAddrLen; j++) {\n                if (j == (pIfRow->dwPhysAddrLen - 1))\n                    printf(\"%.2X\\n\", (int) pIfRow->bPhysAddr[j]);\n                else\n                    printf(\"%.2X-\", (int) pIfRow->bPhysAddr[j]);\n            }\n            printf(\"\\tAdmin Status[%d]:\\t %ld\\n\", i, pIfRow->dwAdminStatus);\n            printf(\"\\tOper Status[%d]:\\t \", i);\n            switch (pIfRow->dwOperStatus) {\n            case IF_OPER_STATUS_NON_OPERATIONAL:\n                printf(\"Non Operational\\n\");\n                break;\n            case IF_OPER_STATUS_UNREACHABLE:\n                printf(\"Unreachable\\n\");\n                break;\n            case IF_OPER_STATUS_DISCONNECTED:\n                printf(\"Disconnected\\n\");\n                break;\n            case IF_OPER_STATUS_CONNECTING:\n                printf(\"Connecting\\n\");\n                break;\n            case IF_OPER_STATUS_CONNECTED:\n                printf(\"Connected\\n\");\n                break;\n            case IF_OPER_STATUS_OPERATIONAL:\n                printf(\"Operational\\n\");\n                break;\n            default:\n                printf(\"Unknown status %ld\\n\", pIfRow->dwAdminStatus);\n                break;\n            }\n            printf(\"\\n\");\n        }\n    } else {\n        printf(\"GetIfTable failed with error: \\n\", dwRetVal);\n        if (pIfTable != NULL) {\n            FREE(pIfTable);\n            pIfTable = NULL;\n        }  \n        return 1;\n        // Here you can use FormatMessage to find out why \n        // it failed.\n    }\n    if (pIfTable != NULL) {\n        FREE(pIfTable);\n        pIfTable = NULL;\n    }\n    return 0;\n}\n\n\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/api/iphlpapi/nf-iphlpapi-getifentry\">GetIfEntry</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-getifentry2\">GetIfEntry2</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-getiftable2\">GetIfTable2</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-getiftable2ex\">GetIfTable2Ex</a>\n\n\n\n<a href=\"/windows/desktop/api/iphlpapi/nf-iphlpapi-getnumberofinterfaces\">GetNumberOfInterfaces</a>\n\n\n\n<a href=\"/windows/desktop/IpHlp/ip-helper-function-reference\">IP Helper Function Reference</a>\n\n\n\n<a href=\"/windows/desktop/api/ifmib/ns-ifmib-mib_ifrow\">MIB_IFROW</a>\n\n\n\n<a href=\"/windows/desktop/api/ifmib/ns-ifmib-mib_iftable\">MIB_IFTABLE</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_if_row2\">MIB_IF_ROW2</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_if_table2\">MIB_IF_TABLE2</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "if_row_fill",
+   "file": "dlls/iphlpapi/iphlpapi_main.c",
+   "start_line": 1581,
+   "end_line": 1611,
+   "static": true,
+   "called_from": [
+    "GetIfTable"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/iphlpapi/iphlpapi_main.c:1643",
+    "dlls/iphlpapi/iphlpapi_main.c:1766"
+   ],
+   "signature": "static void if_row_fill( MIB_IFROW *row, struct nsi_ndis_ifinfo_rw *rw, struct nsi_ndis_ifinfo_dynamic *dyn, struct nsi_ndis_ifinfo_static *stat )",
+   "code": "static void if_row_fill( MIB_IFROW *row, struct nsi_ndis_ifinfo_rw *rw, struct nsi_ndis_ifinfo_dynamic *dyn,\n                         struct nsi_ndis_ifinfo_static *stat )\n{\n    wcscpy( row->wszName, device_tcpip );\n    ConvertGuidToStringW( &stat->if_guid, row->wszName + wcslen( device_tcpip ), CHARS_IN_GUID );\n    row->dwIndex = stat->if_index;\n    row->dwType = stat->type;\n    row->dwMtu = dyn->mtu;\n    row->dwSpeed = dyn->rcv_speed;\n    row->dwPhysAddrLen = rw->phys_addr.Length;\n    if (row->dwPhysAddrLen > sizeof(row->bPhysAddr)) row->dwPhysAddrLen = 0;\n    memcpy( row->bPhysAddr, rw->phys_addr.Address, row->dwPhysAddrLen );\n    row->dwAdminStatus = rw->admin_status;\n    row->dwOperStatus = (dyn->oper_status == IfOperStatusUp) ? MIB_IF_OPER_STATUS_OPERATIONAL : MIB_IF_OPER_STATUS_NON_OPERATIONAL;\n    row->dwLastChange = 0;\n    row->dwInOctets = dyn->in_octets;\n    row->dwInUcastPkts = dyn->in_ucast_pkts;\n    row->dwInNUcastPkts = dyn->in_bcast_pkts + dyn->in_mcast_pkts;\n    row->dwInDiscards = dyn->in_discards;\n    row->dwInErrors = dyn->in_errors;\n    row->dwInUnknownProtos = 0;\n    row->dwOutOctets = dyn->out_octets;\n    row->dwOutUcastPkts = dyn->out_ucast_pkts;\n    row->dwOutNUcastPkts = dyn->out_bcast_pkts + dyn->out_mcast_pkts;\n    row->dwOutDiscards = dyn->out_discards;\n    row->dwOutErrors = dyn->out_errors;\n    row->dwOutQLen = 0;\n    row->dwDescrLen = WideCharToMultiByte( CP_ACP, 0, stat->descr.String, stat->descr.Length / sizeof(WCHAR),\n                                           (char *)row->bDescr, sizeof(row->bDescr) - 1, NULL, NULL );\n    row->bDescr[row->dwDescrLen] = '\\0';\n}"
+  },
+  {
+   "name": "ifrow_cmp",
+   "file": "dlls/iphlpapi/iphlpapi_main.c",
+   "start_line": 1652,
+   "end_line": 1656,
+   "static": true,
+   "called_from": [
+    "GetIfTable"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/iphlpapi/iphlpapi_main.c:1768"
+   ],
+   "signature": "static int ifrow_cmp( const void *a, const void *b )",
+   "code": "static int ifrow_cmp( const void *a, const void *b )\n{\n    const MIB_IFROW *rowA = a, *rowB = b;\n    return DWORD_cmp(rowA->dwIndex, rowB->dwIndex);\n}"
+  },
+  {
+   "name": "DWORD_cmp",
+   "file": "dlls/iphlpapi/iphlpapi_main.c",
+   "start_line": 1647,
+   "end_line": 1650,
+   "static": true,
+   "called_from": [
+    "ifrow_cmp"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/iphlpapi/iphlpapi_main.c:1982",
+    "dlls/iphlpapi/iphlpapi_main.c:2090",
+    "dlls/iphlpapi/iphlpapi_main.c:2092",
+    "dlls/iphlpapi/iphlpapi_main.c:2094",
+    "dlls/iphlpapi/iphlpapi_main.c:2096"
+   ],
+   "signature": "static int DWORD_cmp( DWORD a, DWORD b )",
+   "code": "static int DWORD_cmp( DWORD a, DWORD b )\n{\n    return a < b ? -1 : a > b ? 1 : 0; /* a subtraction would overflow */\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "device_tcpip",
+    "type": "const WCHAR *",
+    "static": true,
+    "start_line": 49,
+    "end_line": 49,
+    "code": "static const WCHAR *device_tcpip = L\"\\\\DEVICE\\\\TCPIP_\";"
+   }
+  ],
+  "macros": [
+   {
+    "name": "CHARS_IN_GUID",
+    "start_line": 47,
+    "end_line": 47,
+    "code": "#define CHARS_IN_GUID 39"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "ConvertGuidToStringW",
+    "impl": [
+     "dlls/iphlpapi/iphlpapi_main.c:69"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NsiAllocateAndGetTable",
+    "module": "nsi",
+    "impl": [
+     "dlls/nsi/nsi.c:66"
+    ]
+   },
+   {
+    "name": "NsiFreeTable",
+    "module": "nsi",
+    "impl": [
+     "dlls/nsi/nsi.c:209"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "qsort",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/misc.c:173"
+    ]
+   },
+   {
+    "name": "wcscpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:184"
+    ]
+   },
+   {
+    "name": "wcslen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:215"
+    ]
+   }
+  ],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

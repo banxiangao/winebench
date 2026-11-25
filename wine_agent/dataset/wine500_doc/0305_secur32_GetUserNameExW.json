@@ -1,0 +1,135 @@
+{
+ "id": "0305",
+ "function": {
+  "name": "GetUserNameExW",
+  "export_name": "GetUserNameExW",
+  "module": "secur32",
+  "source_module": "secur32",
+  "exported_by": [
+   "secur32",
+   "sspicli"
+  ],
+  "side": "PE",
+  "file": "dlls/secur32/secur32.c",
+  "start_line": 1122,
+  "end_line": 1175,
+  "body_lines": 51,
+  "signature": "BOOLEAN WINAPI GetUserNameExW( EXTENDED_NAME_FORMAT NameFormat, LPWSTR lpNameBuffer, PULONG nSize)",
+  "header_comment": null,
+  "code": "BOOLEAN WINAPI GetUserNameExW(\n  EXTENDED_NAME_FORMAT NameFormat, LPWSTR lpNameBuffer, PULONG nSize)\n{\n    TRACE(\"(%s %p %p)\\n\", debugstr_NameFormat(NameFormat), lpNameBuffer, nSize);\n\n    switch (NameFormat)\n    {\n    case NameSamCompatible:\n        {\n            WCHAR samname[UNLEN + 1 + MAX_COMPUTERNAME_LENGTH + 1];\n            LPWSTR out;\n            DWORD len;\n\n            /* This assumes the current user is always a local account */\n            len = MAX_COMPUTERNAME_LENGTH + 1;\n            if (GetComputerNameW(samname, &len))\n            {\n                out = samname + lstrlenW(samname);\n                *out++ = '\\\\';\n                len = UNLEN + 1;\n                if (GetUserNameW(out, &len))\n                {\n                    if (lstrlenW(samname) < *nSize)\n                    {\n                        lstrcpyW(lpNameBuffer, samname);\n                        *nSize = lstrlenW(samname);\n                        return TRUE;\n                    }\n\n                    SetLastError(ERROR_MORE_DATA);\n                    *nSize = lstrlenW(samname) + 1;\n                }\n            }\n            return FALSE;\n        }\n\n    case NameUnknown:\n    case NameFullyQualifiedDN:\n    case NameDisplay:\n    case NameUniqueId:\n    case NameCanonical:\n    case NameUserPrincipal:\n    case NameCanonicalEx:\n    case NameServicePrincipal:\n    case NameDnsDomain:\n        FIXME(\"NameFormat %d not implemented\\n\", NameFormat);\n        SetLastError(ERROR_NONE_MAPPED);\n        return FALSE;\n\n    default:\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return FALSE;\n    }\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winternl.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"sspi.h\"",
+   "#include \"secext.h\"",
+   "#include \"ntsecapi.h\"",
+   "#include \"thunks.h\"",
+   "#include \"lmcons.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"secur32_priv.h\""
+  ],
+  "resolution": [
+   "secur32!GetUserNameExW [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/secur32/tests/secur32.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "secext",
+   "path": "sdk-api-src/content/secext/nf-secext-getusernameexw.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/secext/nf-secext-getusernameexw",
+   "documented_name": "getusernameexw",
+   "file": "docs/0305_sdk-api_nf-secext-getusernameexw.md",
+   "text": "---\nUID: NF:secext.GetUserNameExW\ntitle: GetUserNameExW function (secext.h)\ndescription: Retrieves the name of the user or other security principal associated with the calling thread. You can specify the format of the returned name. (Unicode)\nhelpviewer_keywords: [\"GetUserNameEx\", \"GetUserNameEx function\", \"GetUserNameExW\", \"_win32_getusernameex\", \"base.getusernameex\", \"secext/GetUserNameEx\", \"secext/GetUserNameExW\"]\nold-location: base\\getusernameex.htm\ntech.root: winprog\nms.assetid: 7e7d618b-2e64-4b0b-aed3-f3221b0443ca\nms.date: 12/05/2018\nms.keywords: GetUserNameEx, GetUserNameEx function, GetUserNameExA, GetUserNameExW, _win32_getusernameex, base.getusernameex, secext/GetUserNameEx, secext/GetUserNameExA, secext/GetUserNameExW\nreq.header: secext.h\nreq.include-header: Security.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: GetUserNameExW (Unicode) and GetUserNameExA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Secur32.lib\nreq.dll: Secur32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetUserNameExW\n - secext/GetUserNameExW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Secur32.dll\napi_name:\n - GetUserNameEx\n - GetUserNameExA\n - GetUserNameExW\n---\n\n# GetUserNameExW function\n\n\n## -description\n\nRetrieves the name of the user or other security principal associated with the calling thread. You can specify the format of the returned name.\n\nIf the thread is impersonating a client, \n<b>GetUserNameEx</b> returns the name of the client.\n\n## -parameters\n\n### -param NameFormat [in]\n\nThe format of the name. This parameter is a value from the \n<a href=\"/windows/desktop/api/secext/ne-secext-extended_name_format\">EXTENDED_NAME_FORMAT</a> enumeration type. It cannot be <b>NameUnknown</b>. If the user account is not in a domain, only <b>NameSamCompatible</b> is supported.\n\n### -param lpNameBuffer [out]\n\nA pointer to a buffer that receives the name in the specified format. The buffer must include space for the terminating null character.\n\n### -param nSize [in, out]\n\nOn input, this variable specifies the size of the <i>lpNameBuffer</i> buffer, in <b>TCHARs</b>. If the function is successful, the variable receives the number of <b>TCHARs</b> copied to the buffer, not including the terminating null character. \n\n\n\n\nIf <i>lpNameBuffer</i> is too small, the function fails and <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> returns ERROR_MORE_DATA. This parameter receives the required buffer size, in Unicode characters (whether or not Unicode is being used), including the terminating null character.\n\n## -returns\n\nIf the function succeeds, the return value is a nonzero value.\n\nIf the function fails, the return value is zero. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>. Possible values include the following.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_MORE_DATA</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <i>lpNameBuffer</i> buffer is too small. The <i>lpnSize</i> parameter contains the number of bytes required to receive the name.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NO_SUCH_DOMAIN</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe domain controller is not available to perform the lookup\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NONE_MAPPED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe user name is not available in the specified format.\n\n</td>\n</tr>\n</table>\n\n## -see-also\n\n<a href=\"/windows/desktop/api/secext/ne-secext-extended_name_format\">EXTENDED_NAME_FORMAT</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-lookupaccountnamea\">LookupAccountName</a>\n\n\n\n<a href=\"/windows/desktop/SysInfo/system-information-functions\">System Information Functions</a>\n\n## -remarks\n\n> [!NOTE]\n> The secext.h header defines GetUserNameEx as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "debugstr_NameFormat",
+   "file": "dlls/secur32/secur32.c",
+   "start_line": 817,
+   "end_line": 840,
+   "static": true,
+   "called_from": [
+    "GetUserNameExW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/secur32/secur32.c:874",
+    "dlls/secur32/secur32.c:906",
+    "dlls/secur32/secur32.c:1093",
+    "dlls/secur32/secur32.c:1182",
+    "dlls/secur32/secur32.c:1183"
+   ],
+   "signature": "static const char *debugstr_NameFormat( EXTENDED_NAME_FORMAT format )",
+   "code": "static const char *debugstr_NameFormat( EXTENDED_NAME_FORMAT format )\n{\n    static const char * const names[] =\n    {\n        \"NameUnknown\",\n        \"NameFullyQualifiedDN\",\n        \"NameSamCompatible\",\n        \"NameDisplay\",\n        NULL,\n        NULL,\n        \"NameUniqueId\",\n        \"NameCanonical\",\n        \"NameUserPrincipal\",\n        \"NameCanonicalEx\",\n        \"NameServicePrincipal\",\n        NULL,\n        \"NameDnsDomain\",\n        \"NameGivenName\",\n        \"NameSurname\"\n    };\n\n    if (format < ARRAY_SIZE(names) && names[format]) return names[format];\n    return wine_dbg_sprintf( \"%u\", format );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(secur32);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "GetComputerNameW",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernel32/computername.c:41"
+    ]
+   },
+   {
+    "name": "GetUserNameW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/advapi.c:60"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "lstrcpyW",
+   "lstrlenW",
+   "wine_dbg_log",
+   "wine_dbg_sprintf"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

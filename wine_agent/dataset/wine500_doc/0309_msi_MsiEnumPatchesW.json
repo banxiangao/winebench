@@ -1,0 +1,351 @@
+{
+ "id": "0309",
+ "function": {
+  "name": "MsiEnumPatchesW",
+  "export_name": "MsiEnumPatchesW",
+  "module": "msi",
+  "source_module": "msi",
+  "exported_by": [
+   "msi"
+  ],
+  "side": "PE",
+  "file": "dlls/msi/registry.c",
+  "start_line": 2053,
+  "end_line": 2097,
+  "body_lines": 42,
+  "signature": "UINT WINAPI MsiEnumPatchesW( const WCHAR *szProduct, DWORD iPatchIndex, WCHAR *lpPatchBuf, WCHAR *lpTransformsBuf, DWORD *pcchTransformsBuf )",
+  "header_comment": "/***********************************************************************\n * MsiEnumPatchesW            [MSI.@]\n */",
+  "code": "UINT WINAPI MsiEnumPatchesW( const WCHAR *szProduct, DWORD iPatchIndex, WCHAR *lpPatchBuf, WCHAR *lpTransformsBuf,\n                             DWORD *pcchTransformsBuf )\n{\n    WCHAR *transforms = NULL, squashed_pc[SQUASHED_GUID_SIZE];\n    HKEY prod;\n    DWORD idx = 0;\n    UINT r;\n\n    TRACE( \"%s, %lu, %p, %p, %p)\\n\", debugstr_w(szProduct), iPatchIndex, lpPatchBuf, lpTransformsBuf,\n           pcchTransformsBuf );\n\n    if (!szProduct || !squash_guid( szProduct, squashed_pc ))\n        return ERROR_INVALID_PARAMETER;\n\n    if (!lpPatchBuf || !lpTransformsBuf || !pcchTransformsBuf)\n        return ERROR_INVALID_PARAMETER;\n\n    if (MSIREG_OpenProductKey(szProduct, NULL, MSIINSTALLCONTEXT_USERMANAGED,\n                              &prod, FALSE) != ERROR_SUCCESS &&\n        MSIREG_OpenProductKey(szProduct, NULL, MSIINSTALLCONTEXT_USERUNMANAGED,\n                              &prod, FALSE) != ERROR_SUCCESS &&\n        MSIREG_OpenProductKey(szProduct, NULL, MSIINSTALLCONTEXT_MACHINE,\n                              &prod, FALSE) != ERROR_SUCCESS)\n        return ERROR_UNKNOWN_PRODUCT;\n\n    RegCloseKey(prod);\n\n    r = enum_patches(szProduct, NULL, MSIINSTALLCONTEXT_ALL, MSIPATCHSTATE_ALL, iPatchIndex, &idx, lpPatchBuf, NULL,\n                     NULL, NULL, NULL, &transforms);\n    if (r != ERROR_SUCCESS)\n        goto done;\n\n    lstrcpynW(lpTransformsBuf, transforms, *pcchTransformsBuf);\n    if (*pcchTransformsBuf <= lstrlenW(transforms))\n    {\n        r = ERROR_MORE_DATA;\n        *pcchTransformsBuf = lstrlenW(transforms);\n    }\n    else\n        *pcchTransformsBuf = lstrlenW(transforms);\n\ndone:\n    free(transforms);\n    return r;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winnls.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"msi.h\"",
+   "#include \"msipriv.h\"",
+   "#include \"wincrypt.h\"",
+   "#include \"winver.h\"",
+   "#include \"winuser.h\"",
+   "#include \"sddl.h\""
+  ],
+  "resolution": [
+   "msi!MsiEnumPatchesW [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/msi/tests/msi.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "msi",
+   "path": "sdk-api-src/content/msi/nf-msi-msienumpatchesw.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/msi/nf-msi-msienumpatchesw",
+   "documented_name": "msienumpatchesw",
+   "file": "docs/0309_sdk-api_nf-msi-msienumpatchesw.md",
+   "text": "---\nUID: NF:msi.MsiEnumPatchesW\ntitle: MsiEnumPatchesW function (msi.h)\ndescription: The MsiEnumPatches function enumerates all of the patches that have been applied to a product. (Unicode)\nhelpviewer_keywords: [\"MsiEnumPatches\", \"MsiEnumPatches function\", \"MsiEnumPatchesW\", \"_msi_msienumpatches\", \"msi/MsiEnumPatches\", \"msi/MsiEnumPatchesW\", \"setup.msienumpatches\"]\nold-location: setup\\msienumpatches.htm\ntech.root: setup\nms.assetid: 8f15accf-1ff5-4aa3-8a8e-be0e339360d2\nms.date: 12/05/2018\nms.keywords: MsiEnumPatches, MsiEnumPatches function, MsiEnumPatchesA, MsiEnumPatchesW, _msi_msienumpatches, msi/MsiEnumPatches, msi/MsiEnumPatchesA, msi/MsiEnumPatchesW, setup.msienumpatches\nreq.header: msi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Installer 5.0 on Windows Server 2012, Windows 8, Windows Server 2008 R2 or Windows 7. Windows Installer 4.0 or Windows Installer 4.5 on   Windows Server 2008 or Windows Vista. Windows Installer on Windows Server 2003 or Windows XP. See the Windows Installer Run-Time Requirements for information about the minimum Windows service pack that is required by a Windows Installer version.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: MsiEnumPatchesW (Unicode) and MsiEnumPatchesA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Msi.lib\nreq.dll: Msi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - MsiEnumPatchesW\n - msi/MsiEnumPatchesW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Msi.dll\napi_name:\n - MsiEnumPatches\n - MsiEnumPatchesA\n - MsiEnumPatchesW\n---\n\n# MsiEnumPatchesW function\n\n\n## -description\n\nThe \n<b>MsiEnumPatches</b> function enumerates all of the patches that have been applied to a product. The function returns the patch code GUID for each patch that has been applied to the product and returns a list of transforms from each patch that apply to the product. Note that patches may have many transforms only some of which are applicable to a particular product. The list of transforms are returned in the same format as the value of the \n<a href=\"/windows/desktop/Msi/transforms\">TRANSFORMS</a> property.\n<div class=\"alert\"><b>Note</b>  <i>pcchTransformsBuf</i> is not set to the number of characters copied to <i>lpTransformsBuf</i> upon a successful return of \n<b>MsiEnumPatches</b>.</div><div> </div>\n\n## -parameters\n\n### -param szProduct [in]\n\nSpecifies the product code of the product for which patches are to be enumerated.\n\n### -param iPatchIndex [in]\n\nSpecifies the index of the patch to retrieve. This parameter should be zero for the first call to the \n<b>MsiEnumPatches</b> function and then incremented for subsequent calls.\n\n### -param lpPatchBuf [out]\n\nPointer to a buffer that receives the patch's GUID. This argument is required.\n\n### -param lpTransformsBuf [out]\n\nPointer to a buffer that receives the list of transforms in the patch that are applicable to the product. This argument is required and cannot be Null.\n\n### -param pcchTransformsBuf [in, out]\n\nSet to the number of characters copied to <i>lpTransformsBuf</i> upon an unsuccessful return of the function. Not set for a successful return. On input, this is the full size of the buffer, including a space for a terminating null character. If the buffer passed in is too small, the count returned does not include the terminating null character.\n\n## -returns\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_BAD_CONFIGURATION</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe configuration data is corrupt.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn invalid parameter was passed to the function.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NO_MORE_ITEMS</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThere are no patches to return.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_SUCCESS</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA value was enumerated.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_MORE_DATA</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA buffer is too small to hold the requested data.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nTo enumerate patches, an application should initially call the \n<b>MsiEnumPatches</b> function with the <i>iPatchIndex</i> parameter set to zero. The application should then increment the <i>iPatchIndex</i> parameter and call \n<b>MsiEnumPatches</b> until there are no more products (until the function returns ERROR_NO_MORE_ITEMS).\n\nIf the buffer is too small to hold the requested data, \n<b>MsiEnumPatches</b> returns ERROR_MORE_DATA and <i>pcchTransformsBuf</i> contains the number of characters copied to <i>lpTransformsBuf</i>, without counting the Null character.\n\n\n\n\n> [!NOTE]\n> The msi.h header defines MsiEnumPatches as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "squash_guid",
+   "file": "dlls/msi/registry.c",
+   "start_line": 74,
+   "end_line": 106,
+   "static": false,
+   "called_from": [
+    "MSIREG_OpenProductKey",
+    "MSIREG_OpenUserDataPatchKey",
+    "MSIREG_OpenUserDataProductKey",
+    "MsiEnumPatchesW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msi/msi.c:148",
+    "dlls/msi/msi.c:1017",
+    "dlls/msi/msi.c:1112",
+    "dlls/msi/msi.c:1411",
+    "dlls/msi/msi.c:1680"
+   ],
+   "signature": "BOOL squash_guid(LPCWSTR in, LPWSTR out)",
+   "code": "BOOL squash_guid(LPCWSTR in, LPWSTR out)\n{\n    DWORD i,n=1;\n    GUID guid;\n\n    out[0] = 0;\n\n    if (FAILED(CLSIDFromString((LPCOLESTR)in, &guid)))\n        return FALSE;\n\n    for(i=0; i<8; i++)\n        out[7-i] = in[n++];\n    n++;\n    for(i=0; i<4; i++)\n        out[11-i] = in[n++];\n    n++;\n    for(i=0; i<4; i++)\n        out[15-i] = in[n++];\n    n++;\n    for(i=0; i<2; i++)\n    {\n        out[17+i*2] = in[n++];\n        out[16+i*2] = in[n++];\n    }\n    n++;\n    for( ; i<8; i++)\n    {\n        out[17+i*2] = in[n++];\n        out[16+i*2] = in[n++];\n    }\n    out[32]=0;\n    return TRUE;\n}"
+  },
+  {
+   "name": "MSIREG_OpenProductKey",
+   "file": "dlls/msi/registry.c",
+   "start_line": 338,
+   "end_line": 376,
+   "static": false,
+   "called_from": [
+    "MsiEnumPatchesW",
+    "check_product_patches"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msi/msipriv.h:928",
+    "dlls/msi/msi.c:61",
+    "dlls/msi/msi.c:64",
+    "dlls/msi/msi.c:67",
+    "dlls/msi/msi.c:1049"
+   ],
+   "signature": "UINT MSIREG_OpenProductKey(LPCWSTR szProduct, LPCWSTR szUserSid, MSIINSTALLCONTEXT context, HKEY *key, BOOL create)",
+   "code": "UINT MSIREG_OpenProductKey(LPCWSTR szProduct, LPCWSTR szUserSid, MSIINSTALLCONTEXT context, HKEY *key, BOOL create)\n{\n    HKEY root = HKEY_LOCAL_MACHINE;\n    REGSAM access = KEY_WOW64_64KEY | KEY_ALL_ACCESS;\n    WCHAR *usersid = NULL, squashed_pc[SQUASHED_GUID_SIZE], keypath[MAX_PATH];\n\n    if (!squash_guid( szProduct, squashed_pc )) return ERROR_FUNCTION_FAILED;\n    TRACE(\"%s squashed %s\\n\", debugstr_w(szProduct), debugstr_w(squashed_pc));\n\n    if (context == MSIINSTALLCONTEXT_MACHINE)\n    {\n        lstrcpyW(keypath, L\"Software\\\\Classes\\\\Installer\\\\Products\\\\\");\n        lstrcatW( keypath, squashed_pc );\n    }\n    else if (context == MSIINSTALLCONTEXT_USERUNMANAGED)\n    {\n        root = HKEY_CURRENT_USER;\n        lstrcpyW( keypath, L\"Software\\\\Microsoft\\\\Installer\\\\Products\\\\\" );\n        lstrcatW( keypath, squashed_pc );\n    }\n    else\n    {\n        if (!szUserSid)\n        {\n            if (!(usersid = get_user_sid()))\n            {\n                ERR(\"Failed to retrieve user SID\\n\");\n                return ERROR_FUNCTION_FAILED;\n            }\n            szUserSid = usersid;\n        }\n        swprintf( keypath, ARRAY_SIZE(keypath),\n                  L\"Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Installer\\\\Managed\\\\%s\\\\Installer\\\\Products\\\\%s\",\n                  szUserSid, squashed_pc );\n        LocalFree(usersid);\n    }\n    if (create) return RegCreateKeyExW(root, keypath, 0, NULL, 0, access, NULL, key, NULL);\n    return RegOpenKeyExW(root, keypath, 0, access, key);\n}"
+  },
+  {
+   "name": "enum_patches",
+   "file": "dlls/msi/registry.c",
+   "start_line": 1899,
+   "end_line": 1943,
+   "static": true,
+   "called_from": [
+    "MsiEnumPatchesW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msi/registry.c:1985"
+   ],
+   "signature": "static UINT enum_patches(const WCHAR *szProductCode, const WCHAR *szUserSid, DWORD dwContext, DWORD dwFilter, DWORD dwIndex, DWORD *idx, WCHAR *szPatchCode, WCHAR *szTargetProductCode, MSIINSTALLCONTEXT *pdwTargetProductContext, WCHAR *szTargetUserSid, DWORD *pcchTargetUserSid, WCHAR **szTransforms)",
+   "code": "static UINT enum_patches(const WCHAR *szProductCode, const WCHAR *szUserSid, DWORD dwContext, DWORD dwFilter,\n                         DWORD dwIndex, DWORD *idx, WCHAR *szPatchCode, WCHAR *szTargetProductCode,\n                         MSIINSTALLCONTEXT *pdwTargetProductContext, WCHAR *szTargetUserSid, DWORD *pcchTargetUserSid,\n                         WCHAR **szTransforms)\n{\n    LPWSTR usersid = NULL;\n    UINT r = ERROR_INVALID_PARAMETER;\n\n    if (!szUserSid)\n    {\n        szUserSid = usersid = get_user_sid();\n        if (!usersid) return ERROR_FUNCTION_FAILED;\n    }\n\n    if (dwContext & MSIINSTALLCONTEXT_USERMANAGED)\n    {\n        r = check_product_patches(szProductCode, szUserSid, MSIINSTALLCONTEXT_USERMANAGED, dwFilter, dwIndex, idx,\n                                  szPatchCode, szTargetProductCode, pdwTargetProductContext, szTargetUserSid,\n                                  pcchTargetUserSid, szTransforms);\n        if (r != ERROR_NO_MORE_ITEMS)\n            goto done;\n    }\n\n    if (dwContext & MSIINSTALLCONTEXT_USERUNMANAGED)\n    {\n        r = check_product_patches(szProductCode, szUserSid, MSIINSTALLCONTEXT_USERUNMANAGED, dwFilter, dwIndex, idx,\n                                  szPatchCode, szTargetProductCode, pdwTargetProductContext, szTargetUserSid,\n                                  pcchTargetUserSid, szTransforms);\n        if (r != ERROR_NO_MORE_ITEMS)\n            goto done;\n    }\n\n    if (dwContext & MSIINSTALLCONTEXT_MACHINE)\n    {\n        r = check_product_patches(szProductCode, szUserSid, MSIINSTALLCONTEXT_MACHINE, dwFilter, dwIndex, idx,\n                                  szPatchCode, szTargetProductCode, pdwTargetProductContext, szTargetUserSid,\n                                  pcchTargetUserSid, szTransforms);\n        if (r != ERROR_NO_MORE_ITEMS)\n            goto done;\n    }\n\ndone:\n    LocalFree(usersid);\n    return r;\n}"
+  },
+  {
+   "name": "get_user_sid",
+   "file": "dlls/msi/registry.c",
+   "start_line": 269,
+   "end_line": 300,
+   "static": true,
+   "called_from": [
+    "MSIREG_OpenProductKey",
+    "MSIREG_OpenUserDataPatchKey",
+    "MSIREG_OpenUserDataProductKey",
+    "enum_patches"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msi/registry.c:429",
+    "dlls/msi/registry.c:476",
+    "dlls/msi/registry.c:523",
+    "dlls/msi/registry.c:551",
+    "dlls/msi/registry.c:637"
+   ],
+   "signature": "static WCHAR *get_user_sid(void)",
+   "code": "static WCHAR *get_user_sid(void)\n{\n    HANDLE token;\n    DWORD size = 256;\n    TOKEN_USER *user;\n    WCHAR *ret;\n\n    if (!OpenProcessToken( GetCurrentProcess(), TOKEN_QUERY, &token )) return NULL;\n    if (!(user = malloc( size )))\n    {\n        CloseHandle( token );\n        return NULL;\n    }\n    if (!GetTokenInformation( token, TokenUser, user, size, &size ))\n    {\n        free( user );\n        if (GetLastError() != ERROR_INSUFFICIENT_BUFFER || !(user = malloc( size )))\n        {\n            CloseHandle( token );\n            return NULL;\n        }\n        GetTokenInformation( token, TokenUser, user, size, &size );\n    }\n    CloseHandle( token );\n    if (!ConvertSidToStringSidW( user->User.Sid, &ret ))\n    {\n        free( user );\n        return NULL;\n    }\n    free( user );\n    return ret;\n}"
+  },
+  {
+   "name": "check_product_patches",
+   "file": "dlls/msi/registry.c",
+   "start_line": 1732,
+   "end_line": 1897,
+   "static": true,
+   "called_from": [
+    "enum_patches"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static UINT check_product_patches(const WCHAR *prodcode, const WCHAR *usersid, MSIINSTALLCONTEXT context, DWORD filter, DWORD index, DWORD *idx, WCHAR *patch, WCHAR *targetprod, MSIINSTALLCONTEXT *targetctx, WCHAR *targetsid, DWORD *sidsize, WCHAR **transforms)",
+   "code": "static UINT check_product_patches(const WCHAR *prodcode, const WCHAR *usersid, MSIINSTALLCONTEXT context,\n                                  DWORD filter, DWORD index, DWORD *idx, WCHAR *patch, WCHAR *targetprod,\n                                  MSIINSTALLCONTEXT *targetctx, WCHAR *targetsid, DWORD *sidsize, WCHAR **transforms)\n{\n    MSIPATCHSTATE state = MSIPATCHSTATE_INVALID;\n    LPWSTR ptr, patches = NULL;\n    HKEY prod, patchkey = 0;\n    HKEY localprod = 0, localpatch = 0;\n    DWORD type, size;\n    LONG res;\n    UINT temp, r = ERROR_NO_MORE_ITEMS;\n\n    if (MSIREG_OpenProductKey(prodcode, usersid, context,\n                              &prod, FALSE) != ERROR_SUCCESS)\n        return ERROR_NO_MORE_ITEMS;\n\n    size = 0;\n    res = RegGetValueW(prod, L\"Patches\", L\"Patches\", RRF_RT_ANY, &type, NULL,\n                       &size);\n    if (res != ERROR_SUCCESS)\n        goto done;\n\n    if (type != REG_MULTI_SZ)\n    {\n        r = ERROR_BAD_CONFIGURATION;\n        goto done;\n    }\n\n    patches = malloc(size);\n    if (!patches)\n    {\n        r = ERROR_OUTOFMEMORY;\n        goto done;\n    }\n\n    res = RegGetValueW(prod, L\"Patches\", L\"Patches\", RRF_RT_ANY, &type,\n                       patches, &size);\n    if (res != ERROR_SUCCESS)\n        goto done;\n\n    for (ptr = patches; *ptr && r == ERROR_NO_MORE_ITEMS; ptr += lstrlenW(ptr) + 1)\n    {\n        if (!unsquash_guid(ptr, patch))\n        {\n            r = ERROR_BAD_CONFIGURATION;\n            goto done;\n        }\n\n        size = 0;\n        res = RegGetValueW(prod, L\"Patches\", ptr, RRF_RT_REG_SZ,\n                           &type, NULL, &size);\n        if (res != ERROR_SUCCESS)\n            continue;\n\n        if (transforms)\n        {\n            *transforms = malloc(size);\n            if (!*transforms)\n            {\n                r = ERROR_OUTOFMEMORY;\n                goto done;\n            }\n\n            res = RegGetValueW(prod, L\"Patches\", ptr, RRF_RT_REG_SZ,\n                               &type, *transforms, &size);\n            if (res != ERROR_SUCCESS)\n                continue;\n        }\n\n        if (context == MSIINSTALLCONTEXT_USERMANAGED)\n        {\n            if (!(filter & MSIPATCHSTATE_APPLIED))\n            {\n                temp = get_patch_state(prodcode, usersid, context, ptr, &state);\n                if (temp == ERROR_BAD_CONFIGURATION)\n                {\n                    r = ERROR_BAD_CONFIGURATION;\n                    goto done;\n                }\n\n                if (temp != ERROR_SUCCESS || !(filter & state))\n                    continue;\n            }\n        }\n        else if (context == MSIINSTALLCONTEXT_USERUNMANAGED)\n        {\n            if (!(filter & MSIPATCHSTATE_APPLIED))\n            {\n                temp = get_patch_state(prodcode, usersid, context, ptr, &state);\n                if (temp == ERROR_BAD_CONFIGURATION)\n                {\n                    r = ERROR_BAD_CONFIGURATION;\n                    goto done;\n                }\n\n                if (temp != ERROR_SUCCESS || !(filter & state))\n                    continue;\n            }\n            else\n            {\n                temp = MSIREG_OpenUserDataPatchKey(patch, context,\n                                                   &patchkey, FALSE);\n                RegCloseKey(patchkey);\n                if (temp != ERROR_SUCCESS)\n                    continue;\n            }\n        }\n        else if (context == MSIINSTALLCONTEXT_MACHINE)\n        {\n            usersid = L\"\";\n\n            if (MSIREG_OpenUserDataProductKey(prodcode, context, NULL, &localprod, FALSE) == ERROR_SUCCESS &&\n                RegOpenKeyExW(localprod, L\"Patches\", 0, KEY_READ, &localpatch) == ERROR_SUCCESS &&\n                RegOpenKeyExW(localpatch, ptr, 0, KEY_READ, &patchkey) == ERROR_SUCCESS)\n            {\n                size = sizeof(state);\n                res = RegGetValueW(patchkey, NULL, L\"State\", RRF_RT_REG_DWORD,\n                                   &type, &state, &size);\n\n                if (!(filter & state))\n                    res = ERROR_NO_MORE_ITEMS;\n\n                RegCloseKey(patchkey);\n            }\n\n            RegCloseKey(localpatch);\n            RegCloseKey(localprod);\n\n            if (res != ERROR_SUCCESS)\n                continue;\n        }\n\n        if (*idx < index)\n        {\n            (*idx)++;\n            continue;\n        }\n\n        r = ERROR_SUCCESS;\n        if (targetprod)\n            lstrcpyW(targetprod, prodcode);\n\n        if (targetctx)\n            *targetctx = context;\n\n        if (targetsid)\n        {\n            lstrcpynW(targetsid, usersid, *sidsize);\n            if (lstrlenW(usersid) >= *sidsize)\n                r = ERROR_MORE_DATA;\n        }\n\n        if (sidsize)\n        {\n            *sidsize = lstrlenW(usersid);\n            if (!targetsid)\n                *sidsize *= sizeof(WCHAR);\n        }\n    }\n\ndone:\n    RegCloseKey(prod);\n    free(patches);\n\n    return r;\n}"
+  },
+  {
+   "name": "unsquash_guid",
+   "file": "dlls/msi/registry.c",
+   "start_line": 41,
+   "end_line": 72,
+   "static": false,
+   "called_from": [
+    "check_product_patches"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msi/msi.c:1047",
+    "dlls/msi/msi.c:1069",
+    "dlls/msi/msi.c:1215",
+    "dlls/msi/upgrade.c:155",
+    "dlls/msi/registry.c:1188"
+   ],
+   "signature": "BOOL unsquash_guid(LPCWSTR in, LPWSTR out)",
+   "code": "BOOL unsquash_guid(LPCWSTR in, LPWSTR out)\n{\n    DWORD i,n=0;\n\n    if (lstrlenW(in) != 32)\n        return FALSE;\n\n    out[n++]='{';\n    for(i=0; i<8; i++)\n        out[n++] = in[7-i];\n    out[n++]='-';\n    for(i=0; i<4; i++)\n        out[n++] = in[11-i];\n    out[n++]='-';\n    for(i=0; i<4; i++)\n        out[n++] = in[15-i];\n    out[n++]='-';\n    for(i=0; i<2; i++)\n    {\n        out[n++] = in[17+i*2];\n        out[n++] = in[16+i*2];\n    }\n    out[n++]='-';\n    for( ; i<8; i++)\n    {\n        out[n++] = in[17+i*2];\n        out[n++] = in[16+i*2];\n    }\n    out[n++]='}';\n    out[n]=0;\n    return TRUE;\n}"
+  },
+  {
+   "name": "get_patch_state",
+   "file": "dlls/msi/registry.c",
+   "start_line": 1688,
+   "end_line": 1730,
+   "static": true,
+   "called_from": [
+    "check_product_patches"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static UINT get_patch_state(const WCHAR *prodcode, const WCHAR *usersid, MSIINSTALLCONTEXT context, WCHAR *patch, MSIPATCHSTATE *state)",
+   "code": "static UINT get_patch_state(const WCHAR *prodcode, const WCHAR *usersid, MSIINSTALLCONTEXT context,\n                            WCHAR *patch, MSIPATCHSTATE *state)\n{\n    DWORD type, val, size;\n    HKEY prod, hkey = 0;\n    HKEY udpatch = 0;\n    LONG res;\n    UINT r = ERROR_NO_MORE_ITEMS;\n\n    *state = MSIPATCHSTATE_INVALID;\n\n    r = MSIREG_OpenUserDataProductKey(prodcode, context,\n                                      usersid, &prod, FALSE);\n    if (r != ERROR_SUCCESS)\n        return ERROR_NO_MORE_ITEMS;\n\n    res = RegOpenKeyExW(prod, L\"Patches\", 0, KEY_READ, &hkey);\n    if (res != ERROR_SUCCESS)\n        goto done;\n\n    res = RegOpenKeyExW(hkey, patch, 0, KEY_READ, &udpatch);\n    if (res != ERROR_SUCCESS)\n        goto done;\n\n    size = sizeof(DWORD);\n    res = RegGetValueW(udpatch, NULL, L\"State\", RRF_RT_DWORD, &type, &val, &size);\n    if (res != ERROR_SUCCESS ||\n        val < MSIPATCHSTATE_APPLIED || val > MSIPATCHSTATE_REGISTERED)\n    {\n        r = ERROR_BAD_CONFIGURATION;\n        goto done;\n    }\n\n    *state = val;\n    r = ERROR_SUCCESS;\n\ndone:\n    RegCloseKey(udpatch);\n    RegCloseKey(hkey);\n    RegCloseKey(prod);\n\n    return r;\n}"
+  },
+  {
+   "name": "MSIREG_OpenUserDataPatchKey",
+   "file": "dlls/msi/registry.c",
+   "start_line": 595,
+   "end_line": 619,
+   "static": false,
+   "called_from": [
+    "check_product_patches"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msi/msipriv.h:941",
+    "dlls/msi/msi.c:1736",
+    "dlls/msi/action.c:4183"
+   ],
+   "signature": "UINT MSIREG_OpenUserDataPatchKey(LPCWSTR szPatch, MSIINSTALLCONTEXT dwContext, HKEY *key, BOOL create)",
+   "code": "UINT MSIREG_OpenUserDataPatchKey(LPCWSTR szPatch, MSIINSTALLCONTEXT dwContext, HKEY *key, BOOL create)\n{\n    static const WCHAR fmtW[] =\n        L\"Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Installer\\\\UserData\\\\%s\\\\Patches\\\\%s\";\n    REGSAM access = KEY_WOW64_64KEY | KEY_ALL_ACCESS;\n    WCHAR *usersid, squashed_patch[SQUASHED_GUID_SIZE], keypath[0x200];\n\n    if (!squash_guid( szPatch, squashed_patch )) return ERROR_FUNCTION_FAILED;\n    TRACE(\"%s squashed %s\\n\", debugstr_w(szPatch), debugstr_w(squashed_patch));\n\n    if (dwContext == MSIINSTALLCONTEXT_MACHINE)\n        swprintf( keypath, ARRAY_SIZE(keypath), fmtW, L\"S-1-5-18\", squashed_patch );\n    else\n    {\n        if (!(usersid = get_user_sid()))\n        {\n            ERR(\"Failed to retrieve user SID\\n\");\n            return ERROR_FUNCTION_FAILED;\n        }\n        swprintf( keypath, ARRAY_SIZE(keypath), fmtW, usersid, squashed_patch );\n        LocalFree(usersid);\n    }\n    if (create) return RegCreateKeyExW(HKEY_LOCAL_MACHINE, keypath, 0, NULL, 0, access, NULL, key, NULL);\n    return RegOpenKeyExW(HKEY_LOCAL_MACHINE, keypath, 0, access, key);\n}"
+  },
+  {
+   "name": "MSIREG_OpenUserDataProductKey",
+   "file": "dlls/msi/registry.c",
+   "start_line": 567,
+   "end_line": 593,
+   "static": false,
+   "called_from": [
+    "check_product_patches",
+    "get_patch_state"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msi/msipriv.h:939",
+    "dlls/msi/msi.c:1703",
+    "dlls/msi/msi.c:2814",
+    "dlls/msi/action.c:4298"
+   ],
+   "signature": "UINT MSIREG_OpenUserDataProductKey(LPCWSTR szProduct, MSIINSTALLCONTEXT dwContext, LPCWSTR szUserSid, HKEY *key, BOOL create)",
+   "code": "UINT MSIREG_OpenUserDataProductKey(LPCWSTR szProduct, MSIINSTALLCONTEXT dwContext, LPCWSTR szUserSid, HKEY *key, BOOL create)\n{\n    static const WCHAR fmtW[] =\n        L\"Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Installer\\\\UserData\\\\%s\\\\Products\\\\%s\";\n    REGSAM access = KEY_WOW64_64KEY | KEY_ALL_ACCESS;\n    WCHAR *usersid, squashed_pc[SQUASHED_GUID_SIZE], keypath[0x200];\n\n    if (!squash_guid( szProduct, squashed_pc )) return ERROR_FUNCTION_FAILED;\n    TRACE(\"%s squashed %s\\n\", debugstr_w(szProduct), debugstr_w(squashed_pc));\n\n    if (dwContext == MSIINSTALLCONTEXT_MACHINE)\n        swprintf( keypath, ARRAY_SIZE(keypath), fmtW, L\"S-1-5-18\", squashed_pc );\n    else if (szUserSid)\n        swprintf( keypath, ARRAY_SIZE(keypath), fmtW, szUserSid, squashed_pc );\n    else\n    {\n        if (!(usersid = get_user_sid()))\n        {\n            ERR(\"Failed to retrieve user SID\\n\");\n            return ERROR_FUNCTION_FAILED;\n        }\n        swprintf( keypath, ARRAY_SIZE(keypath), fmtW, usersid, squashed_pc );\n        LocalFree(usersid);\n    }\n    if (create) return RegCreateKeyExW(HKEY_LOCAL_MACHINE, keypath, 0, NULL, 0, access, NULL, key, NULL);\n    return RegOpenKeyExW(HKEY_LOCAL_MACHINE, keypath, 0, access, key);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 39,
+    "end_line": 39,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(msi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "CLSIDFromString",
+    "module": "ole32",
+    "impl": [
+     "dlls/combase/combase.c:1480"
+    ]
+   },
+   {
+    "name": "CloseHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "ConvertSidToStringSidW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/sechost/security.c:227"
+    ]
+   },
+   {
+    "name": "GetTokenInformation",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/security.c:704"
+    ]
+   },
+   {
+    "name": "LocalFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:1107"
+    ]
+   },
+   {
+    "name": "OpenProcessToken",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/security.c:828"
+    ]
+   },
+   {
+    "name": "RegCloseKey",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1129"
+    ]
+   },
+   {
+    "name": "RegCreateKeyExW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:566"
+    ]
+   },
+   {
+    "name": "RegGetValueW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1900"
+    ]
+   },
+   {
+    "name": "RegOpenKeyExW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:644"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetCurrentProcess",
+   "GetLastError",
+   "debugstr_w",
+   "lstrcatW",
+   "lstrcpyW",
+   "lstrcpynW",
+   "lstrlenW",
+   "swprintf",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

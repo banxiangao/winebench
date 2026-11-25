@@ -1,0 +1,241 @@
+{
+ "id": "0018",
+ "function": {
+  "name": "GdipCombineRegionRect",
+  "export_name": "GdipCombineRegionRect",
+  "module": "gdiplus",
+  "source_module": "gdiplus",
+  "exported_by": [
+   "gdiplus"
+  ],
+  "side": "PE",
+  "file": "dlls/gdiplus/region.c",
+  "start_line": 297,
+  "end_line": 339,
+  "body_lines": 40,
+  "signature": "GpStatus WINGDIPAPI GdipCombineRegionRect(GpRegion *region, GDIPCONST GpRectF *rect, CombineMode mode)",
+  "header_comment": "/*****************************************************************************\n * GdipCombineRegionRect [GDIPLUS.@]\n */",
+  "code": "GpStatus WINGDIPAPI GdipCombineRegionRect(GpRegion *region,\n        GDIPCONST GpRectF *rect, CombineMode mode)\n{\n    GpRegion *rect_region;\n    region_element *left, *right = NULL;\n    GpStatus stat;\n\n    TRACE(\"%p %s %d\\n\", region, debugstr_rectf(rect), mode);\n\n    if (!(region && rect))\n        return InvalidParameter;\n\n    stat = GdipCreateRegionRect(rect, &rect_region);\n    if (stat != Ok)\n        return stat;\n\n    /* simply replace region data */\n    if(mode == CombineModeReplace){\n        delete_element(&region->node);\n        memcpy(region, rect_region, sizeof(GpRegion));\n        free(rect_region);\n        return Ok;\n    }\n\n    left = malloc(sizeof(region_element));\n    if (left)\n    {\n        memcpy(left, &region->node, sizeof(region_element));\n        stat = clone_element(&rect_region->node, &right);\n        if (stat == Ok)\n        {\n            fuse_region(region, left, right, mode);\n            GdipDeleteRegion(rect_region);\n            return Ok;\n        }\n    }\n    else\n        stat = OutOfMemory;\n\n    free(left);\n    GdipDeleteRegion(rect_region);\n    return stat;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"objbase.h\"",
+   "#include \"gdiplus.h\"",
+   "#include \"gdiplus_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "gdiplus!GdipCombineRegionRect [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdiplus/tests/graphics.c",
+   "dlls/gdiplus/tests/region.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 13
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "gdiplusflat",
+   "path": "desktop-src/gdiplus/-gdiplus-region-flat.md",
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-region-flat",
+   "documented_name": "gdipcombineregionrect",
+   "excerpt": {
+    "note": "GDI+ flat API page: one table row per function; only the page introduction, the table header and this function's row are kept",
+    "full_page_chars": 24326
+   },
+   "file": "docs/0018_win32_-gdiplus-region-flat.md",
+   "text": "---\ndescription: Windows GDI+ exposes a flat API that consists of about 600 functions. These flat API functions are wrapped by the Region C++ class.\nms.assetid: 2f1d3631-7104-421a-a577-ef764bffe034\ntitle: Region Functions (GDI+)\nms.topic: reference\nms.date: 05/31/2018\n---\n\n# Region Functions (GDI+)\n\nWindows GDI+ exposes a flat API that consists of about 600 functions, which are implemented in Gdiplus.dll and declared in Gdiplusflat.h. The functions in the GDI+ flat API are wrapped by a collection of about 40 C++ classes. It is recommended that you do not directly call the functions in the flat API. Whenever you make calls to GDI+, you should do so by calling the methods and functions provided by the C++ wrappers. Microsoft Product Support Services will not provide support for code that calls the flat API directly. For more information on using these wrapper methods, see [GDI+ Flat API](-gdiplus-flatapi-flat.md).\n\nThe following flat API functions are wrapped by the [**Region**](/windows/desktop/api/gdiplusheaders/nl-gdiplusheaders-region) C++ class.\n\n## Region Functions and Corresponding Wrapper Methods\n\n\n\n| Flat function                                                                                                                                            | Wrapper method                                                                                                                                                                                       | Remarks                                                                                                                                                                                                                                                                                                           |\n|----------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|\n| GpStatus WINGDIPAPI GdipCombineRegionRect(GpRegion \\*region, GDIPCONST GpRectF \\*rect, CombineMode combineMode)<br/>                               | [**Status Region::Intersect(IN const RectF& rect)**](/windows/win32/api/gdiplusheaders/nf-gdiplusheaders-region-intersect(inconstrectf_))<br/>                                                                                     | Updates this region to the portion of itself that intersects the specified rectangle's interior.<br/> The *combineMode* parameter in the flat function is a member of the [**CombineMode**](/windows/desktop/api/Gdiplusenums/ne-gdiplusenums-combinemode) enumeration that specifies how the region and rectangle are combined.<br/> |\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "clone_element",
+   "file": "dlls/gdiplus/region.c",
+   "start_line": 159,
+   "end_line": 203,
+   "static": true,
+   "called_from": [
+    "GdipCombineRegionRect"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/region.c:245",
+    "dlls/gdiplus/region.c:278",
+    "dlls/gdiplus/region.c:389"
+   ],
+   "signature": "static inline GpStatus clone_element(const region_element* element, region_element** element2)",
+   "code": "static inline GpStatus clone_element(const region_element* element,\n        region_element** element2)\n{\n    GpStatus stat;\n\n    /* root node is allocated with GpRegion */\n    if(!*element2){\n        *element2 = calloc(1, sizeof(region_element));\n        if (!*element2)\n            return OutOfMemory;\n    }\n\n    (*element2)->type = element->type;\n\n    switch (element->type)\n    {\n        case RegionDataRect:\n            (*element2)->elementdata.rect = element->elementdata.rect;\n            return Ok;\n        case RegionDataEmptyRect:\n        case RegionDataInfiniteRect:\n            return Ok;\n        case RegionDataPath:\n            stat = GdipClonePath(element->elementdata.path, &(*element2)->elementdata.path);\n            if (stat == Ok) return Ok;\n            break;\n        default:\n            (*element2)->elementdata.combine.left  = NULL;\n            (*element2)->elementdata.combine.right = NULL;\n\n            stat = clone_element(element->elementdata.combine.left,\n                    &(*element2)->elementdata.combine.left);\n            if (stat == Ok)\n            {\n                stat = clone_element(element->elementdata.combine.right,\n                        &(*element2)->elementdata.combine.right);\n                if (stat == Ok) return Ok;\n            }\n            break;\n    }\n\n    delete_element(*element2);\n    *element2 = NULL;\n    return stat;\n}"
+  },
+  {
+   "name": "fuse_region",
+   "file": "dlls/gdiplus/region.c",
+   "start_line": 208,
+   "end_line": 215,
+   "static": true,
+   "called_from": [
+    "GdipCombineRegionRect"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/region.c:281",
+    "dlls/gdiplus/region.c:396"
+   ],
+   "signature": "static inline void fuse_region(GpRegion* region, region_element* left, region_element* right, const CombineMode mode)",
+   "code": "static inline void fuse_region(GpRegion* region, region_element* left,\n        region_element* right, const CombineMode mode)\n{\n    region->node.type = mode;\n    region->node.elementdata.combine.left = left;\n    region->node.elementdata.combine.right = right;\n    region->num_children += 2;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 33,
+    "end_line": 33,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(gdiplus);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "debugstr_rectf",
+    "file": "dlls/gdiplus/gdiplus.c",
+    "start_line": 486
+   },
+   {
+    "name": "delete_element",
+    "file": "dlls/gdiplus/gdiplus.c",
+    "start_line": 465
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "GdipClonePath",
+    "impl": [
+     "dlls/gdiplus/graphicspath.c:1297"
+    ]
+   },
+   {
+    "name": "GdipCreateRegionRect",
+    "impl": [
+     "dlls/gdiplus/region.c:474"
+    ]
+   },
+   {
+    "name": "GdipDeleteRegion",
+    "impl": [
+     "dlls/gdiplus/region.c:582"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "calloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "gdiplus.GdipCombineRegionRect",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI+",
+   "header": "gdiplusflat.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 43,
+   "body": 41,
+   "code": 27
+  },
+  "cyclomatic": 7,
+  "return_type": "GpStatus",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 13,
+   "n_tests": 13,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/gdiplus/tests/graphics.c::test_clipping",
+    "dlls/gdiplus/tests/graphics.c::test_clipping_2",
+    "dlls/gdiplus/tests/region.c::test_combinereplace",
+    "dlls/gdiplus/tests/region.c::test_excludeinfinite",
+    "dlls/gdiplus/tests/region.c::test_getbounds",
+    "dlls/gdiplus/tests/region.c::test_gethrgn",
+    "dlls/gdiplus/tests/region.c::test_isequal",
+    "dlls/gdiplus/tests/region.c::test_isvisiblepoint",
+    "dlls/gdiplus/tests/region.c::test_isvisiblerect",
+    "dlls/gdiplus/tests/region.c::test_rounding",
+    "dlls/gdiplus/tests/region.c::test_scans",
+    "dlls/gdiplus/tests/region.c::test_transform",
+    "dlls/gdiplus/tests/region.c::test_translate"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-region-flat",
+   "source": "win32-gdiplus-flat",
+   "description": "",
+   "min_windows": "",
+   "documented_dll": "gdiplus.dll"
+  },
+  "exports": [
+   "gdiplus.GdipCombineRegionRect"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

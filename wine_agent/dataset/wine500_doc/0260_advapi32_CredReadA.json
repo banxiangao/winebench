@@ -1,0 +1,162 @@
+{
+ "id": "0260",
+ "function": {
+  "name": "CredReadA",
+  "export_name": "CredReadA",
+  "module": "advapi32",
+  "source_module": "advapi32",
+  "exported_by": [
+   "advapi32",
+   "sechost"
+  ],
+  "side": "PE",
+  "file": "dlls/advapi32/cred.c",
+  "start_line": 1116,
+  "end_line": 1158,
+  "body_lines": 40,
+  "signature": "BOOL WINAPI CredReadA(LPCSTR TargetName, DWORD Type, DWORD Flags, PCREDENTIALA *Credential)",
+  "header_comment": "/******************************************************************************\n * CredReadA [ADVAPI32.@]\n */",
+  "code": "BOOL WINAPI CredReadA(LPCSTR TargetName, DWORD Type, DWORD Flags, PCREDENTIALA *Credential)\n{\n    LPWSTR TargetNameW;\n    PCREDENTIALW CredentialW;\n    INT len;\n\n    TRACE(\"(%s, %ld, 0x%lx, %p)\\n\", debugstr_a(TargetName), Type, Flags, Credential);\n\n    if (!TargetName)\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return FALSE;\n    }\n\n    len = MultiByteToWideChar(CP_ACP, 0, TargetName, -1, NULL, 0);\n    TargetNameW = malloc(len * sizeof(WCHAR));\n    if (!TargetNameW)\n    {\n        SetLastError(ERROR_OUTOFMEMORY);\n        return FALSE;\n    }\n    MultiByteToWideChar(CP_ACP, 0, TargetName, -1, TargetNameW, len);\n\n    if (!CredReadW(TargetNameW, Type, Flags, &CredentialW))\n    {\n        free(TargetNameW);\n        return FALSE;\n    }\n    free(TargetNameW);\n\n    len = convert_PCREDENTIALW_to_PCREDENTIALA(CredentialW, NULL, 0);\n    *Credential = malloc(len);\n    if (!*Credential)\n    {\n        SetLastError(ERROR_OUTOFMEMORY);\n        return FALSE;\n    }\n    convert_PCREDENTIALW_to_PCREDENTIALA(CredentialW, *Credential, len);\n\n    CredFree(CredentialW);\n\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <time.h>",
+   "#include <limits.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"wincred.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"ddk/mountmgr.h\"",
+   "#include \"crypt.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"advapi32_misc.h\""
+  ],
+  "resolution": [
+   "advapi32!CredReadA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/advapi32/tests/cred.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wincred",
+   "path": "sdk-api-src/content/wincred/nf-wincred-credreada.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wincred/nf-wincred-credreada",
+   "documented_name": "credreada",
+   "file": "docs/0260_sdk-api_nf-wincred-credreada.md",
+   "text": "---\nUID: NF:wincred.CredReadA\ntitle: CredReadA function (wincred.h)\ndescription: Reads a credential from the user's credential set. (ANSI)\nhelpviewer_keywords: [\"CredReadA\", \"wincred/CredReadA\"]\nold-location: security\\credread.htm\ntech.root: security\nms.assetid: 3222de7b-5290-4e82-a382-b2db6afc78cc\nms.date: 12/05/2018\nms.keywords: CredRead, CredRead function [Security], CredReadA, CredReadW, _cred_credread, security.credread, wincred/CredRead, wincred/CredReadA, wincred/CredReadW\nreq.header: wincred.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: CredReadW (Unicode) and CredReadA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Advapi32.lib\nreq.dll: Advapi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CredReadA\n - wincred/CredReadA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Advapi32.dll\n - API-MS-Win-DownLevel-AdvApi32-l2-1-0.dll\n - sechost.dll\n - API-MS-Win-DownLevel-AdvApi32-l2-1-1.dll\n - API-MS-Win-Security-credentials-l1-1-0.dll\napi_name:\n - CredRead\n - CredReadA\n - CredReadW\n---\n\n# CredReadA function\n\n\n## -description\n\nThe <b>CredRead</b> function reads a credential from the user's credential set. The credential set used is the one associated with the logon session of the current token. The token must not have the user's SID disabled.\n\n## -parameters\n\n### -param TargetName [in]\n\nPointer to a null-terminated string that contains the name of the credential to read.\n\n### -param Type [in]\n\nType of the credential to read. <i>Type</i> must be one of the CRED_TYPE_* defined types.\n\n### -param Flags [in]\n\nCurrently reserved and must be zero.\n\n### -param Credential [out]\n\nPointer to a single allocated block buffer to return the credential.\nAny pointers contained within the buffer are pointers to locations within this single allocated block. The single returned buffer must be freed by calling <a href=\"/windows/desktop/api/wincred/nf-wincred-credfree\">CredFree</a>.\n\n## -returns\n\nThe function returns <b>TRUE</b> on success and <b>FALSE</b> on failure. The <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> function can be called to get a more specific status code. The following status codes can be returned:\n\n<ul>\n<li>ERROR_NOT_FOUND \n\n\nNo credential exists with the specified <i>TargetName</i>.\n\t\t\t\t\t\t\t\t\n\n</li>\n<li>ERROR_NO_SUCH_LOGON_SESSION \n\n\nThe logon session does not exist or there is no credential set associated with this logon session. Network logon sessions do not have an associated credential set.\n\n</li>\n<li>ERROR_INVALID_FLAGS \n\n\nA flag that is not valid was specified for the <i>Flags</i> parameter.\n\n</li>\n</ul>\n\n## -remarks\n\nIf the value of the <b>Type</b> member of the <a href=\"/windows/desktop/api/wincred/ns-wincred-credentiala\">CREDENTIAL</a> structure specified by the <i>Credential</i>  parameter is <b>CRED_TYPE_DOMAIN_EXTENDED</b>, a namespace must be specified in the target name. This function can return only one credential of the specified type.\n\n\n\n\n> [!NOTE]\n> The wincred.h header defines CredRead as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "convert_PCREDENTIALW_to_PCREDENTIALA",
+   "file": "dlls/advapi32/cred.c",
+   "start_line": 541,
+   "end_line": 624,
+   "static": true,
+   "called_from": [
+    "CredReadA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/advapi32/cred.c:875",
+    "dlls/advapi32/cred.c:890",
+    "dlls/advapi32/cred.c:1458",
+    "dlls/advapi32/cred.c:1473"
+   ],
+   "signature": "static INT convert_PCREDENTIALW_to_PCREDENTIALA(const CREDENTIALW *CredentialW, PCREDENTIALA CredentialA, DWORD len)",
+   "code": "static INT convert_PCREDENTIALW_to_PCREDENTIALA(const CREDENTIALW *CredentialW, PCREDENTIALA CredentialA, DWORD len)\n{\n    char *buffer;\n    INT string_len;\n    INT needed = sizeof(CREDENTIALA);\n\n    if (!CredentialA)\n    {\n        if (CredentialW->TargetName)\n            needed += WideCharToMultiByte(CP_ACP, 0, CredentialW->TargetName, -1, NULL, 0, NULL, NULL);\n        if (CredentialW->Comment)\n            needed += WideCharToMultiByte(CP_ACP, 0, CredentialW->Comment, -1, NULL, 0, NULL, NULL);\n        needed += CredentialW->CredentialBlobSize;\n        if (CredentialW->TargetAlias)\n            needed += WideCharToMultiByte(CP_ACP, 0, CredentialW->TargetAlias, -1, NULL, 0, NULL, NULL);\n        if (CredentialW->UserName)\n            needed += WideCharToMultiByte(CP_ACP, 0, CredentialW->UserName, -1, NULL, 0, NULL, NULL);\n\n        return needed;\n    }\n\n\n    buffer = (char *)CredentialA + sizeof(CREDENTIALA);\n    len -= sizeof(CREDENTIALA);\n    CredentialA->Flags = CredentialW->Flags;\n    CredentialA->Type = CredentialW->Type;\n\n    if (CredentialW->TargetName)\n    {\n        CredentialA->TargetName = buffer;\n        string_len = WideCharToMultiByte(CP_ACP, 0, CredentialW->TargetName, -1, buffer, len, NULL, NULL);\n        buffer += string_len;\n        needed += string_len;\n        len -= string_len;\n    }\n    else\n        CredentialA->TargetName = NULL;\n    if (CredentialW->Comment)\n    {\n        CredentialA->Comment = buffer;\n        string_len = WideCharToMultiByte(CP_ACP, 0, CredentialW->Comment, -1, buffer, len, NULL, NULL);\n        buffer += string_len;\n        needed += string_len;\n        len -= string_len;\n    }\n    else\n        CredentialA->Comment = NULL;\n    CredentialA->LastWritten = CredentialW->LastWritten;\n    CredentialA->CredentialBlobSize = CredentialW->CredentialBlobSize;\n    if (CredentialW->CredentialBlobSize && (CredentialW->CredentialBlobSize <= len))\n    {\n        CredentialA->CredentialBlob =(LPBYTE)buffer;\n        memcpy(CredentialA->CredentialBlob, CredentialW->CredentialBlob,\n               CredentialW->CredentialBlobSize);\n        buffer += CredentialW->CredentialBlobSize;\n        needed += CredentialW->CredentialBlobSize;\n        len -= CredentialW->CredentialBlobSize;\n    }\n    else\n        CredentialA->CredentialBlob = NULL;\n    CredentialA->Persist = CredentialW->Persist;\n    CredentialA->AttributeCount = 0;\n    CredentialA->Attributes = NULL; /* FIXME */\n    if (CredentialW->TargetAlias)\n    {\n        CredentialA->TargetAlias = buffer;\n        string_len = WideCharToMultiByte(CP_ACP, 0, CredentialW->TargetAlias, -1, buffer, len, NULL, NULL);\n        buffer += string_len;\n        needed += string_len;\n        len -= string_len;\n    }\n    else\n        CredentialA->TargetAlias = NULL;\n    if (CredentialW->UserName)\n    {\n        CredentialA->UserName = buffer;\n        string_len = WideCharToMultiByte(CP_ACP, 0, CredentialW->UserName, -1, buffer, len, NULL, NULL);\n        needed += string_len;\n    }\n    else\n        CredentialA->UserName = NULL;\n\n    return needed;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(cred);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "CredFree",
+    "impl": [
+     "dlls/advapi32/cred.c:1108"
+    ]
+   },
+   {
+    "name": "CredReadW",
+    "impl": [
+     "dlls/advapi32/cred.c:1243"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "MultiByteToWideChar",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7070"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/string.c:3161"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "debugstr_a",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

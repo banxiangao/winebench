@@ -1,0 +1,147 @@
+#!/usr/bin/env python3
+"""Resolve a Wine export (module, name) to the file:line of its implementation."""
+import os, re, sys, glob
+ROOT = os.environ.get('WINE_SRC', '.')
+SPEC = re.compile(r'^\s*(?:@|\d+)\s+(\w+)\s+((?:-\S+\s+)*)([^\s(]+)\s*(\([^)]*\))?\s*([^\s#]*)')
+
+def moddir(mod):
+    mod = mod.lower()
+    for c in (mod, mod[:-4] if mod.endswith('.dll') else None):
+        if c and os.path.isdir(f'{ROOT}/dlls/{c}'): return c
+    return None
+
+_mk = {}
+def makefile_vars(m):
+    if m in _mk: return _mk[m]
+    v = _mk[m] = {}
+    try:
+        for l in open(f'{ROOT}/dlls/{m}/Makefile.in'):
+            if '=' in l: k, _, x = l.partition('='); v[k.strip()] = x.split()
+    except OSError: pass
+    return v
+
+_spec = {}
+def spec_entry(m, name):
+    if m not in _spec:
+        d = {}
+        for f in glob.glob(f'{ROOT}/dlls/{m}/*.spec'):
+            for l in open(f, errors='ignore'):
+                x = SPEC.match(l)
+                if x: d.setdefault(x.group(3), x)
+        _spec[m] = d
+    return _spec[m].get(name)
+
+def src_dirs(m, unix=False):
+    d = [f'dlls/{m}']
+    p = makefile_vars(m).get('PARENTSRC')
+    if p: d.append(os.path.normpath(f'dlls/{m}/{p[0]}'))
+    if unix and os.path.isdir(f'{ROOT}/dlls/{m}/unix'): d.insert(0, f'dlls/{m}/unix')
+    return d
+
+_files, _text = {}, {}
+def cfiles(d):
+    if d not in _files:
+
+        out = []
+        for dp, dn, fn in os.walk(f'{ROOT}/{d}'):
+            dn[:] = [x for x in dn if x != 'tests' and not (x == 'unix' and not d.endswith('unix'))]
+            out += [os.path.join(dp, f) for f in sorted(fn) if f.endswith('.c')]
+        _files[d] = out
+    return _files[d]
+def lines(f):
+    if f not in _text: _text[f] = open(f, errors='ignore').read().split('\n')
+    return _text[f]
+
+NAME = re.compile(r'([A-Za-z_]\w*)\s*\(')
+SKIP = re.compile(r'^(DEFINE_\w+|__ASM\w*|C_ASSERT|DECLSPEC_\w+|__attribute__|if|while|for|switch|sizeof|return)$')
+MAC = re.compile(r'^\s*\w+\s*\(\s*"?([A-Za-z_]\w*)"?\s*[,)]')
+_idx = {}
+def index(d):
+    """one pass per directory: function definitions and macro-generated symbols"""
+    if d in _idx: return _idx[d]
+    defs, macs = {}, {}
+    for f in cfiles(d):
+        L = lines(f); rel = os.path.relpath(f, ROOT)
+        for i, l in enumerate(L):
+            if not l or l[0].isspace() or l[0] in '#/*{}': continue
+            m = MAC.match(l)
+            if m: macs.setdefault(m.group(1), []).append(f'{rel}:{i+1} (macro)')
+            if l.rstrip().endswith(';') or '=' in l.split('(')[0]: continue
+            names = [n for n in NAME.findall(l) if not SKIP.match(n)]
+            if not names: continue
+            if re.search(r'\)\s*\{', l):                       # one-line definition: int f(void) { ... }
+                defs.setdefault(names[0], []).append(f'{rel}:{i+1}'); continue
+            for j in range(i, min(i + 15, len(L))):
+                if L[j].startswith('{'):
+                    if 'SYSCALL_FUNC' not in ' '.join(L[j:j+3]):
+                        defs.setdefault(names[0], []).append(f'{rel}:{i+1}')
+                    break
+                if L[j].rstrip().endswith(';'): break
+    _idx[d] = (defs, macs)
+    return _idx[d]
+
+def find_def(sym, dirs):
+    hits = [h for d in dirs for h in index(d)[0].get(sym, [])]
+    return hits or [h for d in dirs for h in index(d)[1].get(sym, [])]
+
+def resolve(mod, name, chain=None, depth=0):
+    chain = chain or []
+    m = moddir(mod)
+    if not m or depth > 6: return chain + [f'?? module {mod} not found'], []
+    e = spec_entry(m, name)
+    if not e: return chain + [f'{m}!{name}: not in spec'], []
+    kind, flags, _, _, target = e.groups()
+    step = f'{m}!{name} [{kind}{" " + flags.strip() if flags.strip() else ""}]'
+    if kind == 'stub': return chain + [step + ' -> UNIMPLEMENTED'], []
+    if target and '.' in target:                       # forward: dll.func
+        tm, tf = target.rsplit('.', 1)
+        return resolve(tm, tf, chain + [step + f' -> forward {target}'], depth + 1)
+    if '-import' in flags:                             # implemented in an imported dll
+        for im in makefile_vars(m).get('IMPORTS', []):
+            if moddir(im) and spec_entry(moddir(im), name):
+                return resolve(im, name, chain + [step + f' -> import from {im}'], depth + 1)
+    sym = target or name
+    if target and spec_entry(m, target) and target != name:    # alias of another export of the same module (Zw* -> Nt*)
+        return resolve(m, target, chain + [step + f' -> alias of {m}!{target}'], depth + 1)
+    hits = find_def(sym, src_dirs(m, unix='-syscall' in flags))
+    if len(hits) > 1:                                           # drop arm64ec-only duplicates when a generic one exists
+        generic = [h for h in hits if 'arm64ec' not in h]
+        if generic: hits = generic
+    if not hits and sym in ('DllGetClassObject', 'DllCanUnloadNow', 'DllRegisterServer', 'DllUnregisterServer') \
+            and any(k.startswith('dlldata') for k in makefile_vars(m)):
+        return chain + [step + ' -> GENERATED by widl (dlldata.c)'], []
+    if not hits:
+        imps = makefile_vars(m).get('IMPORTS', [])
+        crt0 = find_def(sym, ['libs/winecrt0'])            # default DllRegisterServer/DllCanUnloadNow/... from winecrt0
+        if crt0: return chain + [step + ' -> default implementation from libs/winecrt0'], crt0
+        for im in imps:   # bundled third-party, e.g. $(MUSL_PE_LIBS)
+            if im.startswith('$(') and im.endswith('_PE_LIBS)'):
+                lib = im[2:-9].lower()
+                if os.path.isdir(f'{ROOT}/libs/{lib}') and find_def(sym, [f'libs/{lib}']):
+                    return chain + [step + f' -> THIRD_PARTY libs/{lib}'], []
+        for im in imps + ['kernelbase', 'kernel32', 'ntdll', 'msvcrt']:   # explicit + default imports
+            if not im.startswith('$') and im != m and moddir(im) and spec_entry(moddir(im), sym):
+                return resolve(im, sym, chain + [step + f' -> {sym} implicitly imported from {im}'], depth + 1)
+    return chain + [step + (f' -> internal symbol {sym}' if target else '')], hits
+
+def all_exports(mods):
+    for m in mods:
+        for f in glob.glob(f'{ROOT}/dlls/{m}/*.spec'):
+            for l in open(f, errors='ignore'):
+                x = SPEC.match(l)
+                if x and x.group(1) not in ('stub', 'extern', 'variable', 'equate'):
+                    yield m, x.group(3)
+
+if __name__ == '__main__' and sys.argv[1:2] == ['--all']:
+    mods = sys.argv[2:] or sorted(os.path.basename(os.path.dirname(p)) for p in glob.glob(f'{ROOT}/dlls/*/Makefile.in'))
+    print('module\texport\tresolved_module\tlocation\tchain')
+    for m, n in all_exports(mods):
+        chain, hits = resolve(m, n)
+        last = chain[-1].split('!')[0] if hits else ''
+        print(f'{m}\t{n}\t{last}\t{";".join(hits) or "NOT_FOUND"}\t{" | ".join(chain)}')
+    sys.exit()
+if __name__ == '__main__':
+    for arg in sys.argv[1:]:
+        mod, name = arg.split('!')
+        chain, hits = resolve(mod, name)
+        print(arg); [print('   ', c) for c in chain]; print('    =>', hits or 'definition not found')

@@ -1,0 +1,257 @@
+{
+ "id": "0206",
+ "function": {
+  "name": "SetupDiEnumDeviceInterfaces",
+  "export_name": "SetupDiEnumDeviceInterfaces",
+  "module": "setupapi",
+  "source_module": "setupapi",
+  "exported_by": [
+   "setupapi"
+  ],
+  "side": "PE",
+  "file": "dlls/setupapi/devinst.c",
+  "start_line": 2397,
+  "end_line": 2461,
+  "body_lines": 62,
+  "signature": "BOOL WINAPI SetupDiEnumDeviceInterfaces(HDEVINFO devinfo, SP_DEVINFO_DATA *device_data, const GUID *class, DWORD index, SP_DEVICE_INTERFACE_DATA *iface_data)",
+  "header_comment": "/***********************************************************************\n *\t\tSetupDiEnumDeviceInterfaces (SETUPAPI.@)\n *\n * PARAMS\n *   DeviceInfoSet      [I]    Set of devices from which to enumerate\n *                             interfaces\n *   DeviceInfoData     [I]    (Optional) If specified, a specific device\n *                             instance from which to enumerate interfaces.\n *                             If it isn't specified, all interfaces for all\n *                             devices in the set are enumerated.\n *   InterfaceClassGuid [I]    The interface class to enumerate.\n *   MemberIndex        [I]    An index of the interface instance to enumerate.\n *                             A caller should start with MemberIndex set to 0,\n *                             and continue until the function fails with\n *                             ERROR_NO_MORE_ITEMS.\n *   DeviceInterfaceData [I/O] Returns an enumerated interface.  Its cbSize\n *                             member must be set to\n *                             sizeof(SP_DEVICE_INTERFACE_DATA).\n *\n * RETURNS\n *   Success: non-zero value.\n *   Failure: FALSE.  Call GetLastError() for more info.\n */",
+  "code": "BOOL WINAPI SetupDiEnumDeviceInterfaces(HDEVINFO devinfo,\n    SP_DEVINFO_DATA *device_data, const GUID *class, DWORD index,\n    SP_DEVICE_INTERFACE_DATA *iface_data)\n{\n    struct DeviceInfoSet *set;\n    struct device *device;\n    struct device_iface *iface;\n    DWORD i = 0;\n\n    TRACE(\"devinfo %p, device_data %p, class %s, index %lu, iface_data %p.\\n\",\n            devinfo, device_data, debugstr_guid(class), index, iface_data);\n\n    if (!iface_data || iface_data->cbSize != sizeof(SP_DEVICE_INTERFACE_DATA))\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return FALSE;\n    }\n\n    /* In case application fails to check return value, clear output */\n    memset(iface_data, 0, sizeof(*iface_data));\n    iface_data->cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);\n\n    if (device_data)\n    {\n        if (!(device = get_device(devinfo, device_data)))\n            return FALSE;\n\n        LIST_FOR_EACH_ENTRY(iface, &device->interfaces, struct device_iface, entry)\n        {\n            if (IsEqualGUID(&iface->class, class))\n            {\n                if (i == index)\n                {\n                    copy_device_iface_data(iface_data, iface);\n                    return TRUE;\n                }\n                i++;\n            }\n        }\n    }\n    else\n    {\n        if (!(set = get_device_set(devinfo)))\n            return FALSE;\n\n        LIST_FOR_EACH_ENTRY(device, &set->devices, struct device, entry)\n        {\n            LIST_FOR_EACH_ENTRY(iface, &device->interfaces, struct device_iface, entry)\n            {\n                if (IsEqualGUID(&iface->class, class))\n                {\n                    if (i == index)\n                    {\n                        copy_device_iface_data(iface_data, iface);\n                        return TRUE;\n                    }\n                    i++;\n                }\n            }\n        }\n    }\n\n    SetLastError(ERROR_NO_MORE_ITEMS);\n    return FALSE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdbool.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnt.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winternl.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winsvc.h\"",
+   "#include \"setupapi.h\"",
+   "#include \"softpub.h\"",
+   "#include \"mscat.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"cfgmgr32.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"rpc.h\"",
+   "#include \"rpcdce.h\"",
+   "#include \"cguid.h\"",
+   "#include \"setupapi_private.h\"",
+   "#include \"initguid.h\"",
+   "#include \"devpkey.h\""
+  ],
+  "resolution": [
+   "setupapi!SetupDiEnumDeviceInterfaces [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/setupapi/tests/devinst.c",
+   "dlls/setupapi/tests/misc.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 6
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "setupapi",
+   "path": "sdk-api-src/content/setupapi/nf-setupapi-setupdienumdeviceinterfaces.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/setupapi/nf-setupapi-setupdienumdeviceinterfaces",
+   "documented_name": "setupdienumdeviceinterfaces",
+   "file": "docs/0206_sdk-api_nf-setupapi-setupdienumdeviceinterfaces.md",
+   "text": "---\nUID: NF:setupapi.SetupDiEnumDeviceInterfaces\ntitle: SetupDiEnumDeviceInterfaces function (setupapi.h)\ndescription: The SetupDiEnumDeviceInterfaces function enumerates the device interfaces that are contained in a device information set.\nhelpviewer_keywords: [\"SetupDiEnumDeviceInterfaces\",\"SetupDiEnumDeviceInterfaces function [Device and Driver Installation]\",\"devinst.setupdienumdeviceinterfaces\",\"di-rtns_1fd59eb7-0934-4747-9a0e-81dac96c23ef.xml\",\"setupapi/SetupDiEnumDeviceInterfaces\"]\nold-location: devinst\\setupdienumdeviceinterfaces.htm\ntech.root: devinst\nms.assetid: 5095404d-2447-407e-99e2-dd3ef3c3b905\nms.date: 12/05/2018\nms.keywords: SetupDiEnumDeviceInterfaces, SetupDiEnumDeviceInterfaces function [Device and Driver Installation], devinst.setupdienumdeviceinterfaces, di-rtns_1fd59eb7-0934-4747-9a0e-81dac96c23ef.xml, setupapi/SetupDiEnumDeviceInterfaces\nreq.header: setupapi.h\nreq.include-header: Setupapi.h\nreq.target-type: Desktop\nreq.target-min-winverclnt: Available in Microsoft Windows 2000 and later versions of Windows.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Setupapi.lib\nreq.dll: Setupapi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SetupDiEnumDeviceInterfaces\n - setupapi/SetupDiEnumDeviceInterfaces\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-setupapi-devobj-l1-1-0.dll\n - Setupapi.dll\n - Ext-MS-Win-SetupAPI-ClassInstallers-L1-1-1.dll\n - Ext-MS-Win-SetupAPI-ClassInstallers-L1-1-2.dll\napi_name:\n - SetupDiEnumDeviceInterfaces\nreq.apiset: ext-ms-win-setupapi-classinstallers-l1-1-2 (introduced in Windows 10, version 10.0.14393)\n---\n\n# SetupDiEnumDeviceInterfaces function\n\n\n## -description\n\nThe <b>SetupDiEnumDeviceInterfaces</b> function enumerates the device interfaces that are contained in a device information set.\n\n## -parameters\n\n### -param DeviceInfoSet [in]\n\nA pointer to a <a href=\"/windows-hardware/drivers/install/device-information-sets\">device information set</a> that contains the device interfaces for which to return information. This handle is typically returned by <a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupdigetclassdevsw\">SetupDiGetClassDevs</a>.\n\n### -param DeviceInfoData [in, optional]\n\nA pointer to an <a href=\"/windows/desktop/api/setupapi/ns-setupapi-sp_devinfo_data\">SP_DEVINFO_DATA</a> structure that specifies a device information element in <i>DeviceInfoSet</i>. This parameter is optional and can be <b>NULL</b>. If this parameter is specified, <b>SetupDiEnumDeviceInterfaces</b> constrains the enumeration to the interfaces that are supported by the specified device. If this parameter is <b>NULL</b>, repeated calls to <b>SetupDiEnumDeviceInterfaces</b> return information about the interfaces that are associated with all the device information elements in <i>DeviceInfoSet</i>. This pointer is typically returned by <a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupdienumdeviceinfo\">SetupDiEnumDeviceInfo</a>.\n\n### -param InterfaceClassGuid [in]\n\nA pointer to a GUID that specifies the device interface class for the requested interface.\n\n### -param MemberIndex [in]\n\nA zero-based index into the list of interfaces in the device information set. The caller should call this function first with <i>MemberIndex</i> set to zero to obtain the first interface. Then, repeatedly increment <i>MemberIndex</i> and retrieve an interface until this function fails and <a href=\"/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> returns ERROR_NO_MORE_ITEMS.\n\nIf <i>DeviceInfoData</i> specifies a particular device, the <i>MemberIndex</i> is relative to only the interfaces exposed by that device.\n\n### -param DeviceInterfaceData [out]\n\nA pointer to a caller-allocated buffer that contains, on successful return, a completed <a href=\"/windows/desktop/api/setupapi/ns-setupapi-sp_device_interface_data\">SP_DEVICE_INTERFACE_DATA</a> structure that identifies an interface that meets the search parameters. The caller must set <i>DeviceInterfaceData</i>.<b>cbSize</b> to <b>sizeof</b>(SP_DEVICE_INTERFACE_DATA) before calling this function.\n\n## -returns\n\n<b>SetupDiEnumDeviceInterfaces</b> returns <b>TRUE</b> if the function completed without error. If the function completed with an error, <b>FALSE</b> is returned and the error code for the failure can be retrieved by calling <a href=\"/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nRepeated calls to this function return an <a href=\"/windows/desktop/api/setupapi/ns-setupapi-sp_device_interface_data\">SP_DEVICE_INTERFACE_DATA</a> structure for a different device interface. This function can be called repeatedly to get information about interfaces in a device information set that are associated with a particular device information element or that are associated with all device information elements.\n\n<i>DeviceInterfaceData</i> points to a structure that identifies a requested device interface. To get detailed information about an interface, call <a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupdigetdeviceinterfacedetaila\">SetupDiGetDeviceInterfaceDetail</a>. The detailed information includes the name of the device interface that can be passed to a Win32 function such as <a href=\"/windows/desktop/api/fileapi/nf-fileapi-createfilea\">CreateFile</a> (described in Microsoft Windows SDK documentation) to get a handle to the interface.\n\nSee <a href=\"/windows-hardware/drivers/install/overview-of-device-interface-classes\">Overview of Device Interface Classes</a> for more info.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupdienumdeviceinfo\">SetupDiEnumDeviceInfo</a>\n\n\n\n<a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupdigetclassdevsw\">SetupDiGetClassDevs</a>\n\n\n\n<a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupdigetdeviceinterfacedetaila\">SetupDiGetDeviceInterfaceDetail</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_device",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 200,
+   "end_line": 229,
+   "static": true,
+   "called_from": [
+    "SetupDiEnumDeviceInterfaces"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:1261",
+    "dlls/setupapi/devinst.c:1457",
+    "dlls/setupapi/devinst.c:1480",
+    "dlls/setupapi/devinst.c:1520",
+    "dlls/setupapi/devinst.c:1636"
+   ],
+   "signature": "static struct device *get_device(HDEVINFO devinfo, const SP_DEVINFO_DATA *data)",
+   "code": "static struct device *get_device(HDEVINFO devinfo, const SP_DEVINFO_DATA *data)\n{\n    struct DeviceInfoSet *set;\n    struct device *device;\n\n    if (!(set = get_device_set(devinfo)))\n        return FALSE;\n\n    if (!data || data->cbSize != sizeof(*data) || !data->Reserved)\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return NULL;\n    }\n\n    device = (struct device *)data->Reserved;\n\n    if (device->set != set)\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return NULL;\n    }\n\n    if (device->removed)\n    {\n        SetLastError(ERROR_NO_SUCH_DEVINST);\n        return NULL;\n    }\n\n    return device;\n}"
+  },
+  {
+   "name": "copy_device_iface_data",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 252,
+   "end_line": 258,
+   "static": true,
+   "called_from": [
+    "SetupDiEnumDeviceInterfaces"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:2273",
+    "dlls/setupapi/devinst.c:3595"
+   ],
+   "signature": "static inline void copy_device_iface_data(SP_DEVICE_INTERFACE_DATA *data, const struct device_iface *iface)",
+   "code": "static inline void copy_device_iface_data(SP_DEVICE_INTERFACE_DATA *data,\n    const struct device_iface *iface)\n{\n    data->InterfaceClassGuid = iface->class;\n    data->Flags = iface->flags;\n    data->Reserved = (ULONG_PTR)iface;\n}"
+  },
+  {
+   "name": "get_device_set",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 187,
+   "end_line": 198,
+   "static": true,
+   "called_from": [
+    "SetupDiEnumDeviceInterfaces",
+    "get_device"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:233",
+    "dlls/setupapi/devinst.c:1358",
+    "dlls/setupapi/devinst.c:1573",
+    "dlls/setupapi/devinst.c:2169",
+    "dlls/setupapi/devinst.c:2193"
+   ],
+   "signature": "static struct DeviceInfoSet *get_device_set(HDEVINFO devinfo)",
+   "code": "static struct DeviceInfoSet *get_device_set(HDEVINFO devinfo)\n{\n    struct DeviceInfoSet *set = devinfo;\n\n    if (!devinfo || devinfo == INVALID_HANDLE_VALUE || set->magic != SETUP_DEVICE_INFO_SET_MAGIC)\n    {\n        SetLastError(ERROR_INVALID_HANDLE);\n        return NULL;\n    }\n\n    return set;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "DeviceInfoSet",
+    "kind": "struct_decl",
+    "start_line": 86,
+    "end_line": 92,
+    "code": "struct DeviceInfoSet\n{\n    DWORD magic;        /* if is equal to SETUP_DEVICE_INFO_SET_MAGIC struct is okay */\n    GUID ClassGuid;\n    HWND hwndParent;\n    struct list devices;\n};"
+   },
+   {
+    "name": "device",
+    "kind": "struct_decl",
+    "start_line": 94,
+    "end_line": 109,
+    "code": "struct device\n{\n    struct DeviceInfoSet *set;\n    HKEY                  key;\n    BOOL                  phantom;\n    WCHAR                *instanceId;\n    struct list           interfaces;\n    GUID                  class;\n    DEVINST               devnode;\n    struct list           entry;\n    BOOL                  removed;\n    SP_DEVINSTALL_PARAMS_W params;\n    struct driver        *drivers;\n    unsigned int          driver_count;\n    struct driver        *selected_driver;\n};"
+   },
+   {
+    "name": "device_iface",
+    "kind": "struct_decl",
+    "start_line": 111,
+    "end_line": 121,
+    "code": "struct device_iface\n{\n    WCHAR           *refstr;\n    WCHAR           *symlink;\n    struct device   *device;\n    GUID             class;\n    DWORD            flags;\n    HKEY             class_key;\n    HKEY             refstr_key;\n    struct list      entry;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 52,
+    "end_line": 52,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(setupapi);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "SETUP_DEVICE_INFO_SET_MAGIC",
+    "start_line": 84,
+    "end_line": 84,
+    "code": "#define SETUP_DEVICE_INFO_SET_MAGIC 0xd00ff056"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "debugstr_guid",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "setupapi.SetupDiEnumDeviceInterfaces",
+  "category": {
+   "l1": "Devices",
+   "l2": "Device management and installation",
+   "header": "setupapi.h",
+   "textbook": "Device management",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 65,
+   "body": 62,
+   "code": 32
+  },
+  "cyclomatic": 10,
+  "return_type": "BOOL",
+  "n_params": 5,
+  "tests": {
+   "n_tests_own": 6,
+   "n_tests": 16,
+   "n_tests_other": 10,
+   "own_test_functions": [
+    "dlls/setupapi/tests/devinst.c::check_device_iface_",
+    "dlls/setupapi/tests/devinst.c::test_SetupDiOpenDeviceInterface",
+    "dlls/setupapi/tests/devinst.c::test_class_device_order",
+    "dlls/setupapi/tests/devinst.c::test_device_iface",
+    "dlls/setupapi/tests/devinst.c::test_register_device_iface",
+    "dlls/setupapi/tests/misc.c::_check_device_interface"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/setupapi/nf-setupapi-setupdienumdeviceinterfaces",
+   "source": "win32",
+   "description": "The SetupDiEnumDeviceInterfaces function enumerates the device interfaces that are contained in a device information set.",
+   "min_windows": "Available in Microsoft Windows 2000 and later versions of Windows.",
+   "documented_dll": "Setupapi.dll"
+  },
+  "exports": [
+   "setupapi.SetupDiEnumDeviceInterfaces"
+  ],
+  "subset": {
+   "selected_by": "added 2026-11-25 to replace the 12 records that cannot be tested on Vulcan",
+   "rule": "not in the 205; loc.total > 10; 5 < n_tests_own <= 50; from the categories with the fewest samples; every candidate built and its tests run on the clean tree first"
+  }
+ }
+}

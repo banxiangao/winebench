@@ -1,0 +1,328 @@
+{
+ "id": "0169",
+ "function": {
+  "name": "MsiViewFetch",
+  "export_name": "MsiViewFetch",
+  "module": "msi",
+  "source_module": "msi",
+  "exported_by": [
+   "msi"
+  ],
+  "side": "PE",
+  "file": "dlls/msi/msiquery.c",
+  "start_line": 400,
+  "end_line": 448,
+  "body_lines": 46,
+  "signature": "UINT WINAPI MsiViewFetch( MSIHANDLE hView, MSIHANDLE *record )",
+  "header_comment": null,
+  "code": "UINT WINAPI MsiViewFetch( MSIHANDLE hView, MSIHANDLE *record )\n{\n    MSIQUERY *query;\n    MSIRECORD *rec = NULL;\n    UINT ret;\n\n    TRACE( \"%lu, %p\\n\", hView, record );\n\n    if( !record )\n        return ERROR_INVALID_PARAMETER;\n    *record = 0;\n\n    query = msihandle2msiinfo( hView, MSIHANDLETYPE_VIEW );\n    if (!query)\n    {\n        struct wire_record *wire_rec = NULL;\n        MSIHANDLE remote;\n\n        if (!(remote = msi_get_remote(hView)))\n            return ERROR_INVALID_HANDLE;\n\n        __TRY\n        {\n            ret = remote_ViewFetch(remote, &wire_rec);\n        }\n        __EXCEPT(rpc_filter)\n        {\n            ret = GetExceptionCode();\n        }\n        __ENDTRY\n\n        if (!ret)\n        {\n            ret = unmarshal_record(wire_rec, record);\n            free_remote_record(wire_rec);\n        }\n        return ret;\n    }\n    ret = MSI_ViewFetch( query, &rec );\n    if( ret == ERROR_SUCCESS )\n    {\n        *record = alloc_msihandle( &rec->hdr );\n        if (! *record)\n           ret = ERROR_NOT_ENOUGH_MEMORY;\n        msiobj_release( &rec->hdr );\n    }\n    msiobj_release( &query->hdr );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"msi.h\"",
+   "#include \"msiquery.h\"",
+   "#include \"objbase.h\"",
+   "#include \"objidl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"msipriv.h\"",
+   "#include \"query.h\"",
+   "#include \"winemsi.h\"",
+   "#include \"initguid.h\""
+  ],
+  "resolution": [
+   "msi!MsiViewFetch [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/msi/tests/custom.c",
+   "dlls/msi/tests/db.c",
+   "dlls/msi/tests/package.c",
+   "dlls/msi/tests/record.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 42
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "msiquery",
+   "path": "sdk-api-src/content/msiquery/nf-msiquery-msiviewfetch.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/msiquery/nf-msiquery-msiviewfetch",
+   "documented_name": "msiviewfetch",
+   "file": "docs/0169_sdk-api_nf-msiquery-msiviewfetch.md",
+   "text": "---\nUID: NF:msiquery.MsiViewFetch\ntitle: MsiViewFetch function (msiquery.h)\ndescription: The MsiViewFetch function fetches the next sequential record from the view. This function returns a handle that should be closed using MsiCloseHandle.\nhelpviewer_keywords: [\"MsiViewFetch\",\"MsiViewFetch function\",\"_msi_msiviewfetch\",\"msiquery/MsiViewFetch\",\"setup.msiviewfetch\"]\nold-location: setup\\msiviewfetch.htm\ntech.root: setup\nms.assetid: 1a973a22-ca3a-4980-9b20-d3c5b43fdd19\nms.date: 12/05/2018\nms.keywords: MsiViewFetch, MsiViewFetch function, _msi_msiviewfetch, msiquery/MsiViewFetch, setup.msiviewfetch\nreq.header: msiquery.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Installer 5.0 on Windows Server 2012, Windows 8, Windows Server 2008 R2 or Windows 7. Windows Installer 4.0 or Windows Installer 4.5 on   Windows Server 2008 or Windows Vista. Windows Installer on Windows Server 2003 or Windows XP\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Msi.lib\nreq.dll: Msi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - MsiViewFetch\n - msiquery/MsiViewFetch\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Msi.dll\n - Ext-MS-Win-MSI-Misc-l1-1-0.dll\napi_name:\n - MsiViewFetch\n---\n\n# MsiViewFetch function\n\n\n## -description\n\nThe \n<b>MsiViewFetch</b> function fetches the next sequential record from the view. This function returns a handle that should be closed using \n<a href=\"/windows/desktop/api/msi/nf-msi-msiclosehandle\">MsiCloseHandle</a>.\n\n## -parameters\n\n### -param hView [in]\n\nHandle to the view to fetch from.\n\n### -param phRecord [out]\n\nPointer to the handle for the fetched record.\n\n## -returns\n\nNote that in low memory situations, this function can raise a STATUS_NO_MEMORY exception.\n\n## -remarks\n\nIf the \n<b>MsiViewFetch</b> function returns ERROR_FUNCTION_FAILED, it is possible that the \n<a href=\"/windows/desktop/api/msiquery/nf-msiquery-msiviewexecute\">MsiViewExecute</a> function was not called first. If more rows are available in the result set, \n<b>MsiViewFetch</b> returns <i>phRecord</i> as a handle to a record containing the requested column data, or <i>phRecord</i> is 0. For maximum performance, the same record should be used for all retrievals, or the record should be released by going out of scope.\n\nNote that it is recommended to use variables of type PMSIHANDLE because the installer closes PMSIHANDLE objects as they go out of scope, whereas you must close MSIHANDLE objects by calling \n<a href=\"/windows/desktop/api/msi/nf-msi-msiclosehandle\">MsiCloseHandle</a>. For more information see <a href=\"/windows/desktop/Msi/windows-installer-best-practices\">Use PMSIHANDLE instead of HANDLE</a> section in the <a href=\"/windows/desktop/Msi/windows-installer-best-practices\">Windows Installer Best Practices</a>.\n\n## -see-also\n\n<a href=\"/windows/desktop/Msi/database-functions\">General Database Access Functions</a>\n\n\n\n<a href=\"/windows/desktop/Msi/working-with-queries\">Working with Queries</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "MSI_ViewFetch",
+   "file": "dlls/msi/msiquery.c",
+   "start_line": 373,
+   "end_line": 398,
+   "static": false,
+   "called_from": [
+    "MsiViewFetch"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msi/patch.c:390",
+    "dlls/msi/patch.c:464",
+    "dlls/msi/patch.c:498",
+    "dlls/msi/patch.c:600",
+    "dlls/msi/patch.c:623"
+   ],
+   "signature": "UINT MSI_ViewFetch(MSIQUERY *query, MSIRECORD **prec)",
+   "code": "UINT MSI_ViewFetch(MSIQUERY *query, MSIRECORD **prec)\n{\n    MSIVIEW *view;\n    UINT r;\n\n    TRACE(\"%p %p\\n\", query, prec );\n\n    view = query->view;\n    if( !view )\n        return ERROR_FUNCTION_FAILED;\n\n    r = msi_view_get_row(query->db, view, query->row, prec);\n    if (r == ERROR_SUCCESS)\n    {\n        query->row ++;\n        (*prec)->cookie = (UINT64)(ULONG_PTR)query;\n        MSI_RecordSetInteger(*prec, 0, 1);\n    }\n    else if (r == ERROR_NO_MORE_ITEMS)\n    {\n        /* end of view; reset cursor to first row */\n        query->row = 0;\n    }\n\n    return r;\n}"
+  },
+  {
+   "name": "msi_view_get_row",
+   "file": "dlls/msi/msiquery.c",
+   "start_line": 351,
+   "end_line": 371,
+   "static": false,
+   "called_from": [
+    "MSI_ViewFetch"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msi/where.c:962",
+    "dlls/msi/table.c:1311",
+    "dlls/msi/table.c:2392",
+    "dlls/msi/table.c:2710"
+   ],
+   "signature": "UINT msi_view_get_row(MSIDATABASE *db, MSIVIEW *view, UINT row, MSIRECORD **rec)",
+   "code": "UINT msi_view_get_row(MSIDATABASE *db, MSIVIEW *view, UINT row, MSIRECORD **rec)\n{\n    UINT row_count = 0, col_count = 0, r;\n    MSIRECORD *object;\n\n    if ((r = view->ops->get_dimensions(view, &row_count, &col_count)))\n        return r;\n\n    if (row >= row_count)\n        return ERROR_NO_MORE_ITEMS;\n\n    if (!(object = MSI_CreateRecord( col_count )))\n        return ERROR_OUTOFMEMORY;\n\n    if ((r = msi_view_refresh_row(db, view, row, object)))\n        msiobj_release( &object->hdr );\n    else\n        *rec = object;\n\n    return r;\n}"
+  },
+  {
+   "name": "msi_view_refresh_row",
+   "file": "dlls/msi/msiquery.c",
+   "start_line": 287,
+   "end_line": 349,
+   "static": false,
+   "called_from": [
+    "msi_view_get_row"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msi/select.c:318"
+   ],
+   "signature": "UINT msi_view_refresh_row(MSIDATABASE *db, MSIVIEW *view, UINT row, MSIRECORD *rec)",
+   "code": "UINT msi_view_refresh_row(MSIDATABASE *db, MSIVIEW *view, UINT row, MSIRECORD *rec)\n{\n    UINT row_count = 0, col_count = 0, i, ival, ret, type;\n\n    ret = view->ops->get_dimensions(view, &row_count, &col_count);\n    if (ret)\n        return ret;\n\n    if (!col_count)\n        return ERROR_INVALID_PARAMETER;\n\n    for (i = 1; i <= col_count; i++)\n    {\n        ret = view->ops->get_column_info(view, i, NULL, &type, NULL, NULL);\n        if (ret)\n        {\n            ERR(\"Error getting column type for %d\\n\", i);\n            continue;\n        }\n\n        if (MSITYPE_IS_BINARY(type))\n        {\n            IStream *stm = NULL;\n\n            ret = view->ops->fetch_stream(view, row, i, &stm);\n            if ((ret == ERROR_SUCCESS) && stm)\n            {\n                MSI_RecordSetIStream(rec, i, stm);\n                IStream_Release(stm);\n            }\n            else\n                WARN(\"failed to get stream\\n\");\n\n            continue;\n        }\n\n        ret = view->ops->fetch_int(view, row, i, &ival);\n        if (ret)\n        {\n            ERR(\"Error fetching data for %d\\n\", i);\n            continue;\n        }\n\n        if (! (type & MSITYPE_VALID))\n            ERR(\"Invalid type!\\n\");\n\n        if (type & MSITYPE_STRING)\n        {\n            int len;\n            const WCHAR *sval = msi_string_lookup(db->strings, ival, &len);\n            msi_record_set_string(rec, i, sval, len);\n        }\n        else\n        {\n            if ((type & MSI_DATASIZEMASK) == 2)\n                MSI_RecordSetInteger(rec, i, ival ? ival - (1<<15) : MSI_NULL_INTEGER);\n            else\n                MSI_RecordSetInteger(rec, i, ival - (1u<<31));\n        }\n    }\n\n    return ERROR_SUCCESS;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 42,
+    "end_line": 42,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(msi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "MSI_CreateRecord",
+    "file": "dlls/msi/record.c",
+    "start_line": 76
+   },
+   {
+    "name": "MSI_RecordSetIStream",
+    "file": "dlls/msi/record.c",
+    "start_line": 836
+   },
+   {
+    "name": "MSI_RecordSetInteger",
+    "file": "dlls/msi/record.c",
+    "start_line": 280
+   },
+   {
+    "name": "alloc_msihandle",
+    "file": "dlls/msi/handle.c",
+    "start_line": 111
+   },
+   {
+    "name": "free_remote_record",
+    "file": "dlls/msi/record.c",
+    "start_line": 1153
+   },
+   {
+    "name": "msi_get_remote",
+    "file": "dlls/msi/handle.c",
+    "start_line": 183
+   },
+   {
+    "name": "msi_record_set_string",
+    "file": "dlls/msi/record.c",
+    "start_line": 573
+   },
+   {
+    "name": "msi_string_lookup",
+    "file": "dlls/msi/string.c",
+    "start_line": 342
+   },
+   {
+    "name": "msihandle2msiinfo",
+    "file": "dlls/msi/handle.c",
+    "start_line": 158
+   },
+   {
+    "name": "msiobj_release",
+    "file": "dlls/msi/handle.c",
+    "start_line": 241
+   },
+   {
+    "name": "rpc_filter",
+    "file": "dlls/msi/custom.c",
+    "start_line": 77
+   },
+   {
+    "name": "unmarshal_record",
+    "file": "dlls/msi/record.c",
+    "start_line": 1095
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [],
+  "header_inline": [
+   "IStream_Release",
+   "__wine_pop_frame",
+   "__wine_push_frame",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "__wine_exception_handler",
+   "__wine_setjmpex",
+   "remote_ViewFetch"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "view->ops->get_dimensions",
+    "in_function": "msi_view_get_row",
+    "at": "dlls/msi/msiquery.c:356",
+    "candidates": []
+   },
+   {
+    "expr": "view->ops->get_column_info",
+    "in_function": "msi_view_refresh_row",
+    "at": "dlls/msi/msiquery.c:300",
+    "candidates": []
+   },
+   {
+    "expr": "view->ops->fetch_stream",
+    "in_function": "msi_view_refresh_row",
+    "at": "dlls/msi/msiquery.c:311",
+    "candidates": []
+   },
+   {
+    "expr": "view->ops->fetch_int",
+    "in_function": "msi_view_refresh_row",
+    "at": "dlls/msi/msiquery.c:323",
+    "candidates": []
+   }
+  ]
+ },
+ "winebench": {
+  "id": "msi.MsiViewFetch",
+  "category": {
+   "l1": "Application installation and servicing",
+   "l2": "Windows Installer",
+   "header": "msiquery.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 49,
+   "body": 48,
+   "code": 30
+  },
+  "cyclomatic": 7,
+  "return_type": "UINT",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 42,
+   "n_tests": 42,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/msi/tests/custom.c::test_db",
+    "dlls/msi/tests/db.c::do_query",
+    "dlls/msi/tests/db.c::get_columns_table_type",
+    "dlls/msi/tests/db.c::test_carriagereturn",
+    "dlls/msi/tests/db.c::test_collation",
+    "dlls/msi/tests/db.c::test_columnorder",
+    "dlls/msi/tests/db.c::test_dbmerge",
+    "dlls/msi/tests/db.c::test_deleterow",
+    "dlls/msi/tests/db.c::test_droptable",
+    "dlls/msi/tests/db.c::test_insertorder",
+    "dlls/msi/tests/db.c::test_join",
+    "dlls/msi/tests/db.c::test_longstrings",
+    "dlls/msi/tests/db.c::test_msiimport",
+    "dlls/msi/tests/db.c::test_msiinsert",
+    "dlls/msi/tests/db.c::test_noquotes",
+    "dlls/msi/tests/db.c::test_order",
+    "dlls/msi/tests/db.c::test_quotes",
+    "dlls/msi/tests/db.c::test_rows_order",
+    "dlls/msi/tests/db.c::test_select_column_names",
+    "dlls/msi/tests/db.c::test_select_markers",
+    "dlls/msi/tests/db.c::test_select_with_tablenames",
+    "dlls/msi/tests/db.c::test_storages_table",
+    "dlls/msi/tests/db.c::test_streamtable",
+    "dlls/msi/tests/db.c::test_stringtable",
+    "dlls/msi/tests/db.c::test_tables_order",
+    "dlls/msi/tests/db.c::test_try_transform",
+    "dlls/msi/tests/db.c::test_update",
+    "dlls/msi/tests/db.c::test_viewfetch_wraparound",
+    "dlls/msi/tests/db.c::test_viewmodify",
+    "dlls/msi/tests/db.c::test_viewmodify_assign",
+    "dlls/msi/tests/db.c::test_viewmodify_delete",
+    "dlls/msi/tests/db.c::test_viewmodify_delete_temporary",
+    "dlls/msi/tests/db.c::test_viewmodify_insert",
+    "dlls/msi/tests/db.c::test_viewmodify_merge",
+    "dlls/msi/tests/db.c::test_viewmodify_refresh",
+    "dlls/msi/tests/db.c::test_viewmodify_update",
+    "dlls/msi/tests/db.c::test_where",
+    "dlls/msi/tests/db.c::test_where_not_in_selected",
+    "dlls/msi/tests/db.c::test_where_viewmodify",
+    "dlls/msi/tests/package.c::do_query",
+    "dlls/msi/tests/package.c::find_prop_in_property",
+    "dlls/msi/tests/record.c::test_fieldzero"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/msiquery/nf-msiquery-msiviewfetch",
+   "source": "win32",
+   "description": "The MsiViewFetch function fetches the next sequential record from the view. This function returns a handle that should be closed using MsiCloseHandle.",
+   "min_windows": "Windows Installer 5.0 on Windows Server 2012, Windows 8, Windows Server 2008 R2 or Windows 7. Windows Installer 4.0 or Windows Installer 4.5 on   Windows Server 2008 or Windows Vista. Windows Installer on Windows Server 2003 or Windows XP",
+   "documented_dll": "Msi.dll"
+  },
+  "exports": [
+   "msi.MsiViewFetch"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

@@ -1,0 +1,654 @@
+{
+ "id": "0028",
+ "function": {
+  "name": "GdipReleaseDC",
+  "export_name": "GdipReleaseDC",
+  "module": "gdiplus",
+  "source_module": "gdiplus",
+  "exported_by": [
+   "gdiplus"
+  ],
+  "side": "PE",
+  "file": "dlls/gdiplus/graphics.c",
+  "start_line": 7646,
+  "end_line": 7698,
+  "body_lines": 50,
+  "signature": "GpStatus WINGDIPAPI GdipReleaseDC(GpGraphics *graphics, HDC hdc)",
+  "header_comment": null,
+  "code": "GpStatus WINGDIPAPI GdipReleaseDC(GpGraphics *graphics, HDC hdc)\n{\n    GpStatus stat=Ok;\n\n    TRACE(\"(%p, %p)\\n\", graphics, hdc);\n\n    if(!graphics || !hdc || !graphics->busy)\n        return InvalidParameter;\n\n    if (is_metafile_graphics(graphics))\n    {\n        stat = METAFILE_ReleaseDC((GpMetafile*)graphics->image, hdc);\n    }\n    else if (graphics->owndc)\n    {\n        ReleaseDC(graphics->hwnd, graphics->temp_hdc);\n        graphics->temp_hdc = NULL;\n    }\n    else if (graphics->temp_hdc == hdc)\n    {\n        DWORD* pos;\n        int i;\n\n        /* Find the pixels that have changed, and mark them as opaque. */\n        pos = (DWORD*)graphics->temp_bits;\n        for (i=0; i<(graphics->temp_hbitmap_width * graphics->temp_hbitmap_height); i++)\n        {\n            if (*pos != DC_BACKGROUND_KEY)\n            {\n                *pos |= 0xff000000;\n            }\n            pos++;\n        }\n\n        /* Write the changed pixels to the real target. */\n        alpha_blend_pixels(graphics, 0, 0, graphics->temp_bits,\n            graphics->temp_hbitmap_width, graphics->temp_hbitmap_height,\n            graphics->temp_hbitmap_width * 4, PixelFormat32bppARGB);\n\n        /* Clean up. */\n        DeleteObject(graphics->temp_hbitmap);\n        graphics->temp_hbitmap = NULL;\n    }\n    else if (hdc != graphics->hdc)\n    {\n        stat = InvalidParameter;\n    }\n\n    if (stat == Ok)\n        graphics->busy = FALSE;\n\n    return stat;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <math.h>",
+   "#include <limits.h>",
+   "#include <assert.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winuser.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"objbase.h\"",
+   "#include \"ocidl.h\"",
+   "#include \"olectl.h\"",
+   "#include \"ole2.h\"",
+   "#include \"winreg.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"mlang.h\"",
+   "#include \"gdiplus.h\"",
+   "#include \"gdiplus_private.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\""
+  ],
+  "resolution": [
+   "gdiplus!GdipReleaseDC [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdiplus/tests/graphics.c",
+   "dlls/gdiplus/tests/metafile.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 11
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "gdiplusflat",
+   "path": "desktop-src/gdiplus/-gdiplus-graphics-flat.md",
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-graphics-flat",
+   "documented_name": "gdipreleasedc",
+   "excerpt": {
+    "note": "GDI+ flat API page: one table row per function; only the page introduction, the table header and this function's row are kept",
+    "full_page_chars": 212688
+   },
+   "file": "docs/0028_win32_-gdiplus-graphics-flat.md",
+   "text": "---\ndescription: Windows GDI+ exposes a flat API that consists of about 600 functions. These flat API functions are wrapped by the Graphics C++ class.\nms.assetid: 0d10b3cc-6d1d-4e14-80c9-fd3b8b3880d7\ntitle: Graphics Functions\nms.topic: reference\nms.date: 05/31/2018\n---\n\n# Graphics Functions\n\nWindows GDI+ exposes a flat API that consists of about 600 functions, which are implemented in Gdiplus.dll and declared in Gdiplusflat.h. The functions in the GDI+ flat API are wrapped by a collection of about 40 C++ classes. It is recommended that you do not directly call the functions in the flat API. Whenever you make calls to GDI+, you should do so by calling the methods and functions provided by the C++ wrappers. Microsoft Product Support Services will not provide support for code that calls the flat API directly. For more information on using these wrapper methods, see [GDI+ Flat API](-gdiplus-flatapi-flat.md).\n\nThe following flat API functions are wrapped by the [**Graphics**](/windows/win32/api/gdiplusgraphics/nl-gdiplusgraphics-graphics) C++ class.\n\n## Graphics Functions and Corresponding Wrapper Methods\n\n\n\n| Flat function                                                                                                                                                                                                                                                                                                               | Wrapper method                                                                                                                                                                                                                                                                                                                                                                                                              | Remarks                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |\n|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|\n| GpStatus WINGDIPAPI GdipReleaseDC(GpGraphics\\* graphics, HDC hdc)<br/>                                                                                                                                                                                                                                                | [**VOID Graphics::ReleaseHDC(IN HDC hdc)**](/windows/win32/api/Gdiplusgraphics/nf-gdiplusgraphics-graphics-releasehdc)                                                                                                                                                                                                                                                                                                                                    | Releases a device context handle obtained by a previous call to the Graphics::GetHDC method of this [**Graphics**](/windows/win32/api/gdiplusgraphics/nl-gdiplusgraphics-graphics) object.                                                                                                                                                                                                                                                                                                                 |\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "is_metafile_graphics",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 153,
+   "end_line": 156,
+   "static": true,
+   "called_from": [
+    "GdipReleaseDC",
+    "alpha_blend_pixels_hrgn"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:2367",
+    "dlls/gdiplus/graphics.c:2679",
+    "dlls/gdiplus/graphics.c:2730",
+    "dlls/gdiplus/graphics.c:3052",
+    "dlls/gdiplus/graphics.c:3247"
+   ],
+   "signature": "static BOOL is_metafile_graphics(const GpGraphics *graphics)",
+   "code": "static BOOL is_metafile_graphics(const GpGraphics *graphics)\n{\n    return graphics->image && graphics->image_type == ImageTypeMetafile;\n}"
+  },
+  {
+   "name": "alpha_blend_pixels",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 734,
+   "end_line": 738,
+   "static": true,
+   "called_from": [
+    "GdipReleaseDC"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:3481",
+    "dlls/gdiplus/graphics.c:4170",
+    "dlls/gdiplus/graphics.c:8401"
+   ],
+   "signature": "static GpStatus alpha_blend_pixels(GpGraphics *graphics, INT dst_x, INT dst_y, const BYTE *src, INT src_width, INT src_height, INT src_stride, PixelFormat fmt)",
+   "code": "static GpStatus alpha_blend_pixels(GpGraphics *graphics, INT dst_x, INT dst_y,\n    const BYTE *src, INT src_width, INT src_height, INT src_stride, PixelFormat fmt)\n{\n    return alpha_blend_pixels_hrgn(graphics, dst_x, dst_y, src, src_width, src_height, src_stride, NULL, fmt);\n}"
+  },
+  {
+   "name": "alpha_blend_pixels_hrgn",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 625,
+   "end_line": 732,
+   "static": true,
+   "called_from": [
+    "alpha_blend_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:5097"
+   ],
+   "signature": "static GpStatus alpha_blend_pixels_hrgn(GpGraphics *graphics, INT dst_x, INT dst_y, const BYTE *src, INT src_width, INT src_height, INT src_stride, HRGN hregion, PixelFormat fmt)",
+   "code": "static GpStatus alpha_blend_pixels_hrgn(GpGraphics *graphics, INT dst_x, INT dst_y,\n    const BYTE *src, INT src_width, INT src_height, INT src_stride, HRGN hregion, PixelFormat fmt)\n{\n    GpStatus stat=Ok;\n\n    if (graphics->image && graphics->image->type == ImageTypeBitmap)\n    {\n        DWORD i;\n        int size;\n        RGNDATA *rgndata;\n        RECT *rects;\n        HRGN hrgn, visible_rgn;\n\n        hrgn = CreateRectRgn(dst_x, dst_y, dst_x + src_width, dst_y + src_height);\n        if (!hrgn)\n            return OutOfMemory;\n\n        if (hregion)\n            CombineRgn(hrgn, hrgn, hregion, RGN_AND);\n        else\n        {\n            stat = get_clip_hrgn(graphics, &visible_rgn);\n            if (stat != Ok)\n            {\n                DeleteObject(hrgn);\n                return stat;\n            }\n\n            if (visible_rgn)\n            {\n                CombineRgn(hrgn, hrgn, visible_rgn, RGN_AND);\n                DeleteObject(visible_rgn);\n            }\n        }\n\n        size = GetRegionData(hrgn, 0, NULL);\n\n        rgndata = malloc(size);\n        if (!rgndata)\n        {\n            DeleteObject(hrgn);\n            return OutOfMemory;\n        }\n\n        GetRegionData(hrgn, size, rgndata);\n\n        rects = (RECT*)rgndata->Buffer;\n\n        for (i=0; stat == Ok && i<rgndata->rdh.nCount; i++)\n        {\n            stat = alpha_blend_bmp_pixels(graphics, rects[i].left, rects[i].top,\n                &src[(rects[i].left - dst_x) * 4 + (rects[i].top - dst_y) * src_stride],\n                rects[i].right - rects[i].left, rects[i].bottom - rects[i].top,\n                src_stride, fmt);\n        }\n\n        free(rgndata);\n\n        DeleteObject(hrgn);\n\n        return stat;\n    }\n    else if (is_metafile_graphics(graphics))\n    {\n        ERR(\"This should not be used for metafiles; fix caller\\n\");\n        return NotImplemented;\n    }\n    else\n    {\n        HDC hdc;\n        HRGN hrgn;\n        int save;\n\n        stat = gdi_dc_acquire(graphics, &hdc);\n\n        if (stat != Ok)\n            return stat;\n\n        save = SaveDC(hdc);\n\n        if (hregion)\n            ExtSelectClipRgn(hdc, hregion, RGN_COPY);\n        else\n        {\n            stat = get_clip_hrgn(graphics, &hrgn);\n\n            if (stat != Ok)\n            {\n                RestoreDC(hdc, save);\n                gdi_dc_release(graphics, hdc);\n                return stat;\n            }\n\n            ExtSelectClipRgn(hdc, hrgn, RGN_COPY);\n\n            DeleteObject(hrgn);\n        }\n\n        stat = alpha_blend_hdc_pixels(graphics, dst_x, dst_y, src, src_width,\n            src_height, src_stride, fmt);\n\n        RestoreDC(hdc, save);\n\n        gdi_dc_release(graphics, hdc);\n\n        return stat;\n    }\n}"
+  },
+  {
+   "name": "get_clip_hrgn",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 462,
+   "end_line": 512,
+   "static": true,
+   "called_from": [
+    "alpha_blend_pixels_hrgn"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:3542",
+    "dlls/gdiplus/graphics.c:3783",
+    "dlls/gdiplus/graphics.c:4546",
+    "dlls/gdiplus/graphics.c:8140"
+   ],
+   "signature": "static GpStatus get_clip_hrgn(GpGraphics *graphics, HRGN *hrgn)",
+   "code": "static GpStatus get_clip_hrgn(GpGraphics *graphics, HRGN *hrgn)\n{\n    GpRegion *rgn;\n    GpMatrix transform;\n    GpStatus stat;\n    GpRectF bounds;\n    RECT gdi_bounds;\n    BOOL identity;\n\n    stat = get_graphics_device_bounds(graphics, &bounds);\n\n    if (stat == Ok)\n    {\n        gdi_bounds.left = floorf(bounds.X);\n        gdi_bounds.top = floorf(bounds.Y);\n        gdi_bounds.right = ceilf(bounds.X + bounds.Width);\n        gdi_bounds.bottom = ceilf(bounds.Y + bounds.Height);\n\n        stat = get_graphics_transform(graphics, WineCoordinateSpaceGdiDevice, CoordinateSpaceDevice, &transform);\n    }\n\n    if (stat == Ok)\n        stat = GdipIsMatrixIdentity(&transform, &identity);\n\n    if (stat == Ok)\n        stat = GdipCloneRegion(graphics->clip, &rgn);\n\n    if (stat == Ok)\n    {\n        if (!identity)\n            stat = GdipTransformRegion(rgn, &transform);\n\n        if (stat == Ok)\n            stat = get_region_hrgn(&rgn->node, &gdi_bounds, hrgn);\n\n        GdipDeleteRegion(rgn);\n    }\n\n    if (stat == Ok && graphics->gdi_clip)\n    {\n        if (*hrgn)\n            CombineRgn(*hrgn, *hrgn, graphics->gdi_clip, RGN_AND);\n        else\n        {\n            *hrgn = CreateRectRgn(0,0,0,0);\n            CombineRgn(*hrgn, graphics->gdi_clip, graphics->gdi_clip, RGN_COPY);\n        }\n    }\n\n    return stat;\n}"
+  },
+  {
+   "name": "alpha_blend_bmp_pixels",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 515,
+   "end_line": 551,
+   "static": true,
+   "called_from": [
+    "alpha_blend_pixels_hrgn"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static GpStatus alpha_blend_bmp_pixels(GpGraphics *graphics, INT dst_x, INT dst_y, const BYTE *src, INT src_width, INT src_height, INT src_stride, const PixelFormat fmt)",
+   "code": "static GpStatus alpha_blend_bmp_pixels(GpGraphics *graphics, INT dst_x, INT dst_y,\n    const BYTE *src, INT src_width, INT src_height, INT src_stride, const PixelFormat fmt)\n{\n    GpBitmap *dst_bitmap = (GpBitmap*)graphics->image;\n    INT x, y;\n    CompositingMode comp_mode = graphics->compmode;\n\n    for (y=0; y<src_height; y++)\n    {\n        for (x=0; x<src_width; x++)\n        {\n            ARGB dst_color, src_color;\n            src_color = ((ARGB*)(src + src_stride * y))[x];\n\n            if (comp_mode == CompositingModeSourceCopy)\n            {\n                if (!(src_color & 0xff000000))\n                    GdipBitmapSetPixel(dst_bitmap, x+dst_x, y+dst_y, 0);\n                else\n                    GdipBitmapSetPixel(dst_bitmap, x+dst_x, y+dst_y, src_color);\n            }\n            else\n            {\n                if (!(src_color & 0xff000000))\n                    continue;\n\n                GdipBitmapGetPixel(dst_bitmap, x+dst_x, y+dst_y, &dst_color);\n                if (fmt & PixelFormatPAlpha)\n                    GdipBitmapSetPixel(dst_bitmap, x+dst_x, y+dst_y, color_over_fgpremult(dst_color, src_color));\n                else\n                    GdipBitmapSetPixel(dst_bitmap, x+dst_x, y+dst_y, color_over(dst_color, src_color));\n            }\n        }\n    }\n\n    return Ok;\n}"
+  },
+  {
+   "name": "gdi_dc_acquire",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 50,
+   "end_line": 69,
+   "static": false,
+   "called_from": [
+    "alpha_blend_pixels_hrgn",
+    "gdi_alpha_blend"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:1259",
+    "dlls/gdiplus/graphics.c:1789",
+    "dlls/gdiplus/graphics.c:2192",
+    "dlls/gdiplus/graphics.c:2215",
+    "dlls/gdiplus/graphics.c:3538"
+   ],
+   "signature": "GpStatus gdi_dc_acquire(GpGraphics *graphics, HDC *hdc)",
+   "code": "GpStatus gdi_dc_acquire(GpGraphics *graphics, HDC *hdc)\n{\n    if (graphics->hdc != NULL)\n    {\n        *hdc = graphics->hdc;\n        graphics->hdc_refs++;\n        return Ok;\n    }\n    else if (graphics->owndc)\n    {\n        *hdc = graphics->hdc = GetDC(graphics->hwnd);\n        if (!graphics->hdc)\n            return OutOfMemory;\n        graphics->hdc_refs++;\n        return Ok;\n    }\n\n    *hdc = NULL;\n    return InvalidParameter;\n}"
+  },
+  {
+   "name": "gdi_dc_release",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 71,
+   "end_line": 82,
+   "static": false,
+   "called_from": [
+    "alpha_blend_pixels_hrgn",
+    "gdi_alpha_blend"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:1322",
+    "dlls/gdiplus/graphics.c:1988",
+    "dlls/gdiplus/graphics.c:2198",
+    "dlls/gdiplus/graphics.c:2224",
+    "dlls/gdiplus/graphics.c:3567"
+   ],
+   "signature": "void gdi_dc_release(GpGraphics *graphics, HDC hdc)",
+   "code": "void gdi_dc_release(GpGraphics *graphics, HDC hdc)\n{\n    assert(graphics->hdc_refs > 0);\n    graphics->hdc_refs--;\n\n    if (graphics->owndc && !graphics->hdc_refs)\n    {\n        assert(graphics->hdc == hdc);\n        graphics->hdc = NULL;\n        ReleaseDC(graphics->hwnd, hdc);\n    }\n}"
+  },
+  {
+   "name": "alpha_blend_hdc_pixels",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 574,
+   "end_line": 623,
+   "static": true,
+   "called_from": [
+    "alpha_blend_pixels_hrgn"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static GpStatus alpha_blend_hdc_pixels(GpGraphics *graphics, INT dst_x, INT dst_y, const BYTE *src, INT src_width, INT src_height, INT src_stride, PixelFormat fmt)",
+   "code": "static GpStatus alpha_blend_hdc_pixels(GpGraphics *graphics, INT dst_x, INT dst_y,\n    const BYTE *src, INT src_width, INT src_height, INT src_stride, PixelFormat fmt)\n{\n    HDC hdc;\n    HBITMAP hbitmap;\n    BITMAPINFOHEADER bih;\n    BYTE *temp_bits;\n\n    hdc = CreateCompatibleDC(0);\n\n    bih.biSize = sizeof(BITMAPINFOHEADER);\n    bih.biWidth = src_width;\n    bih.biHeight = -src_height;\n    bih.biPlanes = 1;\n    bih.biBitCount = 32;\n    bih.biCompression = BI_RGB;\n    bih.biSizeImage = 0;\n    bih.biXPelsPerMeter = 0;\n    bih.biYPelsPerMeter = 0;\n    bih.biClrUsed = 0;\n    bih.biClrImportant = 0;\n\n    hbitmap = CreateDIBSection(hdc, (BITMAPINFO*)&bih, DIB_RGB_COLORS,\n        (void**)&temp_bits, NULL, 0);\n\n    if(!hbitmap || !temp_bits)\n        goto done;\n\n    if (graphics->hdc &&\n         GetDeviceCaps(graphics->hdc, TECHNOLOGY) == DT_RASPRINTER &&\n         GetDeviceCaps(graphics->hdc, SHADEBLENDCAPS) == SB_NONE)\n        blend_32bppARGB(src_width, src_height, temp_bits,\n                        4 * src_width, src, src_stride);\n    else if (fmt & PixelFormatPAlpha)\n        memcpy(temp_bits, src, src_width * src_height * 4);\n    else\n        convert_32bppARGB_to_32bppPARGB(src_width, src_height, temp_bits,\n                                        4 * src_width, src, src_stride);\n\n    SelectObject(hdc, hbitmap);\n    gdi_alpha_blend(graphics, dst_x, dst_y, src_width, src_height,\n                    hdc, 0, 0, src_width, src_height);\n\n    DeleteObject(hbitmap);\n\ndone:\n    DeleteDC(hdc);\n\n    return Ok;\n}"
+  },
+  {
+   "name": "get_graphics_device_bounds",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 415,
+   "end_line": 460,
+   "static": true,
+   "called_from": [
+    "get_clip_hrgn"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:2325",
+    "dlls/gdiplus/graphics.c:3342",
+    "dlls/gdiplus/graphics.c:3875",
+    "dlls/gdiplus/graphics.c:4863"
+   ],
+   "signature": "static GpStatus get_graphics_device_bounds(GpGraphics* graphics, GpRectF* rect)",
+   "code": "static GpStatus get_graphics_device_bounds(GpGraphics* graphics, GpRectF* rect)\n{\n    RECT wnd_rect;\n    GpStatus stat=Ok;\n    GpUnit unit;\n\n    if(graphics->hwnd) {\n        if(!GetClientRect(graphics->hwnd, &wnd_rect))\n            return GenericError;\n\n        rect->X = wnd_rect.left;\n        rect->Y = wnd_rect.top;\n        rect->Width = wnd_rect.right - wnd_rect.left;\n        rect->Height = wnd_rect.bottom - wnd_rect.top;\n    }else if (graphics->image){\n        stat = GdipGetImageBounds(graphics->image, rect, &unit);\n        if (stat == Ok && unit != UnitPixel)\n            FIXME(\"need to convert from unit %i\\n\", unit);\n    }else if (GetObjectType(graphics->hdc) == OBJ_MEMDC){\n        HBITMAP hbmp;\n        BITMAP bmp;\n\n        rect->X = 0;\n        rect->Y = 0;\n\n        hbmp = GetCurrentObject(graphics->hdc, OBJ_BITMAP);\n        if (hbmp && GetObjectW(hbmp, sizeof(bmp), &bmp))\n        {\n            rect->Width = bmp.bmWidth;\n            rect->Height = bmp.bmHeight;\n        }\n        else\n        {\n            /* FIXME: ??? */\n            rect->Width = 1;\n            rect->Height = 1;\n        }\n    }else{\n        rect->X = 0;\n        rect->Y = 0;\n        rect->Width = GetDeviceCaps(graphics->hdc, HORZRES);\n        rect->Height = GetDeviceCaps(graphics->hdc, VERTRES);\n    }\n\n    return stat;\n}"
+  },
+  {
+   "name": "get_graphics_transform",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 7771,
+   "end_line": 7847,
+   "static": false,
+   "called_from": [
+    "get_clip_hrgn"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/gdiplus_private.h:85",
+    "dlls/gdiplus/region.c:1397",
+    "dlls/gdiplus/region.c:1838",
+    "dlls/gdiplus/metafile.c:2760",
+    "dlls/gdiplus/graphics.c:1599"
+   ],
+   "signature": "GpStatus get_graphics_transform(GpGraphics *graphics, GpCoordinateSpace dst_space, GpCoordinateSpace src_space, GpMatrix *matrix)",
+   "code": "GpStatus get_graphics_transform(GpGraphics *graphics, GpCoordinateSpace dst_space,\n        GpCoordinateSpace src_space, GpMatrix *matrix)\n{\n    GpStatus stat = Ok;\n    REAL scale_x, scale_y;\n\n    GdipSetMatrixElements(matrix, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0);\n\n    if (dst_space != src_space)\n    {\n        if(graphics->unit != UnitDisplay)\n        {\n            scale_x = units_to_pixels(graphics->scale, graphics->unit, graphics->xres, graphics->printer_display);\n            scale_y = units_to_pixels(graphics->scale, graphics->unit, graphics->yres, graphics->printer_display);\n        }\n        else\n        {\n            scale_x = units_to_pixels(1.0, graphics->unit, graphics->xres, graphics->printer_display);\n            scale_y = units_to_pixels(1.0, graphics->unit, graphics->yres, graphics->printer_display);\n        }\n\n        if (dst_space < src_space)\n        {\n            /* transform towards world space */\n            switch ((int)src_space)\n            {\n            case WineCoordinateSpaceGdiDevice:\n            {\n                GpMatrix gdixform = graphics->gdi_transform;\n                stat = GdipInvertMatrix(&gdixform);\n                if (stat != Ok)\n                    break;\n                memcpy(matrix->matrix, gdixform.matrix, sizeof(matrix->matrix));\n                if (dst_space == CoordinateSpaceDevice)\n                    break;\n                /* else fall-through */\n            }\n            case CoordinateSpaceDevice:\n                GdipScaleMatrix(matrix, 1.0/scale_x, 1.0/scale_y, MatrixOrderAppend);\n                if (dst_space == CoordinateSpacePage)\n                    break;\n                /* else fall-through */\n            case CoordinateSpacePage:\n            {\n                GpMatrix inverted_transform = graphics->worldtrans;\n                stat = GdipInvertMatrix(&inverted_transform);\n                if (stat == Ok)\n                    GdipMultiplyMatrix(matrix, &inverted_transform, MatrixOrderAppend);\n                break;\n            }\n            }\n        }\n        else\n        {\n            /* transform towards device space */\n            switch ((int)src_space)\n            {\n            case CoordinateSpaceWorld:\n                memcpy(matrix->matrix, &graphics->worldtrans, sizeof(matrix->matrix));\n                if (dst_space == CoordinateSpacePage)\n                    break;\n                /* else fall-through */\n            case CoordinateSpacePage:\n                GdipScaleMatrix(matrix, scale_x, scale_y, MatrixOrderAppend);\n                if (dst_space == CoordinateSpaceDevice)\n                    break;\n                /* else fall-through */\n            case CoordinateSpaceDevice:\n            {\n                GdipMultiplyMatrix(matrix, &graphics->gdi_transform, MatrixOrderAppend);\n                break;\n            }\n            }\n        }\n    }\n    return stat;\n}"
+  },
+  {
+   "name": "blend_32bppARGB",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 553,
+   "end_line": 572,
+   "static": true,
+   "called_from": [
+    "alpha_blend_hdc_pixels"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void blend_32bppARGB(UINT width, UINT height, BYTE *dst_bits, INT dst_stride, const BYTE *src_bits, INT src_stride)",
+   "code": "static void blend_32bppARGB(UINT width, UINT height, BYTE *dst_bits,\n    INT dst_stride, const BYTE *src_bits, INT src_stride)\n{\n    INT x, y;\n    for (y = 0; y < height; y++)\n    {\n        const BYTE *src = src_bits + y * src_stride;\n        BYTE *dst = dst_bits + y * dst_stride;\n        for (x = 0; x < width; x++)\n        {\n            BYTE alpha = src[3];\n            /* blend to white background */\n            *dst++ = (*src++ * alpha + 127) / 255 + (255 - alpha);\n            *dst++ = (*src++ * alpha + 127) / 255 + (255 - alpha);\n            *dst++ = (*src++ * alpha + 127) / 255 + (255 - alpha);\n            *dst++ = 255;\n            src++;\n        }\n    }\n}"
+  },
+  {
+   "name": "gdi_alpha_blend",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 377,
+   "end_line": 413,
+   "static": true,
+   "called_from": [
+    "alpha_blend_hdc_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:1293",
+    "dlls/gdiplus/graphics.c:3554"
+   ],
+   "signature": "static void gdi_alpha_blend(GpGraphics *graphics, INT dst_x, INT dst_y, INT dst_width, INT dst_height, HDC hdc, INT src_x, INT src_y, INT src_width, INT src_height)",
+   "code": "static void gdi_alpha_blend(GpGraphics *graphics, INT dst_x, INT dst_y, INT dst_width, INT dst_height,\n                            HDC hdc, INT src_x, INT src_y, INT src_width, INT src_height)\n{\n    HDC dst_hdc;\n    CompositingMode comp_mode;\n    INT technology, shadeblendcaps;\n\n    gdi_dc_acquire(graphics, &dst_hdc);\n\n    technology = GetDeviceCaps(dst_hdc, TECHNOLOGY);\n    shadeblendcaps  = GetDeviceCaps(dst_hdc, SHADEBLENDCAPS);\n\n    GdipGetCompositingMode(graphics, &comp_mode);\n\n    if ((technology == DT_RASPRINTER && shadeblendcaps == SB_NONE)\n        || comp_mode == CompositingModeSourceCopy)\n    {\n        TRACE(\"alpha blending not supported by device, fallback to StretchBlt\\n\");\n\n        StretchBlt(dst_hdc, dst_x, dst_y, dst_width, dst_height,\n                   hdc, src_x, src_y, src_width, src_height, SRCCOPY);\n    }\n    else\n    {\n        BLENDFUNCTION bf;\n\n        bf.BlendOp = AC_SRC_OVER;\n        bf.BlendFlags = 0;\n        bf.SourceConstantAlpha = 255;\n        bf.AlphaFormat = AC_SRC_ALPHA;\n\n        GdiAlphaBlend(dst_hdc, dst_x, dst_y, dst_width, dst_height,\n                      hdc, src_x, src_y, src_width, src_height, bf);\n    }\n\n    gdi_dc_release(graphics, dst_hdc);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "DC_BACKGROUND_KEY",
+    "type": "const COLORREF",
+    "static": true,
+    "start_line": 7553,
+    "end_line": 7553,
+    "code": "static const COLORREF DC_BACKGROUND_KEY = 0x0d0b0c;"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 44,
+    "end_line": 44,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(gdiplus);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "METAFILE_ReleaseDC",
+    "file": "dlls/gdiplus/metafile.c",
+    "start_line": 1669
+   },
+   {
+    "name": "convert_32bppARGB_to_32bppPARGB",
+    "file": "dlls/gdiplus/gdiplus.c",
+    "start_line": 445
+   },
+   {
+    "name": "get_region_hrgn",
+    "file": "dlls/gdiplus/region.c",
+    "start_line": 1246
+   },
+   {
+    "name": "units_to_pixels",
+    "file": "dlls/gdiplus/gdiplus.c",
+    "start_line": 329
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "GdipBitmapGetPixel",
+    "impl": [
+     "dlls/gdiplus/image.c:315"
+    ]
+   },
+   {
+    "name": "GdipBitmapSetPixel",
+    "impl": [
+     "dlls/gdiplus/image.c:539"
+    ]
+   },
+   {
+    "name": "GdipCloneRegion",
+    "impl": [
+     "dlls/gdiplus/region.c:230"
+    ]
+   },
+   {
+    "name": "GdipDeleteRegion",
+    "impl": [
+     "dlls/gdiplus/region.c:582"
+    ]
+   },
+   {
+    "name": "GdipGetCompositingMode",
+    "impl": [
+     "dlls/gdiplus/graphics.c:5224"
+    ]
+   },
+   {
+    "name": "GdipGetImageBounds",
+    "impl": [
+     "dlls/gdiplus/image.c:2202"
+    ]
+   },
+   {
+    "name": "GdipInvertMatrix",
+    "impl": [
+     "dlls/gdiplus/matrix.c:181"
+    ]
+   },
+   {
+    "name": "GdipIsMatrixIdentity",
+    "impl": [
+     "dlls/gdiplus/matrix.c:513"
+    ]
+   },
+   {
+    "name": "GdipMultiplyMatrix",
+    "impl": [
+     "dlls/gdiplus/matrix.c:239"
+    ]
+   },
+   {
+    "name": "GdipScaleMatrix",
+    "impl": [
+     "dlls/gdiplus/matrix.c:288"
+    ]
+   },
+   {
+    "name": "GdipSetMatrixElements",
+    "impl": [
+     "dlls/gdiplus/matrix.c:318"
+    ]
+   },
+   {
+    "name": "GdipTransformRegion",
+    "impl": [
+     "dlls/gdiplus/region.c:2014"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CombineRgn",
+    "module": "gdi32",
+    "impl": [
+     "dlls/win32u/region.c:1179"
+    ]
+   },
+   {
+    "name": "CreateCompatibleDC",
+    "module": "gdi32",
+    "impl": [
+     "dlls/win32u/dc.c:792"
+    ]
+   },
+   {
+    "name": "CreateDIBSection",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:857"
+    ]
+   },
+   {
+    "name": "CreateRectRgn",
+    "module": "gdi32",
+    "impl": [
+     "dlls/win32u/region.c:606"
+    ]
+   },
+   {
+    "name": "DeleteDC",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:532"
+    ]
+   },
+   {
+    "name": "DeleteObject",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:194"
+    ]
+   },
+   {
+    "name": "ExtSelectClipRgn",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:2301"
+    ]
+   },
+   {
+    "name": "GdiAlphaBlend",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:2037"
+    ]
+   },
+   {
+    "name": "GetClientRect",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/win.c:689"
+    ]
+   },
+   {
+    "name": "GetCurrentObject",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:394"
+    ]
+   },
+   {
+    "name": "GetDC",
+    "module": "user32",
+    "impl": [
+     "dlls/win32u/dce.c:1416"
+    ]
+   },
+   {
+    "name": "GetDeviceCaps",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:621"
+    ]
+   },
+   {
+    "name": "GetObjectType",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:150"
+    ]
+   },
+   {
+    "name": "GetObjectW",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:365"
+    ]
+   },
+   {
+    "name": "GetRegionData",
+    "module": "gdi32",
+    "impl": [
+     "dlls/win32u/region.c:828"
+    ]
+   },
+   {
+    "name": "ReleaseDC",
+    "module": "user32",
+    "impl": [
+     "dlls/win32u/dce.c:1408"
+    ]
+   },
+   {
+    "name": "RestoreDC",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:608"
+    ]
+   },
+   {
+    "name": "SaveDC",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:595"
+    ]
+   },
+   {
+    "name": "SelectObject",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:324"
+    ]
+   },
+   {
+    "name": "StretchBlt",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:1961"
+    ]
+   },
+   {
+    "name": "_assert",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/exit.c:319"
+    ]
+   },
+   {
+    "name": "ceilf",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/mathf.c:58"
+    ]
+   },
+   {
+    "name": "floorf",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/mathf.c:57"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "color_over",
+   "color_over_fgpremult"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "gdiplus.GdipReleaseDC",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI+",
+   "header": "gdiplusflat.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 53,
+   "body": 52,
+   "code": 27
+  },
+  "cyclomatic": 11,
+  "return_type": "GpStatus",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 11,
+   "n_tests": 11,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/gdiplus/tests/graphics.c::test_GdipDrawString",
+    "dlls/gdiplus/tests/graphics.c::test_Get_Release_DC",
+    "dlls/gdiplus/tests/graphics.c::test_alpha_hdc",
+    "dlls/gdiplus/tests/graphics.c::test_fromMemoryBitmap",
+    "dlls/gdiplus/tests/graphics.c::test_gdi_interop_bitmap",
+    "dlls/gdiplus/tests/graphics.c::test_gdi_interop_hdc",
+    "dlls/gdiplus/tests/graphics.c::test_getdc_scaled",
+    "dlls/gdiplus/tests/metafile.c::test_emfonly",
+    "dlls/gdiplus/tests/metafile.c::test_gditransform",
+    "dlls/gdiplus/tests/metafile.c::test_getdc",
+    "dlls/gdiplus/tests/metafile.c::test_restoredc"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-graphics-flat",
+   "source": "win32-gdiplus-flat",
+   "description": "",
+   "min_windows": "",
+   "documented_dll": "gdiplus.dll"
+  },
+  "exports": [
+   "gdiplus.GdipReleaseDC"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

@@ -1,0 +1,134 @@
+{
+ "id": "0422",
+ "function": {
+  "name": "LoadStringW",
+  "export_name": "LoadStringW",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernelbase",
+   "unicows",
+   "user32"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/string.c",
+  "start_line": 1209,
+  "end_line": 1250,
+  "body_lines": 39,
+  "signature": "INT WINAPI DECLSPEC_HOTPATCH LoadStringW(HINSTANCE instance, UINT resource_id, LPWSTR buffer, INT buflen)",
+  "header_comment": null,
+  "code": "INT WINAPI DECLSPEC_HOTPATCH LoadStringW(HINSTANCE instance, UINT resource_id, LPWSTR buffer, INT buflen)\n{\n    int string_num, i;\n    HGLOBAL hmem;\n    HRSRC hrsrc;\n    WCHAR *p;\n\n    TRACE(\"instance = %p, id = %04x, buffer = %p, length = %d\\n\", instance, resource_id, buffer, buflen);\n\n    if (!buffer)\n        return 0;\n\n    if (!(hrsrc = FindResourceW(instance, MAKEINTRESOURCEW((LOWORD(resource_id) >> 4) + 1), (LPWSTR)RT_STRING)) ||\n        !(hmem = LoadResource(instance, hrsrc)))\n    {\n        TRACE( \"Failed to load string.\\n\" );\n        if (buflen > 0) buffer[0] = 0;\n        return 0;\n    }\n\n    p = LockResource(hmem);\n    string_num = resource_id & 0x000f;\n    for (i = 0; i < string_num; i++)\n        p += *p + 1;\n\n    TRACE(\"strlen = %d\\n\", (int)*p );\n\n    /*if buflen == 0, then return a read-only pointer to the resource itself in buffer\n    it is assumed that buffer is actually a (LPWSTR *) */\n    if (buflen == 0)\n    {\n        *((LPWSTR *)buffer) = p + 1;\n        return *p;\n    }\n\n    i = min(buflen - 1, *p);\n    memcpy(buffer, p + 1, i * sizeof(WCHAR));\n    buffer[i] = 0;\n\n    TRACE(\"returning %s\\n\", debugstr_w(buffer));\n    return i;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"winternl.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\""
+  ],
+  "resolution": [
+   "kernelbase!LoadStringW [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/resource.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "user32",
+   "source_module": "user32",
+   "exported_by": [
+    "user32"
+   ],
+   "file": "dlls/user32/resource.c",
+   "start_line": 149,
+   "resolution": [
+    "user32!LoadStringW [stdcall]"
+   ],
+   "macro_generated": false,
+   "win16": false,
+   "end_line": 193,
+   "signature": "INT WINAPI DECLSPEC_HOTPATCH LoadStringW( HINSTANCE instance, UINT resource_id, LPWSTR buffer, INT buflen )",
+   "code": "INT WINAPI DECLSPEC_HOTPATCH LoadStringW( HINSTANCE instance, UINT resource_id,\n                            LPWSTR buffer, INT buflen )\n{\n    HGLOBAL hmem;\n    HRSRC hrsrc;\n    WCHAR *p;\n    int string_num;\n    int i;\n\n    TRACE(\"instance = %p, id = %04x, buffer = %p, length = %d\\n\",\n          instance, resource_id, buffer, buflen);\n\n    if(buffer == NULL)\n        return 0;\n\n    if (!(hrsrc = FindResourceW( instance, MAKEINTRESOURCEW((LOWORD(resource_id) >> 4) + 1), (LPWSTR)RT_STRING )) ||\n        !(hmem = LoadResource( instance, hrsrc )))\n    {\n        TRACE( \"Failed to load string.\\n\" );\n        if (buflen > 0) buffer[0] = 0;\n        return 0;\n    }\n\n    p = LockResource(hmem);\n    string_num = resource_id & 0x000f;\n    for (i = 0; i < string_num; i++)\n\tp += *p + 1;\n\n    TRACE(\"strlen = %d\\n\", (int)*p );\n\n    /*if buflen == 0, then return a read-only pointer to the resource itself in buffer\n    it is assumed that buffer is actually a (LPWSTR *) */\n    if(buflen == 0)\n    {\n        *((LPWSTR *)buffer) = p + 1;\n        return *p;\n    }\n\n    i = min(buflen - 1, *p);\n    memcpy(buffer, p + 1, i * sizeof(WCHAR));\n    buffer[i] = 0;\n\n    TRACE(\"returning %s\\n\", debugstr_w(buffer));\n    return i;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-loadstringw.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-loadstringw",
+   "documented_name": "loadstringw",
+   "file": "docs/0422_sdk-api_nf-winuser-loadstringw.md",
+   "text": "---\nUID: NF:winuser.LoadStringW\ntitle: LoadStringW function (winuser.h)\ndescription: Loads a string resource from the executable file associated with a specified module, copies the string into a buffer, and appends a terminating null character. (Unicode)\nhelpviewer_keywords: [\"LoadString\", \"LoadString function [Menus and Other Resources]\", \"LoadStringW\", \"_win32_LoadString\", \"_win32_loadstring_cpp\", \"menurc.loadstring\", \"winui._win32_loadstring\", \"winuser/LoadString\", \"winuser/LoadStringW\"]\nold-location: menurc\\loadstring.htm\ntech.root: menurc\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\resources\\strings\\stringreference\\stringfunctions\\loadstring.htm\nms.date: 12/05/2018\nms.keywords: LoadString, LoadString function [Menus and Other Resources], LoadStringA, LoadStringW, _win32_LoadString, _win32_loadstring_cpp, menurc.loadstring, winui._win32_loadstring, winuser/LoadString, winuser/LoadStringA, winuser/LoadStringW\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: LoadStringW (Unicode) and LoadStringA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - LoadStringW\n - winuser/LoadStringW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-downlevel-user32-l1-1-0.dll\n - api-ms-win-core-libraryloader-l1-2-3.dll\n - User32.dll\n - API-MS-Win-Core-LibraryLoader-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-LibraryLoader-l1-1-1.dll\n - API-MS-Win-Core-LibraryLoader-l1-2-0.dll\n - API-MS-Win-Core-Stringloader-l1-1-0.dll\n - API-MS-Win-Core-Stringloader-l1-1-1.dll\n - API-MS-Win-DownLevel-user32-l1-1-1.dll\n - MinKernelBase.dll\n - kernel32.dll\n - API-MS-Win-Core-Libraryloader-l1-2-1.dll\n - API-MS-Win-Core-LibraryLoader-L1-2-2.dll\napi_name:\n - LoadString\n - LoadStringA\n - LoadStringW\n---\n\n# LoadStringW function\n\n\n## -description\n\nLoads a string resource from the executable file associated with a specified module and either copies the string into a buffer with a terminating null character or returns a read-only pointer to the string resource itself.\n\n## -parameters\n\n### -param hInstance [in, optional]\n\nType: <b>HINSTANCE</b>\n\nA handle to an instance of the module whose executable file contains the string resource. To get the handle to the application itself, call the <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-getmodulehandlea\">GetModuleHandle</a> function with <b>NULL</b>.\n\n### -param uID [in]\n\nType: <b>UINT</b>\n\nThe identifier of the string to be loaded.\n\n### -param lpBuffer [out]\n\nType: <b>LPTSTR</b>\n\nThe buffer to receive the string (if *cchBufferMax* is non-zero) or a read-only pointer to the string resource itself (if *cchBufferMax* is zero). Must be of sufficient length to hold a pointer (8 bytes).\n\n### -param cchBufferMax [in]\n\nType: <b>int</b>\n\nThe size of the buffer, in characters. The string is truncated and null-terminated if it is longer than the number of characters specified. If this parameter is 0, then <i>lpBuffer</i> receives a read-only pointer to the string resource itself.\n\n## -returns\n\nType: <b>int</b>\n\nIf the function succeeds, the return value is one of the following:\n\n- The number of characters copied into the buffer (if *cchBufferMax* is non-zero), not including the terminating null character.\n- The number of characters in the string resource that *lpBuffer* points to (if *cchBufferMax* is zero). The string resource is not guaranteed to be null-terminated in the module's resource table, and you can use this value to determine where the string resource ends.\n- Zero if the string resource does not exist. \n \nTo get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nIf you pass 0 to *cchBufferMax* to return a read-only pointer to the string resource in the *lpBuffer* parameter, use the number of characters in the return value to determine the length of the string resource. String resources are not guaranteed to be null-terminated in the module's resource table. However, resource tables can contain null characters. String resources are stored in blocks of 16 strings, and any empty slots within a block are indicated by null characters. \n\n<h3><a id=\"Security_Remarks\"></a><a id=\"security_remarks\"></a><a id=\"SECURITY_REMARKS\"></a>Security Remarks</h3>\nUsing this function incorrectly can compromise the security of your application. Incorrect use includes specifying the wrong size in the <i>nBufferMax</i> parameter. For example, if <i>lpBuffer</i> points to a buffer <i>szBuffer</i> which is declared as <code>TCHAR szBuffer[100]</code>, then sizeof(szBuffer) gives the size of the buffer in bytes, which could lead to a buffer overflow for the Unicode version of the function. Buffer overflow situations are the cause of many security problems in applications. In this case, using <code>sizeof(szBuffer)/sizeof(TCHAR)</code> or <code>sizeof(szBuffer)/sizeof(szBuffer[0])</code> would give the proper size of the buffer.\n\n\n#### Examples\n\nFor an example, see <a href=\"/windows/desktop/winmsg/using-the-multiple-document-interface\">Creating a Child Window</a>\n\n<div class=\"code\"></div>\n\n\n\n\n> [!NOTE]\n> The winuser.h header defines LoadString as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-formatmessage\">FormatMessage</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-loadacceleratorsa\">LoadAccelerators</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-loadbitmapa\">LoadBitmap</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-loadcursora\">LoadCursor</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-loadicona\">LoadIcon</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-loadmenua\">LoadMenu</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-loadmenuindirecta\">LoadMenuIndirect</a>\n\n\n\n<b>Other Resources</b>\n\n\n\n<b>Reference</b>\n\n\n\n<a href=\"/windows/desktop/menurc/strings\">Strings</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 31,
+    "end_line": 31,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(string);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "FindResourceW",
+    "impl": [
+     "dlls/kernelbase/loader.c:1107"
+    ]
+   },
+   {
+    "name": "LoadResource",
+    "impl": [
+     "dlls/kernelbase/loader.c:1125"
+    ]
+   },
+   {
+    "name": "LockResource",
+    "impl": [
+     "dlls/kernelbase/loader.c:1142"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_w",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

@@ -1,0 +1,408 @@
+{
+ "id": "0451",
+ "function": {
+  "name": "setvbuf",
+  "export_name": "setvbuf",
+  "module": "crtdll",
+  "source_module": "msvcrt",
+  "exported_by": [
+   "crtdll",
+   "msvcr100",
+   "msvcr110",
+   "msvcr120",
+   "msvcr120_app",
+   "msvcr70",
+   "msvcr71",
+   "msvcr80",
+   "msvcr90",
+   "msvcrt",
+   "msvcrt20",
+   "msvcrt40",
+   "msvcrtd",
+   "ucrtbase"
+  ],
+  "side": "PE",
+  "file": "dlls/msvcrt/file.c",
+  "start_line": 5001,
+  "end_line": 5036,
+  "body_lines": 33,
+  "signature": "int CDECL setvbuf(FILE* file, char *buf, int mode, size_t size)",
+  "header_comment": "/*********************************************************************\n *\t\tsetvbuf (MSVCRT.@)\n */",
+  "code": "int CDECL setvbuf(FILE* file, char *buf, int mode, size_t size)\n{\n    if(!MSVCRT_CHECK_PMT(file != NULL)) return -1;\n    if(!MSVCRT_CHECK_PMT(mode==_IONBF || mode==_IOFBF || mode==_IOLBF)) return -1;\n    if(!MSVCRT_CHECK_PMT(mode==_IONBF || (size>=2 && size<=INT_MAX))) return -1;\n\n    _lock_file(file);\n\n    _fflush_nolock(file);\n    if(file->_flag & _IOMYBUF)\n        free(file->_base);\n    file->_flag &= ~(MSVCRT__NOBUF | _IOMYBUF | MSVCRT__USERBUF);\n    file->_cnt = 0;\n\n    if(mode == _IONBF) {\n        file->_flag |= MSVCRT__NOBUF;\n        file->_base = file->_ptr = (char*)&file->_charbuf;\n        file->_bufsiz = 2;\n    }else if(buf) {\n        file->_base = file->_ptr = buf;\n        file->_flag |= MSVCRT__USERBUF;\n        file->_bufsiz = size;\n    }else {\n        file->_base = file->_ptr = malloc(size);\n        if(!file->_base) {\n            file->_bufsiz = 0;\n            _unlock_file(file);\n            return -1;\n        }\n\n        file->_flag |= _IOMYBUF;\n        file->_bufsiz = size;\n    }\n    _unlock_file(file);\n    return 0;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <direct.h>",
+   "#include <fcntl.h>",
+   "#include <io.h>",
+   "#include <share.h>",
+   "#include <stdarg.h>",
+   "#include <sys/locking.h>",
+   "#include <sys/types.h>",
+   "#include <sys/utime.h>",
+   "#include <time.h>",
+   "#include <limits.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wincon.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"msvcrt.h\"",
+   "#include \"mtdll.h\"",
+   "#include \"wine/asm.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/asm.h\""
+  ],
+  "resolution": [
+   "crtdll!setvbuf [cdecl]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/msvcrt/tests/file.c",
+   "dlls/ucrtbase/tests/file.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "cpp-docs",
+   "header": "crt",
+   "path": "docs/c-runtime-library/reference/setvbuf.md",
+   "url": "https://learn.microsoft.com/cpp/c-runtime-library/reference/setvbuf",
+   "documented_name": "setvbuf",
+   "file": "docs/0451_cpp-docs_setvbuf.md",
+   "text": "---\ndescription: \"Learn more about: setvbuf\"\ntitle: \"setvbuf\"\nms.date: \"4/2/2020\"\napi_name: [\"setvbuf\", \"_o_setvbuf\"]\napi_location: [\"msvcrt.dll\", \"msvcr80.dll\", \"msvcr90.dll\", \"msvcr100.dll\", \"msvcr100_clr0400.dll\", \"msvcr110.dll\", \"msvcr110_clr0400.dll\", \"msvcr120.dll\", \"msvcr120_clr0400.dll\", \"ucrtbase.dll\", \"api-ms-win-crt-stdio-l1-1-0.dll\"]\napi_type: [\"DLLExport\"]\ntopic_type: [\"apiref\"]\nf1_keywords: [\"setvbuf\"]\nhelpviewer_keywords: [\"controlling stream buffering\", \"stream buffering\", \"setvbuf function\"]\nms.assetid: 6aa5aa37-3408-4fa0-992f-87f9f9c4baea\n---\n# `setvbuf`\n\nControls stream buffering and buffer size.\n\n## Syntax\n\n```C\nint setvbuf(\n   FILE *stream,\n   char *buffer,\n   int mode,\n   size_t size\n);\n```\n\n### Parameters\n\n*`stream`*\\\nPointer to `FILE` structure.\n\n*`buffer`*\\\nUser-allocated buffer.\n\n*`mode`*\\\nMode of buffering.\n\n*`size`*\\\nBuffer size in bytes. Allowable range: 2 <= *`size`* <= INT_MAX (2147483647). Internally, the value supplied for *`size`* is rounded down to the nearest multiple of 2.\n\n## Return value\n\nReturns 0 if successful.\n\nIf *`stream`* is `NULL`, or if *`mode`* or *`size`* isn't within a valid change, the invalid parameter handler is invoked, as described in [Parameter validation](../parameter-validation.md). If execution is allowed to continue, this function returns -1 and sets `errno` to `EINVAL`.\n\nFor information on these and other error codes, see [`errno`, `_doserrno`, `_sys_errlist`, and `_sys_nerr`](../errno-doserrno-sys-errlist-and-sys-nerr.md).\n\n## Remarks\n\nThe **`setvbuf`** function allows the program to control both buffering and buffer size for *`stream`*. *`stream`* must refer to an open file that hasn't undergone an I/O operation since it was opened. The array pointed to by *`buffer`* is used as the buffer, unless *`buffer`* is `NULL`, in which case **`setvbuf`** uses an automatically allocated buffer of length *`size`*/2 \\* 2 bytes.\n\nThe mode must be `_IOFBF`, `_IOLBF`, or `_IONBF`. If *`mode`* is `_IOFBF` or `_IOLBF`, then *`size`* is used as the size of the buffer. If *`mode`* is `_IONBF`, the stream is unbuffered, and both *`size`* and *`buffer`* are ignored. Values for *`mode`* and their meanings are:\n\n| *`mode`* value | Meaning |\n|---|---|\n| `_IOFBF` | Full buffering; that is, *`buffer`* is used as the buffer and *`size`* is used as the size of the buffer. If *`buffer`* is `NULL`, this mode uses an automatically allocated buffer that's *`size`* bytes long. |\n| `_IOLBF` | For some systems, this mode provides line buffering. However, for Win32, the behavior is the same as `_IOFBF` - Full Buffering. |\n| `_IONBF` | No buffer is used, regardless of *`buffer`* or *`size`*. |\n\nBy default, this function's global state is scoped to the application. To change this behavior, see [Global state in the CRT](../global-state.md).\n\n## Requirements\n\n| Routine | Required header |\n|---|---|\n| **`setvbuf`** | \\<stdio.h> |\n\nFor more compatibility information, see [Compatibility](../compatibility.md).\n\n## Libraries\n\nAll versions of the [C run-time libraries](../crt-library-features.md).\n\n## Example\n\n```C\n// crt_setvbuf.c\n// This program opens two streams: stream1\n// and stream2. It then uses setvbuf to give stream1 a\n// user-defined buffer of 1024 bytes and stream2 no buffer.\n//\n\n#include <stdio.h>\n\nint main( void )\n{\n   char buf[1024];\n   FILE *stream1, *stream2;\n\n   if( fopen_s( &stream1, \"data1\", \"a\" ) == 0 &&\n       fopen_s( &stream2, \"data2\", \"w\" ) == 0 )\n   {\n      if( setvbuf( stream1, buf, _IOFBF, sizeof( buf ) ) != 0 )\n         printf( \"Incorrect type or size of buffer for stream1\\n\" );\n      else\n         printf( \"'stream1' now has a buffer of 1024 bytes\\n\" );\n      if( setvbuf( stream2, NULL, _IONBF, 0 ) != 0 )\n         printf( \"Incorrect type or size of buffer for stream2\\n\" );\n      else\n         printf( \"'stream2' now has no buffer\\n\" );\n      _fcloseall();\n   }\n}\n```\n\n```Output\n'stream1' now has a buffer of 1024 bytes\n'stream2' now has no buffer\n```\n\n## See also\n\n[Stream I/O](../stream-i-o.md)\\\n[`fclose`, `_fcloseall`](fclose-fcloseall.md)\\\n[`fflush`](fflush.md)\\\n[`fopen`, `_wfopen`](fopen-wfopen.md)\\\n[`setbuf`](setbuf.md)\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "_lock_file",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 1482,
+   "end_line": 1489,
+   "static": false,
+   "called_from": [
+    "setvbuf"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:1186",
+    "dlls/msvcrt/file.c:1570",
+    "dlls/msvcrt/file.c:1671",
+    "dlls/msvcrt/file.c:1685",
+    "dlls/msvcrt/file.c:1711"
+   ],
+   "signature": "void CDECL _lock_file(FILE *file)",
+   "code": "void CDECL _lock_file(FILE *file)\n{\n    CRITICAL_SECTION *cs = file_get_cs(file);\n    if (!cs)\n        _lock(_STREAM_LOCKS + (file - iob_get_file(0)));\n    else\n        EnterCriticalSection(cs);\n}"
+  },
+  {
+   "name": "_fflush_nolock",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 1197,
+   "end_line": 1210,
+   "static": false,
+   "called_from": [
+    "setvbuf"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:1187",
+    "dlls/msvcrt/file.c:3791"
+   ],
+   "signature": "int CDECL _fflush_nolock(FILE* file)",
+   "code": "int CDECL _fflush_nolock(FILE* file)\n{\n    int res;\n\n    if(!file) {\n        msvcrt_flush_all_buffers(_IOWRT);\n        return 0;\n    }\n\n    res = msvcrt_flush_buffer(file);\n    if(!res && (file->_flag & MSVCRT__IOCOMMIT))\n        res = _commit(file->_file) ? EOF : 0;\n    return res;\n}"
+  },
+  {
+   "name": "_unlock_file",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 1494,
+   "end_line": 1501,
+   "static": false,
+   "called_from": [
+    "setvbuf"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:1188",
+    "dlls/msvcrt/file.c:1572",
+    "dlls/msvcrt/file.c:1673",
+    "dlls/msvcrt/file.c:1687",
+    "dlls/msvcrt/file.c:1714"
+   ],
+   "signature": "void CDECL _unlock_file(FILE *file)",
+   "code": "void CDECL _unlock_file(FILE *file)\n{\n    CRITICAL_SECTION *cs = file_get_cs(file);\n    if (!cs)\n        _unlock(_STREAM_LOCKS + (file - iob_get_file(0)));\n    else\n        LeaveCriticalSection(cs);\n}"
+  },
+  {
+   "name": "file_get_cs",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 271,
+   "end_line": 276,
+   "static": true,
+   "called_from": [
+    "_lock_file",
+    "_unlock_file"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:259",
+    "dlls/msvcrt/file.c:641",
+    "dlls/msvcrt/file.c:797",
+    "dlls/msvcrt/file.c:1411"
+   ],
+   "signature": "static CRITICAL_SECTION* file_get_cs(FILE *f)",
+   "code": "static CRITICAL_SECTION* file_get_cs(FILE *f)\n{\n    if (f < iob_get_file(0) || f >= iob_get_file(_IOB_ENTRIES))\n        return &((file_crit*)f)->crit;\n    return NULL;\n}"
+  },
+  {
+   "name": "iob_get_file",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 266,
+   "end_line": 269,
+   "static": true,
+   "called_from": [
+    "_lock_file",
+    "_unlock_file",
+    "file_get_cs",
+    "msvcrt_get_file"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:254",
+    "dlls/msvcrt/file.c:796",
+    "dlls/msvcrt/file.c:967",
+    "dlls/msvcrt/file.c:976"
+   ],
+   "signature": "static FILE* iob_get_file(int i)",
+   "code": "static FILE* iob_get_file(int i)\n{\n    return &MSVCRT__iob[i];\n}"
+  },
+  {
+   "name": "msvcrt_flush_all_buffers",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 1144,
+   "end_line": 1165,
+   "static": true,
+   "called_from": [
+    "_fflush_nolock"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:1172",
+    "dlls/msvcrt/file.c:1183"
+   ],
+   "signature": "static int msvcrt_flush_all_buffers(int mask)",
+   "code": "static int msvcrt_flush_all_buffers(int mask)\n{\n  int i, num_flushed = 0;\n  FILE *file;\n\n  LOCK_FILES();\n  for (i = 0; i < MSVCRT_stream_idx; i++) {\n    file = msvcrt_get_file(i);\n\n    if (file->_flag)\n    {\n      if(file->_flag & mask) {\n\tfflush(file);\n        num_flushed++;\n      }\n    }\n  }\n  UNLOCK_FILES();\n\n  TRACE(\":flushed (%d) handles\\n\",num_flushed);\n  return num_flushed;\n}"
+  },
+  {
+   "name": "msvcrt_flush_buffer",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 815,
+   "end_line": 833,
+   "static": true,
+   "called_from": [
+    "_fflush_nolock"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:905",
+    "dlls/msvcrt/file.c:1590",
+    "dlls/msvcrt/file.c:4107",
+    "dlls/msvcrt/file.c:4173",
+    "dlls/msvcrt/file.c:4378"
+   ],
+   "signature": "static int msvcrt_flush_buffer(FILE* file)",
+   "code": "static int msvcrt_flush_buffer(FILE* file)\n{\n    int ret = 0;\n\n    if((file->_flag & (_IOREAD|_IOWRT)) == _IOWRT &&\n            file->_flag & (_IOMYBUF|MSVCRT__USERBUF)) {\n        int cnt=file->_ptr-file->_base;\n        if(cnt>0 && _write(file->_file, file->_base, cnt) != cnt) {\n            file->_flag |= _IOERR;\n            ret = EOF;\n        } else if(file->_flag & _IORW) {\n            file->_flag &= ~_IOWRT;\n        }\n    }\n\n    file->_ptr=file->_base;\n    file->_cnt=0;\n    return ret;\n}"
+  },
+  {
+   "name": "msvcrt_get_file",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 523,
+   "end_line": 547,
+   "static": true,
+   "called_from": [
+    "msvcrt_flush_all_buffers"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:633",
+    "dlls/msvcrt/file.c:1376",
+    "dlls/msvcrt/file.c:1410",
+    "dlls/msvcrt/file.c:2756"
+   ],
+   "signature": "static inline FILE* msvcrt_get_file(int i)",
+   "code": "static inline FILE* msvcrt_get_file(int i)\n{\n    file_crit *ret;\n\n    if(i >= MSVCRT_max_streams)\n        return NULL;\n\n    if(i < _IOB_ENTRIES)\n        return iob_get_file(i);\n\n    ret = MSVCRT_fstream[i/MSVCRT_FD_BLOCK_SIZE];\n    if(!ret) {\n        MSVCRT_fstream[i/MSVCRT_FD_BLOCK_SIZE] = calloc(MSVCRT_FD_BLOCK_SIZE, sizeof(file_crit));\n        if(!MSVCRT_fstream[i/MSVCRT_FD_BLOCK_SIZE]) {\n            ERR(\"out of memory\\n\");\n            *_errno() = ENOMEM;\n            return NULL;\n        }\n\n        ret = MSVCRT_fstream[i/MSVCRT_FD_BLOCK_SIZE] + (i%MSVCRT_FD_BLOCK_SIZE);\n    } else\n        ret += i%MSVCRT_FD_BLOCK_SIZE;\n\n    return &ret->file;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "file_crit",
+    "kind": "struct_decl",
+    "start_line": 246,
+    "end_line": 249,
+    "code": "typedef struct {\n    FILE file;\n    CRITICAL_SECTION crit;\n} file_crit;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "MSVCRT__iob",
+    "type": "FILE[20]",
+    "static": false,
+    "start_line": 264,
+    "end_line": 264,
+    "code": "FILE MSVCRT__iob[_IOB_ENTRIES] = { { 0 } };"
+   },
+   {
+    "name": "MSVCRT_file_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 308,
+    "end_line": 308,
+    "code": "static CRITICAL_SECTION MSVCRT_file_cs = { &MSVCRT_file_cs_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "MSVCRT_fstream",
+    "type": "file_crit *[64]",
+    "static": true,
+    "start_line": 279,
+    "end_line": 279,
+    "code": "static file_crit* MSVCRT_fstream[MSVCRT_MAX_FILES/MSVCRT_FD_BLOCK_SIZE];"
+   },
+   {
+    "name": "MSVCRT_max_streams",
+    "type": "int",
+    "static": true,
+    "start_line": 280,
+    "end_line": 280,
+    "code": "static int MSVCRT_max_streams = 512, MSVCRT_stream_idx;"
+   },
+   {
+    "name": "MSVCRT_stream_idx",
+    "type": "int",
+    "static": true,
+    "start_line": 280,
+    "end_line": 280,
+    "code": "static int MSVCRT_max_streams = 512, MSVCRT_stream_idx;"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 49,
+    "end_line": 49,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(msvcrt);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "LOCK_FILES",
+    "start_line": 309,
+    "end_line": 309,
+    "code": "#define LOCK_FILES()    do { EnterCriticalSection(&MSVCRT_file_cs); } while (0)"
+   },
+   {
+    "name": "MSVCRT_FD_BLOCK_SIZE",
+    "start_line": 127,
+    "end_line": 127,
+    "code": "#define MSVCRT_FD_BLOCK_SIZE 32"
+   },
+   {
+    "name": "UNLOCK_FILES",
+    "start_line": 310,
+    "end_line": 310,
+    "code": "#define UNLOCK_FILES()  do { LeaveCriticalSection(&MSVCRT_file_cs); } while (0)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "_invalid_parameter",
+    "file": "dlls/msvcrt/errno.c",
+    "start_line": 460
+   },
+   {
+    "name": "_lock",
+    "file": "dlls/msvcrt/lock.c",
+    "start_line": 85
+   },
+   {
+    "name": "_unlock",
+    "file": "dlls/msvcrt/lock.c",
+    "start_line": 114
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "_commit",
+    "impl": [
+     "dlls/msvcrt/file.c:1105"
+    ]
+   },
+   {
+    "name": "_errno",
+    "impl": [
+     "dlls/msvcrt/errno.c:214"
+    ]
+   },
+   {
+    "name": "_write",
+    "impl": [
+     "dlls/msvcrt/file.c:3562"
+    ]
+   },
+   {
+    "name": "calloc",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "fflush",
+    "impl": [
+     "dlls/msvcrt/file.c:1178"
+    ]
+   },
+   {
+    "name": "free",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

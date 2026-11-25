@@ -1,0 +1,249 @@
+{
+ "id": "0170",
+ "function": {
+  "name": "MsiViewGetColumnInfo",
+  "export_name": "MsiViewGetColumnInfo",
+  "module": "msi",
+  "source_module": "msi",
+  "exported_by": [
+   "msi"
+  ],
+  "side": "PE",
+  "file": "dlls/msi/msiquery.c",
+  "start_line": 637,
+  "end_line": 691,
+  "body_lines": 52,
+  "signature": "UINT WINAPI MsiViewGetColumnInfo( MSIHANDLE hView, MSICOLINFO info, MSIHANDLE *hRec )",
+  "header_comment": null,
+  "code": "UINT WINAPI MsiViewGetColumnInfo( MSIHANDLE hView, MSICOLINFO info, MSIHANDLE *hRec )\n{\n    MSIQUERY *query = NULL;\n    MSIRECORD *rec = NULL;\n    UINT r;\n\n    TRACE( \"%lu, %d, %p\\n\", hView, info, hRec );\n\n    if( !hRec )\n        return ERROR_INVALID_PARAMETER;\n\n    if( info != MSICOLINFO_NAMES && info != MSICOLINFO_TYPES )\n        return ERROR_INVALID_PARAMETER;\n\n    query = msihandle2msiinfo( hView, MSIHANDLETYPE_VIEW );\n    if (!query)\n    {\n        struct wire_record *wire_rec = NULL;\n        MSIHANDLE remote;\n\n        if (!(remote = msi_get_remote(hView)))\n            return ERROR_INVALID_HANDLE;\n\n        __TRY\n        {\n            r = remote_ViewGetColumnInfo(remote, info, &wire_rec);\n        }\n        __EXCEPT(rpc_filter)\n        {\n            r = GetExceptionCode();\n        }\n        __ENDTRY\n\n        if (!r)\n        {\n            r = unmarshal_record(wire_rec, hRec);\n            free_remote_record(wire_rec);\n        }\n\n        return r;\n    }\n\n    r = MSI_ViewGetColumnInfo( query, info, &rec );\n    if ( r == ERROR_SUCCESS )\n    {\n        *hRec = alloc_msihandle( &rec->hdr );\n        if ( !*hRec )\n            r = ERROR_NOT_ENOUGH_MEMORY;\n        msiobj_release( &rec->hdr );\n    }\n\n    msiobj_release( &query->hdr );\n\n    return r;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"msi.h\"",
+   "#include \"msiquery.h\"",
+   "#include \"objbase.h\"",
+   "#include \"objidl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"msipriv.h\"",
+   "#include \"query.h\"",
+   "#include \"winemsi.h\"",
+   "#include \"initguid.h\""
+  ],
+  "resolution": [
+   "msi!MsiViewGetColumnInfo [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/msi/tests/custom.c",
+   "dlls/msi/tests/db.c",
+   "dlls/msi/tests/install.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 12
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "msiquery",
+   "path": "sdk-api-src/content/msiquery/nf-msiquery-msiviewgetcolumninfo.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/msiquery/nf-msiquery-msiviewgetcolumninfo",
+   "documented_name": "msiviewgetcolumninfo",
+   "file": "docs/0170_sdk-api_nf-msiquery-msiviewgetcolumninfo.md",
+   "text": "---\nUID: NF:msiquery.MsiViewGetColumnInfo\ntitle: MsiViewGetColumnInfo function (msiquery.h)\ndescription: The MsiViewGetColumnInfo function returns a record containing column names or definitions. This function returns a handle that should be closed using MsiCloseHandle.\nhelpviewer_keywords: [\"MSICOLINFO_NAMES\",\"MSICOLINFO_TYPES\",\"MsiViewGetColumnInfo\",\"MsiViewGetColumnInfo function\",\"_msi_msiviewgetcolumninfo\",\"msiquery/MsiViewGetColumnInfo\",\"setup.msiviewgetcolumninfo\"]\nold-location: setup\\msiviewgetcolumninfo.htm\ntech.root: setup\nms.assetid: f1b8e24c-ac90-4a25-a1d1-c005c403dffc\nms.date: 12/05/2018\nms.keywords: MSICOLINFO_NAMES, MSICOLINFO_TYPES, MsiViewGetColumnInfo, MsiViewGetColumnInfo function, _msi_msiviewgetcolumninfo, msiquery/MsiViewGetColumnInfo, setup.msiviewgetcolumninfo\nreq.header: msiquery.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Installer 5.0 on Windows Server 2012, Windows 8, Windows Server 2008 R2 or Windows 7. Windows Installer 4.0 or Windows Installer 4.5 on   Windows Server 2008 or Windows Vista. Windows Installer on Windows Server 2003 or Windows XP\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Msi.lib\nreq.dll: Msi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - MsiViewGetColumnInfo\n - msiquery/MsiViewGetColumnInfo\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-msi-misc-l1-1-0.dll\n - Msi.dll\napi_name:\n - MsiViewGetColumnInfo\n---\n\n# MsiViewGetColumnInfo function\n\n\n## -description\n\nThe \n<b>MsiViewGetColumnInfo</b> function returns a record containing column names or definitions. This function returns a handle that should be closed using \n<a href=\"/windows/desktop/api/msi/nf-msi-msiclosehandle\">MsiCloseHandle</a>.\n\n## -parameters\n\n### -param hView [in]\n\nHandle to the view from which to obtain column information.\n\n### -param eColumnInfo [in]\n\nSpecifies a flag indicating what type of information is needed. This parameter must be one of the following values. \n\n\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MSICOLINFO_NAMES\"></a><a id=\"msicolinfo_names\"></a><dl>\n<dt><b>MSICOLINFO_NAMES</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nColumn names are returned.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MSICOLINFO_TYPES\"></a><a id=\"msicolinfo_types\"></a><dl>\n<dt><b>MSICOLINFO_TYPES</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nDefinitions are returned.\n\n</td>\n</tr>\n</table>\n\n### -param phRecord [out]\n\nPointer to a handle to receive the column information data record.\n\n## -returns\n\nNote that in low memory situations, this function can raise a STATUS_NO_MEMORY exception.\n\n## -remarks\n\nThe column description returned by \n<b>MsiViewGetColumnInfo</b> is in the format described in the section: \n<a href=\"/windows/desktop/Msi/column-definition-format\">Column Definition Format</a>. Each column is described by a string in the corresponding record field. The definition string consists of a single letter representing the data type followed by the width of the column (in characters when applicable, bytes otherwise). A width of zero designates an unbounded width (for example, long text fields and streams). An uppercase letter indicates that null values are allowed in the column.\n\nNote that it is recommended to use variables of type PMSIHANDLE because the installer closes PMSIHANDLE objects as they go out of scope, whereas you must close MSIHANDLE objects by calling \n<a href=\"/windows/desktop/api/msi/nf-msi-msiclosehandle\">MsiCloseHandle</a>. For more information see <a href=\"/windows/desktop/Msi/windows-installer-best-practices\">Use PMSIHANDLE instead of HANDLE</a> section in the <a href=\"/windows/desktop/Msi/windows-installer-best-practices\">Windows Installer Best Practices</a>."
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "MSI_ViewGetColumnInfo",
+   "file": "dlls/msi/msiquery.c",
+   "start_line": 598,
+   "end_line": 635,
+   "static": false,
+   "called_from": [
+    "MsiViewGetColumnInfo"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msi/database.c:1121",
+    "dlls/msi/database.c:1129",
+    "dlls/msi/database.c:1284",
+    "dlls/msi/database.c:1288",
+    "dlls/msi/database.c:1312"
+   ],
+   "signature": "UINT MSI_ViewGetColumnInfo( MSIQUERY *query, MSICOLINFO info, MSIRECORD **prec )",
+   "code": "UINT MSI_ViewGetColumnInfo( MSIQUERY *query, MSICOLINFO info, MSIRECORD **prec )\n{\n    UINT r = ERROR_FUNCTION_FAILED, i, count = 0, type;\n    MSIRECORD *rec;\n    MSIVIEW *view = query->view;\n    LPCWSTR name;\n    BOOL temporary;\n\n    if( !view )\n        return ERROR_FUNCTION_FAILED;\n\n    if( !view->ops->get_dimensions )\n        return ERROR_FUNCTION_FAILED;\n\n    r = view->ops->get_dimensions( view, NULL, &count );\n    if( r != ERROR_SUCCESS )\n        return r;\n    if( !count )\n        return ERROR_INVALID_PARAMETER;\n\n    rec = MSI_CreateRecord( count );\n    if( !rec )\n        return ERROR_FUNCTION_FAILED;\n\n    for( i=0; i<count; i++ )\n    {\n        name = NULL;\n        r = view->ops->get_column_info( view, i+1, &name, &type, &temporary, NULL );\n        if( r != ERROR_SUCCESS )\n            continue;\n        if (info == MSICOLINFO_NAMES)\n            MSI_RecordSetStringW( rec, i+1, name );\n        else\n            set_record_type_string( rec, i+1, type, temporary );\n    }\n    *prec = rec;\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "set_record_type_string",
+   "file": "dlls/msi/msiquery.c",
+   "start_line": 563,
+   "end_line": 596,
+   "static": true,
+   "called_from": [
+    "MSI_ViewGetColumnInfo"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static UINT set_record_type_string( MSIRECORD *rec, UINT field, UINT type, BOOL temporary )",
+   "code": "static UINT set_record_type_string( MSIRECORD *rec, UINT field, UINT type, BOOL temporary )\n{\n    WCHAR szType[0x10];\n\n    if (MSITYPE_IS_BINARY(type))\n        szType[0] = 'v';\n    else if (type & MSITYPE_LOCALIZABLE)\n        szType[0] = 'l';\n    else if (type & MSITYPE_UNKNOWN)\n        szType[0] = 'f';\n    else if (type & MSITYPE_STRING)\n    {\n        if (temporary)\n            szType[0] = 'g';\n        else\n          szType[0] = 's';\n    }\n    else\n    {\n        if (temporary)\n            szType[0] = 'j';\n        else\n            szType[0] = 'i';\n    }\n\n    if (type & MSITYPE_NULLABLE)\n        szType[0] &= ~0x20;\n\n    swprintf( &szType[1], ARRAY_SIZE(szType) - 1, L\"%d\", (type&0xff) );\n\n    TRACE(\"type %04x -> %s\\n\", type, debugstr_w(szType) );\n\n    return MSI_RecordSetStringW( rec, field, szType );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 42,
+    "end_line": 42,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(msi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "MSI_CreateRecord",
+    "file": "dlls/msi/record.c",
+    "start_line": 76
+   },
+   {
+    "name": "MSI_RecordSetStringW",
+    "file": "dlls/msi/record.c",
+    "start_line": 597
+   },
+   {
+    "name": "alloc_msihandle",
+    "file": "dlls/msi/handle.c",
+    "start_line": 111
+   },
+   {
+    "name": "free_remote_record",
+    "file": "dlls/msi/record.c",
+    "start_line": 1153
+   },
+   {
+    "name": "msi_get_remote",
+    "file": "dlls/msi/handle.c",
+    "start_line": 183
+   },
+   {
+    "name": "msihandle2msiinfo",
+    "file": "dlls/msi/handle.c",
+    "start_line": 158
+   },
+   {
+    "name": "msiobj_release",
+    "file": "dlls/msi/handle.c",
+    "start_line": 241
+   },
+   {
+    "name": "rpc_filter",
+    "file": "dlls/msi/custom.c",
+    "start_line": 77
+   },
+   {
+    "name": "unmarshal_record",
+    "file": "dlls/msi/record.c",
+    "start_line": 1095
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [],
+  "header_inline": [
+   "__wine_pop_frame",
+   "__wine_push_frame",
+   "debugstr_w",
+   "swprintf",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "__wine_exception_handler",
+   "__wine_setjmpex",
+   "remote_ViewGetColumnInfo"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "view->ops->get_dimensions",
+    "in_function": "MSI_ViewGetColumnInfo",
+    "at": "dlls/msi/msiquery.c:612",
+    "candidates": []
+   },
+   {
+    "expr": "view->ops->get_column_info",
+    "in_function": "MSI_ViewGetColumnInfo",
+    "at": "dlls/msi/msiquery.c:625",
+    "candidates": []
+   }
+  ]
+ },
+ "winebench": {
+  "id": "msi.MsiViewGetColumnInfo",
+  "category": {
+   "l1": "Application installation and servicing",
+   "l2": "Windows Installer",
+   "header": "msiquery.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 55,
+   "body": 54,
+   "code": 31
+  },
+  "cyclomatic": 9,
+  "return_type": "UINT",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 12,
+   "n_tests": 12,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/msi/tests/custom.c::test_db",
+    "dlls/msi/tests/db.c::get_column_info",
+    "dlls/msi/tests/db.c::test_columnorder",
+    "dlls/msi/tests/db.c::test_createtable",
+    "dlls/msi/tests/db.c::test_dbmerge",
+    "dlls/msi/tests/db.c::test_getcolinfo",
+    "dlls/msi/tests/db.c::test_integers",
+    "dlls/msi/tests/db.c::test_msiimport",
+    "dlls/msi/tests/db.c::test_select_column_names",
+    "dlls/msi/tests/db.c::test_temporary_table",
+    "dlls/msi/tests/db.c::test_try_transform",
+    "dlls/msi/tests/install.c::test_packagecoltypes"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/msiquery/nf-msiquery-msiviewgetcolumninfo",
+   "source": "win32",
+   "description": "The MsiViewGetColumnInfo function returns a record containing column names or definitions. This function returns a handle that should be closed using MsiCloseHandle.",
+   "min_windows": "Windows Installer 5.0 on Windows Server 2012, Windows 8, Windows Server 2008 R2 or Windows 7. Windows Installer 4.0 or Windows Installer 4.5 on   Windows Server 2008 or Windows Vista. Windows Installer on Windows Server 2003 or Windows XP",
+   "documented_dll": "Msi.dll"
+  },
+  "exports": [
+   "msi.MsiViewGetColumnInfo"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

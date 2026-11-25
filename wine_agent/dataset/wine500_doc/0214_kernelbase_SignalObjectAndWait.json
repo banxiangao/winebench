@@ -1,0 +1,138 @@
+{
+ "id": "0214",
+ "function": {
+  "name": "SignalObjectAndWait",
+  "export_name": "SignalObjectAndWait",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/sync.c",
+  "start_line": 340,
+  "end_line": 355,
+  "body_lines": 13,
+  "signature": "DWORD WINAPI DECLSPEC_HOTPATCH SignalObjectAndWait( HANDLE signal, HANDLE wait, DWORD timeout, BOOL alertable )",
+  "header_comment": "/***********************************************************************\n *           SignalObjectAndWait  (kernelbase.@)\n */",
+  "code": "DWORD WINAPI DECLSPEC_HOTPATCH SignalObjectAndWait( HANDLE signal, HANDLE wait,\n                                                    DWORD timeout, BOOL alertable )\n{\n    NTSTATUS status;\n    LARGE_INTEGER time;\n\n    TRACE( \"%p %p %ld %d\\n\", signal, wait, timeout, alertable );\n\n    status = NtSignalAndWaitForSingleObject( signal, wait, alertable, get_nt_timeout( &time, timeout ) );\n    if (HIWORD(status))\n    {\n        SetLastError( RtlNtStatusToDosError(status) );\n        status = WAIT_FAILED;\n    }\n    return status;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include <stdio.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wincon.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"ddk/wdm.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/asm.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!SignalObjectAndWait [stdcall -import] -> import from kernelbase",
+   "kernelbase!SignalObjectAndWait [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/sync.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "synchapi",
+   "path": "sdk-api-src/content/synchapi/nf-synchapi-signalobjectandwait.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/synchapi/nf-synchapi-signalobjectandwait",
+   "documented_name": "signalobjectandwait",
+   "file": "docs/0214_sdk-api_nf-synchapi-signalobjectandwait.md",
+   "text": "---\nUID: NF:synchapi.SignalObjectAndWait\ntitle: SignalObjectAndWait function (synchapi.h)\ndescription: Signals one object and waits on another object as a single operation.\nhelpviewer_keywords: [\"SignalObjectAndWait\",\"SignalObjectAndWait function\",\"_win32_signalobjectandwait\",\"base.signalobjectandwait\",\"synchapi/SignalObjectAndWait\"]\nold-location: base\\signalobjectandwait.htm\ntech.root: base\nms.assetid: 2b1ce22b-8edb-4685-99f4-4fc38eec202a\nms.date: 12/05/2018\nms.keywords: SignalObjectAndWait, SignalObjectAndWait function, _win32_signalobjectandwait, base.signalobjectandwait, synchapi/SignalObjectAndWait\nreq.header: synchapi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SignalObjectAndWait\n - synchapi/SignalObjectAndWait\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Kernel32.dll\n - API-MS-Win-Core-Synch-l1-2-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-Synch-l1-2-1.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\napi_name:\n - SignalObjectAndWait\n---\n\n# SignalObjectAndWait function\n\n\n## -description\n\nSignals one object and waits on another object as a single operation.\n\n## -parameters\n\n### -param hObjectToSignal [in]\n\nA handle to the object to be signaled. This object can be a semaphore, a mutex, or an event. \n\n\n\n\nIf the handle is a semaphore, the <b>SEMAPHORE_MODIFY_STATE</b> access right is required. If the handle is an event, the <b>EVENT_MODIFY_STATE</b> access right is required. If the handle is a mutex and the caller does not own the mutex, the function fails with <b>ERROR_NOT_OWNER</b>.\n\n### -param hObjectToWaitOn [in]\n\nA handle to the object to wait on. The <b>SYNCHRONIZE</b> access right is required; for more information, see \n<a href=\"/windows/desktop/Sync/synchronization-object-security-and-access-rights\">Synchronization Object Security and Access Rights</a>. For a list of the object types whose handles you can specify, see the Remarks section.\n\n### -param dwMilliseconds [in]\n\nThe time-out interval, in milliseconds. The function returns if the interval elapses, even if the object's state is nonsignaled and no completion or asynchronous procedure call (APC) objects are queued. If <i>dwMilliseconds</i> is zero, the function tests the object's state, checks for queued completion routines or APCs, and returns immediately. If <i>dwMilliseconds</i> is <b>INFINITE</b>, the function's time-out interval never elapses.\n\n### -param bAlertable [in]\n\nIf this parameter is <b>TRUE</b>, the function returns when the system queues an I/O completion routine or APC function, and the thread calls the function. If <b>FALSE</b>, the function does not return, and the thread does not call the completion routine or APC function. \n\n\n\n\nA completion routine is queued when the \nfunction call that queued the APC has completed. This function returns and the completion routine is called only if <i>bAlertable</i> is <b>TRUE</b>, and the calling thread is the thread that queued the APC.\n\n## -returns\n\nIf the function succeeds, the return value indicates the event that caused the function to return. It can be one of the following values.\n\n<table>\n<tr>\n<th>Return code/value</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WAIT_ABANDONED</b></dt>\n<dt>0x00000080L</dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe specified object is a mutex object that was not released by the thread that owned the mutex object before the owning thread terminated. Ownership of the mutex object is granted to the calling thread, and the mutex is set to nonsignaled.\n\nIf the mutex was protecting persistent state information, you should check it for consistency.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WAIT_IO_COMPLETION</b></dt>\n<dt>0x000000C0L</dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe wait was ended by one or more user-mode \n<a href=\"/windows/desktop/Sync/asynchronous-procedure-calls\">asynchronous procedure calls</a> (APC) queued to the thread.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WAIT_OBJECT_0</b></dt>\n<dt>0x00000000L</dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe state of the specified object is signaled.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WAIT_TIMEOUT</b></dt>\n<dt>0x00000102L</dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe time-out interval elapsed, and the object's state is nonsignaled.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WAIT_FAILED</b></dt>\n<dt>(<b>DWORD</b>)0xFFFFFFFF</dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe function has failed. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe <b>SignalObjectAndWait</b> function  provides a more efficient way to signal one object and then wait on another compared to separate function calls such as  <a href=\"/windows/desktop/api/synchapi/nf-synchapi-setevent\">SetEvent</a> followed by <a href=\"/windows/desktop/api/synchapi/nf-synchapi-waitforsingleobject\">WaitForSingleObject</a>. \n\nThe \n<b>SignalObjectAndWait</b> function can wait for the following objects:\n\n<ul>\n<li>Change notification</li>\n<li>Console input</li>\n<li>Event</li>\n<li>Memory resource notification</li>\n<li>Mutex</li>\n<li>Process</li>\n<li>Semaphore</li>\n<li>Thread</li>\n<li>Waitable timer</li>\n</ul>\nFor more information, see \n<a href=\"/windows/desktop/Sync/synchronization-objects\">Synchronization Objects</a>.\n\nA thread can use the <b>SignalObjectAndWait</b> function to ensure that a  worker thread is in a wait state before signaling an object. For example, a thread and a worker thread may use handles to event objects to synchronize their work. The thread executes code such as the following:\n\n\n``` syntax\n  dwRet = WaitForSingleObject(hEventWorkerDone, INFINITE);\n  if( WAIT_OBJECT_0 == dwRet)\n    SetEvent(hEventMoreWorkToDo);\n\n```\n\nThe worker thread executes code such as the following:\n\n\n``` syntax\n  dwRet = SignalObjectAndWait(hEventWorkerDone,\n                              hEventMoreWorkToDo,\n                              INFINITE, \n                              FALSE);\n\n```\n\nNote that the \"signal\" and \"wait\" are not guaranteed to be performed as an atomic operation. Threads executing on other processors can observe the signaled state of the first object before the thread calling <b>SignalObjectAndWait</b> begins its wait on the second object.\n\nUse extreme caution when using  <b>SignalObjectAndWait</b>  and <a href=\"/windows/desktop/api/winbase/nf-winbase-pulseevent\">PulseEvent</a> with Windows 7, since using these APIs among multiple threads can cause an application to deadlock. Threads that are signaled by <b>SignalObjectAndWait</b>  call <b>PulseEvent</b> to signal the waiting object of the <b>SignalObjectAndWait</b> call. In some circumstances, the caller of <b>SignalObjectAndWait</b> can't receive signal state of the waiting object in time, causing a deadlock.\n\nUse caution when using the wait functions and code that directly or indirectly creates windows. If a thread creates any windows, it must process messages. Message broadcasts are sent to all windows in the system. A thread that uses a wait function with no time-out interval may cause the system to become deadlocked. Two examples of code that indirectly creates windows are DDE and COM <b>CoInitialize</b>. Therefore, if you have a thread that creates windows, be sure to call <b>SignalObjectAndWait</b> from a different thread. If this is not possible, you can use \n<a href=\"/windows/desktop/api/winuser/nf-winuser-msgwaitformultipleobjects\">MsgWaitForMultipleObjects</a> or \n<a href=\"/windows/desktop/api/winuser/nf-winuser-msgwaitformultipleobjectsex\">MsgWaitForMultipleObjectsEx</a>, but the functionality is not equivalent.\n\nTo compile an application that uses this function, define <b>_WIN32_WINNT</b> as 0x0400 or later. For more information, see \n<a href=\"/windows/desktop/WinProg/using-the-windows-headers\">Using the Windows Headers</a>.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-msgwaitformultipleobjects\">MsgWaitForMultipleObjects</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-msgwaitformultipleobjectsex\">MsgWaitForMultipleObjectsEx</a>\n\n\n\n<a href=\"/windows/desktop/Sync/synchronization-functions\">Synchronization Functions</a>\n\n\n\n<a href=\"/windows/desktop/Sync/wait-functions\">Wait Functions</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_nt_timeout",
+   "file": "dlls/kernelbase/sync.c",
+   "start_line": 51,
+   "end_line": 56,
+   "static": true,
+   "called_from": [
+    "SignalObjectAndWait"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/sync.c:365",
+    "dlls/kernelbase/sync.c:377",
+    "dlls/kernelbase/sync.c:410",
+    "dlls/kernelbase/sync.c:450",
+    "dlls/kernelbase/sync.c:471"
+   ],
+   "signature": "static inline LARGE_INTEGER *get_nt_timeout( LARGE_INTEGER *time, DWORD timeout )",
+   "code": "static inline LARGE_INTEGER *get_nt_timeout( LARGE_INTEGER *time, DWORD timeout )\n{\n    if (timeout == INFINITE) return NULL;\n    time->QuadPart = (ULONGLONG)timeout * -10000;\n    return time;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(sync);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtSignalAndWaitForSingleObject",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/sync.c:2373"
+    ]
+   },
+   {
+    "name": "RtlNtStatusToDosError",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:77"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

@@ -1,0 +1,635 @@
+{
+ "id": "0036",
+ "function": {
+  "name": "NtUserGetAncestor",
+  "export_name": "GetAncestor",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/window.c",
+  "start_line": 988,
+  "end_line": 1043,
+  "body_lines": 53,
+  "signature": "HWND WINAPI NtUserGetAncestor( HWND hwnd, UINT type )",
+  "header_comment": "/*****************************************************************\n *           NtUserGetAncestor (win32u.@)\n */",
+  "code": "HWND WINAPI NtUserGetAncestor( HWND hwnd, UINT type )\n{\n    HWND *list, ret = 0;\n    WND *win;\n\n    switch(type)\n    {\n    case GA_PARENT:\n        if (!(win = get_win_ptr( hwnd )))\n        {\n            RtlSetLastWin32Error( ERROR_INVALID_WINDOW_HANDLE );\n            return 0;\n        }\n        if (win == WND_DESKTOP) return 0;\n        if (win != WND_OTHER_PROCESS)\n        {\n            ret = win->parent;\n            release_win_ptr( win );\n        }\n        else /* need to query the server */\n        {\n            SERVER_START_REQ( get_window_tree )\n            {\n                req->handle = wine_server_user_handle( hwnd );\n                if (!wine_server_call_err( req )) ret = wine_server_ptr_handle( reply->parent );\n            }\n            SERVER_END_REQ;\n        }\n        break;\n\n    case GA_ROOT:\n        if (!(list = list_window_parents( hwnd ))) return 0;\n\n        if (!list[0] || !list[1]) ret = get_full_window_handle( hwnd );  /* top-level window */\n        else\n        {\n            int count = 2;\n            while (list[count]) count++;\n            ret = list[count - 2];  /* get the one before the desktop */\n        }\n        free( list );\n        break;\n\n    case GA_ROOTOWNER:\n        if (is_desktop_window( hwnd )) return 0;\n        ret = get_full_window_handle( hwnd );\n        for (;;)\n        {\n            HWND parent = get_parent( ret );\n            if (!parent) break;\n            ret = parent;\n        }\n        break;\n    }\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"ntgdi_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/opengl_driver.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "user32!GetAncestor [stdcall] -> NtUserGetAncestor implicitly imported from win32u",
+   "win32u!NtUserGetAncestor [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/msg.c",
+   "dlls/user32/tests/sysparams.c",
+   "dlls/user32/tests/win.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 7
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-getancestor.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getancestor",
+   "documented_name": "getancestor",
+   "file": "docs/0036_sdk-api_nf-winuser-getancestor.md",
+   "text": "---\nUID: NF:winuser.GetAncestor\ntitle: GetAncestor function (winuser.h)\ndescription: Retrieves the handle to the ancestor of the specified window.\nhelpviewer_keywords: [\"GA_PARENT\",\"GA_ROOT\",\"GA_ROOTOWNER\",\"GetAncestor\",\"GetAncestor function [Windows and Messages]\",\"_win32_GetAncestor\",\"_win32_getancestor_cpp\",\"winmsg.getancestor\",\"winui._win32_getancestor\",\"winuser/GetAncestor\"]\nold-location: winmsg\\getancestor.htm\ntech.root: winmsg\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\windowing\\windows\\windowreference\\windowfunctions\\getancestor.htm\nms.date: 11/26/2024\nms.keywords: GA_PARENT, GA_ROOT, GA_ROOTOWNER, GetAncestor, GetAncestor function [Windows and Messages], _win32_GetAncestor, _win32_getancestor_cpp, winmsg.getancestor, winui._win32_getancestor, winuser/GetAncestor\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetAncestor\n - winuser/GetAncestor\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-rtcore-ntuser-window-ext-l1-1-1.dll\n - ext-ms-win-ntuser-window-l1-1-6.dll\n - ext-ms-win-ntuser-window-l1-1-5.dll\n - User32.dll\n - API-MS-Win-NTUser-IE-Window-l1-1-0.dll\n - ie_shims.dll\n - API-MS-Win-RTCore-NTUser-Window-l1-1-0.dll\n - minuser.dll\n - Ext-MS-Win-NTUser-Window-l1-1-1.dll\n - Ext-MS-Win-NTUser-Window-l1-1-2.dll\n - Ext-MS-Win-RTCore-NTUser-Window-Ext-l1-1-0.dll\n - ext-ms-win-ntuser-window-l1-1-3.dll\n - Ext-MS-Win-NTUser-Window-L1-1-4.dll\napi_name:\n - GetAncestor\nreq.apiset: ext-ms-win-ntuser-window-l1-1-1 (introduced in Windows 8.1)\n---\n\n# GetAncestor function\n\n\n## -description\n\nRetrieves the handle to the ancestor of the specified window.\n\n## -parameters\n\n### -param hwnd [in]\n\nType: <b>HWND</b>\n\nA handle to the window whose ancestor is to be retrieved. If this parameter is the desktop window, the function returns <b>NULL</b>.\n\n### -param gaFlags [in]\n\nType: <b>UINT</b>\n\nThe ancestor to be retrieved. This parameter can be one of the following values. \n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"GA_PARENT\"></a><a id=\"ga_parent\"></a><dl>\n<dt><b>GA_PARENT</b></dt>\n<dt>1</dt>\n</dl>\n</td>\n<td width=\"60%\">\nRetrieves the parent window. This does not include the owner, as it does with the <a href=\"/windows/desktop/api/winuser/nf-winuser-getparent\">GetParent</a> function. \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"GA_ROOT\"></a><a id=\"ga_root\"></a><dl>\n<dt><b>GA_ROOT</b></dt>\n<dt>2</dt>\n</dl>\n</td>\n<td width=\"60%\">\nRetrieves the root window by walking the chain of parent windows.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"GA_ROOTOWNER\"></a><a id=\"ga_rootowner\"></a><dl>\n<dt><b>GA_ROOTOWNER</b></dt>\n<dt>3</dt>\n</dl>\n</td>\n<td width=\"60%\">\nRetrieves the owned root window by walking the chain of parent and owner windows returned by <a href=\"/windows/desktop/api/winuser/nf-winuser-getparent\">GetParent</a>. \n\n</td>\n</tr>\n</table>\n\n## -returns\n\nType: <b>HWND</b>\n\nThe return value is the handle to the ancestor window.\n\nIf the function fails, the return value is <b>NULL</b>. To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -see-also\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-getparent\">GetParent</a>\n\n\n\n<b>Reference</b>\n\n\n\n<a href=\"/windows/desktop/winmsg/windows\">Windows</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_win_ptr",
+   "file": "dlls/win32u/window.c",
+   "start_line": 602,
+   "end_line": 611,
+   "static": false,
+   "called_from": [
+    "NtUserGetAncestor",
+    "get_parent",
+    "get_window_long_size",
+    "get_window_relative",
+    "list_window_parents"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/message.c:445",
+    "dlls/win32u/imm.c:211",
+    "dlls/win32u/imm.c:235",
+    "dlls/win32u/menu.c:369",
+    "dlls/win32u/menu.c:1598"
+   ],
+   "signature": "WND *get_win_ptr( HWND hwnd )",
+   "code": "WND *get_win_ptr( HWND hwnd )\n{\n    WND *win;\n\n    if ((win = get_user_handle_ptr( hwnd, NTUSER_OBJ_WINDOW )) == WND_OTHER_PROCESS)\n    {\n        if (is_desktop_window( hwnd )) win = WND_DESKTOP;\n    }\n    return win;\n}"
+  },
+  {
+   "name": "list_window_parents",
+   "file": "dlls/win32u/window.c",
+   "start_line": 896,
+   "end_line": 957,
+   "static": true,
+   "called_from": [
+    "NtUserGetAncestor",
+    "is_window_visible"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/window.c:1053",
+    "dlls/win32u/window.c:1104"
+   ],
+   "signature": "static HWND *list_window_parents( HWND hwnd )",
+   "code": "static HWND *list_window_parents( HWND hwnd )\n{\n    WND *win;\n    HWND current, *list;\n    int i, pos = 0, size = 16, count;\n\n    if (!(list = malloc( size * sizeof(HWND) ))) return NULL;\n\n    current = hwnd;\n    for (;;)\n    {\n        if (!(win = get_win_ptr( current ))) goto empty;\n        if (win == WND_OTHER_PROCESS) break;  /* need to do it the hard way */\n        if (win == WND_DESKTOP)\n        {\n            if (!pos) goto empty;\n            list[pos] = 0;\n            return list;\n        }\n        list[pos] = current = win->parent;\n        release_win_ptr( win );\n        if (!current) return list;\n        if (++pos == size - 1)\n        {\n            /* need to grow the list */\n            HWND *new_list = realloc( list, (size + 16) * sizeof(HWND) );\n            if (!new_list) goto empty;\n            list = new_list;\n            size += 16;\n        }\n    }\n\n    /* at least one parent belongs to another process, have to query the server */\n\n    for (;;)\n    {\n        count = 0;\n        SERVER_START_REQ( get_window_parents )\n        {\n            req->handle = wine_server_user_handle( hwnd );\n            wine_server_set_reply( req, list, (size-1) * sizeof(user_handle_t) );\n            if (!wine_server_call( req )) count = reply->count;\n        }\n        SERVER_END_REQ;\n        if (!count) goto empty;\n        if (size > count)\n        {\n            /* start from the end since HWND is potentially larger than user_handle_t */\n            for (i = count - 1; i >= 0; i--)\n                list[i] = wine_server_ptr_handle( ((user_handle_t *)list)[i] );\n            list[count] = 0;\n            return list;\n        }\n        free( list );\n        size = count + 1;\n        if (!(list = malloc( size * sizeof(HWND) ))) return NULL;\n    }\n\nempty:\n    free( list );\n    return NULL;\n}"
+  },
+  {
+   "name": "get_full_window_handle",
+   "file": "dlls/win32u/window.c",
+   "start_line": 560,
+   "end_line": 572,
+   "static": false,
+   "called_from": [
+    "NtUserGetAncestor",
+    "get_window_long_size"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/message.c:425",
+    "dlls/win32u/message.c:452",
+    "dlls/win32u/message.c:2370",
+    "dlls/win32u/menu.c:696",
+    "dlls/win32u/menu.c:1532"
+   ],
+   "signature": "HWND get_full_window_handle( HWND hwnd )",
+   "code": "HWND get_full_window_handle( HWND hwnd )\n{\n    struct user_entry entry;\n    HANDLE handle;\n\n    if (!hwnd || (ULONG_PTR)hwnd >> 16) return hwnd;\n    if (LOWORD(hwnd) <= 1 || LOWORD(hwnd) == 0xffff) return hwnd;\n    /* do sign extension for -2 and -3 */\n    if (LOWORD(hwnd) >= (WORD)-3) return (HWND)(LONG_PTR)(INT16)LOWORD(hwnd);\n\n    if (!get_user_entry( hwnd, NTUSER_OBJ_WINDOW, &entry, &handle )) return hwnd;\n    return handle;\n}"
+  },
+  {
+   "name": "is_desktop_window",
+   "file": "dlls/win32u/window.c",
+   "start_line": 579,
+   "end_line": 593,
+   "static": false,
+   "called_from": [
+    "NtUserGetAncestor",
+    "get_win_ptr"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/message.c:2190",
+    "dlls/win32u/message.c:2193",
+    "dlls/win32u/message.c:2196",
+    "dlls/win32u/message.c:2201",
+    "dlls/win32u/window.c:4336"
+   ],
+   "signature": "BOOL is_desktop_window( HWND hwnd )",
+   "code": "BOOL is_desktop_window( HWND hwnd )\n{\n    struct user_thread_info *thread_info = get_user_thread_info();\n\n    if (!hwnd) return FALSE;\n    if (hwnd == thread_info->top_window) return TRUE;\n    if (hwnd == thread_info->msg_window) return TRUE;\n\n    if (!HIWORD(hwnd) || HIWORD(hwnd) == 0xffff)\n    {\n        if (LOWORD(thread_info->top_window) == LOWORD(hwnd)) return TRUE;\n        if (LOWORD(thread_info->msg_window) == LOWORD(hwnd)) return TRUE;\n    }\n    return FALSE;\n}"
+  },
+  {
+   "name": "get_parent",
+   "file": "dlls/win32u/window.c",
+   "start_line": 672,
+   "end_line": 707,
+   "static": false,
+   "called_from": [
+    "NtUserGetAncestor"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/message.c:2472",
+    "dlls/win32u/defwnd.c:730",
+    "dlls/win32u/defwnd.c:2500",
+    "dlls/win32u/defwnd.c:2575",
+    "dlls/win32u/defwnd.c:2593"
+   ],
+   "signature": "HWND get_parent( HWND hwnd )",
+   "code": "HWND get_parent( HWND hwnd )\n{\n    HWND retval = 0;\n    WND *win;\n\n    if (!(win = get_win_ptr( hwnd )))\n    {\n        RtlSetLastWin32Error( ERROR_INVALID_WINDOW_HANDLE );\n        return 0;\n    }\n    if (win == WND_DESKTOP) return 0;\n    if (win == WND_OTHER_PROCESS)\n    {\n        DWORD style = get_window_long( hwnd, GWL_STYLE );\n        if (style & (WS_POPUP | WS_CHILD))\n        {\n            SERVER_START_REQ( get_window_tree )\n            {\n                req->handle = wine_server_user_handle( hwnd );\n                if (!wine_server_call_err( req ))\n                {\n                    if (style & WS_POPUP) retval = wine_server_ptr_handle( reply->owner );\n                    else if (style & WS_CHILD) retval = wine_server_ptr_handle( reply->parent );\n                }\n            }\n            SERVER_END_REQ;\n        }\n    }\n    else\n    {\n        if (win->dwStyle & WS_POPUP) retval = win->owner;\n        else if (win->dwStyle & WS_CHILD) retval = win->parent;\n        release_win_ptr( win );\n    }\n    return retval;\n}"
+  },
+  {
+   "name": "get_user_handle_ptr",
+   "file": "dlls/win32u/window.c",
+   "start_line": 212,
+   "end_line": 228,
+   "static": false,
+   "called_from": [
+    "get_win_ptr"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/imm.c:70",
+    "dlls/win32u/menu.c:181",
+    "dlls/win32u/menu.c:312",
+    "dlls/win32u/cursoricon.c:70",
+    "dlls/win32u/cursoricon.c:694"
+   ],
+   "signature": "void *get_user_handle_ptr( HANDLE handle, unsigned short type )",
+   "code": "void *get_user_handle_ptr( HANDLE handle, unsigned short type )\n{\n    WORD index = USER_HANDLE_TO_INDEX( handle );\n    void *ptr = NULL;\n    struct user_entry entry;\n\n    if (index >= MAX_USER_HANDLES) return NULL;\n\n    user_lock();\n\n    if (!get_user_entry( handle, type, &entry, &handle )) ptr = NULL;\n    else if (entry.pid != GetCurrentProcessId()) ptr = OBJ_OTHER_PROCESS;\n    else ptr = client_objects[index];\n\n    if (!ptr || ptr == OBJ_OTHER_PROCESS) user_unlock();\n    return ptr;\n}"
+  },
+  {
+   "name": "get_user_entry",
+   "file": "dlls/win32u/window.c",
+   "start_line": 131,
+   "end_line": 140,
+   "static": true,
+   "called_from": [
+    "get_full_window_handle",
+    "get_shared_window",
+    "get_user_handle_ptr",
+    "is_current_process_window"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/window.c:623",
+    "dlls/win32u/window.c:661"
+   ],
+   "signature": "static BOOL get_user_entry( HANDLE handle, unsigned short type, struct user_entry *entry, HANDLE *full )",
+   "code": "static BOOL get_user_entry( HANDLE handle, unsigned short type, struct user_entry *entry, HANDLE *full )\n{\n    const volatile struct user_entry *entries = shared_session->user_entries;\n    WORD index = USER_HANDLE_TO_INDEX( handle );\n\n    if (index >= MAX_USER_HANDLES) return FALSE;\n    if (!read_acquire_user_entry( handle, type, entries + index, entry )) return FALSE;\n    *full = USER_HANDLE_FROM_INDEX( index, entry->generation );\n    return TRUE;\n}"
+  },
+  {
+   "name": "get_window_long",
+   "file": "dlls/win32u/window.c",
+   "start_line": 1404,
+   "end_line": 1407,
+   "static": false,
+   "called_from": [
+    "get_parent",
+    "is_window_enabled",
+    "is_window_visible"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/message.c:536",
+    "dlls/win32u/message.c:543",
+    "dlls/win32u/message.c:2470",
+    "dlls/win32u/message.c:2471",
+    "dlls/win32u/message.c:2834"
+   ],
+   "signature": "DWORD get_window_long( HWND hwnd, INT offset )",
+   "code": "DWORD get_window_long( HWND hwnd, INT offset )\n{\n    return get_window_long_size( hwnd, offset, sizeof(LONG), FALSE, FALSE );\n}"
+  },
+  {
+   "name": "read_acquire_user_entry",
+   "file": "dlls/win32u/window.c",
+   "start_line": 118,
+   "end_line": 129,
+   "static": true,
+   "called_from": [
+    "get_user_entry"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/window.c:146"
+   ],
+   "signature": "static BOOL read_acquire_user_entry( HANDLE handle, unsigned short type, const volatile struct user_entry *src, struct user_entry *dst )",
+   "code": "static BOOL read_acquire_user_entry( HANDLE handle, unsigned short type, const volatile struct user_entry *src, struct user_entry *dst )\n{\n    UINT64 uniq = ReadAcquire64( (LONG64 *)&src->uniq );\n    if (!is_valid_entry_uniq( handle, type, uniq )) return FALSE;\n    dst->offset = src->offset;\n    dst->tid = src->tid;\n    dst->pid = src->pid;\n    dst->id = src->id;\n    __SHARED_READ_FENCE;\n    dst->uniq = ReadNoFence64( &src->uniq );\n    return dst->uniq == uniq;\n}"
+  },
+  {
+   "name": "get_window_long_size",
+   "file": "dlls/win32u/window.c",
+   "start_line": 1333,
+   "end_line": 1401,
+   "static": true,
+   "called_from": [
+    "get_window_long"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/window.c:1412",
+    "dlls/win32u/window.c:1428",
+    "dlls/win32u/window.c:6374",
+    "dlls/win32u/window.c:6466"
+   ],
+   "signature": "static LONG_PTR get_window_long_size( HWND hwnd, INT offset, UINT size, BOOL ansi, BOOL internal )",
+   "code": "static LONG_PTR get_window_long_size( HWND hwnd, INT offset, UINT size, BOOL ansi, BOOL internal )\n{\n    LONG_PTR retval = 0;\n    WND *win;\n\n    switch (offset)\n    {\n    default:\n        if (offset < 0) break;\n        /* fallthrough */\n    case GWLP_ID:\n    case GWLP_HINSTANCE:\n    case GWLP_USERDATA:\n    case GWLP_WNDPROC:\n        return get_window_long_shm( hwnd, offset, size, ansi, internal );\n    case GWLP_HWNDPARENT:\n    {\n        HWND parent = NtUserGetAncestor( hwnd, GA_PARENT );\n        if (parent == get_desktop_window())\n            parent = get_window_relative( hwnd, GW_OWNER );\n        return (ULONG_PTR)parent;\n    }\n    }\n\n    if (!(win = get_win_ptr( hwnd )))\n    {\n        RtlSetLastWin32Error( ERROR_INVALID_WINDOW_HANDLE );\n        return 0;\n    }\n\n    if (win == WND_DESKTOP)\n    {\n        switch (offset)\n        {\n        case GWL_STYLE:\n            retval = WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN; /* message parent is not visible */\n            if (get_full_window_handle( hwnd ) == get_desktop_window())\n                retval |= WS_VISIBLE;\n            return retval;\n        case GWL_EXSTYLE:\n            return 0;\n        }\n        RtlSetLastWin32Error( ERROR_INVALID_INDEX );\n        return 0;\n    }\n\n    if (win == WND_OTHER_PROCESS)\n    {\n        SERVER_START_REQ( get_window_info )\n        {\n            req->handle = wine_server_user_handle( hwnd );\n            req->offset = offset;\n            req->size = size;\n            if (!wine_server_call_err( req )) retval = reply->info;\n        }\n        SERVER_END_REQ;\n        return retval;\n    }\n\n    /* now we have a valid win */\n\n    switch(offset)\n    {\n    case GWL_STYLE:      retval = win->dwStyle; break;\n    case GWL_EXSTYLE:    retval = win->dwExStyle; break;\n    }\n    release_win_ptr( win );\n    return retval;\n}"
+  },
+  {
+   "name": "is_valid_entry_uniq",
+   "file": "dlls/win32u/window.c",
+   "start_line": 104,
+   "end_line": 108,
+   "static": true,
+   "called_from": [
+    "read_acquire_user_entry"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/window.c:115"
+   ],
+   "signature": "static BOOL is_valid_entry_uniq( HANDLE handle, unsigned short type, UINT64 uniq )",
+   "code": "static BOOL is_valid_entry_uniq( HANDLE handle, unsigned short type, UINT64 uniq )\n{\n    if (!HIWORD(handle) || HIWORD(handle) == 0xffff) return LOWORD(uniq) == type;\n    return uniq == MAKELONG(type, HIWORD(handle));\n}"
+  },
+  {
+   "name": "get_window_long_shm",
+   "file": "dlls/win32u/window.c",
+   "start_line": 1266,
+   "end_line": 1310,
+   "static": true,
+   "called_from": [
+    "get_window_long_size"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static LONG_PTR get_window_long_shm( HWND hwnd, UINT offset, UINT size, BOOL ansi, BOOL internal )",
+   "code": "static LONG_PTR get_window_long_shm( HWND hwnd, UINT offset, UINT size, BOOL ansi, BOOL internal )\n{\n    struct object_lock lock = OBJECT_LOCK_INIT;\n    const window_shm_t *window_shm = NULL;\n    BOOL valid = TRUE, window_ansi = FALSE;\n    LONG_PTR ret = 0;\n    NTSTATUS status;\n\n    if (offset == GWLP_WNDPROC && !is_current_process_window( hwnd ))\n    {\n        RtlSetLastWin32Error( ERROR_ACCESS_DENIED );\n        return 0;\n    }\n\n    while ((status = get_shared_window( hwnd, &lock, &window_shm )) == STATUS_PENDING)\n    {\n        switch (offset)\n        {\n        case GWLP_ID:        ret = window_shm->info.id; break;\n        case GWLP_HINSTANCE: ret = window_shm->info.instance; break;\n        case GWLP_USERDATA:  memcpy( &ret, (void *)&window_shm->info.user_data, size ); break;\n        case GWLP_WNDPROC:   ret = window_shm->info.wndproc; break;\n        default:\n            valid = size <= window_shm->extra_size && offset <= window_shm->extra_size - size &&\n                    (internal || offset >= window_shm->private_size);\n            if (valid) memcpy( &ret, (char *)window_shm->extra + offset, size );\n            break;\n        }\n        window_ansi = window_shm->ansi;\n    }\n    if (status)\n    {\n        RtlSetLastWin32Error( ERROR_INVALID_WINDOW_HANDLE );\n        return 0;\n    }\n    if (!valid)\n    {\n        WARN( \"Invalid window %p offset %d size %u\\n\", hwnd, offset, size );\n        RtlSetLastWin32Error( ERROR_INVALID_INDEX );\n        return 0;\n    }\n\n    if (offset == GWLP_WNDPROC) return (ULONG_PTR)get_window_proc( (WNDPROC)ret, window_ansi, ansi );\n    return ret;\n}"
+  },
+  {
+   "name": "get_window_relative",
+   "file": "dlls/win32u/window.c",
+   "start_line": 815,
+   "end_line": 888,
+   "static": false,
+   "called_from": [
+    "get_window_long_size",
+    "list_window_children"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/message.c:2626",
+    "dlls/win32u/message.c:2628",
+    "dlls/win32u/defwnd.c:2712",
+    "dlls/win32u/window.c:3982",
+    "dlls/win32u/window.c:3988"
+   ],
+   "signature": "HWND get_window_relative( HWND hwnd, UINT rel )",
+   "code": "HWND get_window_relative( HWND hwnd, UINT rel )\n{\n    HWND retval = 0;\n\n    if (rel == GW_ENABLEDPOPUP)\n    {\n        HWND *list;\n        int i;\n\n        if (NtUserGetAncestor( hwnd, GA_ROOT ) != hwnd) return NULL;\n        if (!(list = list_window_children( 0 ))) return NULL;\n\n        for (i = 0; !retval && list[i]; i++)\n        {\n            if (get_window_relative( list[i], GW_OWNER ) != hwnd) continue;\n            if (!is_window_visible( list[i] )) continue;\n            if (!is_window_enabled( list[i] )) continue;\n            retval = list[i];\n        }\n\n        free(list);\n\n        return retval;\n    }\n\n    if (rel == GW_OWNER)  /* this one may be available locally */\n    {\n        WND *win = get_win_ptr( hwnd );\n        if (!win)\n        {\n            RtlSetLastWin32Error( ERROR_INVALID_HANDLE );\n            return 0;\n        }\n        if (win == WND_DESKTOP) return 0;\n        if (win != WND_OTHER_PROCESS)\n        {\n            retval = win->owner;\n            release_win_ptr( win );\n            return retval;\n        }\n        /* else fall through to server call */\n    }\n\n    SERVER_START_REQ( get_window_tree )\n    {\n        req->handle = wine_server_user_handle( hwnd );\n        if (!wine_server_call_err( req ))\n        {\n            switch(rel)\n            {\n            case GW_HWNDFIRST:\n                retval = wine_server_ptr_handle( reply->first_sibling );\n                break;\n            case GW_HWNDLAST:\n                retval = wine_server_ptr_handle( reply->last_sibling );\n                break;\n            case GW_HWNDNEXT:\n                retval = wine_server_ptr_handle( reply->next_sibling );\n                break;\n            case GW_HWNDPREV:\n                retval = wine_server_ptr_handle( reply->prev_sibling );\n                break;\n            case GW_OWNER:\n                retval = wine_server_ptr_handle( reply->owner );\n                break;\n            case GW_CHILD:\n                retval = wine_server_ptr_handle( reply->first_child );\n                break;\n            }\n        }\n    }\n    SERVER_END_REQ;\n    return retval;\n}"
+  },
+  {
+   "name": "is_current_process_window",
+   "file": "dlls/win32u/window.c",
+   "start_line": 633,
+   "end_line": 641,
+   "static": false,
+   "called_from": [
+    "get_window_long_shm"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/clipboard.c:194",
+    "dlls/win32u/defwnd.c:336",
+    "dlls/win32u/dce.c:1394",
+    "dlls/win32u/window.c:6325"
+   ],
+   "signature": "HWND is_current_process_window( HWND hwnd )",
+   "code": "HWND is_current_process_window( HWND hwnd )\n{\n    struct user_entry entry;\n    HANDLE handle;\n\n    if (!get_user_entry( hwnd, NTUSER_OBJ_WINDOW, &entry, &handle )) return 0;\n    if (entry.pid != GetCurrentProcessId()) return 0;\n    return handle;\n}"
+  },
+  {
+   "name": "get_shared_window",
+   "file": "dlls/win32u/window.c",
+   "start_line": 151,
+   "end_line": 174,
+   "static": true,
+   "called_from": [
+    "get_window_long_shm"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/window.c:183",
+    "dlls/win32u/window.c:200",
+    "dlls/win32u/window.c:1200",
+    "dlls/win32u/window.c:1221",
+    "dlls/win32u/window.c:1328"
+   ],
+   "signature": "static NTSTATUS get_shared_window( HANDLE handle, struct object_lock *lock, const window_shm_t **window_shm )",
+   "code": "static NTSTATUS get_shared_window( HANDLE handle, struct object_lock *lock, const window_shm_t **window_shm )\n{\n    const shared_object_t *object;\n    struct user_entry entry;\n\n    if (!get_user_entry( handle, NTUSER_OBJ_WINDOW, &entry, &handle )) return STATUS_INVALID_HANDLE;\n\n    if (lock->id) object = CONTAINING_RECORD( *window_shm, shared_object_t, shm.window );\n    else\n    {\n        object = find_shared_session_object( entry.id, entry.offset );\n        if (!object) return STATUS_INVALID_HANDLE;\n    }\n\n    if (!lock->id || !shared_object_release_seqlock( object, lock->seq ))\n    {\n        shared_object_acquire_seqlock( object, &lock->seq );\n        *window_shm = &object->shm.window;\n        lock->id = object->id;\n        return STATUS_PENDING;\n    }\n\n    return STATUS_SUCCESS;\n}"
+  },
+  {
+   "name": "get_window_proc",
+   "file": "dlls/win32u/window.c",
+   "start_line": 1256,
+   "end_line": 1264,
+   "static": true,
+   "called_from": [
+    "get_window_long_shm"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/window.c:1665"
+   ],
+   "signature": "static WNDPROC get_window_proc( WNDPROC wndproc, BOOL wndproc_ansi, BOOL ansi )",
+   "code": "static WNDPROC get_window_proc( WNDPROC wndproc, BOOL wndproc_ansi, BOOL ansi )\n{\n    /* This looks like a hack only for the edit control (see tests). This makes these controls\n     * more tolerant to A/W mismatches. The lack of W->A->W conversion for such a mismatch suggests\n     * that the hack is in GetWindowLongPtr[AW], not in winprocs.\n     */\n    if (wndproc == MAKE_WNDPROC(NTUSER_WNDPROC_EDIT) && wndproc_ansi != ansi) return wndproc;\n    return get_winproc( wndproc, ansi );\n}"
+  },
+  {
+   "name": "list_window_children",
+   "file": "dlls/win32u/window.c",
+   "start_line": 965,
+   "end_line": 983,
+   "static": false,
+   "called_from": [
+    "get_window_relative"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/message.c:4097",
+    "dlls/win32u/defwnd.c:2867",
+    "dlls/win32u/defwnd.c:2981",
+    "dlls/win32u/defwnd.c:3015",
+    "dlls/win32u/dce.c:2200"
+   ],
+   "signature": "HWND *list_window_children( HWND hwnd )",
+   "code": "HWND *list_window_children( HWND hwnd )\n{\n    HWND *list;\n    ULONG size = 128;\n    NTSTATUS status;\n\n    if (hwnd && !(hwnd = get_window_relative( hwnd, GW_CHILD ))) return NULL;\n\n    for (;;)\n    {\n        if (!(list = malloc( size * sizeof(HWND) ))) return NULL;\n        status = NtUserBuildHwndList( 0, hwnd, FALSE, TRUE, 0, size, list, &size );\n        if (!status && size) break;\n        free( list );\n        if (status != STATUS_BUFFER_TOO_SMALL) return NULL;\n    }\n    list[size - 1] = 0;\n    return list;\n}"
+  },
+  {
+   "name": "is_window_visible",
+   "file": "dlls/win32u/window.c",
+   "start_line": 1069,
+   "end_line": 1085,
+   "static": false,
+   "called_from": [
+    "get_window_relative"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/defwnd.c:691",
+    "dlls/win32u/defwnd.c:2846",
+    "dlls/win32u/scroll.c:996",
+    "dlls/win32u/dce.c:2256",
+    "dlls/win32u/window.c:3950"
+   ],
+   "signature": "BOOL is_window_visible( HWND hwnd )",
+   "code": "BOOL is_window_visible( HWND hwnd )\n{\n    HWND *list;\n    BOOL retval = TRUE;\n    int i;\n\n    if (!(get_window_long( hwnd, GWL_STYLE ) & WS_VISIBLE)) return FALSE;\n    if (!(list = list_window_parents( hwnd ))) return TRUE;\n    if (list[0])\n    {\n        for (i = 0; list[i+1]; i++)\n            if (!(get_window_long( list[i], GWL_STYLE ) & WS_VISIBLE)) break;\n        retval = !list[i+1] && (list[i] == get_desktop_window());  /* top message window isn't visible */\n    }\n    free( list );\n    return retval;\n}"
+  },
+  {
+   "name": "is_window_enabled",
+   "file": "dlls/win32u/window.c",
+   "start_line": 1183,
+   "end_line": 1191,
+   "static": false,
+   "called_from": [
+    "get_window_relative"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/menu.c:1778",
+    "dlls/win32u/menu.c:1802",
+    "dlls/win32u/defwnd.c:969",
+    "dlls/win32u/scroll.c:1089",
+    "dlls/win32u/window.c:6312"
+   ],
+   "signature": "BOOL is_window_enabled( HWND hwnd )",
+   "code": "BOOL is_window_enabled( HWND hwnd )\n{\n    DWORD ret;\n\n    RtlSetLastWin32Error( NO_ERROR );\n    ret = get_window_long( hwnd, GWL_STYLE );\n    if (!ret && RtlGetLastWin32Error() != NO_ERROR) return FALSE;\n    return !(ret & WS_DISABLED);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 35,
+    "end_line": 35,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(win);"
+   },
+   {
+    "name": "client_objects",
+    "type": "void *[32744]",
+    "static": true,
+    "start_line": 42,
+    "end_line": 42,
+    "code": "static void *client_objects[MAX_USER_HANDLES];"
+   }
+  ],
+  "macros": [
+   {
+    "name": "USER_HANDLE_FROM_INDEX",
+    "start_line": 38,
+    "end_line": 38,
+    "code": "#define USER_HANDLE_FROM_INDEX(index, generation) UlongToHandle( (index << 1) + FIRST_USER_HANDLE + (generation << 16) )"
+   },
+   {
+    "name": "USER_HANDLE_TO_INDEX",
+    "start_line": 37,
+    "end_line": 37,
+    "code": "#define USER_HANDLE_TO_INDEX(hwnd) ((LOWORD(hwnd) - FIRST_USER_HANDLE) >> 1)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "find_shared_session_object",
+    "file": "dlls/win32u/winstation.c",
+    "start_line": 175
+   },
+   {
+    "name": "get_desktop_window",
+    "file": "dlls/win32u/winstation.c",
+    "start_line": 805
+   },
+   {
+    "name": "get_user_thread_info",
+    "file": "dlls/win32u/syscall.c",
+    "start_line": 190
+   },
+   {
+    "name": "get_winproc",
+    "file": "dlls/win32u/class.c",
+    "start_line": 260
+   },
+   {
+    "name": "shared_object_acquire_seqlock",
+    "file": "dlls/win32u/winstation.c",
+    "start_line": 82
+   },
+   {
+    "name": "shared_object_release_seqlock",
+    "file": "dlls/win32u/winstation.c",
+    "start_line": 88
+   },
+   {
+    "name": "user_lock",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 334
+   },
+   {
+    "name": "user_unlock",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 340
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "NtUserBuildHwndList",
+    "impl": [
+     "dlls/win32u/window.c:3327"
+    ]
+   },
+   {
+    "name": "NtUserGetAncestor",
+    "impl": [
+     "dlls/win32u/window.c:988"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "PsGetCurrentProcessId",
+    "module": "ntoskrnl.exe",
+    "impl": [
+     "dlls/ntoskrnl.exe/ntoskrnl.c:3438"
+    ]
+   },
+   {
+    "name": "RtlGetLastWin32Error",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:104"
+    ]
+   },
+   {
+    "name": "RtlSetLastWin32Error",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   },
+   {
+    "name": "wine_server_call",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/loader.c:3436"
+    ]
+   }
+  ],
+  "header_inline": [
+   "HandleToULong",
+   "ReadAcquire64",
+   "ReadNoFence64",
+   "ULongToHandle",
+   "wine_dbg_log",
+   "wine_server_call_err",
+   "wine_server_ptr_handle",
+   "wine_server_set_reply",
+   "wine_server_user_handle"
+  ],
+  "system": [
+   "free",
+   "malloc",
+   "memcpy",
+   "memset",
+   "realloc"
+  ],
+  "unresolved": [
+   "release_win_ptr"
+  ],
+  "server_requests": [
+   {
+    "request": "get_window_info",
+    "handler": "server/window.c:2422"
+   },
+   {
+    "request": "get_window_parents",
+    "handler": "server/window.c:2522"
+   },
+   {
+    "request": "get_window_tree",
+    "handler": "server/window.c:2661"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "win32u.NtUserGetAncestor",
+  "category": {
+   "l1": "User input and messaging",
+   "l2": "Windows and messages",
+   "header": "winuser.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 56,
+   "body": 55,
+   "code": 35
+  },
+  "cyclomatic": 15,
+  "return_type": "HWND",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 7,
+   "n_tests": 10,
+   "n_tests_other": 3,
+   "own_test_functions": [
+    "dlls/user32/tests/msg.c::MsgCheckProc",
+    "dlls/user32/tests/msg.c::test_DestroyWindow",
+    "dlls/user32/tests/sysparams.c::test_dpi_mapping",
+    "dlls/user32/tests/win.c::cbt_hook_proc",
+    "dlls/user32/tests/win.c::check_parents",
+    "dlls/user32/tests/win.c::main_window_procA",
+    "dlls/user32/tests/win.c::test_hwnd_message"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getancestor",
+   "source": "win32",
+   "description": "Retrieves the handle to the ancestor of the specified window.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "User32.dll"
+  },
+  "exports": [
+   "user32.GetAncestor",
+   "win32u.NtUserGetAncestor"
+  ],
+  "subset": {
+   "selected_by": "extra candidate 2026-11-25: loc.total > 10, 5 < n_tests_own <= 50, category with few samples"
+  }
+ }
+}

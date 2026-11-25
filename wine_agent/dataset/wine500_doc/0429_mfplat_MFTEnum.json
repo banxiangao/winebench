@@ -1,0 +1,418 @@
+{
+ "id": "0429",
+ "function": {
+  "name": "MFTEnum",
+  "export_name": "MFTEnum",
+  "module": "mfplat",
+  "source_module": "mfplat",
+  "exported_by": [
+   "mfplat"
+  ],
+  "side": "PE",
+  "file": "dlls/mfplat/main.c",
+  "start_line": 1339,
+  "end_line": 1386,
+  "body_lines": 45,
+  "signature": "HRESULT WINAPI MFTEnum(GUID category, UINT32 flags, MFT_REGISTER_TYPE_INFO *input_type, MFT_REGISTER_TYPE_INFO *output_type, IMFAttributes *attributes, CLSID **clsids, UINT32 *count)",
+  "header_comment": "/***********************************************************************\n *      MFTEnum (mfplat.@)\n */",
+  "code": "HRESULT WINAPI MFTEnum(GUID category, UINT32 flags, MFT_REGISTER_TYPE_INFO *input_type,\n        MFT_REGISTER_TYPE_INFO *output_type, IMFAttributes *attributes, CLSID **clsids, UINT32 *count)\n{\n    struct mft_registration *mft, *mft2;\n    unsigned int mft_count;\n    struct list mfts;\n    HRESULT hr;\n\n    TRACE(\"%s, %#x, %s, %s, %p, %p, %p.\\n\", debugstr_mf_guid(&category), flags, debugstr_reg_typeinfo(input_type),\n            debugstr_reg_typeinfo(output_type), attributes, clsids, count);\n\n    if (!clsids || !count)\n        return E_INVALIDARG;\n\n    *count = 0;\n    *clsids = NULL;\n\n    list_init(&mfts);\n\n    if (FAILED(hr = mft_collect_machine_reg(&mfts, &category, MFT_ENUM_FLAG_SYNCMFT, NULL, input_type, output_type)))\n        return hr;\n\n    mft_count = list_count(&mfts);\n\n    if (mft_count)\n    {\n        if (!(*clsids = CoTaskMemAlloc(mft_count * sizeof(**clsids))))\n            hr = E_OUTOFMEMORY;\n\n        mft_count = 0;\n        LIST_FOR_EACH_ENTRY_SAFE(mft, mft2, &mfts, struct mft_registration, entry)\n        {\n            if (*clsids)\n                (*clsids)[mft_count++] = mft->clsid;\n            list_remove(&mft->entry);\n            release_mft_registration(mft);\n        }\n    }\n\n    if (!mft_count)\n    {\n        CoTaskMemFree(*clsids);\n        *clsids = NULL;\n    }\n    *count = mft_count;\n\n    return hr;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include <math.h>",
+   "#include <limits.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winreg.h\"",
+   "#include \"initguid.h\"",
+   "#include \"rtworkq.h\"",
+   "#include \"ole2.h\"",
+   "#include \"propsys.h\"",
+   "#include \"d3d11.h\"",
+   "#include \"uuids.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"mfplat_private.h\"",
+   "#include \"mfreadwrite.h\"",
+   "#include \"mfmediaengine.h\"",
+   "#include \"propvarutil.h\"",
+   "#include \"strsafe.h\"",
+   "#include \"evr.h\"",
+   "#include \"initguid.h\"",
+   "#include \"mfd3d12.h\"",
+   "#include \"bcrypt.h\"",
+   "#include \"pathcch.h\""
+  ],
+  "resolution": [
+   "mfplat!MFTEnum [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/mfplat/tests/mfplat.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "mfapi",
+   "path": "sdk-api-src/content/mfapi/nf-mfapi-mftenum.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/mfapi/nf-mfapi-mftenum",
+   "documented_name": "mftenum",
+   "file": "docs/0429_sdk-api_nf-mfapi-mftenum.md",
+   "text": "---\nUID: NF:mfapi.MFTEnum\ntitle: MFTEnum function (mfapi.h)\ndescription: Enumerates Media Foundation transforms (MFTs) in the registry.\nhelpviewer_keywords: [\"MFTEnum\",\"MFTEnum function [Media Foundation]\",\"a3bd2b3c-0b0b-4d64-99cc-6093c773f71c\",\"mf.mftenum\",\"mfapi/MFTEnum\"]\nold-location: mf\\mftenum.htm\ntech.root: mf\nms.assetid: a3bd2b3c-0b0b-4d64-99cc-6093c773f71c\nms.date: 12/05/2018\nms.keywords: MFTEnum, MFTEnum function [Media Foundation], a3bd2b3c-0b0b-4d64-99cc-6093c773f71c, mf.mftenum, mfapi/MFTEnum\nreq.header: mfapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps only]\nreq.target-min-winversvr: Windows Server 2008 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Mfplat.lib\nreq.dll: Mfplat.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - MFTEnum\n - mfapi/MFTEnum\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - mfplat.dll\napi_name:\n - MFTEnum\n---\n\n# MFTEnum function\n\n\n## -description\n\nEnumerates Media Foundation transforms (MFTs) in the registry.\n        \n\nStarting in Windows 7, applications should use the <a href=\"/windows/desktop/api/mfapi/nf-mfapi-mftenumex\">MFTEnumEx</a> function instead.\n\n## -parameters\n\n### -param guidCategory [in]\n\nGUID that specifies the category of MFTs to enumerate. For a list of MFT categories, see <a href=\"/windows/desktop/medfound/mft-category\">MFT_CATEGORY</a>.\n\n### -param Flags [in]\n\nReserved. Must be zero.\n\n### -param pInputType [in]\n\nPointer to an <a href=\"/windows/win32/api/mfobjects/ns-mfobjects-mft_register_type_info\">MFT_REGISTER_TYPE_INFO</a> structure that specifies an input media type to match. \n\nThis parameter can be <b>NULL</b>. If <b>NULL</b>, all input types are matched.\n\n### -param pOutputType [in]\n\nPointer to an <a href=\"/windows/win32/api/mfobjects/ns-mfobjects-mft_register_type_info\">MFT_REGISTER_TYPE_INFO</a> structure that specifies an output media type to match.\n\nThis parameter can be <b>NULL</b>.\n          If <b>NULL</b>, all output types are matched.\n\n### -param pAttributes [in]\n\nReserved. Set to <b>NULL</b>.\n\n<div class=\"alert\"><b>Note</b>  Windows Vista and Windows Server 2008: This parameter can specify a pointer to the <a href=\"/windows/desktop/api/mfobjects/nn-mfobjects-imfattributes\">IMFAttributes</a> interface of an attribute store. The <b>MFTEnum</b> function matches the attributes in this object against the attributes stored in the registry. (Registry attributes are specified in the <i>pAttributes</i> parameter of the <a href=\"/windows/desktop/api/mfapi/nf-mfapi-mftregister\">MFTRegister</a> function.) Only MFTs with matching attributes are returned in the enumeration results.</div>\n<div> </div>\n<div class=\"alert\"><b>Note</b>  Windows 7 and later: This parameter is ignored.</div>\n<div> </div>\n\n### -param ppclsidMFT [out]\n\nReceives a pointer to an array of CLSIDs. To create an MFT from this list, call <b>CoCreateInstance</b> with one of the CLSIDs. To get information about a particular MFT from its CLSID, call <a href=\"/windows/desktop/api/mfapi/nf-mfapi-mftgetinfo\">MFTGetInfo</a>. The caller must free the memory for the array by calling <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-cotaskmemfree\">CoTaskMemFree</a>.\n\n### -param pcMFTs [out]\n\nReceives the number of elements in the <i>ppclsidMFT</i> array. The value can be zero.\n\n## -returns\n\nIf this function succeeds, it returns <b>S_OK</b>. Otherwise, it returns an <b>HRESULT</b> error code.\n\n## -remarks\n\nThis function returns a list of all the MFTs in the specified category that match the search criteria given by the <i>pInputType</i>, <i>pOutputType</i>, and <i>pAttributes</i> parameters. Any of those parameters can be <b>NULL</b>.\n      \n\nIf no MFTs match the criteria, the method succeeds but returns the value zero in <i>pcMFTs</i>.\n      \n\n\n#### Examples\n\nTo find a decoder, set <i>guidCategory</i> to <b>MFT_CATEGORY_AUDIO_DECODER</b> or <b>MFT_CATEGORY_VIDEO_DECODER</b> and specify the encoding format in <i>pInputType</i>.  You would typically set <i>pOutputType</i> to <b>NULL</b> in this case.\n\n\n```cpp\nHRESULT FindDecoder(\n    const GUID& subtype,        // Subtype\n    BOOL bAudio,                // TRUE for audio, FALSE for video\n    IMFTransform **ppDecoder    // Receives a pointer to the decoder.\n    )\n{\n    HRESULT hr = S_OK;\n    UINT32 count = 0;\n\n    CLSID *ppCLSIDs = NULL;\n\n    MFT_REGISTER_TYPE_INFO info = { 0 };\n\n    info.guidMajorType = bAudio ? MFMediaType_Audio : MFMediaType_Video;\n    info.guidSubtype = subtype;\n\n    hr = MFTEnum(   \n        bAudio ? MFT_CATEGORY_AUDIO_DECODER : MFT_CATEGORY_VIDEO_DECODER,\n        0,      // Reserved\n        &info,  // Input type\n        NULL,   // Output type\n        NULL,   // Reserved\n        &ppCLSIDs,\n        &count\n        );\n\n    if (SUCCEEDED(hr) && count == 0)\n    {\n        hr = MF_E_TOPO_CODEC_NOT_FOUND;\n    }\n\n    // Create the first decoder in the list.\n\n    if (SUCCEEDED(hr))\n    {\n        hr = CoCreateInstance(ppCLSIDs[0], NULL,\n            CLSCTX_INPROC_SERVER, IID_PPV_ARGS(ppDecoder));\n    }\n\n    CoTaskMemFree(ppCLSIDs);\n    return hr;\n}\n\n```\n\n\nTo find an encoder, set <i>guidCategory</i> to <b>MFT_CATEGORY_AUDIO_ENCODER</b> or <b>MFT_CATEGORY_VIDEO_ENCODER</b> and specify the encoding format in <i>pOutputType</i>.  You would typically set <i>pInputType</i> to <b>NULL</b> in this case.\n\n\n```cpp\nHRESULT FindEncoder(\n    const GUID& subtype, \n    BOOL bAudio, \n    IMFTransform **ppEncoder\n    )\n{\n    HRESULT hr = S_OK;\n    UINT32 count = 0;\n\n    CLSID *ppCLSIDs = NULL;\n\n    MFT_REGISTER_TYPE_INFO info = { 0 };\n\n    info.guidMajorType = bAudio ? MFMediaType_Audio : MFMediaType_Video;\n    info.guidSubtype = subtype;\n\n    hr = MFTEnum(   \n        bAudio ? MFT_CATEGORY_AUDIO_ENCODER : MFT_CATEGORY_VIDEO_ENCODER,\n        0,          // Reserved\n        NULL,       // Input type\n        &info,      // Output type\n        NULL,       // Reserved\n        &ppCLSIDs,\n        &count\n        );\n\n    if (SUCCEEDED(hr) && count == 0)\n    {\n        hr = MF_E_TOPO_CODEC_NOT_FOUND;\n    }\n\n    // Create the first encoder in the list.\n\n    if (SUCCEEDED(hr))\n    {\n        hr = CoCreateInstance(ppCLSIDs[0], NULL,\n            CLSCTX_INPROC_SERVER, IID_PPV_ARGS(ppEncoder));\n    }\n\n    CoTaskMemFree(ppCLSIDs);\n    return hr;\n}\n\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/medfound/adding-a-decoder-to-a-topology\">Adding a Decoder to a Topology</a>\n\n\n\n<a href=\"/windows/desktop/api/mfapi/nf-mfapi-mftenumex\">MFTEnumEx</a>\n\n\n\n<a href=\"/windows/desktop/api/mfapi/nf-mfapi-mftregister\">MFTRegister</a>\n\n\n\n<a href=\"/windows/desktop/medfound/media-foundation-functions\">Media Foundation Functions</a>\n\n\n\n<a href=\"/windows/desktop/medfound/media-foundation-transforms\">Media Foundation Transforms</a>\n\n\n\n<a href=\"/windows/desktop/medfound/registering-and-enumerating-mfts\">Registering and Enumerating MFTs</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "debugstr_mf_guid",
+   "file": "dlls/mfplat/main.c",
+   "start_line": 2055,
+   "end_line": 2195,
+   "static": false,
+   "called_from": [
+    "MFTEnum",
+    "debugstr_reg_typeinfo"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/mfplat/sample.c:407",
+    "dlls/mfplat/mediatype.c:419",
+    "dlls/mfplat/mediatype.c:924",
+    "dlls/mfplat/mediatype.c:1327",
+    "dlls/mfplat/mediatype.c:1808"
+   ],
+   "signature": "const char *debugstr_mf_guid(const GUID *guid)",
+   "code": "const char *debugstr_mf_guid(const GUID *guid)\n{\n    static const struct guid_def guid_defs[] =\n    {\n#define X(g) { &(g), #g }\n        X(MFAudioFormat_ADTS),\n        X(MFAudioFormat_PCM),\n        X(MFAudioFormat_PCM_HDCP),\n        X(MFAudioFormat_Float),\n        X(MFAudioFormat_DTS),\n        X(MFAudioFormat_DRM),\n        X(MFAudioFormat_MSP1),\n        X(MFAudioFormat_Vorbis),\n        X(MFAudioFormat_AAC),\n        X(MFVideoFormat_RGB24),\n        X(MFVideoFormat_ARGB32),\n        X(MFVideoFormat_RGB32),\n        X(MFVideoFormat_RGB565),\n        X(MFVideoFormat_RGB555),\n        X(MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_AUDCAP_GUID),\n        X(MFT_CATEGORY_MULTIPLEXER),\n        X(MFVideoFormat_A2R10G10B10),\n        X(MFT_CATEGORY_VIDEO_EFFECT),\n        X(MFMediaType_Script),\n        X(MFMediaType_Image),\n        X(MFMediaType_HTML),\n        X(MFMediaType_Binary),\n        X(MFVideoFormat_MPEG2),\n        X(MFMediaType_FileTransfer),\n        X(MFVideoFormat_RGB8),\n        X(MFAudioFormat_Dolby_AC3),\n        X(MFVideoFormat_L8),\n        X(MFAudioFormat_LPCM),\n        X(MFVideoFormat_420O),\n        X(MFVideoFormat_AI44),\n        X(MFVideoFormat_AV1),\n        X(MFVideoFormat_AYUV),\n        X(MFVideoFormat_H263),\n        X(MFVideoFormat_H264),\n        X(MFVideoFormat_H265),\n        X(MFVideoFormat_HEVC),\n        X(MFVideoFormat_HEVC_ES),\n        X(MFT_CATEGORY_AUDIO_EFFECT),\n        X(MFVideoFormat_I420),\n        X(MFVideoFormat_IYUV),\n        X(MFT_CATEGORY_VIDEO_DECODER),\n        X(MFVideoFormat_M4S2),\n        X(MFVideoFormat_MJPG),\n        X(MFVideoFormat_MP43),\n        X(MFVideoFormat_MP4S),\n        X(MFVideoFormat_MP4V),\n        X(MFVideoFormat_MPG1),\n        X(MFVideoFormat_MSS1),\n        X(MFVideoFormat_MSS2),\n        X(MFVideoFormat_NV11),\n        X(MFVideoFormat_NV12),\n        X(MFVideoFormat_ORAW),\n        X(MFAudioFormat_Opus),\n        X(MFAudioFormat_MPEG),\n        X(MFVideoFormat_D16),\n        X(MFVideoFormat_P010),\n        X(MFVideoFormat_P016),\n        X(MFVideoFormat_P210),\n        X(MFVideoFormat_P216),\n        X(MFVideoFormat_L16),\n        X(MFAudioFormat_MP3),\n        X(MFVideoFormat_UYVY),\n        X(MFVideoFormat_VP10),\n        X(MFVideoFormat_VP80),\n        X(MFVideoFormat_VP90),\n        X(MFVideoFormat_WMV1),\n        X(MFVideoFormat_WMV2),\n        X(MFVideoFormat_WMV3),\n        X(MFVideoFormat_WVC1),\n        X(MFT_CATEGORY_OTHER),\n        X(MFVideoFormat_Y210),\n        X(MFVideoFormat_Y216),\n        X(MFVideoFormat_Y410),\n        X(MFVideoFormat_Y416),\n        X(MFVideoFormat_Y41P),\n        X(MFVideoFormat_Y41T),\n        X(MFVideoFormat_Y42T),\n        X(MFVideoFormat_YUY2),\n        X(MFVideoFormat_YV12),\n        X(MFVideoFormat_YVU9),\n        X(MFVideoFormat_YVYU),\n        X(MFAudioFormat_WMAudioV8),\n        X(MFAudioFormat_ALAC),\n        X(MFAudioFormat_AMR_NB),\n        X(MFMediaType_Audio),\n        X(MFAudioFormat_WMAudioV9),\n        X(MFAudioFormat_AMR_WB),\n        X(MFAudioFormat_WMAudio_Lossless),\n        X(MFAudioFormat_AMR_WP),\n        X(MFAudioFormat_WMASPDIF),\n        X(MFVideoFormat_DV25),\n        X(MFVideoFormat_DV50),\n        X(MFVideoFormat_DVC),\n        X(MFVideoFormat_DVH1),\n        X(MFVideoFormat_DVHD),\n        X(MFVideoFormat_DVSD),\n        X(MFVideoFormat_DVSL),\n        X(MFVideoFormat_A16B16G16R16F),\n        X(MFVideoFormat_v210),\n        X(MFVideoFormat_v216),\n        X(MFVideoFormat_v410),\n        X(MFMediaType_Video),\n        X(MFAudioFormat_AAC_HDCP),\n        X(MFT_CATEGORY_DEMULTIPLEXER),\n        X(MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID),\n        X(MFT_CATEGORY_VIDEO_ENCODER),\n        X(MFAudioFormat_Dolby_AC3_HDCP),\n        X(MFMediaType_Subtitle),\n        X(MFMediaType_Stream),\n        X(MFAudioFormat_Dolby_AC3_SPDIF),\n        X(MFAudioFormat_Float_SpatialObjects),\n        X(MFMediaType_SAMI),\n        X(MFAudioFormat_ADTS_HDCP),\n        X(MFAudioFormat_FLAC),\n        X(MFAudioFormat_Dolby_DDPlus),\n        X(MFMediaType_MultiplexedFrames),\n        X(MFT_CATEGORY_AUDIO_DECODER),\n        X(MFAudioFormat_Base_HDCP),\n        X(MFT_CATEGORY_AUDIO_ENCODER),\n        X(MFVideoFormat_Base_HDCP),\n        X(MFVideoFormat_H264_HDCP),\n        X(MFVideoFormat_HEVC_HDCP),\n        X(MFMediaType_Default),\n        X(MFMediaType_Protected),\n        X(MFVideoFormat_H264_ES),\n        X(MFMediaType_Perception),\n        X(MFT_CATEGORY_VIDEO_PROCESSOR),\n#undef X\n    };\n    struct guid_def *ret = NULL;\n\n    if (guid)\n        ret = bsearch(guid, guid_defs, ARRAY_SIZE(guid_defs), sizeof(*guid_defs), debug_compare_guid);\n\n    return ret ? wine_dbg_sprintf(\"%s\", ret->name) : wine_dbgstr_guid(guid);\n}"
+  },
+  {
+   "name": "debugstr_reg_typeinfo",
+   "file": "dlls/mfplat/main.c",
+   "start_line": 93,
+   "end_line": 97,
+   "static": true,
+   "called_from": [
+    "MFTEnum"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/mfplat/main.c:1394",
+    "dlls/mfplat/main.c:1395",
+    "dlls/mfplat/main.c:1406",
+    "dlls/mfplat/main.c:1407"
+   ],
+   "signature": "static const char *debugstr_reg_typeinfo(const MFT_REGISTER_TYPE_INFO *info)",
+   "code": "static const char *debugstr_reg_typeinfo(const MFT_REGISTER_TYPE_INFO *info)\n{\n    return info ? wine_dbg_sprintf(\"%p{%s,%s}\", info, debugstr_mf_guid(&info->guidMajorType),\n            debugstr_mf_guid(&info->guidSubtype)) : wine_dbg_sprintf(\"%p\", info);\n}"
+  },
+  {
+   "name": "mft_collect_machine_reg",
+   "file": "dlls/mfplat/main.c",
+   "start_line": 1106,
+   "end_line": 1159,
+   "static": true,
+   "called_from": [
+    "MFTEnum"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/mfplat/main.c:1207"
+   ],
+   "signature": "static HRESULT mft_collect_machine_reg(struct list *mfts, const GUID *category, UINT32 flags, IMFPluginControl *plugin_control, const MFT_REGISTER_TYPE_INFO *input_type, const MFT_REGISTER_TYPE_INFO *output_type)",
+   "code": "static HRESULT mft_collect_machine_reg(struct list *mfts, const GUID *category, UINT32 flags,\n        IMFPluginControl *plugin_control, const MFT_REGISTER_TYPE_INFO *input_type,\n        const MFT_REGISTER_TYPE_INFO *output_type)\n{\n    struct mft_registration mft, *cur;\n    HKEY hcategory, hlist;\n    WCHAR clsidW[64];\n    DWORD ret, size;\n    int index = 0;\n\n    if (RegOpenKeyW(HKEY_CLASSES_ROOT, categories_keyW, &hcategory))\n        return E_FAIL;\n\n    guid_to_string(clsidW, category);\n    ret = RegOpenKeyW(hcategory, clsidW, &hlist);\n    RegCloseKey(hcategory);\n    if (ret)\n        return E_FAIL;\n\n    size = ARRAY_SIZE(clsidW);\n    while (!RegEnumKeyExW(hlist, index, clsidW, &size, NULL, NULL, NULL, NULL))\n    {\n        memset(&mft, 0, sizeof(mft));\n        mft.category = *category;\n        if (!GUIDFromString(clsidW, &mft.clsid))\n            goto next;\n\n        mft_get_reg_flags(clsidW, L\"MFTFlags\", &mft.flags);\n\n        if (output_type)\n            mft_get_reg_type_info_internal(clsidW, L\"OutputTypes\", &mft.output_types, &mft.output_types_count);\n\n        if (input_type)\n            mft_get_reg_type_info_internal(clsidW, L\"InputTypes\", &mft.input_types, &mft.input_types_count);\n\n        if (!mft_is_type_info_match(&mft, category, flags, plugin_control, input_type, output_type))\n        {\n            free(mft.input_types);\n            free(mft.output_types);\n            goto next;\n        }\n\n        cur = malloc(sizeof(*cur));\n        /* Reuse allocated type arrays. */\n        *cur = mft;\n        list_add_tail(mfts, &cur->entry);\n\n    next:\n        size = ARRAY_SIZE(clsidW);\n        index++;\n    }\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "release_mft_registration",
+   "file": "dlls/mfplat/main.c",
+   "start_line": 808,
+   "end_line": 816,
+   "static": true,
+   "called_from": [
+    "MFTEnum"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/mfplat/main.c:888",
+    "dlls/mfplat/main.c:892",
+    "dlls/mfplat/main.c:953",
+    "dlls/mfplat/main.c:1322"
+   ],
+   "signature": "static void release_mft_registration(struct mft_registration *mft)",
+   "code": "static void release_mft_registration(struct mft_registration *mft)\n{\n    if (mft->factory)\n        IClassFactory_Release(mft->factory);\n    free(mft->name);\n    free(mft->input_types);\n    free(mft->output_types);\n    free(mft);\n}"
+  },
+  {
+   "name": "debug_compare_guid",
+   "file": "dlls/mfplat/main.c",
+   "start_line": 1641,
+   "end_line": 1646,
+   "static": true,
+   "called_from": [
+    "debugstr_mf_guid"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/mfplat/main.c:2050"
+   ],
+   "signature": "static int __cdecl debug_compare_guid(const void *a, const void *b)",
+   "code": "static int __cdecl debug_compare_guid(const void *a, const void *b)\n{\n    const GUID *guid = a;\n    const struct guid_def *guid_def = b;\n    return memcmp(guid, guid_def->guid, sizeof(*guid));\n}"
+  },
+  {
+   "name": "guid_to_string",
+   "file": "dlls/mfplat/main.c",
+   "start_line": 637,
+   "end_line": 645,
+   "static": true,
+   "called_from": [
+    "mft_collect_machine_reg"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/mfplat/main.c:713",
+    "dlls/mfplat/main.c:774",
+    "dlls/mfplat/main.c:775",
+    "dlls/mfplat/main.c:1427",
+    "dlls/mfplat/main.c:1556"
+   ],
+   "signature": "static WCHAR* guid_to_string(WCHAR *str, REFGUID guid)",
+   "code": "static WCHAR* guid_to_string(WCHAR *str, REFGUID guid)\n{\n    swprintf(str, 39, L\"%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x\",\n            guid->Data1, guid->Data2, guid->Data3, guid->Data4[0], guid->Data4[1],\n            guid->Data4[2], guid->Data4[3], guid->Data4[4], guid->Data4[5],\n            guid->Data4[6], guid->Data4[7]);\n\n    return str;\n}"
+  },
+  {
+   "name": "GUIDFromString",
+   "file": "dlls/mfplat/main.c",
+   "start_line": 656,
+   "end_line": 699,
+   "static": true,
+   "called_from": [
+    "mft_collect_machine_reg"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL GUIDFromString(LPCWSTR s, GUID *id)",
+   "code": "static BOOL GUIDFromString(LPCWSTR s, GUID *id)\n{\n    int i;\n\n    /* in form XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX */\n\n    id->Data1 = 0;\n    for (i = 0; i < 8; i++)\n    {\n        if (!is_valid_hex(s[i])) return FALSE;\n        id->Data1 = (id->Data1 << 4) | guid_conv_table[s[i]];\n    }\n    if (s[8]!='-') return FALSE;\n\n    id->Data2 = 0;\n    for (i = 9; i < 13; i++)\n    {\n        if (!is_valid_hex(s[i])) return FALSE;\n        id->Data2 = (id->Data2 << 4) | guid_conv_table[s[i]];\n    }\n    if (s[13]!='-') return FALSE;\n\n    id->Data3 = 0;\n    for (i = 14; i < 18; i++)\n    {\n        if (!is_valid_hex(s[i])) return FALSE;\n        id->Data3 = (id->Data3 << 4) | guid_conv_table[s[i]];\n    }\n    if (s[18]!='-') return FALSE;\n\n    for (i = 19; i < 36; i+=2)\n    {\n        if (i == 23)\n        {\n            if (s[i]!='-') return FALSE;\n            i++;\n        }\n        if (!is_valid_hex(s[i]) || !is_valid_hex(s[i+1])) return FALSE;\n        id->Data4[(i-19)/2] = guid_conv_table[s[i]] << 4 | guid_conv_table[s[i+1]];\n    }\n\n    if (!s[36]) return TRUE;\n    return FALSE;\n}"
+  },
+  {
+   "name": "mft_get_reg_flags",
+   "file": "dlls/mfplat/main.c",
+   "start_line": 1084,
+   "end_line": 1104,
+   "static": true,
+   "called_from": [
+    "mft_collect_machine_reg"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void mft_get_reg_flags(const WCHAR *clsidW, const WCHAR *nameW, DWORD *flags)",
+   "code": "static void mft_get_reg_flags(const WCHAR *clsidW, const WCHAR *nameW, DWORD *flags)\n{\n    DWORD ret, reg_type, size;\n    HKEY hroot, hmft;\n\n    *flags = 0;\n\n    if (RegOpenKeyW(HKEY_CLASSES_ROOT, transform_keyW, &hroot))\n        return;\n\n    ret = RegOpenKeyW(hroot, clsidW, &hmft);\n    RegCloseKey(hroot);\n    if (ret)\n        return;\n\n    reg_type = 0;\n    if (!RegQueryValueExW(hmft, nameW, NULL, &reg_type, NULL, &size) && reg_type == REG_DWORD)\n        RegQueryValueExW(hmft, nameW, NULL, &reg_type, (BYTE *)flags, &size);\n\n    RegCloseKey(hmft);\n}"
+  },
+  {
+   "name": "mft_get_reg_type_info_internal",
+   "file": "dlls/mfplat/main.c",
+   "start_line": 1040,
+   "end_line": 1082,
+   "static": true,
+   "called_from": [
+    "mft_collect_machine_reg"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/mfplat/main.c:1482"
+   ],
+   "signature": "static void mft_get_reg_type_info_internal(const WCHAR *clsidW, const WCHAR *typeW, MFT_REGISTER_TYPE_INFO **type, UINT32 *count)",
+   "code": "static void mft_get_reg_type_info_internal(const WCHAR *clsidW, const WCHAR *typeW, MFT_REGISTER_TYPE_INFO **type,\n        UINT32 *count)\n{\n    HKEY htransform, hfilter;\n    DWORD reg_type, size;\n\n    *type = NULL;\n    *count = 0;\n\n    if (RegOpenKeyW(HKEY_CLASSES_ROOT, transform_keyW, &htransform))\n        return;\n\n    if (RegOpenKeyW(htransform, clsidW, &hfilter))\n    {\n        RegCloseKey(htransform);\n        return;\n    }\n\n    if (RegQueryValueExW(hfilter, typeW, NULL, &reg_type, NULL, &size))\n        goto out;\n\n    if (reg_type != REG_BINARY)\n        goto out;\n\n    if (!size || size % sizeof(**type))\n        goto out;\n\n    if (!(*type = malloc(size)))\n        goto out;\n\n    *count = size / sizeof(**type);\n\n    if (RegQueryValueExW(hfilter, typeW, NULL, &reg_type, (BYTE *)*type, &size))\n    {\n        free(*type);\n        *type = NULL;\n        *count = 0;\n    }\n\nout:\n    RegCloseKey(hfilter);\n    RegCloseKey(htransform);\n}"
+  },
+  {
+   "name": "mft_is_type_info_match",
+   "file": "dlls/mfplat/main.c",
+   "start_line": 985,
+   "end_line": 1038,
+   "static": true,
+   "called_from": [
+    "mft_collect_machine_reg"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/mfplat/main.c:1218"
+   ],
+   "signature": "static BOOL mft_is_type_info_match(struct mft_registration *mft, const GUID *category, UINT32 flags, IMFPluginControl *plugin_control, const MFT_REGISTER_TYPE_INFO *input_type, const MFT_REGISTER_TYPE_INFO *output_type)",
+   "code": "static BOOL mft_is_type_info_match(struct mft_registration *mft, const GUID *category, UINT32 flags,\n        IMFPluginControl *plugin_control, const MFT_REGISTER_TYPE_INFO *input_type,\n        const MFT_REGISTER_TYPE_INFO *output_type)\n{\n    BOOL matching = TRUE;\n    DWORD model;\n    int i;\n\n    if (!IsEqualGUID(category, &mft->category))\n        return FALSE;\n\n    /* Default model is synchronous. */\n    model = mft->flags & (MFT_ENUM_FLAG_SYNCMFT | MFT_ENUM_FLAG_ASYNCMFT | MFT_ENUM_FLAG_HARDWARE);\n    if (!model)\n        model = MFT_ENUM_FLAG_SYNCMFT;\n    if (!(model & flags & (MFT_ENUM_FLAG_SYNCMFT | MFT_ENUM_FLAG_ASYNCMFT | MFT_ENUM_FLAG_HARDWARE)))\n        return FALSE;\n\n    /* These flags should be explicitly enabled. */\n    if (mft->flags & ~flags & (MFT_ENUM_FLAG_FIELDOFUSE | MFT_ENUM_FLAG_TRANSCODE_ONLY))\n        return FALSE;\n\n    if (flags & MFT_ENUM_FLAG_SORTANDFILTER && !mft->factory && plugin_control\n            && IMFPluginControl_IsDisabled(plugin_control, MF_Plugin_Type_MFT, &mft->clsid) == S_OK)\n    {\n        return FALSE;\n    }\n\n    if (input_type)\n    {\n        for (i = 0, matching = FALSE; input_type && i < mft->input_types_count; ++i)\n        {\n            if (!memcmp(&mft->input_types[i], input_type, sizeof(*input_type)))\n            {\n                matching = TRUE;\n                break;\n            }\n        }\n    }\n\n    if (output_type && matching)\n    {\n        for (i = 0, matching = FALSE; i < mft->output_types_count; ++i)\n        {\n            if (!memcmp(&mft->output_types[i], output_type, sizeof(*output_type)))\n            {\n                matching = TRUE;\n                break;\n            }\n        }\n    }\n\n    return matching;\n}"
+  },
+  {
+   "name": "is_valid_hex",
+   "file": "dlls/mfplat/main.c",
+   "start_line": 647,
+   "end_line": 654,
+   "static": true,
+   "called_from": [
+    "GUIDFromString"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static inline BOOL is_valid_hex(WCHAR c)",
+   "code": "static inline BOOL is_valid_hex(WCHAR c)\n{\n    if (!(((c >= '0') && (c <= '9'))  ||\n          ((c >= 'a') && (c <= 'f'))  ||\n          ((c >= 'A') && (c <= 'F'))))\n        return FALSE;\n    return TRUE;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "guid_def",
+    "kind": "struct_decl",
+    "start_line": 1635,
+    "end_line": 1639,
+    "code": "struct guid_def\n{\n    const GUID *guid;\n    const char *name;\n};"
+   },
+   {
+    "name": "mft_registration",
+    "kind": "struct_decl",
+    "start_line": 78,
+    "end_line": 91,
+    "code": "struct mft_registration\n{\n    struct list entry;\n    IClassFactory *factory;\n    CLSID clsid;\n    GUID category;\n    WCHAR *name;\n    DWORD flags;\n    MFT_REGISTER_TYPE_INFO *input_types;\n    UINT32 input_types_count;\n    MFT_REGISTER_TYPE_INFO *output_types;\n    UINT32 output_types_count;\n    BOOL local;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 56,
+    "end_line": 56,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(mfplat);"
+   },
+   {
+    "name": "categories_keyW",
+    "type": "const WCHAR[38]",
+    "static": true,
+    "start_line": 624,
+    "end_line": 624,
+    "code": "static const WCHAR categories_keyW[] = L\"MediaFoundation\\\\Transforms\\\\Categories\";"
+   },
+   {
+    "name": "guid_conv_table",
+    "type": "const BYTE[256]",
+    "static": true,
+    "start_line": 626,
+    "end_line": 635,
+    "code": "static const BYTE guid_conv_table[256] =\n{\n    0,   0,   0,   0,   0,   0,   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 0x00 */\n    0,   0,   0,   0,   0,   0,   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 0x10 */\n    0,   0,   0,   0,   0,   0,   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 0x20 */\n    0,   1,   2,   3,   4,   5,   6, 7, 8, 9, 0, 0, 0, 0, 0, 0, /* 0x30 */\n    0, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 0x40 */\n    0,   0,   0,   0,   0,   0,   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 0x50 */\n    0, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf                             /* 0x60 */\n};"
+   },
+   {
+    "name": "transform_keyW",
+    "type": "const WCHAR[27]",
+    "static": true,
+    "start_line": 623,
+    "end_line": 623,
+    "code": "static const WCHAR transform_keyW[] = L\"MediaFoundation\\\\Transforms\";"
+   }
+  ],
+  "macros": [
+   {
+    "name": "X",
+    "start_line": 2059,
+    "end_line": 2059,
+    "code": "#define X(g) { &(g), #g }"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "CoTaskMemAlloc",
+    "module": "ole32",
+    "impl": [
+     "dlls/combase/malloc.c:381"
+    ]
+   },
+   {
+    "name": "CoTaskMemFree",
+    "module": "ole32",
+    "impl": [
+     "dlls/combase/malloc.c:389"
+    ]
+   },
+   {
+    "name": "RegCloseKey",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1129"
+    ]
+   },
+   {
+    "name": "RegEnumKeyExW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:801"
+    ]
+   },
+   {
+    "name": "RegOpenKeyW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/registry.c:126"
+    ]
+   },
+   {
+    "name": "RegQueryValueExW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1636"
+    ]
+   },
+   {
+    "name": "bsearch",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/misc.c:210"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "IClassFactory_Release",
+   "IMFPluginControl_IsDisabled",
+   "list_add_tail",
+   "list_count",
+   "list_init",
+   "list_remove",
+   "swprintf",
+   "wine_dbg_log",
+   "wine_dbg_sprintf",
+   "wine_dbgstr_guid"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

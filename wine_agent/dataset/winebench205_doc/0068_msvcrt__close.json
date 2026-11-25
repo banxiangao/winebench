@@ -1,0 +1,429 @@
+{
+ "id": "0068",
+ "function": {
+  "name": "_close",
+  "export_name": "_close",
+  "module": "msvcrt",
+  "source_module": "msvcrt",
+  "exported_by": [
+   "crtdll",
+   "msvcr100",
+   "msvcr110",
+   "msvcr120",
+   "msvcr120_app",
+   "msvcr70",
+   "msvcr71",
+   "msvcr80",
+   "msvcr90",
+   "msvcrt",
+   "msvcrt20",
+   "msvcrt40",
+   "msvcrtd",
+   "ucrtbase"
+  ],
+  "side": "PE",
+  "file": "dlls/msvcrt/file.c",
+  "start_line": 1185,
+  "end_line": 1215,
+  "body_lines": 28,
+  "signature": "int CDECL _close(int fd)",
+  "header_comment": "/*********************************************************************\n *\t\t_close (MSVCRT.@)\n */",
+  "code": "int CDECL _close(int fd)\n{\n  ioinfo *info = get_ioinfo(fd);\n  int ret;\n\n  TRACE(\":fd (%d) handle (%p)\\n\", fd, info->handle);\n\n  if (fd == MSVCRT_NO_CONSOLE_FD) {\n    *_errno() = EBADF;\n    ret = -1;\n  } else if (!MSVCRT_CHECK_PMT_ERR(info->wxflag & WX_OPEN, EBADF)) {\n    ret = -1;\n  } else if (fd == STDOUT_FILENO &&\n          info->handle == get_ioinfo_nolock(STDERR_FILENO)->handle) {\n    msvcrt_free_fd(fd);\n    ret = 0;\n  } else if (fd == STDERR_FILENO &&\n          info->handle == get_ioinfo_nolock(STDOUT_FILENO)->handle) {\n    msvcrt_free_fd(fd);\n    ret = 0;\n  } else {\n    ret = CloseHandle(info->handle) ? 0 : -1;\n    msvcrt_free_fd(fd);\n    if (ret) {\n      WARN(\":failed-last error (%ld)\\n\", GetLastError());\n      msvcrt_set_errno(GetLastError());\n    }\n  }\n  release_ioinfo(info);\n  return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <direct.h>",
+   "#include <fcntl.h>",
+   "#include <io.h>",
+   "#include <share.h>",
+   "#include <stdarg.h>",
+   "#include <sys/locking.h>",
+   "#include <sys/types.h>",
+   "#include <sys/utime.h>",
+   "#include <time.h>",
+   "#include <limits.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wincon.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"msvcrt.h\"",
+   "#include \"mtdll.h\"",
+   "#include \"wine/asm.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/asm.h\""
+  ],
+  "resolution": [
+   "msvcrt!_close [cdecl]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/msvcr80/tests/msvcr80.c",
+   "dlls/msvcr90/tests/msvcr90.c",
+   "dlls/msvcrt/tests/file.c",
+   "dlls/msvcrt/tests/misc.c",
+   "dlls/ucrtbase/tests/misc.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 11
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "cpp-docs",
+   "header": "",
+   "path": "docs/c-runtime-library/reference/close.md",
+   "url": "https://learn.microsoft.com/cpp/c-runtime-library/reference/close",
+   "documented_name": "_close",
+   "file": "docs/0068_cpp-docs_close.md",
+   "text": "---\ndescription: \"Learn more about: _close\"\ntitle: \"_close\"\nms.date: \"4/2/2020\"\napi_name: [\"_close\", \"_o__close\"]\napi_location: [\"msvcrt.dll\", \"msvcr80.dll\", \"msvcr90.dll\", \"msvcr100.dll\", \"msvcr100_clr0400.dll\", \"msvcr110.dll\", \"msvcr110_clr0400.dll\", \"msvcr120.dll\", \"msvcr120_clr0400.dll\", \"ucrtbase.dll\", \"api-ms-win-crt-stdio-l1-1-0.dll\"]\napi_type: [\"DLLExport\"]\ntopic_type: [\"apiref\"]\nf1_keywords: [\"_close\"]\nhelpviewer_keywords: [\"_close function\", \"close function\", \"files [C++], closing\"]\nms.assetid: 4708a329-8acf-4cd9-b7b0-a952e1897247\n---\n# `_close`\n\nCloses a file.\n\n## Syntax\n\n```C\nint _close(\n   int fd\n);\n```\n\n### Parameters\n\n*`fd`*\\\nFile descriptor referring to the open file.\n\n## Return value\n\n**`_close`** returns 0 if the file was successfully closed. A return value of -1 indicates an error.\n\n## Remarks\n\nThe **`_close`** function closes the file associated with *`fd`*.\n\nThe file descriptor and the underlying OS file handle are closed. Thus, it isn't necessary to call `CloseHandle` if the file was originally opened using the Win32 function `CreateFile` and converted to a file descriptor using `_open_osfhandle`.\n\nThis function validates its parameters. If *`fd`* is a bad file descriptor, the invalid parameter handler is invoked, as described in [Parameter validation](../parameter-validation.md). If execution is allowed to continue, the functions returns -1 and `errno` is set to `EBADF`.\n\nBy default, this function's global state is scoped to the application. To change this behavior, see [Global state in the CRT](../global-state.md).\n\n## Requirements\n\n| Routine | Required header | Optional header |\n|---|---|---|\n| **`_close`** | \\<io.h> | \\<errno.h> |\n\nFor more compatibility information, see [Compatibility](../compatibility.md).\n\n## Example\n\nSee the example for [`_open`](open-wopen.md).\n\n## See also\n\n[Low-level I/O](../low-level-i-o.md)\\\n[`_chsize`](chsize.md)\\\n[`_creat`, `_wcreat`](creat-wcreat.md)\\\n[`_dup`, `_dup2`](dup-dup2.md)\\\n[`_open`, `_wopen`](open-wopen.md)\\\n[`_unlink`, `_wunlink`](unlink-wunlink.md)\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_ioinfo",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 390,
+   "end_line": 398,
+   "static": true,
+   "called_from": [
+    "_close",
+    "msvcrt_free_fd"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:444",
+    "dlls/msvcrt/file.c:451",
+    "dlls/msvcrt/file.c:1077",
+    "dlls/msvcrt/file.c:1233",
+    "dlls/msvcrt/file.c:1239"
+   ],
+   "signature": "static inline ioinfo* get_ioinfo(int fd)",
+   "code": "static inline ioinfo* get_ioinfo(int fd)\n{\n    ioinfo *ret = get_ioinfo_nolock(fd);\n    if(ret == &MSVCRT___badioinfo)\n        return ret;\n    init_ioinfo_cs(ret);\n    EnterCriticalSection(&ret->crit);\n    return ret;\n}"
+  },
+  {
+   "name": "get_ioinfo_nolock",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 367,
+   "end_line": 376,
+   "static": true,
+   "called_from": [
+    "_close",
+    "get_ioinfo"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:461",
+    "dlls/msvcrt/file.c:467",
+    "dlls/msvcrt/file.c:630",
+    "dlls/msvcrt/file.c:661",
+    "dlls/msvcrt/file.c:679"
+   ],
+   "signature": "static inline ioinfo* get_ioinfo_nolock(int fd)",
+   "code": "static inline ioinfo* get_ioinfo_nolock(int fd)\n{\n    ioinfo *ret = NULL;\n    if(fd>=0 && fd<MSVCRT_MAX_FILES)\n        ret = MSVCRT___pioinfo[fd/MSVCRT_FD_BLOCK_SIZE];\n    if(!ret)\n        return &MSVCRT___badioinfo;\n\n    return ret + (fd%MSVCRT_FD_BLOCK_SIZE);\n}"
+  },
+  {
+   "name": "msvcrt_free_fd",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 520,
+   "end_line": 547,
+   "static": true,
+   "called_from": [
+    "_close"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void msvcrt_free_fd(int fd)",
+   "code": "static void msvcrt_free_fd(int fd)\n{\n  ioinfo *fdinfo = get_ioinfo(fd);\n\n  if(fdinfo != &MSVCRT___badioinfo)\n  {\n    fdinfo->handle = INVALID_HANDLE_VALUE;\n    fdinfo->wxflag = 0;\n  }\n  TRACE(\":fd (%d) freed\\n\",fd);\n\n  if (fd < 3)\n  {\n    switch (fd)\n    {\n    case 0:\n        SetStdHandle(STD_INPUT_HANDLE, 0);\n        break;\n    case 1:\n        SetStdHandle(STD_OUTPUT_HANDLE, 0);\n        break;\n    case 2:\n        SetStdHandle(STD_ERROR_HANDLE, 0);\n        break;\n    }\n  }\n  release_ioinfo(fdinfo);\n}"
+  },
+  {
+   "name": "release_ioinfo",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 487,
+   "end_line": 491,
+   "static": true,
+   "called_from": [
+    "_close",
+    "msvcrt_free_fd"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:587",
+    "dlls/msvcrt/file.c:724",
+    "dlls/msvcrt/file.c:757",
+    "dlls/msvcrt/file.c:1109",
+    "dlls/msvcrt/file.c:1275"
+   ],
+   "signature": "static inline void release_ioinfo(ioinfo *info)",
+   "code": "static inline void release_ioinfo(ioinfo *info)\n{\n    if(info!=&MSVCRT___badioinfo && ioinfo_is_crit_init(info))\n        LeaveCriticalSection(&info->crit);\n}"
+  },
+  {
+   "name": "init_ioinfo_cs",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 378,
+   "end_line": 388,
+   "static": true,
+   "called_from": [
+    "get_ioinfo"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:470"
+   ],
+   "signature": "static inline void init_ioinfo_cs(ioinfo *info)",
+   "code": "static inline void init_ioinfo_cs(ioinfo *info)\n{\n    if(!ioinfo_is_crit_init(info)) {\n        LOCK_FILES();\n        if(!ioinfo_is_crit_init(info)) {\n            InitializeCriticalSection(&info->crit);\n            ioinfo_set_crit_init(info);\n        }\n        UNLOCK_FILES();\n    }\n}"
+  },
+  {
+   "name": "ioinfo_is_crit_init",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 202,
+   "end_line": 205,
+   "static": true,
+   "called_from": [
+    "init_ioinfo_cs",
+    "release_ioinfo"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:161",
+    "dlls/msvcrt/file.c:170",
+    "dlls/msvcrt/file.c:421",
+    "dlls/msvcrt/file.c:430",
+    "dlls/msvcrt/file.c:1372"
+   ],
+   "signature": "static inline BOOL ioinfo_is_crit_init(ioinfo *info)",
+   "code": "static inline BOOL ioinfo_is_crit_init(ioinfo *info)\n{\n    return info->exflag & EF_CRIT_INIT;\n}"
+  },
+  {
+   "name": "ioinfo_set_crit_init",
+   "file": "dlls/msvcrt/file.c",
+   "start_line": 207,
+   "end_line": 210,
+   "static": true,
+   "called_from": [
+    "init_ioinfo_cs"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvcrt/file.c:166",
+    "dlls/msvcrt/file.c:175"
+   ],
+   "signature": "static inline void ioinfo_set_crit_init(ioinfo *info)",
+   "code": "static inline void ioinfo_set_crit_init(ioinfo *info)\n{\n    info->exflag |= EF_CRIT_INIT;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "ioinfo",
+    "kind": "typedef_decl",
+    "start_line": 129,
+    "end_line": 144,
+    "code": "typedef struct {\n    HANDLE              handle;\n    unsigned char       wxflag;\n    char                lookahead[3];\n    int                 exflag;\n    CRITICAL_SECTION    crit;\n#if _MSVCR_VER >= 80\n    char textmode : 7;\n    char unicode : 1;\n    char pipech2[2];\n    __int64 startpos;\n    BOOL utf8translations;\n    char dbcsBuffer[1];\n    BOOL dbcsBufferUsed;\n#endif\n} ioinfo;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "MSVCRT___badioinfo",
+    "type": "ioinfo",
+    "static": false,
+    "start_line": 149,
+    "end_line": 149,
+    "code": "ioinfo MSVCRT___badioinfo = { INVALID_HANDLE_VALUE, WX_TEXT };"
+   },
+   {
+    "name": "MSVCRT___pioinfo",
+    "type": "ioinfo *[64]",
+    "static": false,
+    "start_line": 156,
+    "end_line": 156,
+    "code": "ioinfo * MSVCRT___pioinfo[MSVCRT_MAX_FILES/MSVCRT_FD_BLOCK_SIZE] = { 0 };"
+   },
+   {
+    "name": "MSVCRT_file_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 308,
+    "end_line": 308,
+    "code": "static CRITICAL_SECTION MSVCRT_file_cs = { &MSVCRT_file_cs_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 49,
+    "end_line": 49,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(msvcrt);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "EF_CRIT_INIT",
+    "start_line": 199,
+    "end_line": 199,
+    "code": "#define EF_CRIT_INIT      0x04"
+   },
+   {
+    "name": "LOCK_FILES",
+    "start_line": 309,
+    "end_line": 309,
+    "code": "#define LOCK_FILES()    do { EnterCriticalSection(&MSVCRT_file_cs); } while (0)"
+   },
+   {
+    "name": "MSVCRT_FD_BLOCK_SIZE",
+    "start_line": 127,
+    "end_line": 127,
+    "code": "#define MSVCRT_FD_BLOCK_SIZE 32"
+   },
+   {
+    "name": "MSVCRT_MAX_FILES",
+    "start_line": 126,
+    "end_line": 126,
+    "code": "#define MSVCRT_MAX_FILES 2048"
+   },
+   {
+    "name": "UNLOCK_FILES",
+    "start_line": 310,
+    "end_line": 310,
+    "code": "#define UNLOCK_FILES()  do { LeaveCriticalSection(&MSVCRT_file_cs); } while (0)"
+   },
+   {
+    "name": "WX_OPEN",
+    "start_line": 81,
+    "end_line": 81,
+    "code": "#define WX_OPEN           0x01"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "msvcrt_set_errno",
+    "file": "dlls/msvcrt/errno.c",
+    "start_line": 131
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "_errno",
+    "impl": [
+     "dlls/msvcrt/errno.c:214"
+    ]
+   },
+   {
+    "name": "_invalid_parameter",
+    "impl": [
+     "dlls/msvcrt/errno.c:460"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CloseHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "InitializeCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:200"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "SetStdHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:1434"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetLastError",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "msvcrt._close",
+  "category": {
+   "l1": "C runtime library",
+   "l2": "Input and output",
+   "header": "",
+   "textbook": "File management",
+   "basis": "crt_category"
+  },
+  "loc": {
+   "total": 31,
+   "body": 30,
+   "code": 24
+  },
+  "cyclomatic": 9,
+  "return_type": "int",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 11,
+   "n_tests": 14,
+   "n_tests_other": 3,
+   "own_test_functions": [
+    "dlls/msvcr80/tests/msvcr80.c::test_ioinfo_flags",
+    "dlls/msvcr90/tests/msvcr90.c::test_ioinfo_flags",
+    "dlls/msvcrt/tests/file.c::test__creat",
+    "dlls/msvcrt/tests/file.c::test_chsize",
+    "dlls/msvcrt/tests/file.c::test_file_write_read",
+    "dlls/msvcrt/tests/file.c::test_get_osfhandle",
+    "dlls/msvcrt/tests/file.c::test_lseek",
+    "dlls/msvcrt/tests/file.c::test_setmode",
+    "dlls/msvcrt/tests/misc.c::test__popen",
+    "dlls/ucrtbase/tests/misc.c::test__sopen_dispatch",
+    "dlls/ucrtbase/tests/misc.c::test__sopen_s"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/cpp/c-runtime-library/reference/close",
+   "source": "crt",
+   "description": "Learn more about: _close",
+   "min_windows": "",
+   "documented_dll": ""
+  },
+  "exports": [
+   "msvcr80._close",
+   "msvcr90._close",
+   "msvcrt._close",
+   "msvcrt20._close",
+   "msvcrt40._close",
+   "ucrtbase._close",
+   "ucrtbase._o__close"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 6,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

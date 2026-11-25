@@ -1,0 +1,165 @@
+{
+ "id": "0082",
+ "function": {
+  "name": "GetDiskFreeSpaceW",
+  "export_name": "GetDiskFreeSpaceW",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase",
+   "unicows"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/volume.c",
+  "start_line": 656,
+  "end_line": 699,
+  "body_lines": 41,
+  "signature": "BOOL WINAPI DECLSPEC_HOTPATCH GetDiskFreeSpaceW( LPCWSTR root, LPDWORD cluster_sectors, LPDWORD sector_bytes, LPDWORD free_clusters, LPDWORD total_clusters )",
+  "header_comment": "/***********************************************************************\n *           GetDiskFreeSpaceW   (kernelbase.@)\n */",
+  "code": "BOOL WINAPI DECLSPEC_HOTPATCH GetDiskFreeSpaceW( LPCWSTR root, LPDWORD cluster_sectors,\n                                                 LPDWORD sector_bytes, LPDWORD free_clusters,\n                                                 LPDWORD total_clusters )\n{\n    FILE_FS_SIZE_INFORMATION info;\n    IO_STATUS_BLOCK io;\n    NTSTATUS status;\n    HANDLE handle;\n    UINT units;\n\n    TRACE( \"%s,%p,%p,%p,%p\\n\", debugstr_w(root),\n           cluster_sectors, sector_bytes, free_clusters, total_clusters );\n\n    if (!open_device_root( root, &handle )) return FALSE;\n\n    status = NtQueryVolumeInformationFile( handle, &io, &info, sizeof(info), FileFsSizeInformation );\n    NtClose( handle );\n    if (!set_ntstatus( status )) return FALSE;\n\n    units = info.SectorsPerAllocationUnit * info.BytesPerSector;\n\n    if( GetVersion() & 0x80000000) {    /* win3.x, 9x, ME */\n        /* cap the size and available at 2GB as per specs */\n        if (info.TotalAllocationUnits.QuadPart * units > 0x7fffffff) {\n            info.TotalAllocationUnits.QuadPart = 0x7fffffff / units;\n            if (info.AvailableAllocationUnits.QuadPart * units > 0x7fffffff)\n                info.AvailableAllocationUnits.QuadPart = 0x7fffffff / units;\n        }\n        /* nr. of clusters is always <= 65335 */\n        while( info.TotalAllocationUnits.QuadPart > 65535 ) {\n            info.TotalAllocationUnits.QuadPart /= 2;\n            info.AvailableAllocationUnits.QuadPart /= 2;\n            info.SectorsPerAllocationUnit *= 2;\n        }\n    }\n\n    if (cluster_sectors) *cluster_sectors = info.SectorsPerAllocationUnit;\n    if (sector_bytes) *sector_bytes = info.BytesPerSector;\n    if (free_clusters) *free_clusters = info.AvailableAllocationUnits.u.LowPart;\n    if (total_clusters) *total_clusters = info.TotalAllocationUnits.u.LowPart;\n    TRACE(\"%#08lx, %#08lx, %#08lx, %#08lx\\n\", info.SectorsPerAllocationUnit, info.BytesPerSector,\n          info.AvailableAllocationUnits.u.LowPart, info.TotalAllocationUnits.u.LowPart);\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <stdio.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"ntddcdrm.h\"",
+   "#include \"ddk/mountmgr.h\"",
+   "#include \"ddk/wdm.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!GetDiskFreeSpaceW [stdcall -import] -> import from kernelbase",
+   "kernelbase!GetDiskFreeSpaceW [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/drive.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "fileapi",
+   "path": "sdk-api-src/content/fileapi/nf-fileapi-getdiskfreespacew.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/fileapi/nf-fileapi-getdiskfreespacew",
+   "documented_name": "getdiskfreespacew",
+   "file": "docs/0082_sdk-api_nf-fileapi-getdiskfreespacew.md",
+   "text": "---\nUID: NF:fileapi.GetDiskFreeSpaceW\ntitle: GetDiskFreeSpaceW function (fileapi.h)\ndescription: Retrieves information about the specified disk, including the amount of free space on the disk. (Unicode)\nhelpviewer_keywords: [\"GetDiskFreeSpace\", \"GetDiskFreeSpace function [Files]\", \"GetDiskFreeSpaceW\", \"_win32_getdiskfreespace\", \"base.getdiskfreespace\", \"fileapi/GetDiskFreeSpace\", \"fileapi/GetDiskFreeSpaceW\", \"fs.getdiskfreespace\"]\nold-location: fs\\getdiskfreespace.htm\ntech.root: fs\nms.assetid: 4fe14c49-3fd6-48b7-92de-a0c867b2e042\nms.date: 12/05/2018\nms.keywords: GetDiskFreeSpace, GetDiskFreeSpace function [Files], GetDiskFreeSpaceA, GetDiskFreeSpaceW, _win32_getdiskfreespace, base.getdiskfreespace, fileapi/GetDiskFreeSpace, fileapi/GetDiskFreeSpaceA, fileapi/GetDiskFreeSpaceW, fs.getdiskfreespace, winbase/GetDiskFreeSpace, winbase/GetDiskFreeSpaceA, winbase/GetDiskFreeSpaceW\nreq.header: fileapi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: GetDiskFreeSpaceW (Unicode) and GetDiskFreeSpaceA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetDiskFreeSpaceW\n - fileapi/GetDiskFreeSpaceW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-file-l1-2-5.dll\n - api-ms-win-core-file-l1-2-4.dll\n - api-ms-win-core-file-l1-2-3.dll\n - Kernel32.dll\n - API-MS-Win-Core-File-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-File-l1-2-0.dll\n - API-MS-Win-Core-File-l1-2-1.dll\n - API-MS-Win-Core-File-l1-2-2.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\napi_name:\n - GetDiskFreeSpace\n - GetDiskFreeSpaceA\n - GetDiskFreeSpaceW\n---\n\n# GetDiskFreeSpaceW function\n\n\n## -description\n\nRetrieves information about the specified disk, including the amount of free space on the \n    disk.\n\n## -parameters\n\n### -param lpRootPathName [in]\n\nThe root directory of the disk for which information is to be returned. If this parameter is \n      <b>NULL</b>, the function uses the root of the current disk. If this parameter is a UNC name, \n      it must include a trailing backslash (for example, \"\\\\\\\\MyServer\\\\MyShare\\\\\"). Furthermore, a drive \n      specification must have a trailing backslash (for example, \"C:\\\\\"). The calling application must \n      have <b>FILE_LIST_DIRECTORY</b> access rights for this  directory.\n\n### -param lpSectorsPerCluster [out]\n\nA pointer to a variable that receives the number of sectors per cluster.\n\n### -param lpBytesPerSector [out]\n\nA pointer to a variable that receives the number of bytes per sector.\n\n### -param lpNumberOfFreeClusters [out]\n\nA pointer to a variable that receives the total number of free clusters on the disk that are available to the \n       user who is associated with the calling thread.\n\nIf per-user disk quotas are in use, this value may be less than the total number of free clusters on the \n       disk.\n\n### -param lpTotalNumberOfClusters [out]\n\nA pointer to a variable that receives the total number of clusters on the disk that are available to the user \n       who is associated with the calling thread.\n\nIf per-user disk quotas are in use, this value may be less than the total number of clusters on the disk.\n\n## -returns\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero. To get extended error information, call \n       <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThe <a href=\"/windows/desktop/api/fileapi/nf-fileapi-getdiskfreespaceexa\">GetDiskFreeSpaceEx</a> function lets \n    you avoid some of the arithmetic that is required by the \n    <b>GetDiskFreeSpace</b> function.\n\nSymbolic link behavior—If the path points to a symbolic link, the operation is performed \n    on the target.\n\n\n\n\n\n> [!NOTE]\n> The fileapi.h header defines GetDiskFreeSpace as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/FileIO/disk-management-functions\">Disk Management Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-getdiskfreespaceexa\">GetDiskFreeSpaceEx</a>\n\n\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-getdrivetypea\">GetDriveType</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "open_device_root",
+   "file": "dlls/kernelbase/volume.c",
+   "start_line": 90,
+   "end_line": 108,
+   "static": true,
+   "called_from": [
+    "GetDiskFreeSpaceW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/volume.c:560",
+    "dlls/kernelbase/volume.c:625",
+    "dlls/kernelbase/volume.c:730"
+   ],
+   "signature": "static BOOL open_device_root( LPCWSTR root, HANDLE *handle )",
+   "code": "static BOOL open_device_root( LPCWSTR root, HANDLE *handle )\n{\n    UNICODE_STRING nt_name;\n    OBJECT_ATTRIBUTES attr;\n    IO_STATUS_BLOCK io;\n    NTSTATUS status;\n\n    if (!root) root = L\"\\\\\";\n    if (!RtlDosPathNameToNtPathName_U( root, &nt_name, NULL, NULL ))\n    {\n        SetLastError( ERROR_PATH_NOT_FOUND );\n        return FALSE;\n    }\n    InitializeObjectAttributes( &attr, &nt_name, OBJ_CASE_INSENSITIVE, 0, NULL );\n    status = NtOpenFile( handle, SYNCHRONIZE, &attr, &io, 0,\n                         FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT );\n    RtlFreeUnicodeString( &nt_name );\n    return set_ntstatus( status );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 42,
+    "end_line": 42,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(volume);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetVersion",
+    "impl": [
+     "dlls/kernelbase/version.c:1462"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtClose",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/server.c:1940"
+    ]
+   },
+   {
+    "name": "NtOpenFile",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/file.c:4753"
+    ]
+   },
+   {
+    "name": "NtQueryVolumeInformationFile",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/file.c:7427"
+    ]
+   },
+   {
+    "name": "RtlDosPathNameToNtPathName_U",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/path.c:297"
+    ]
+   },
+   {
+    "name": "RtlFreeUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:272"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_w",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "set_ntstatus"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

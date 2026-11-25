@@ -1,0 +1,134 @@
+{
+ "id": "0139",
+ "function": {
+  "name": "SetConvertStg",
+  "export_name": "SetConvertStg",
+  "module": "ole32",
+  "source_module": "ole32",
+  "exported_by": [
+   "ole32"
+  ],
+  "side": "PE",
+  "file": "dlls/ole32/storage32.c",
+  "start_line": 10442,
+  "end_line": 10490,
+  "body_lines": 46,
+  "signature": "HRESULT WINAPI SetConvertStg(IStorage *storage, BOOL convert)",
+  "header_comment": "/***********************************************************************\n *\t\tSetConvertStg (OLE32.@)\n */",
+  "code": "HRESULT WINAPI SetConvertStg(IStorage *storage, BOOL convert)\n{\n    DWORD flags = convert ? OleStream_Convert : 0;\n    IStream *stream;\n    DWORD header[2];\n    HRESULT hr;\n\n    TRACE(\"(%p, %d)\\n\", storage, convert);\n\n    hr = IStorage_OpenStream(storage, L\"\\1Ole\", NULL, STGM_READWRITE | STGM_SHARE_EXCLUSIVE, 0, &stream);\n    if (FAILED(hr))\n    {\n        if (hr != STG_E_FILENOTFOUND)\n            return hr;\n\n        return STORAGE_CreateOleStream(storage, flags);\n    }\n\n    hr = IStream_Read(stream, header, sizeof(header), NULL);\n    if (FAILED(hr))\n    {\n        IStream_Release(stream);\n        return hr;\n    }\n\n    /* update flag if differs */\n    if ((header[1] ^ flags) & OleStream_Convert)\n    {\n        LARGE_INTEGER pos = {{0}};\n\n        if (header[1] & OleStream_Convert)\n            flags = header[1] & ~OleStream_Convert;\n        else\n            flags = header[1] |  OleStream_Convert;\n\n        pos.QuadPart = sizeof(DWORD);\n        hr = IStream_Seek(stream, pos, STREAM_SEEK_SET, NULL);\n        if (FAILED(hr))\n        {\n            IStream_Release(stream);\n            return hr;\n        }\n\n        hr = IStream_Write(stream, &flags, sizeof(flags), NULL);\n    }\n\n    IStream_Release(stream);\n    return hr;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winuser.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"storage32.h\"",
+   "#include \"ole2.h\"      /* For Write/ReadClassStm */",
+   "#include \"winreg.h\"",
+   "#include \"wine/wingdi16.h\"",
+   "#include \"compobj_private.h\""
+  ],
+  "resolution": [
+   "ole32!SetConvertStg [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ole32/tests/ole2.c",
+   "dlls/ole32/tests/storage32.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "ole2",
+   "path": "sdk-api-src/content/ole2/nf-ole2-setconvertstg.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/ole2/nf-ole2-setconvertstg",
+   "documented_name": "setconvertstg",
+   "file": "docs/0139_sdk-api_nf-ole2-setconvertstg.md",
+   "text": "---\nUID: NF:ole2.SetConvertStg\ntitle: SetConvertStg function (ole2.h)\ndescription: The SetConvertStg function sets the convert bit in a storage object to indicate that the object is to be converted to a new class when it is opened. The setting can be retrieved with a call to the GetConvertStg function.\nhelpviewer_keywords: [\"SetConvertStg\",\"SetConvertStg function [Structured Storage]\",\"_stg_setconvertstg\",\"ole2/SetConvertStg\",\"stg.setconvertstg\"]\nold-location: stg\\setconvertstg.htm\ntech.root: Stg\nms.assetid: 98c8fd20-6384-4656-941c-1f24d9a4d4a9\nms.date: 12/05/2018\nms.keywords: SetConvertStg, SetConvertStg function [Structured Storage], _stg_setconvertstg, ole2/SetConvertStg, stg.setconvertstg\nreq.header: ole2.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ole32.lib\nreq.dll: Ole32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SetConvertStg\n - ole2/SetConvertStg\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-com-ole32-l1-4-0.dll\n - ext-ms-win-com-ole32-l1-3-0.dll\n - ext-ms-win-com-ole32-l1-2-0.dll\n - ext-ms-win-com-ole32-l1-1-5.dll\n - ext-ms-win-com-ole32-l1-1-4.dll\n - ext-ms-win-com-ole32-l1-1-3.dll\n - ext-ms-win-com-ole32-l1-1-2.dll\n - ext-ms-win-com-ole32-l1-1-1.dll\n - ext-ms-win-com-ole32-l1-1-0.dll\n - Ole32.dll\napi_name:\n - SetConvertStg\n---\n\n# SetConvertStg function\n\n\n## -description\n\nThe \n<b>SetConvertStg</b> function sets the convert bit in a storage object to indicate that the object is to be converted to a new class when it is opened. The setting can be retrieved with a call to the \n<a href=\"/windows/desktop/api/coml2api/nf-coml2api-getconvertstg\">GetConvertStg</a> function.\n\n## -parameters\n\n### -param pStg\n\n<a href=\"/windows/desktop/api/objidl/nn-objidl-istorage\">IStorage</a> pointer to the storage object in which to set the conversion bit.\n\n### -param fConvert\n\nIf <b>TRUE</b>, sets the conversion bit for the object to indicate the object is to be converted when opened. If <b>FALSE</b>, clears the conversion bit.\n\n## -returns\n\nSee the \n<a href=\"/windows/desktop/api/objidl/nf-objidl-istorage-createstream\">IStorage::CreateStream</a>, \n<a href=\"/windows/desktop/api/objidl/nf-objidl-istorage-openstream\">IStorage::OpenStream</a>, \n<a href=\"/windows/desktop/api/objidl/nf-objidl-isequentialstream-read\">ISequentialStream::Read</a>, and \n<a href=\"/windows/desktop/api/objidl/nf-objidl-isequentialstream-write\">ISequentialStream::Write</a> methods for possible storage and stream access errors.\n\n## -remarks\n\nThe \n<b>SetConvertStg</b> function determines the status of the convert bit in a contained object. It is called by both the container application and the server in the process of converting an object from one class to another. When a user specifies through a <b>Convert To</b> dialog (which the container produces with a call to the \n<a href=\"/windows/desktop/api/oledlg/nf-oledlg-oleuiconverta\">OleUIConvert</a> function) that an object is to be converted, the container must take the following steps:\n\n<ol>\n<li>Unload the object if it is currently loaded.</li>\n<li>Call \n<a href=\"/windows/desktop/api/coml2api/nf-coml2api-writeclassstg\">WriteClassStg</a> to write the new CLSID to the object storage.</li>\n<li>Call \n<a href=\"/windows/desktop/api/ole2/nf-ole2-writefmtusertypestg\">WriteFmtUserTypeStg</a> to write the new user-type name and the existing main format to the storage.</li>\n<li>Call \n<b>SetConvertStg</b> with the <i>fConvert</i> parameter set to <b>TRUE</b> to indicate that the object has been tagged for conversion to a new class the next time it is loaded.</li>\n<li>Just before the object is loaded, call \n<a href=\"/windows/desktop/api/ole2/nf-ole2-oledoautoconvert\">OleDoAutoConvert</a> to handle any needed object conversion, unless you call \n<a href=\"/windows/desktop/api/ole2/nf-ole2-oleload\">OleLoad</a>, which calls it internally.</li>\n</ol>\nWhen an object is initialized from a storage object and the server is the destination of a convert-to operation, the object server should do the following:\n\n<ol>\n<li>Call the \n<a href=\"/windows/desktop/api/coml2api/nf-coml2api-getconvertstg\">GetConvertStg</a> function to retrieve the value of the conversion bit.</li>\n<li>If the bit is set, the server reads the data out of the object according to the format associated with the new CLSID.</li>\n<li>When the object is asked to save itself, the object should call the \n<a href=\"/windows/desktop/api/ole2/nf-ole2-writefmtusertypestg\">WriteFmtUserTypeStg</a> function using the normal native format and user type of the object.</li>\n<li>The object should then call \n<b>SetConvertStg</b> with the <i>fConvert</i> parameter set to <b>FALSE</b> to reset the object's conversion bit.</li>\n</ol>\n\n## -see-also\n\n<a href=\"/windows/desktop/api/coml2api/nf-coml2api-getconvertstg\">GetConvertStg</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "STORAGE_CreateOleStream",
+   "file": "dlls/ole32/storage32.c",
+   "start_line": 9144,
+   "end_line": 9173,
+   "static": false,
+   "called_from": [
+    "SetConvertStg"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ole32/clipboard.c:726",
+    "dlls/ole32/defaulthandler.c:1795",
+    "dlls/ole32/defaulthandler.c:1812",
+    "dlls/ole32/storage32.c:10338"
+   ],
+   "signature": "HRESULT STORAGE_CreateOleStream(IStorage *storage, DWORD flags)",
+   "code": "HRESULT STORAGE_CreateOleStream(IStorage *storage, DWORD flags)\n{\n    static const DWORD version_magic = 0x02000001;\n    IStream *stream;\n    HRESULT hr;\n\n    hr = IStorage_CreateStream(storage, L\"\\1Ole\", STGM_WRITE | STGM_SHARE_EXCLUSIVE, 0, 0, &stream);\n    if (hr == S_OK)\n    {\n        struct empty_1ole_stream {\n            DWORD version_magic;\n            DWORD flags;\n            DWORD update_options;\n            DWORD reserved;\n            DWORD mon_stream_size;\n        };\n        struct empty_1ole_stream stream_data;\n\n        stream_data.version_magic = version_magic;\n        stream_data.flags = flags;\n        stream_data.update_options = 0;\n        stream_data.reserved = 0;\n        stream_data.mon_stream_size = 0;\n\n        hr = IStream_Write(stream, &stream_data, sizeof(stream_data), NULL);\n        IStream_Release(stream);\n    }\n\n    return hr;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "empty_1ole_stream",
+    "kind": "struct_decl",
+    "start_line": 9153,
+    "end_line": 9159,
+    "code": "        struct empty_1ole_stream {\n            DWORD version_magic;\n            DWORD flags;\n            DWORD update_options;\n            DWORD reserved;\n            DWORD mon_stream_size;\n        };"
+   },
+   {
+    "name": "stream_1ole_flags",
+    "kind": "enum_decl",
+    "start_line": 10423,
+    "end_line": 10426,
+    "code": "enum stream_1ole_flags {\n    OleStream_LinkedObject = 0x00000001,\n    OleStream_Convert      = 0x00000004\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 53,
+    "end_line": 53,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(storage);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [],
+  "header_inline": [
+   "IStorage_CreateStream",
+   "IStorage_OpenStream",
+   "IStream_Read",
+   "IStream_Release",
+   "IStream_Seek",
+   "IStream_Write",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

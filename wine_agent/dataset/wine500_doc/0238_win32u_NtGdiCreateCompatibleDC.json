@@ -1,0 +1,553 @@
+{
+ "id": "0238",
+ "function": {
+  "name": "NtGdiCreateCompatibleDC",
+  "export_name": "CreateCompatibleDC",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "gdi.exe16",
+   "gdi32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/dc.c",
+  "start_line": 792,
+  "end_line": 841,
+  "body_lines": 47,
+  "signature": "HDC WINAPI NtGdiCreateCompatibleDC( HDC hdc )",
+  "header_comment": "/***********************************************************************\n *           NtGdiCreateCompatibleDC   (win32u.@)\n */",
+  "code": "HDC WINAPI NtGdiCreateCompatibleDC( HDC hdc )\n{\n    DC *dc, *origDC;\n    HDC ret;\n    const struct gdi_dc_funcs *funcs;\n    PHYSDEV physDev = NULL;\n\n    /* gdi_lock should not be locked */\n\n    if (hdc)\n    {\n        if (!(origDC = get_dc_ptr( hdc ))) return 0;\n        physDev = GET_DC_PHYSDEV( origDC, pCreateCompatibleDC );\n        funcs = physDev->funcs;\n        release_dc_ptr( origDC );\n    }\n    else funcs = get_display_driver();\n\n    if (!(dc = alloc_dc_ptr( NTGDI_OBJ_MEMDC ))) return 0;\n\n    TRACE(\"(%p): returning %p\\n\", hdc, dc->hSelf );\n\n    dc->hBitmap = GDI_inc_ref_count( GetStockObject( DEFAULT_BITMAP ));\n    dc->attr->vis_rect.left   = 0;\n    dc->attr->vis_rect.top    = 0;\n    dc->attr->vis_rect.right  = 1;\n    dc->attr->vis_rect.bottom = 1;\n    dc->device_rect = dc->attr->vis_rect;\n\n    ret = dc->hSelf;\n\n    if (funcs->pCreateCompatibleDC && !funcs->pCreateCompatibleDC( physDev, &dc->physDev ))\n    {\n        WARN(\"creation aborted by device\\n\");\n        free_dc_ptr( dc );\n        return 0;\n    }\n\n    if (!dib_driver.pCreateDC( &dc->physDev, NULL, NULL, NULL ))\n    {\n        free_dc_ptr( dc );\n        return 0;\n    }\n    physDev = GET_DC_PHYSDEV( dc, pSelectBitmap );\n    physDev->funcs->pSelectBitmap( physDev, dc->hBitmap );\n\n    DC_InitDC( dc );\n    release_dc_ptr( dc );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include <pthread.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winerror.h\"",
+   "#include \"ntgdi_private.h\"",
+   "#include \"wine/opengl_driver.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "gdi32!CreateCompatibleDC [stdcall] -> NtGdiCreateCompatibleDC implicitly imported from win32u",
+   "win32u!NtGdiCreateCompatibleDC [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdi32/tests/bitmap.c",
+   "dlls/gdi32/tests/brush.c",
+   "dlls/gdi32/tests/clipping.c",
+   "dlls/gdi32/tests/dc.c",
+   "dlls/gdi32/tests/dib.c",
+   "dlls/gdi32/tests/font.c",
+   "dlls/gdi32/tests/gdiobj.c",
+   "dlls/gdi32/tests/mapping.c",
+   "dlls/gdi32/tests/metafile.c",
+   "dlls/gdi32/tests/palette.c",
+   "dlls/gdi32/tests/path.c",
+   "dlls/gdi32/tests/pen.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "gdi.exe16",
+   "source_module": "gdi.exe16",
+   "exported_by": [
+    "gdi.exe16"
+   ],
+   "file": "dlls/gdi.exe16/gdi.c",
+   "start_line": 1173,
+   "resolution": [
+    "gdi.exe16!CreateCompatibleDC [pascal -ret16] -> internal symbol CreateCompatibleDC16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 1176,
+   "signature": "HDC16 WINAPI CreateCompatibleDC16( HDC16 hdc )",
+   "code": "HDC16 WINAPI CreateCompatibleDC16( HDC16 hdc )\n{\n    return HDC_16( CreateCompatibleDC( HDC_32(hdc) ) );\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-createcompatibledc.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-createcompatibledc",
+   "documented_name": "createcompatibledc",
+   "file": "docs/0238_sdk-api_nf-wingdi-createcompatibledc.md",
+   "text": "---\nUID: NF:wingdi.CreateCompatibleDC\ntitle: CreateCompatibleDC function (wingdi.h)\ndescription: The CreateCompatibleDC function creates a memory device context (DC) compatible with the specified device.\nhelpviewer_keywords: [\"CreateCompatibleDC\",\"CreateCompatibleDC function [Windows GDI]\",\"_win32_CreateCompatibleDC\",\"gdi.createcompatibledc\",\"wingdi/CreateCompatibleDC\"]\nold-location: gdi\\createcompatibledc.htm\ntech.root: gdi\nms.assetid: 6ddc3705-2995-41af-af94-258aed597e17\nms.date: 12/05/2018\nms.keywords: CreateCompatibleDC, CreateCompatibleDC function [Windows GDI], _win32_CreateCompatibleDC, gdi.createcompatibledc, wingdi/CreateCompatibleDC\nreq.header: wingdi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CreateCompatibleDC\n - wingdi/CreateCompatibleDC\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - gdi32.dll\n - Ext-MS-Win-GDI-DC-Create-l1-1-0.dll\n - Ext-MS-Win-GDI-DC-Create-l1-1-1.dll\n - ext-ms-win-gdi-dc-create-l1-1-2.dll\n - GDI32Full.dll\napi_name:\n - CreateCompatibleDC\n---\n\n# CreateCompatibleDC function\n\n\n## -description\n\nThe <b>CreateCompatibleDC</b> function creates a memory device context (DC) compatible with the specified device.\n\n## -parameters\n\n### -param hdc [in]\n\nA handle to an existing DC. If this handle is <b>NULL</b>, the function creates a memory DC compatible with the application's current screen.\n\n## -returns\n\nIf the function succeeds, the return value is the handle to a memory DC.\n\nIf the function fails, the return value is <b>NULL</b>.\n\n## -remarks\n\nA memory DC exists only in memory. When the memory DC is created, its display surface is exactly one monochrome pixel wide and one monochrome pixel high. Before an application can use a memory DC for drawing operations, it must select a bitmap of the correct width and height into the DC. To select a bitmap into a DC, use the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-createcompatiblebitmap\">CreateCompatibleBitmap</a> function, specifying the height, width, and color organization required.\n\nWhen a memory DC is created, all attributes are set to normal default values. The memory DC can be used as a normal DC. You can set the attributes; obtain the current settings of its attributes; and select pens, brushes, and regions.\n\nThe <b>CreateCompatibleDC</b> function can only be used with devices that support raster operations. An application can determine whether a device supports these operations by calling the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-getdevicecaps\">GetDeviceCaps</a> function.\n\nWhen you no longer need the memory DC, call the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-deletedc\">DeleteDC</a> function. We recommend that you call <b>DeleteDC</b> to delete the DC.  However, you can also call <a href=\"/windows/desktop/api/wingdi/nf-wingdi-deleteobject\">DeleteObject</a> with the HDC to delete the DC.\n\nIf <i>hdc</i> is <b>NULL</b>, the thread that calls <b>CreateCompatibleDC</b> owns the HDC that is created. When this thread is destroyed, the HDC is no longer valid. Thus, if you create the HDC and pass it to another thread, then exit the first thread, the second thread will not be able to use the HDC.\n\n<b>ICM:</b> If the DC that is passed to this function is enabled for Image Color Management (ICM), the DC created by the function is ICM-enabled. The source and destination color spaces are specified in the DC.\n\n\n#### Examples\n\nFor an example, see <a href=\"/windows/desktop/gdi/capturing-an-image\">Capturing an Image</a>.\n\n<div class=\"code\"></div>\n\n## -see-also\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-createcompatiblebitmap\">CreateCompatibleBitmap</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-deletedc\">DeleteDC</a>\n\n\n\n<a href=\"/windows/desktop/gdi/device-context-functions\">Device Context Functions</a>\n\n\n\n<a href=\"/windows/desktop/gdi/device-contexts\">Device Contexts Overview</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-getdevicecaps\">GetDeviceCaps</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_dc_ptr",
+   "file": "dlls/win32u/dc.c",
+   "start_line": 289,
+   "end_line": 313,
+   "static": false,
+   "called_from": [
+    "NtGdiCreateCompatibleDC"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/mapping.c:211",
+    "dlls/win32u/mapping.c:289",
+    "dlls/win32u/mapping.c:305",
+    "dlls/win32u/mapping.c:338",
+    "dlls/win32u/mapping.c:372"
+   ],
+   "signature": "DC *get_dc_ptr( HDC hdc )",
+   "code": "DC *get_dc_ptr( HDC hdc )\n{\n    DC *dc = get_dc_obj( hdc );\n    if (!dc) return NULL;\n    if (dc->attr->disabled)\n    {\n        GDI_ReleaseObj( hdc );\n        return NULL;\n    }\n\n    if (!InterlockedCompareExchange( &dc->refcount, 1, 0 ))\n    {\n        dc->thread = GetCurrentThreadId();\n    }\n    else if (dc->thread != GetCurrentThreadId())\n    {\n        WARN( \"dc %p belongs to thread %04x\\n\", hdc, dc->thread );\n        GDI_ReleaseObj( hdc );\n        return NULL;\n    }\n    else InterlockedIncrement( &dc->refcount );\n\n    GDI_ReleaseObj( hdc );\n    return dc;\n}"
+  },
+  {
+   "name": "release_dc_ptr",
+   "file": "dlls/win32u/dc.c",
+   "start_line": 319,
+   "end_line": 327,
+   "static": false,
+   "called_from": [
+    "NtGdiCreateCompatibleDC"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/mapping.c:255",
+    "dlls/win32u/mapping.c:292",
+    "dlls/win32u/mapping.c:313",
+    "dlls/win32u/mapping.c:325",
+    "dlls/win32u/mapping.c:346"
+   ],
+   "signature": "void release_dc_ptr( DC *dc )",
+   "code": "void release_dc_ptr( DC *dc )\n{\n    LONG ref;\n\n    dc->thread = 0;\n    ref = InterlockedDecrement( &dc->refcount );\n    assert( ref >= 0 );\n    if (ref) dc->thread = GetCurrentThreadId();  /* we still own it */\n}"
+  },
+  {
+   "name": "alloc_dc_ptr",
+   "file": "dlls/win32u/dc.c",
+   "start_line": 204,
+   "end_line": 242,
+   "static": false,
+   "called_from": [
+    "NtGdiCreateCompatibleDC"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dc.c:748",
+    "dlls/win32u/emfdrv.c:552"
+   ],
+   "signature": "DC *alloc_dc_ptr( DWORD magic )",
+   "code": "DC *alloc_dc_ptr( DWORD magic )\n{\n    DC *dc;\n\n    if (!(dc = calloc( 1, sizeof(*dc) ))) return NULL;\n    if (!(dc->attr = alloc_dc_attr()))\n    {\n        free( dc );\n        return NULL;\n    }\n\n    dc->nulldrv.funcs       = &null_driver;\n    dc->physDev             = &dc->nulldrv;\n    dc->thread              = GetCurrentThreadId();\n    dc->refcount            = 1;\n    dc->hPen                = GDI_inc_ref_count( GetStockObject( BLACK_PEN ));\n    dc->hBrush              = GDI_inc_ref_count( GetStockObject( WHITE_BRUSH ));\n    dc->hFont               = GDI_inc_ref_count( GetStockObject( SYSTEM_FONT ));\n    dc->hPalette            = GetStockObject( DEFAULT_PALETTE );\n\n    set_initial_dc_state( dc );\n\n    if (!(dc->hSelf = alloc_gdi_handle( &dc->obj, magic, &dc_funcs )))\n    {\n        free_dc_attr( dc->attr );\n        free( dc );\n        return NULL;\n    }\n    dc->nulldrv.hdc = dc->hSelf;\n    dc->attr->hdc = HandleToUlong( dc->hSelf );\n    set_gdi_client_ptr( dc->hSelf, dc->attr );\n\n    if (!font_driver.pCreateDC( &dc->physDev, NULL, NULL, NULL ))\n    {\n        free_dc_ptr( dc );\n        return NULL;\n    }\n    return dc;\n}"
+  },
+  {
+   "name": "free_dc_ptr",
+   "file": "dlls/win32u/dc.c",
+   "start_line": 265,
+   "end_line": 281,
+   "static": false,
+   "called_from": [
+    "NtGdiCreateCompatibleDC",
+    "alloc_dc_ptr"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dc.c:544",
+    "dlls/win32u/dc.c:764",
+    "dlls/win32u/emfdrv.c:557"
+   ],
+   "signature": "void free_dc_ptr( DC *dc )",
+   "code": "void free_dc_ptr( DC *dc )\n{\n    assert( dc->refcount == 1 );\n\n    while (dc->physDev != &dc->nulldrv)\n    {\n        PHYSDEV physdev = dc->physDev;\n        dc->physDev = physdev->next;\n        physdev->funcs->pDeleteDC( physdev );\n    }\n    GDI_dec_ref_count( dc->hPen );\n    GDI_dec_ref_count( dc->hBrush );\n    GDI_dec_ref_count( dc->hFont );\n    if (dc->hBitmap && !dc->is_display) GDI_dec_ref_count( dc->hBitmap );\n    free_gdi_handle( dc->hSelf );\n    free_dc_state( dc );\n}"
+  },
+  {
+   "name": "DC_InitDC",
+   "file": "dlls/win32u/dc.c",
+   "start_line": 372,
+   "end_line": 385,
+   "static": false,
+   "called_from": [
+    "NtGdiCreateCompatibleDC"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dc.c:782",
+    "dlls/win32u/bitmap.c:471",
+    "dlls/win32u/dibdrv/dc.c:603",
+    "dlls/win32u/dibdrv/dc.c:609"
+   ],
+   "signature": "void DC_InitDC( DC* dc )",
+   "code": "void DC_InitDC( DC* dc )\n{\n    PHYSDEV physdev = GET_DC_PHYSDEV( dc, pRealizeDefaultPalette );\n    physdev->funcs->pRealizeDefaultPalette( physdev );\n    set_text_color( dc, dc->attr->text_color );\n    set_bk_color( dc, dc->attr->background_color );\n    NtGdiSelectPen( dc->hSelf, dc->hPen );\n    NtGdiSelectBrush( dc->hSelf, dc->hBrush );\n    NtGdiSelectFont( dc->hSelf, dc->hFont );\n    update_dc_clipping( dc );\n    NtGdiSetVirtualResolution( dc->hSelf, 0, 0, 0, 0 );\n    physdev = GET_DC_PHYSDEV( dc, pSetBoundsRect );\n    physdev->funcs->pSetBoundsRect( physdev, &dc->bounds, dc->bounds_enabled ? DCB_ENABLE : DCB_DISABLE );\n}"
+  },
+  {
+   "name": "get_dc_obj",
+   "file": "dlls/win32u/dc.c",
+   "start_line": 67,
+   "end_line": 84,
+   "static": true,
+   "called_from": [
+    "get_dc_ptr"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dc.c:1234",
+    "dlls/win32u/dc.c:1251",
+    "dlls/win32u/dc.c:1266"
+   ],
+   "signature": "static inline DC *get_dc_obj( HDC hdc )",
+   "code": "static inline DC *get_dc_obj( HDC hdc )\n{\n    DWORD type;\n    DC *dc = get_any_obj_ptr( hdc, &type );\n    if (!dc) return NULL;\n\n    switch (type)\n    {\n    case NTGDI_OBJ_DC:\n    case NTGDI_OBJ_MEMDC:\n    case NTGDI_OBJ_ENHMETADC:\n        return dc;\n    default:\n        GDI_ReleaseObj( hdc );\n        RtlSetLastWin32Error( ERROR_INVALID_HANDLE );\n        return NULL;\n    }\n}"
+  },
+  {
+   "name": "alloc_dc_attr",
+   "file": "dlls/win32u/dc.c",
+   "start_line": 87,
+   "end_line": 130,
+   "static": true,
+   "called_from": [
+    "alloc_dc_ptr"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dc.c:564"
+   ],
+   "signature": "static DC_ATTR *alloc_dc_attr(void)",
+   "code": "static DC_ATTR *alloc_dc_attr(void)\n{\n    struct dc_attr_bucket *bucket;\n    DC_ATTR *dc_attr = NULL;\n\n    pthread_mutex_lock( &dc_attr_lock );\n\n    LIST_FOR_EACH_ENTRY( bucket, &dc_attr_buckets, struct dc_attr_bucket, entry )\n    {\n        if (bucket->next_free)\n        {\n            dc_attr = bucket->next_free;\n            bucket->next_free = *(void **)bucket->next_free;\n            break;\n        }\n        if ((char *)bucket->next_unused - (char *)bucket->entries + sizeof(*dc_attr) <=\n            system_info.AllocationGranularity)\n        {\n            dc_attr = bucket->next_unused++;\n            break;\n        }\n    }\n\n    if (!dc_attr && (bucket = malloc( sizeof(*bucket) )))\n    {\n        SIZE_T size = system_info.AllocationGranularity;\n        bucket->entries = NULL;\n        if (!NtAllocateVirtualMemory( GetCurrentProcess(), (void **)&bucket->entries, zero_bits,\n                                      &size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE ))\n        {\n            bucket->next_free = NULL;\n            bucket->next_unused = bucket->entries + 1;\n            dc_attr = bucket->entries;\n            list_add_head( &dc_attr_buckets, &bucket->entry );\n        }\n        else free( bucket );\n    }\n\n    if (dc_attr) memset( dc_attr, 0, sizeof( *dc_attr ));\n\n    pthread_mutex_unlock( &dc_attr_lock );\n\n    return dc_attr;\n}"
+  },
+  {
+   "name": "set_initial_dc_state",
+   "file": "dlls/win32u/dc.c",
+   "start_line": 154,
+   "end_line": 199,
+   "static": true,
+   "called_from": [
+    "alloc_dc_ptr"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dc.c:489"
+   ],
+   "signature": "static void set_initial_dc_state( DC *dc )",
+   "code": "static void set_initial_dc_state( DC *dc )\n{\n    dc->attr->wnd_org.x     = 0;\n    dc->attr->wnd_org.y     = 0;\n    dc->attr->wnd_ext.cx    = 1;\n    dc->attr->wnd_ext.cy    = 1;\n    dc->attr->vport_org.x   = 0;\n    dc->attr->vport_org.y   = 0;\n    dc->attr->vport_ext.cx  = 1;\n    dc->attr->vport_ext.cy  = 1;\n    dc->attr->miter_limit   = 10.0f; /* 10.0 is the default, from MSDN */\n    dc->attr->layout        = 0;\n    dc->attr->rop_mode      = R2_COPYPEN;\n    dc->attr->font_code_page   = CP_ACP;\n    dc->attr->poly_fill_mode   = ALTERNATE;\n    dc->attr->stretch_blt_mode = BLACKONWHITE;\n    dc->attr->rel_abs_mode     = ABSOLUTE;\n    dc->attr->background_mode  = OPAQUE;\n    dc->attr->background_color = RGB( 255, 255, 255 );\n    dc->attr->brush_color      = RGB( 255, 255, 255 );\n    dc->attr->pen_color        = RGB( 0, 0, 0 );\n    dc->attr->text_color    = RGB( 0, 0, 0 );\n    dc->attr->brush_org.x   = 0;\n    dc->attr->brush_org.y   = 0;\n    dc->attr->mapper_flags  = 0;\n    dc->attr->text_align    = TA_LEFT | TA_TOP | TA_NOUPDATECP;\n    dc->attr->char_extra    = 0;\n    dc->breakExtra          = 0;\n    dc->breakRem            = 0;\n    dc->attr->map_mode      = MM_TEXT;\n    dc->attr->graphics_mode = GM_COMPATIBLE;\n    dc->attr->cur_pos.x     = 0;\n    dc->attr->cur_pos.y     = 0;\n    dc->attr->arc_direction = AD_COUNTERCLOCKWISE;\n    dc->xformWorld2Wnd.eM11 = 1.0f;\n    dc->xformWorld2Wnd.eM12 = 0.0f;\n    dc->xformWorld2Wnd.eM21 = 0.0f;\n    dc->xformWorld2Wnd.eM22 = 1.0f;\n    dc->xformWorld2Wnd.eDx  = 0.0f;\n    dc->xformWorld2Wnd.eDy  = 0.0f;\n    dc->xformWorld2Vport    = dc->xformWorld2Wnd;\n    dc->xformVport2World    = dc->xformWorld2Wnd;\n    dc->vport2WorldValid    = TRUE;\n\n    reset_bounds( &dc->bounds );\n}"
+  },
+  {
+   "name": "free_dc_attr",
+   "file": "dlls/win32u/dc.c",
+   "start_line": 133,
+   "end_line": 148,
+   "static": true,
+   "called_from": [
+    "alloc_dc_ptr",
+    "free_dc_state"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void free_dc_attr( DC_ATTR *dc_attr )",
+   "code": "static void free_dc_attr( DC_ATTR *dc_attr )\n{\n    struct dc_attr_bucket *bucket;\n\n    pthread_mutex_lock( &dc_attr_lock );\n\n    LIST_FOR_EACH_ENTRY( bucket, &dc_attr_buckets, struct dc_attr_bucket, entry )\n    {\n        if (bucket->entries > dc_attr || dc_attr >= bucket->next_unused) continue;\n        *(void **)dc_attr = bucket->next_free;\n        bucket->next_free = dc_attr;\n        break;\n    }\n\n    pthread_mutex_unlock( &dc_attr_lock );\n}"
+  },
+  {
+   "name": "free_dc_state",
+   "file": "dlls/win32u/dc.c",
+   "start_line": 249,
+   "end_line": 259,
+   "static": true,
+   "called_from": [
+    "free_dc_ptr"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dc.c:509",
+    "dlls/win32u/dc.c:600",
+    "dlls/win32u/dc.c:716"
+   ],
+   "signature": "static void free_dc_state( DC *dc )",
+   "code": "static void free_dc_state( DC *dc )\n{\n    if (dc->opengl_drawable) opengl_drawable_release( dc->opengl_drawable );\n    if (dc->hClipRgn) NtGdiDeleteObjectApp( dc->hClipRgn );\n    if (dc->hMetaRgn) NtGdiDeleteObjectApp( dc->hMetaRgn );\n    if (dc->hVisRgn) NtGdiDeleteObjectApp( dc->hVisRgn );\n    if (dc->region) NtGdiDeleteObjectApp( dc->region );\n    if (dc->path) free_gdi_path( dc->path );\n    free_dc_attr( dc->attr );\n    free( dc );\n}"
+  },
+  {
+   "name": "set_text_color",
+   "file": "dlls/win32u/dc.c",
+   "start_line": 360,
+   "end_line": 364,
+   "static": true,
+   "called_from": [
+    "DC_InitDC"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dc.c:491",
+    "dlls/win32u/dc.c:704",
+    "dlls/win32u/dc.c:953"
+   ],
+   "signature": "static void set_text_color( DC *dc, COLORREF color )",
+   "code": "static void set_text_color( DC *dc, COLORREF color )\n{\n    PHYSDEV physdev = GET_DC_PHYSDEV( dc, pSetTextColor );\n    dc->attr->text_color = physdev->funcs->pSetTextColor( physdev, color );\n}"
+  },
+  {
+   "name": "set_bk_color",
+   "file": "dlls/win32u/dc.c",
+   "start_line": 353,
+   "end_line": 357,
+   "static": true,
+   "called_from": [
+    "DC_InitDC"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dc.c:490",
+    "dlls/win32u/dc.c:703",
+    "dlls/win32u/dc.c:943"
+   ],
+   "signature": "static void set_bk_color( DC *dc, COLORREF color )",
+   "code": "static void set_bk_color( DC *dc, COLORREF color )\n{\n    PHYSDEV physdev = GET_DC_PHYSDEV( dc, pSetBkColor );\n    dc->attr->background_color = physdev->funcs->pSetBkColor( physdev, color );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "dc_attr_bucket",
+    "kind": "struct_decl",
+    "start_line": 47,
+    "end_line": 53,
+    "code": "struct dc_attr_bucket\n{\n    struct list entry;\n    DC_ATTR *entries;\n    DC_ATTR *next_free;\n    DC_ATTR *next_unused;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 43,
+    "end_line": 43,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(dc);"
+   },
+   {
+    "name": "dc_attr_buckets",
+    "type": "struct list",
+    "static": true,
+    "start_line": 55,
+    "end_line": 55,
+    "code": "static struct list dc_attr_buckets = LIST_INIT( dc_attr_buckets );"
+   },
+   {
+    "name": "dc_attr_lock",
+    "type": "pthread_mutex_t",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "static pthread_mutex_t dc_attr_lock = PTHREAD_MUTEX_INITIALIZER;"
+   },
+   {
+    "name": "dc_funcs",
+    "type": "const struct gdi_obj_funcs",
+    "static": true,
+    "start_line": 59,
+    "end_line": 64,
+    "code": "static const struct gdi_obj_funcs dc_funcs =\n{\n    NULL,             /* pGetObjectW */\n    NULL,             /* pUnrealizeObject */\n    DC_DeleteObject   /* pDeleteObject */\n};"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "GDI_ReleaseObj",
+    "file": "dlls/win32u/gdiobj.c",
+    "start_line": 837
+   },
+   {
+    "name": "GDI_dec_ref_count",
+    "file": "dlls/win32u/gdiobj.c",
+    "start_line": 523
+   },
+   {
+    "name": "GDI_inc_ref_count",
+    "file": "dlls/win32u/gdiobj.c",
+    "start_line": 506
+   },
+   {
+    "name": "GetStockObject",
+    "file": "dlls/win32u/gdiobj.c",
+    "start_line": 589
+   },
+   {
+    "name": "alloc_gdi_handle",
+    "file": "dlls/win32u/gdiobj.c",
+    "start_line": 717
+   },
+   {
+    "name": "free_gdi_handle",
+    "file": "dlls/win32u/gdiobj.c",
+    "start_line": 759
+   },
+   {
+    "name": "free_gdi_path",
+    "file": "dlls/win32u/path.c",
+    "start_line": 106
+   },
+   {
+    "name": "get_any_obj_ptr",
+    "file": "dlls/win32u/gdiobj.c",
+    "start_line": 797
+   },
+   {
+    "name": "get_display_driver",
+    "file": "dlls/win32u/driver.c",
+    "start_line": 1067
+   },
+   {
+    "name": "opengl_drawable_release",
+    "file": "dlls/win32u/opengl.c",
+    "start_line": 407
+   },
+   {
+    "name": "set_gdi_client_ptr",
+    "file": "dlls/win32u/gdiobj.c",
+    "start_line": 784
+   },
+   {
+    "name": "update_dc_clipping",
+    "file": "dlls/win32u/clipping.c",
+    "start_line": 100
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "NtGdiDeleteObjectApp",
+    "impl": [
+     "dlls/win32u/gdiobj.c:857"
+    ]
+   },
+   {
+    "name": "NtGdiSelectBrush",
+    "impl": [
+     "dlls/win32u/brush.c:306"
+    ]
+   },
+   {
+    "name": "NtGdiSelectFont",
+    "impl": [
+     "dlls/win32u/font.c:5055"
+    ]
+   },
+   {
+    "name": "NtGdiSelectPen",
+    "impl": [
+     "dlls/win32u/pen.c:206"
+    ]
+   },
+   {
+    "name": "NtGdiSetVirtualResolution",
+    "impl": [
+     "dlls/win32u/mapping.c:432"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtAllocateVirtualMemory",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/virtual.c:5286"
+    ]
+   },
+   {
+    "name": "PsGetCurrentThreadId",
+    "module": "ntoskrnl.exe",
+    "impl": [
+     "dlls/ntoskrnl.exe/ntoskrnl.c:3454"
+    ]
+   },
+   {
+    "name": "RtlSetLastWin32Error",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "header_inline": [
+   "HandleToULong",
+   "_InterlockedCompareExchange",
+   "_InterlockedDecrement",
+   "_InterlockedIncrement",
+   "get_physdev_entry_point",
+   "list_add_head",
+   "wine_dbg_log"
+  ],
+  "system": [
+   "__assert_rtn",
+   "calloc",
+   "free",
+   "malloc",
+   "pthread_mutex_lock",
+   "pthread_mutex_unlock"
+  ],
+  "unresolved": [
+   "reset_bounds"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "funcs->pCreateCompatibleDC",
+    "in_function": "NtGdiCreateCompatibleDC",
+    "at": "dlls/win32u/dc.c:823",
+    "candidates": []
+   },
+   {
+    "expr": "dib_driver.pCreateDC",
+    "in_function": "NtGdiCreateCompatibleDC",
+    "at": "dlls/win32u/dc.c:830",
+    "candidates": []
+   },
+   {
+    "expr": "physDev->funcs->pSelectBitmap",
+    "in_function": "NtGdiCreateCompatibleDC",
+    "at": "dlls/win32u/dc.c:836",
+    "candidates": []
+   },
+   {
+    "expr": "font_driver.pCreateDC",
+    "in_function": "alloc_dc_ptr",
+    "at": "dlls/win32u/dc.c:236",
+    "candidates": []
+   },
+   {
+    "expr": "physdev->funcs->pDeleteDC",
+    "in_function": "free_dc_ptr",
+    "at": "dlls/win32u/dc.c:273",
+    "candidates": []
+   },
+   {
+    "expr": "physdev->funcs->pRealizeDefaultPalette",
+    "in_function": "DC_InitDC",
+    "at": "dlls/win32u/dc.c:375",
+    "candidates": []
+   },
+   {
+    "expr": "physdev->funcs->pSetBoundsRect",
+    "in_function": "DC_InitDC",
+    "at": "dlls/win32u/dc.c:384",
+    "candidates": []
+   },
+   {
+    "expr": "physdev->funcs->pSetTextColor",
+    "in_function": "set_text_color",
+    "at": "dlls/win32u/dc.c:363",
+    "candidates": []
+   },
+   {
+    "expr": "physdev->funcs->pSetBkColor",
+    "in_function": "set_bk_color",
+    "at": "dlls/win32u/dc.c:356",
+    "candidates": []
+   }
+  ]
+ }
+}

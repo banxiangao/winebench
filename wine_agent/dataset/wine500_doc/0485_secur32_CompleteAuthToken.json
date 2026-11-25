@@ -1,0 +1,98 @@
+{
+ "id": "0485",
+ "function": {
+  "name": "CompleteAuthToken",
+  "export_name": "CompleteAuthToken",
+  "module": "secur32",
+  "source_module": "secur32",
+  "exported_by": [
+   "schannel",
+   "secur32",
+   "security",
+   "sspicli"
+  ],
+  "side": "PE",
+  "file": "dlls/secur32/wrapper.c",
+  "start_line": 304,
+  "end_line": 326,
+  "body_lines": 20,
+  "signature": "SECURITY_STATUS WINAPI CompleteAuthToken(PCtxtHandle phContext, PSecBufferDesc pToken)",
+  "header_comment": "/***********************************************************************\n *\t\tCompleteAuthToken (SECUR32.@)\n */",
+  "code": "SECURITY_STATUS WINAPI CompleteAuthToken(PCtxtHandle phContext,\n PSecBufferDesc pToken)\n{\n    SECURITY_STATUS ret;\n\n    TRACE(\"%p %p\\n\", phContext, pToken);\n    if (phContext)\n    {\n        SecurePackage *package = (SecurePackage *)phContext->dwUpper;\n        if (package && package->provider)\n        {\n            if (package->provider->fnTableW.CompleteAuthToken)\n                ret = package->provider->fnTableW.CompleteAuthToken(phContext, pToken);\n            else\n                ret = SEC_E_UNSUPPORTED_FUNCTION;\n        }\n        else\n            ret = SEC_E_INVALID_HANDLE;\n    }\n    else\n        ret = SEC_E_INVALID_HANDLE;\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"sspi.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"secur32_priv.h\""
+  ],
+  "resolution": [
+   "schannel!CompleteAuthToken [stdcall] -> forward secur32.CompleteAuthToken",
+   "secur32!CompleteAuthToken [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/secur32/tests/negotiate.c",
+   "dlls/secur32/tests/ntlm.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "sspi",
+   "path": "sdk-api-src/content/sspi/nf-sspi-completeauthtoken.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/sspi/nf-sspi-completeauthtoken",
+   "documented_name": "completeauthtoken",
+   "file": "docs/0485_sdk-api_nf-sspi-completeauthtoken.md",
+   "text": "---\nUID: NF:sspi.CompleteAuthToken\ntitle: CompleteAuthToken function (sspi.h)\ndescription: Completes an authentication token. (CompleteAuthToken)\nhelpviewer_keywords: [\"CompleteAuthToken\",\"CompleteAuthToken function [Security]\",\"_ssp_completeauthtoken\",\"security.completeauthtoken\",\"sspi/CompleteAuthToken\"]\nold-location: security\\completeauthtoken.htm\ntech.root: security\nms.assetid: a404d0a3-d1ea-4708-87d7-2d216e9a5f5f\nms.date: 12/05/2018\nms.keywords: CompleteAuthToken, CompleteAuthToken function [Security], _ssp_completeauthtoken, security.completeauthtoken, sspi/CompleteAuthToken\nreq.header: sspi.h\nreq.include-header: Security.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Secur32.lib\nreq.dll: Secur32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CompleteAuthToken\n - sspi/CompleteAuthToken\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Secur32.dll\napi_name:\n - CompleteAuthToken\n---\n\n# CompleteAuthToken function\n\n\n## -description\n\nThe <b>CompleteAuthToken</b> function completes an authentication token. This function is used by protocols, such as DCE, that need to revise the security information after the transport application has updated some message parameters.\n\t\t\t\n\nThis function is supported only by the Digest <a href=\"/windows/desktop/SecGloss/s-gly\">security support provider</a> (SSP).\n\n<b>CompleteAuthToken</b> is used on the server side only.\n\n## -parameters\n\n### -param phContext [in]\n\nA handle of the context that needs to be completed.\n\n### -param pToken [in]\n\nA pointer to a \n<a href=\"/windows/desktop/api/sspi/ns-sspi-secbufferdesc\">SecBufferDesc</a> structure that contains the buffer descriptor for the entire message.\n\n## -returns\n\nIf the function succeeds, the function returns SEC_E_OK.\n\t\t\t\t\t\t\n\nIf the function fails, it returns one of the following error codes.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>SEC_E_INVALID_HANDLE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe handle that was passed to the function is not valid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>SEC_E_INVALID_TOKEN</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe token that was passed to the function is not valid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>SEC_E_OUT_OF_SEQUENCE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe client's security context was located, but the message number is incorrect. This return value is used with the Digest SSP.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>SEC_E_MESSAGE_ALTERED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe client's security context was located, but the client's message has been tampered with. This return value is used with the Digest SSP.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>SEC_E_INTERNAL_ERROR</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn error occurred that did not map to an SSPI error code.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe client of a transport application calls the <b>CompleteAuthToken</b> function to allow the <a href=\"/windows/desktop/SecGloss/s-gly\">security package</a> to update a checksum or similar operation after all the protocol headers have been updated by the transport application. The client calls this function only if the \n<a href=\"/windows/desktop/api/sspi/nf-sspi-initializesecuritycontexta\">InitializeSecurityContext (Digest)</a> call returned SEC_I_COMPLETE_NEEDED or SEC_I_COMPLETE_AND_CONTINUE.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/sspi/nf-sspi-initializesecuritycontexta\">InitializeSecurityContext (Digest)</a>\n\n\n\n<a href=\"/windows/desktop/SecAuthN/authentication-functions\">SSPI Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/sspi/ns-sspi-secbufferdesc\">SecBufferDesc</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 31,
+    "end_line": 31,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(secur32);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "package->provider->fnTableW.CompleteAuthToken",
+    "in_function": "CompleteAuthToken",
+    "at": "dlls/secur32/wrapper.c:316",
+    "candidates": []
+   }
+  ]
+ }
+}

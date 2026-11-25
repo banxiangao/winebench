@@ -1,0 +1,120 @@
+{
+ "id": "0327",
+ "function": {
+  "name": "midiOutOpen16",
+  "export_name": "midiOutOpen",
+  "module": "mmsystem.dll16",
+  "source_module": "mmsystem.dll16",
+  "exported_by": [
+   "mmsystem.dll16",
+   "winmm"
+  ],
+  "side": "PE",
+  "file": "dlls/mmsystem.dll16/mmsystem.c",
+  "start_line": 724,
+  "end_line": 744,
+  "body_lines": 18,
+  "signature": "UINT16 WINAPI midiOutOpen16(HMIDIOUT16* lphMidiOut, UINT16 uDeviceID, DWORD dwCallback, DWORD dwInstance, DWORD dwFlags)",
+  "header_comment": "/**************************************************************************\n * \t\t\t\tmidiOutOpen    \t\t[MMSYSTEM.204]\n */",
+  "code": "UINT16 WINAPI midiOutOpen16(HMIDIOUT16* lphMidiOut, UINT16 uDeviceID,\n                            DWORD dwCallback, DWORD dwInstance, DWORD dwFlags)\n{\n    HMIDIOUT\t                hmo;\n    UINT\t                ret;\n    struct mmsystdrv_thunk*     thunk;\n\n    if (!(thunk = MMSYSTDRV_AddThunk(dwCallback, dwFlags, MMSYSTDRV_MIDIOUT)))\n    {\n        return MMSYSERR_NOMEM;\n    }\n    dwFlags = (dwFlags & ~CALLBACK_TYPEMASK) | CALLBACK_FUNCTION;\n    ret = midiOutOpen(&hmo, uDeviceID, (DWORD)thunk, dwInstance, dwFlags);\n    if (ret == MMSYSERR_NOERROR)\n    {\n        if (lphMidiOut != NULL) *lphMidiOut = HMIDIOUT_16(hmo);\n        MMSYSTDRV_SetHandle(thunk, (void*)hmo);\n    }\n    else MMSYSTDRV_DeleteThunk(thunk);\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"mmsystem.h\"",
+   "#include \"winternl.h\"",
+   "#include \"wownt32.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/winuser16.h\"",
+   "#include \"winemm16.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "mmsystem.dll16!midiOutOpen [pascal] -> internal symbol midiOutOpen16"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/winmm/tests/midi.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "winmm",
+   "source_module": "winmm",
+   "exported_by": [
+    "winmm"
+   ],
+   "file": "dlls/winmm/winmm.c",
+   "start_line": 419,
+   "resolution": [
+    "winmm!midiOutOpen [stdcall]"
+   ],
+   "macro_generated": false,
+   "win16": false,
+   "end_line": 453,
+   "signature": "MMRESULT WINAPI midiOutOpen(LPHMIDIOUT lphMidiOut, UINT uDeviceID, DWORD_PTR dwCallback, DWORD_PTR dwInstance, DWORD dwFlags)",
+   "code": "MMRESULT WINAPI midiOutOpen(LPHMIDIOUT lphMidiOut, UINT uDeviceID,\n                       DWORD_PTR dwCallback, DWORD_PTR dwInstance, DWORD dwFlags)\n{\n    HMIDIOUT\t\thMidiOut;\n    LPWINE_MIDI\t\tlpwm;\n    MMRESULT\t\tdwRet;\n\n    TRACE(\"(%p, %d, %08IX, %08IX, %08lX);\\n\",\n\t  lphMidiOut, uDeviceID, dwCallback, dwInstance, dwFlags);\n\n    if (lphMidiOut != NULL) *lphMidiOut = 0;\n\n    dwRet = WINMM_CheckCallback(dwCallback, dwFlags, FALSE);\n    if (dwRet != MMSYSERR_NOERROR)\n\treturn dwRet;\n\n    lpwm = MIDI_OutAlloc(&hMidiOut, &dwCallback, &dwInstance, &dwFlags, 0, NULL);\n\n    if (lpwm == NULL)\n\treturn MMSYSERR_NOMEM;\n\n    lpwm->mld.uDeviceID = uDeviceID;\n\n    dwRet = MMDRV_Open((LPWINE_MLD)lpwm, MODM_OPEN, (DWORD_PTR)&lpwm->mod, dwFlags);\n\n    if (dwRet != MMSYSERR_NOERROR) {\n\tMMDRV_Free(hMidiOut, (LPWINE_MLD)lpwm);\n\thMidiOut = 0;\n    }\n\n    if (lphMidiOut) *lphMidiOut = hMidiOut;\n    TRACE(\"=> %d hMidi=%p\\n\", dwRet, hMidiOut);\n\n    return dwRet;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "mmeapi",
+   "path": "sdk-api-src/content/mmeapi/nf-mmeapi-midioutopen.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/mmeapi/nf-mmeapi-midioutopen",
+   "documented_name": "midioutopen",
+   "file": "docs/0327_sdk-api_nf-mmeapi-midioutopen.md",
+   "text": "---\nUID: NF:mmeapi.midiOutOpen\ntitle: midiOutOpen function (mmeapi.h)\ndescription: The midiOutOpen function opens a MIDI output device for playback.\nhelpviewer_keywords: [\"_win32_midiOutOpen\",\"midiOutOpen\",\"midiOutOpen function [Windows Multimedia]\",\"mmeapi/midiOutOpen\",\"multimedia.midioutopen\"]\nold-location: multimedia\\midioutopen.htm\ntech.root: Multimedia\nms.assetid: 929cd4d1-6912-4456-a6c7-24a819799e46\nms.date: 12/05/2018\nms.keywords: _win32_midiOutOpen, midiOutOpen, midiOutOpen function [Windows Multimedia], mmeapi/midiOutOpen, multimedia.midioutopen\nreq.header: mmeapi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Winmm.lib\nreq.dll: Winmm.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - midiOutOpen\n - mmeapi/midiOutOpen\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Winmm.dll\n - API-MS-Win-mm-mme-l1-1-0.dll\n - winmmbase.dll\napi_name:\n - midiOutOpen\n---\n\n# midiOutOpen function\n\n\n## -description\n\nThe <b>midiOutOpen</b> function opens a MIDI output device for playback.\n\n## -parameters\n\n### -param phmo\n\nPointer to an <b>HMIDIOUT</b> handle. This location is filled with a handle identifying the opened MIDI output device. The handle is used to identify the device in calls to other MIDI output functions.\n\n### -param uDeviceID\n\nIdentifier of the MIDI output device that is to be opened.\n\n### -param dwCallback\n\nPointer to a callback function, an event handle, a thread identifier, or a handle of a window or thread called during MIDI playback to process messages related to the progress of the playback. If no callback is desired, specify <b>NULL</b> for this parameter. For more information on the callback function, see <a href=\"/previous-versions/dd798478(v=vs.85)\">MidiOutProc</a>.\n\n### -param dwInstance\n\nUser instance data passed to the callback. This parameter is not used with window callbacks or threads.\n\n### -param fdwOpen\n\nCallback flag for opening the device. It can be the following values.\n\n<table>\n<tr>\n<th>Value\n</th>\n<th>Meaning\n</th>\n</tr>\n<tr>\n<td>CALLBACK_EVENT</td>\n<td>The <i>dwCallback</i> parameter is an event handle. This callback mechanism is for output only.</td>\n</tr>\n<tr>\n<td>CALLBACK_FUNCTION</td>\n<td>The <i>dwCallback</i> parameter is a callback function address.</td>\n</tr>\n<tr>\n<td>CALLBACK_NULL</td>\n<td>There is no callback mechanism. This value is the default setting.</td>\n</tr>\n<tr>\n<td>CALLBACK_THREAD</td>\n<td>The <i>dwCallback</i> parameter is a thread identifier.</td>\n</tr>\n<tr>\n<td>CALLBACK_WINDOW</td>\n<td>The <i>dwCallback</i> parameter is a window handle.</td>\n</tr>\n</table>\n\n## -returns\n\nReturns MMSYSERR_NOERROR if successful or an error otherwise. Possible error values include the following.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>MIDIERR_NODEVICE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nNo MIDI port was found. This error occurs only when the mapper is opened.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>MMSYSERR_ALLOCATED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe specified resource is already allocated.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>MMSYSERR_BADDEVICEID</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe specified device identifier is out of range.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>MMSYSERR_INVALPARAM</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe specified pointer or structure is invalid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>MMSYSERR_NOMEM</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe system is unable to allocate or lock memory.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nTo determine the number of MIDI output devices present in the system, use the <a href=\"/previous-versions/dd798472(v=vs.85)\">midiOutGetNumDevs</a> function. The device identifier specified by <i>wDeviceID</i> varies from zero to one less than the number of devices present. MIDI_MAPPER can also be used as the device identifier.\n\nIf a window or thread is chosen to receive callback information, the following messages are sent to the window procedure or thread to indicate the progress of MIDI output: <a href=\"/windows/desktop/Multimedia/mm-mom-open\">MM_MOM_OPEN</a>, <a href=\"/windows/desktop/Multimedia/mm-mom-close\">MM_MOM_CLOSE</a>, and <a href=\"/windows/desktop/Multimedia/mm-mom-done\">MM_MOM_DONE</a>.\n\nIf a function is chosen to receive callback information, the following messages are sent to the function to indicate the progress of MIDI output: <a href=\"/windows/desktop/Multimedia/mom-open\">MOM_OPEN</a>, <a href=\"/windows/desktop/Multimedia/mom-close\">MOM_CLOSE</a>, and <a href=\"/windows/desktop/Multimedia/mom-done\">MOM_DONE</a>.\n\n## -see-also\n\n<a href=\"/windows/desktop/Multimedia/midi-functions\">MIDI Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "MMSYSTDRV_AddThunk",
+    "file": "dlls/mmsystem.dll16/message16.c",
+    "start_line": 858
+   },
+   {
+    "name": "MMSYSTDRV_DeleteThunk",
+    "file": "dlls/mmsystem.dll16/message16.c",
+    "start_line": 936
+   },
+   {
+    "name": "MMSYSTDRV_SetHandle",
+    "file": "dlls/mmsystem.dll16/message16.c",
+    "start_line": 927
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "midiOutOpen",
+    "impl": [
+     "dlls/mmsystem.dll16/mmsystem.c:724"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

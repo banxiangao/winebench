@@ -1,0 +1,154 @@
+{
+ "id": "0041",
+ "function": {
+  "name": "VarMul",
+  "export_name": "VarMul",
+  "module": "oleaut32",
+  "source_module": "oleaut32",
+  "exported_by": [
+   "oleaut32"
+  ],
+  "side": "PE",
+  "file": "dlls/oleaut32/variant.c",
+  "start_line": 3426,
+  "end_line": 3588,
+  "body_lines": 160,
+  "signature": "HRESULT WINAPI VarMul(LPVARIANT left, LPVARIANT right, LPVARIANT result)",
+  "header_comment": "/**********************************************************************\n *              VarMul [OLEAUT32.156]\n *\n * Multiply two variants.\n *\n * PARAMS\n *  left    [I] First variant\n *  right   [I] Second variant\n *  result  [O] Result variant\n *\n * RETURNS\n *  Success: S_OK.\n *  Failure: An HRESULT error code indicating the error.\n *\n * NOTES\n *  Native VarMul up to and including WinXP doesn't like I1, UI2, UI4,\n *  UI8, INT and UINT as input variants. But it can multiply apples with oranges.\n *\n *  Native VarMul doesn't check for NULL in/out pointers and crashes. We do the\n *  same here.\n *\n * FIXME\n *  Overflow checking for R8 (double) overflow. Return DISP_E_OVERFLOW in that\n *  case.\n */",
+  "code": "HRESULT WINAPI VarMul(LPVARIANT left, LPVARIANT right, LPVARIANT result)\n{\n    HRESULT hres;\n    VARTYPE lvt, rvt, resvt, tvt;\n    VARIANT lv, rv, tv;\n    VARIANT tempLeft, tempRight;\n    double r8res;\n\n    /* Variant priority for coercion. Sorted from lowest to highest.\n       VT_ERROR shows an invalid input variant type. */\n    enum coerceprio { vt_UI1 = 0, vt_I2, vt_I4, vt_I8, vt_CY, vt_R4, vt_R8,\n                      vt_DECIMAL, vt_NULL, vt_ERROR };\n    /* Mapping from priority to variant type. Keep in sync with coerceprio! */\n    static const VARTYPE prio2vt[] = { VT_UI1, VT_I2, VT_I4, VT_I8, VT_CY, VT_R4, VT_R8,\n                          VT_DECIMAL, VT_NULL, VT_ERROR };\n\n    /* Mapping for coercion from input variant to priority of result variant. */\n    static const VARTYPE coerce[] = {\n        /* VT_EMPTY, VT_NULL, VT_I2, VT_I4, VT_R4 */\n        vt_UI1, vt_NULL, vt_I2, vt_I4, vt_R4,\n        /* VT_R8, VT_CY, VT_DATE, VT_BSTR, VT_DISPATCH */\n        vt_R8, vt_CY, vt_R8, vt_R8, vt_ERROR,\n        /* VT_ERROR, VT_BOOL, VT_VARIANT, VT_UNKNOWN, VT_DECIMAL */\n        vt_ERROR, vt_I2, vt_ERROR, vt_ERROR, vt_DECIMAL,\n        /* 15, VT_I1, VT_UI1, VT_UI2, VT_UI4 VT_I8 */\n        vt_ERROR, vt_ERROR, vt_UI1, vt_ERROR, vt_ERROR, vt_I8\n    };\n\n    TRACE(\"(%s,%s,%p)\\n\", debugstr_variant(left), debugstr_variant(right), result);\n\n    VariantInit(&lv);\n    VariantInit(&rv);\n    VariantInit(&tv);\n    VariantInit(&tempLeft);\n    VariantInit(&tempRight);\n\n    /* Handle VT_DISPATCH by storing and taking address of returned value */\n    if ((V_VT(left) & VT_TYPEMASK) == VT_DISPATCH)\n    {\n        hres = VARIANT_FetchDispatchValue(left, &tempLeft);\n        if (FAILED(hres)) goto end;\n        left = &tempLeft;\n    }\n    if ((V_VT(right) & VT_TYPEMASK) == VT_DISPATCH)\n    {\n        hres = VARIANT_FetchDispatchValue(right, &tempRight);\n        if (FAILED(hres)) goto end;\n        right = &tempRight;\n    }\n\n    lvt = V_VT(left)&VT_TYPEMASK;\n    rvt = V_VT(right)&VT_TYPEMASK;\n\n    /* If we have any flag set (VT_ARRAY, VT_VECTOR, etc.) bail out.\n       Same for any input variant type > VT_I8 */\n    if (V_VT(left) & ~VT_TYPEMASK || V_VT(right) & ~VT_TYPEMASK ||\n        lvt > VT_I8 || rvt > VT_I8) {\n        hres = DISP_E_BADVARTYPE;\n        goto end;\n    }\n\n    /* Determine the variant type to coerce to. */\n    if (coerce[lvt] > coerce[rvt]) {\n        resvt = prio2vt[coerce[lvt]];\n        tvt = prio2vt[coerce[rvt]];\n    } else {\n        resvt = prio2vt[coerce[rvt]];\n        tvt = prio2vt[coerce[lvt]];\n    }\n\n    /* Special cases where the result variant type is defined by both\n       input variants and not only that with the highest priority */\n    if (resvt == VT_R4 && (tvt == VT_CY || tvt == VT_I8 || tvt == VT_I4))\n        resvt = VT_R8;\n    if (lvt == VT_EMPTY && rvt == VT_EMPTY)\n        resvt = VT_I2;\n\n    /* For overflow detection use the biggest compatible type for the\n       multiplication */\n    switch (resvt) {\n        case VT_ERROR:\n            hres = DISP_E_BADVARTYPE;\n            goto end;\n        case VT_NULL:\n            hres = S_OK;\n            V_VT(result) = VT_NULL;\n            goto end;\n        case VT_UI1:\n        case VT_I2:\n        case VT_I4:\n        case VT_I8:\n            tvt = VT_I8;\n            break;\n        case VT_R4:\n            tvt = VT_R8;\n            break;\n        default:\n            tvt = resvt;\n    }\n\n    /* Now coerce the variants */\n    hres = VariantChangeType(&lv, left, 0, tvt);\n    if (FAILED(hres))\n        goto end;\n    hres = VariantChangeType(&rv, right, 0, tvt);\n    if (FAILED(hres))\n        goto end;\n\n    /* Do the math */\n    hres = S_OK;\n    V_VT(&tv) = tvt;\n    V_VT(result) = resvt;\n    switch (tvt) {\n        case VT_DECIMAL:\n            hres = VarDecMul(&V_DECIMAL(&lv), &V_DECIMAL(&rv),\n                             &V_DECIMAL(result));\n            goto end;\n        case VT_CY:\n            hres = VarCyMul(V_CY(&lv), V_CY(&rv), &V_CY(result));\n            goto end;\n        case VT_I8:\n            /* Overflow detection */\n            r8res = (double)V_I8(&lv) * (double)V_I8(&rv);\n            if (r8res > (double)I8_MAX || r8res < (double)I8_MIN) {\n                V_VT(result) = VT_R8;\n                V_R8(result) = r8res;\n                goto end;\n            } else\n                V_I8(&tv) = V_I8(&lv) * V_I8(&rv);\n            break;\n        case VT_R8:\n            /* FIXME: overflow detection */\n            V_R8(&tv) = V_R8(&lv) * V_R8(&rv);\n            break;\n        default:\n            ERR(\"We shouldn't get here! tvt = %d!\\n\", tvt);\n            break;\n    }\n    if (resvt != tvt) {\n        while ((hres = VariantChangeType(result, &tv, 0, resvt)) != S_OK) {\n            /* Overflow! Change to the vartype with the next higher priority.\n               With one exception: I4 ==> R8 even if it would fit in I8 */\n            if (resvt == VT_I4)\n                resvt = VT_R8;\n            else\n                resvt = prio2vt[coerce[resvt] + 1];\n        }\n    } else\n        hres = VariantCopy(result, &tv);\n\nend:\n    if (hres != S_OK) {\n        V_VT(result) = VT_EMPTY;\n        V_I4(result) = 0;       /* No V_EMPTY */\n    }\n    VariantClear(&lv);\n    VariantClear(&rv);\n    VariantClear(&tv);\n    VariantClear(&tempLeft);\n    VariantClear(&tempRight);\n    TRACE(\"returning %#lx, %s\\n\", hres, debugstr_variant(result));\n    return hres;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <string.h>",
+   "#include <stdlib.h>",
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"variant.h\"",
+   "#include \"resource.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "oleaut32!VarMul [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/oleaut32/tests/vartest.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "oleauto",
+   "path": "sdk-api-src/content/oleauto/nf-oleauto-varmul.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/oleauto/nf-oleauto-varmul",
+   "documented_name": "varmul",
+   "file": "docs/0041_sdk-api_nf-oleauto-varmul.md",
+   "text": "---\nUID: NF:oleauto.VarMul\ntitle: VarMul function (oleauto.h)\ndescription: Returns the result from multiplying two variants.\nhelpviewer_keywords: [\"VarMul\",\"VarMul function [Automation]\",\"_oa96_VarMul\",\"automat.varmul\",\"oleauto/VarMul\"]\nold-location: automat\\varmul.htm\ntech.root: automat\nms.assetid: d804a23b-7d52-4f11-a93e-3eb02a079d2c\nms.date: 12/05/2018\nms.keywords: VarMul, VarMul function [Automation], _oa96_VarMul, automat.varmul, oleauto/VarMul\nreq.header: oleauto.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: OleAut32.lib\nreq.dll: OleAut32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - VarMul\n - oleauto/VarMul\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - OleAut32.dll\napi_name:\n - VarMul\n---\n\n# VarMul function\n\n\n## -description\n\nReturns the result from multiplying two variants.\n\n## -parameters\n\n### -param pvarLeft [in]\n\nThe first variant.\n\n### -param pvarRight [in]\n\nThe second variant.\n\n### -param pvarResult [out]\n\nThe result variant.\n\n## -returns\n\nIf this function succeeds, it returns <b>S_OK</b>. Otherwise, it returns an <b>HRESULT</b> error code.\n\n## -remarks\n\nThe function operates as follows.\n\n<table>\n<tr>\n<th>Condition</th>\n<th>Result</th>\n</tr>\n<tr>\n<td>Both expressions are strings, dates, characters, or boolean values</td>\n<td>Multiplication</td>\n</tr>\n<tr>\n<td>One expression is a string and the other a character</td>\n<td>Multiplication</td>\n</tr>\n<tr>\n<td>One expression is numeric and the other a string</td>\n<td>Multiplication</td>\n</tr>\n<tr>\n<td>Both expressions are numeric</td>\n<td>Multiplication</td>\n</tr>\n<tr>\n<td>Either expression is null</td>\n<td>Null</td>\n</tr>\n<tr>\n<td>Both expressions are empty</td>\n<td>Empty string</td>\n</tr>\n</table>\n \n\nBoolean values are converted to -1 for FALSE and 0 for TRUE.\n\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "VARIANT_FetchDispatchValue",
+   "file": "dlls/oleaut32/variant.c",
+   "start_line": 504,
+   "end_line": 518,
+   "static": true,
+   "called_from": [
+    "VarMul"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/oleaut32/variant.c:2668",
+    "dlls/oleaut32/variant.c:2694",
+    "dlls/oleaut32/variant.c:2979",
+    "dlls/oleaut32/variant.c:2985",
+    "dlls/oleaut32/variant.c:3256"
+   ],
+   "signature": "static HRESULT VARIANT_FetchDispatchValue(LPVARIANT pvDispatch, LPVARIANT pValue)",
+   "code": "static HRESULT VARIANT_FetchDispatchValue(LPVARIANT pvDispatch, LPVARIANT pValue)\n{\n    DISPPARAMS params = { 0 };\n    HRESULT hres;\n\n    if ((V_VT(pvDispatch) & VT_TYPEMASK) == VT_DISPATCH) {\n        if (NULL == V_DISPATCH(pvDispatch)) return DISP_E_TYPEMISMATCH;\n        hres = IDispatch_Invoke(V_DISPATCH(pvDispatch), DISPID_VALUE, &IID_NULL,\n            LOCALE_USER_DEFAULT, DISPATCH_PROPERTYGET, &params, pValue,\n            NULL, NULL);\n    } else {\n        hres = DISP_E_TYPEMISMATCH;\n    }\n    return hres;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "coerceprio",
+    "kind": "enum_decl",
+    "start_line": 3436,
+    "end_line": 3437,
+    "code": "    enum coerceprio { vt_UI1 = 0, vt_I2, vt_I4, vt_I8, vt_CY, vt_R4, vt_R8,\n                      vt_DECIMAL, vt_NULL, vt_ERROR };"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(variant);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "VarCyMul",
+    "impl": [
+     "dlls/oleaut32/vartype.c:3802"
+    ]
+   },
+   {
+    "name": "VarDecMul",
+    "impl": [
+     "dlls/oleaut32/vartype.c:5663"
+    ]
+   },
+   {
+    "name": "VariantChangeType",
+    "impl": [
+     "dlls/oleaut32/variant.c:940"
+    ]
+   },
+   {
+    "name": "VariantClear",
+    "impl": [
+     "dlls/oleaut32/variant.c:627"
+    ]
+   },
+   {
+    "name": "VariantCopy",
+    "impl": [
+     "dlls/oleaut32/variant.c:725"
+    ]
+   },
+   {
+    "name": "VariantInit",
+    "impl": [
+     "dlls/oleaut32/variant.c:547"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "IDispatch_Invoke",
+   "debugstr_variant",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

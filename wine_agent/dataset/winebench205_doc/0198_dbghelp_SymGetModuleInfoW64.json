@@ -1,0 +1,197 @@
+{
+ "id": "0198",
+ "function": {
+  "name": "SymGetModuleInfoW64",
+  "export_name": "SymGetModuleInfoW64",
+  "module": "dbghelp",
+  "source_module": "dbghelp",
+  "exported_by": [
+   "dbghelp",
+   "imagehlp"
+  ],
+  "side": "PE",
+  "file": "dlls/dbghelp/module.c",
+  "start_line": 1424,
+  "end_line": 1460,
+  "body_lines": 34,
+  "signature": "BOOL  WINAPI SymGetModuleInfoW64(HANDLE hProcess, DWORD64 dwAddr, PIMAGEHLP_MODULEW64 ModuleInfo)",
+  "header_comment": "/******************************************************************\n *\t\tSymGetModuleInfoW64 (DBGHELP.@)\n *\n */",
+  "code": "BOOL  WINAPI SymGetModuleInfoW64(HANDLE hProcess, DWORD64 dwAddr,\n                                 PIMAGEHLP_MODULEW64 ModuleInfo)\n{\n    struct process*     pcs = process_find_by_handle(hProcess);\n    struct module*      module;\n    IMAGEHLP_MODULEW64  miw64;\n\n    TRACE(\"%p %I64x %p\\n\", hProcess, dwAddr, ModuleInfo);\n\n    if (!pcs) return FALSE;\n    if (ModuleInfo->SizeOfStruct > sizeof(*ModuleInfo)) return FALSE;\n    module = module_find_by_addr(pcs, dwAddr);\n    if (!module) return FALSE;\n\n    miw64 = module->module;\n\n    if (dbghelp_opt_real_path && module->real_path)\n        lstrcpynW(miw64.LoadedImageName, module->real_path, ARRAY_SIZE(miw64.LoadedImageName));\n    else if (miw64.SymType == SymDeferred)\n    {\n        miw64.LoadedImageName[0] = '\\0';\n        miw64.TimeDateStamp = 0;\n    }\n\n    /* update debug information from container if any */\n    if (module->module.SymType == SymNone)\n    {\n        module = module_get_container(pcs, module);\n        if (module && module->module.SymType != SymNone)\n        {\n            miw64.SymType = module->module.SymType;\n            miw64.NumSyms = module->module.NumSyms;\n        }\n    }\n    memcpy(ModuleInfo, &miw64, ModuleInfo->SizeOfStruct);\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdlib.h>",
+   "#include <stdio.h>",
+   "#include <string.h>",
+   "#include <assert.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"dbghelp_private.h\"",
+   "#include \"image_private.h\"",
+   "#include \"psapi.h\"",
+   "#include \"tlhelp32.h\"",
+   "#include \"winternl.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "dbghelp!SymGetModuleInfoW64 [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/dbghelp/tests/dbghelp.c",
+   "dlls/dbghelp/tests/path.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 7
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "dbghelp",
+   "path": "sdk-api-src/content/dbghelp/nf-dbghelp-symgetmoduleinfow64.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/dbghelp/nf-dbghelp-symgetmoduleinfow64",
+   "documented_name": "symgetmoduleinfow64",
+   "file": "docs/0198_sdk-api_nf-dbghelp-symgetmoduleinfow64.md",
+   "text": "---\nUID: NF:dbghelp.SymGetModuleInfoW64\ntitle: SymGetModuleInfoW64 function (dbghelp.h)\ndescription: Retrieves the module information of the specified module. (SymGetModuleInfoW64)\nhelpviewer_keywords: [\"SymGetModuleInfo\",\"SymGetModuleInfo function\",\"SymGetModuleInfo64\",\"SymGetModuleInfo64 function\",\"SymGetModuleInfoW\",\"SymGetModuleInfoW64\",\"_win32_symgetmoduleinfo64\",\"base.symgetmoduleinfo64\",\"dbghelp/SymGetModuleInfo\",\"dbghelp/SymGetModuleInfo64\",\"dbghelp/SymGetModuleInfoW\",\"dbghelp/SymGetModuleInfoW64\"]\nold-location: base\\symgetmoduleinfo64.htm\ntech.root: Debug\nms.assetid: e8057cb5-3331-4460-b07c-4338a57024be\nms.date: 12/05/2018\nms.keywords: SymGetModuleInfo, SymGetModuleInfo function, SymGetModuleInfo64, SymGetModuleInfo64 function, SymGetModuleInfoW, SymGetModuleInfoW64, _win32_symgetmoduleinfo64, base.symgetmoduleinfo64, dbghelp/SymGetModuleInfo, dbghelp/SymGetModuleInfo64, dbghelp/SymGetModuleInfoW, dbghelp/SymGetModuleInfoW64\nreq.header: dbghelp.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: SymGetModuleInfoW64 (Unicode) and SymGetModuleInfo64 (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Dbghelp.lib\nreq.dll: Dbghelp.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: DbgHelp.dll 5.1 or later\nms.custom: 19H1\nf1_keywords:\n - SymGetModuleInfoW64\n - dbghelp/SymGetModuleInfoW64\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Dbghelp.dll\napi_name:\n - SymGetModuleInfo64\n - SymGetModuleInfo64\n - SymGetModuleInfoW64\n - SymGetModuleInfo\n - SymGetModuleInfoW\n---\n\n# SymGetModuleInfoW64 function\n\n\n## -description\n\nRetrieves the module information of the specified module.\n\n## -parameters\n\n### -param hProcess [in]\n\nA handle to the process that was originally passed to the \n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-syminitialize\">SymInitialize</a> function.\n\n### -param qwAddr [in]\n\nThe virtual address that is contained in one of the modules loaded by the \n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symloadmodule\">SymLoadModule64</a> function.\n\n### -param ModuleInfo [out]\n\nA pointer to an \n<a href=\"/windows/desktop/api/dbghelp/ns-dbghelp-imagehlp_modulew64\">IMAGEHLP_MODULEW64</a> structure. The <b>SizeOfStruct</b> member must be set to the size of the \n<b>IMAGEHLP_MODULEW64</b> structure. An invalid value will result in an error.\n\n## -returns\n\nIf the function succeeds, the return value is <b>TRUE</b>.\n\nIf the function fails, the return value is <b>FALSE</b>. To retrieve extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThe module table is searched for a module that contains the <i>dwAddr</i>. The module is located based on the load address and size of each module. If a valid module is found, the <i>ModuleInfo</i> parameter is filled with the information about the module.\n\nThe size of the <a href=\"/windows/desktop/api/dbghelp/ns-dbghelp-imagehlp_modulew64\">IMAGEHLP_MODULEW64</a> structure used by this function has changed over the years.  If a version of DbgHelp.dll is called that is older than the DbgHelp.h used to compile the calling code, then this function may fail with an error code of <b>ERROR_INVALID_PARAMETER</b>.  This most commonly occurs when the system version (%WinDir%\\System32\\DbgHelp.dll) is called.  Code that calls the system version of DbgHelp.dll must be compiled using the appropriate SDK for that Windows release or the SDK for a previous release.  \n\nThe recommended model is to redistribute the required version of DbgHelp.dll along with the calling software.  This allows the caller to use the most robust versions of DbgHelp.dll as well as a simplifying upgrades.  The most recent version of DbgHelp.dll can always be found in the <a href=\"/windows-hardware/drivers/debugger/\">Debugging Tools for Windows</a> package.  As a general rule, code that is compiled to work with older versions will always work with newer versions.\n\nAll DbgHelp functions, such as this one, are single threaded. Therefore, calls from more than one thread to this function will likely result in unexpected behavior or memory corruption. To avoid this, you must synchronize all concurrent calls from more than one thread to this function.\n\nTo call the Unicode version of this function, define <b>DBGHELP_TRANSLATE_TCHAR</b>. <b>SymGetModuleInfoW64</b> is defined as follows in DbgHelp.h. \n\n\n```cpp\n\nBOOL\nIMAGEAPI\nSymGetModuleInfoW64(\n    __in HANDLE hProcess,\n    __in DWORD64 qwAddr,\n    __out PIMAGEHLP_MODULEW64 ModuleInfo\n    );\n\n#ifdef DBGHELP_TRANSLATE_TCHAR\n#define SymGetModuleInfo64   SymGetModuleInfoW64\n#endif\n```\n\n\nThis function supersedes the <b>SymGetModuleInfo</b> function. For more information, see \n<a href=\"/windows/desktop/Debug/updated-platform-support\">Updated Platform Support</a>. <b>SymGetModuleInfo</b> is defined as follows in DbgHelp.h. \n\n\n```cpp\n#if !defined(_IMAGEHLP_SOURCE_) && defined(_IMAGEHLP64)\n#define SymGetModuleInfo   SymGetModuleInfo64\n#define SymGetModuleInfoW  SymGetModuleInfoW64\n#else\nBOOL\nIMAGEAPI\nSymGetModuleInfo(\n    __in HANDLE hProcess,\n    __in DWORD dwAddr,\n    __out PIMAGEHLP_MODULE ModuleInfo\n    );\n\nBOOL\nIMAGEAPI\nSymGetModuleInfoW(\n    __in HANDLE hProcess,\n    __in DWORD dwAddr,\n    __out PIMAGEHLP_MODULEW ModuleInfo\n    );\n#endif\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/Debug/dbghelp-functions\">DbgHelp Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/dbghelp/ns-dbghelp-imagehlp_modulew64\">IMAGEHLP_MODULEW64</a>\n\n\n\n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-syminitialize\">SymInitialize</a>\n\n\n\n<a href=\"/windows/desktop/api/dbghelp/nf-dbghelp-symloadmodule\">SymLoadModule64</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "module_find_by_addr",
+   "file": "dlls/dbghelp/module.c",
+   "start_line": 380,
+   "end_line": 399,
+   "static": false,
+   "called_from": [
+    "SymGetModuleInfoW64"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/dbghelp/module.c:221",
+    "dlls/dbghelp/module.c:1089",
+    "dlls/dbghelp/module.c:1481",
+    "dlls/dbghelp/module.c:1563",
+    "dlls/dbghelp/module.c:1644"
+   ],
+   "signature": "struct module* module_find_by_addr(const struct process* pcs, DWORD64 addr)",
+   "code": "struct module* module_find_by_addr(const struct process* pcs, DWORD64 addr)\n{\n    struct module* module;\n\n    for (module = pcs->lmodules; module; module = module->next)\n    {\n        if (module->type == DMT_PE && addr >= module->module.BaseOfImage &&\n            addr < module->module.BaseOfImage + module->module.ImageSize)\n            return module;\n    }\n    for (module = pcs->lmodules; module; module = module->next)\n    {\n        if ((module->type == DMT_ELF || module->type == DMT_MACHO) &&\n            addr >= module->module.BaseOfImage &&\n            addr < module->module.BaseOfImage + module->module.ImageSize)\n            return module;\n    }\n    SetLastError(ERROR_MOD_NOT_FOUND);\n    return module;\n}"
+  },
+  {
+   "name": "module_get_container",
+   "file": "dlls/dbghelp/module.c",
+   "start_line": 280,
+   "end_line": 294,
+   "static": true,
+   "called_from": [
+    "SymGetModuleInfoW64"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/dbghelp/module.c:369",
+    "dlls/dbghelp/module.c:1006",
+    "dlls/dbghelp/module.c:1652"
+   ],
+   "signature": "static struct module* module_get_container(const struct process* pcs, const struct module* inner)",
+   "code": "static struct module* module_get_container(const struct process* pcs,\n                                    const struct module* inner)\n{\n    struct module*      module;\n     \n    for (module = pcs->lmodules; module; module = module->next)\n    {\n        if (module != inner &&\n            module->module.BaseOfImage <= inner->module.BaseOfImage &&\n            module->module.BaseOfImage + module->module.ImageSize >=\n            inner->module.BaseOfImage + inner->module.ImageSize)\n            return module;\n    }\n    return NULL;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 35,
+    "end_line": 35,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(dbghelp);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "process_find_by_handle",
+    "file": "dlls/dbghelp/dbghelp.c",
+    "start_line": 93
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "lstrcpynW",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "dbghelp.SymGetModuleInfoW64",
+  "category": {
+   "l1": "Diagnostics",
+   "l2": "Debugging and error handling",
+   "header": "dbghelp.h",
+   "textbook": "Process control",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 37,
+   "body": 35,
+   "code": 21
+  },
+  "cyclomatic": 10,
+  "return_type": "BOOL",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 7,
+   "n_tests": 7,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/dbghelp/tests/dbghelp.c::aggregate_cb",
+    "dlls/dbghelp/tests/dbghelp.c::aggregation_sym_cb",
+    "dlls/dbghelp/tests/dbghelp.c::get_test_module",
+    "dlls/dbghelp/tests/dbghelp.c::test_modules",
+    "dlls/dbghelp/tests/path.c::skip_too_old_dbghelp",
+    "dlls/dbghelp/tests/path.c::test_load_modules_details",
+    "dlls/dbghelp/tests/path.c::test_load_modules_path"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/dbghelp/nf-dbghelp-symgetmoduleinfow64",
+   "source": "win32",
+   "description": "Retrieves the module information of the specified module. (SymGetModuleInfoW64)",
+   "min_windows": "",
+   "documented_dll": "Dbghelp.dll"
+  },
+  "exports": [
+   "dbghelp.SymGetModuleInfoW",
+   "dbghelp.SymGetModuleInfoW64",
+   "imagehlp.SymGetModuleInfoW",
+   "imagehlp.SymGetModuleInfoW64"
+  ],
+  "subset": {
+   "selected_by": "topup",
+   "lower_bound_used": 6,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

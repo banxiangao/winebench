@@ -1,0 +1,330 @@
+{
+ "id": "0112",
+ "function": {
+  "name": "WinHttpConnect",
+  "export_name": "WinHttpConnect",
+  "module": "winhttp",
+  "source_module": "winhttp",
+  "exported_by": [
+   "winhttp"
+  ],
+  "side": "PE",
+  "file": "dlls/winhttp/session.c",
+  "start_line": 678,
+  "end_line": 735,
+  "body_lines": 55,
+  "signature": "HINTERNET WINAPI WinHttpConnect( HINTERNET hsession, const WCHAR *server, INTERNET_PORT port, DWORD reserved )",
+  "header_comment": "/***********************************************************************\n *          WinHttpConnect (winhttp.@)\n */",
+  "code": "HINTERNET WINAPI WinHttpConnect( HINTERNET hsession, const WCHAR *server, INTERNET_PORT port, DWORD reserved )\n{\n    struct connect *connect;\n    struct session *session;\n    HINTERNET hconnect = NULL;\n\n    TRACE( \"%p, %s, %u, %#lx\\n\", hsession, debugstr_w(server), port, reserved );\n\n    if (!server)\n    {\n        SetLastError( ERROR_INVALID_PARAMETER );\n        return NULL;\n    }\n    if (!(session = (struct session *)grab_object( hsession )))\n    {\n        SetLastError( ERROR_INVALID_HANDLE );\n        return NULL;\n    }\n    if (session->hdr.type != WINHTTP_HANDLE_TYPE_SESSION)\n    {\n        release_object( &session->hdr );\n        SetLastError( ERROR_WINHTTP_INCORRECT_HANDLE_TYPE );\n        return NULL;\n    }\n    if (!(connect = calloc( 1, sizeof(*connect) )))\n    {\n        release_object( &session->hdr );\n        return NULL;\n    }\n    connect->hdr.type = WINHTTP_HANDLE_TYPE_CONNECT;\n    connect->hdr.vtbl = &connect_vtbl;\n    connect->hdr.refs = 1;\n    connect->hdr.flags = session->hdr.flags;\n    connect->hdr.callback = session->hdr.callback;\n    connect->hdr.notify_mask = session->hdr.notify_mask;\n    connect->hdr.context = session->hdr.context;\n    connect->hdr.redirect_policy = session->hdr.redirect_policy;\n    connect->hdr.decompression = session->hdr.decompression;\n\n    addref_object( &session->hdr );\n    connect->session = session;\n\n    if (!(connect->hostname = wcsdup( server ))) goto end;\n    connect->hostport = port;\n    if (!set_server_for_hostname( connect, server, port )) goto end;\n\n    if ((hconnect = alloc_handle( &connect->hdr )))\n    {\n        send_callback( &session->hdr, WINHTTP_CALLBACK_STATUS_HANDLE_CREATED, &hconnect, sizeof(hconnect) );\n    }\n\nend:\n    release_object( &connect->hdr );\n    release_object( &session->hdr );\n    TRACE(\"returning %p\\n\", hconnect);\n    if (hconnect) SetLastError( ERROR_SUCCESS );\n    return hconnect;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winsock2.h\"",
+   "#include \"ws2ipdef.h\"",
+   "#include \"ws2tcpip.h\"",
+   "#include \"schannel.h\"",
+   "#include \"winhttp.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winternl.h\"",
+   "#include \"iphlpapi.h\"",
+   "#include \"dhcpcsdk.h\"",
+   "#include \"ole2.h\"",
+   "#include \"dispex.h\"",
+   "#include \"activscp.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"winhttp_private.h\""
+  ],
+  "resolution": [
+   "winhttp!WinHttpConnect [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/winhttp/tests/winhttp.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 34
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winhttp",
+   "path": "sdk-api-src/content/winhttp/nf-winhttp-winhttpconnect.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winhttp/nf-winhttp-winhttpconnect",
+   "documented_name": "winhttpconnect",
+   "file": "docs/0112_sdk-api_nf-winhttp-winhttpconnect.md",
+   "text": "---\nUID: NF:winhttp.WinHttpConnect\ntitle: WinHttpConnect function (winhttp.h)\ndescription: The WinHttpConnect function specifies the initial target server of an HTTP request and returns an HINTERNET connection handle to an HTTP session for that initial target.\nhelpviewer_keywords: [\"INTERNET_DEFAULT_HTTPS_PORT\",\"INTERNET_DEFAULT_HTTP_PORT\",\"INTERNET_DEFAULT_PORT\",\"WinHttpConnect\",\"WinHttpConnect function [WinHTTP]\",\"http.winhttpconnect\",\"winhttp.winhttpconnect\",\"winhttp/WinHttpConnect\"]\nold-location: http\\winhttpconnect.htm\ntech.root: http\nms.assetid: afcdad8d-687e-4a1f-99d8-5d8be13825fa\nms.date: 12/05/2018\nms.keywords: INTERNET_DEFAULT_HTTPS_PORT, INTERNET_DEFAULT_HTTP_PORT, INTERNET_DEFAULT_PORT, WinHttpConnect, WinHttpConnect function [WinHTTP], http.winhttpconnect, winhttp.winhttpconnect, winhttp/WinHttpConnect\nreq.header: winhttp.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP, Windows 2000 Professional with SP3 [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003, Windows 2000 Server with SP3 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Winhttp.lib\nreq.dll: Winhttp.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: WinHTTP 5.0 and Internet Explorer 5.01 or later on Windows XP and Windows 2000.\nms.custom: 19H1\nf1_keywords:\n - WinHttpConnect\n - winhttp/WinHttpConnect\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Winhttp.dll\napi_name:\n - WinHttpConnect\n---\n\n# WinHttpConnect function\n\n\n## -description\n\nThe <b>WinHttpConnect</b> function specifies the initial target server of an HTTP request and returns an <a href=\"/windows/desktop/WinHttp/hinternet-handles-in-winhttp\">HINTERNET</a> connection handle to an HTTP session for that initial target.\n\n## -parameters\n\n### -param hSession [in]\n\nValid \n<a href=\"/windows/desktop/WinHttp/hinternet-handles-in-winhttp\">HINTERNET</a> WinHTTP session handle returned by a previous call to \n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpopen\">WinHttpOpen</a>.\n\n### -param pswzServerName [in]\n\nPointer to a <b>null</b>-terminated string that contains the host name of an HTTP server. Alternately, the string can contain the IP address of the site as a string, for example, 10.0.1.45.\nNote that WinHttp does not accept international host names without converting them first to <a href=\"/previous-versions/windows/internet-explorer/ie-developer/\">Punycode</a>. For more information, see <a href=\"/windows/win32/intl/handling-internationalized-domain-names--idns\">Handling Internationalized Domain Names (IDNs)</a>.\n\n### -param nServerPort [in]\n\nUnsigned integer that specifies the TCP/IP port on the server to which a connection is made.  This parameter can be any valid TCP/IP port number, or one of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_DEFAULT_HTTP_PORT\"></a><a id=\"internet_default_http_port\"></a><dl>\n<dt><b>INTERNET_DEFAULT_HTTP_PORT</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nUses the default port for HTTP servers (port 80). \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_DEFAULT_HTTPS_PORT\"></a><a id=\"internet_default_https_port\"></a><dl>\n<dt><b>INTERNET_DEFAULT_HTTPS_PORT</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nUses the default port for HTTPS servers (port 443).  Selecting this port does not automatically establish a secure connection.  You must still specify the use of secure transaction semantics by using the \n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpopenrequest\">WINHTTP_FLAG_SECURE</a> flag with \n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpopenrequest\">WinHttpOpenRequest</a>.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_DEFAULT_PORT\"></a><a id=\"internet_default_port\"></a><dl>\n<dt><b>INTERNET_DEFAULT_PORT</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nUses port 80 for HTTP and port 443 for Secure Hypertext Transfer Protocol (HTTPS). \n\n</td>\n</tr>\n</table>\n\n### -param dwReserved [in]\n\nThis parameter is reserved and must be 0.\n\n## -returns\n\nReturns a valid connection handle to the HTTP session if the connection is successful, or <b>NULL</b> otherwise. To retrieve extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>. Among the error codes returned are the following.\n\n<table>\n<tr>\n<th>Error Codes</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_INCORRECT_HANDLE_TYPE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe type of handle supplied is incorrect for this operation.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_INTERNAL_ERROR</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn internal error has occurred.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_INVALID_URL</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe URL is invalid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_OPERATION_CANCELLED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe operation was canceled, usually because the handle on which the request was operating was closed before the operation completed.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_UNRECOGNIZED_SCHEME</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe URL scheme could not be recognized, or is not supported.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_SHUTDOWN</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe WinHTTP function support is being shut down or unloaded.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOT_ENOUGH_MEMORY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nNot enough memory was available to complete the requested operation. (Windows error code)\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nEven when  WinHTTP is used in asynchronous mode (that is, when <b>WINHTTP_FLAG_ASYNC</b> has been set in <a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpopen\">WinHttpOpen</a>), this function operates synchronously. The return value indicates success or failure.  To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\nAfter the calling application has finished using the \n<a href=\"/windows/desktop/WinHttp/hinternet-handles-in-winhttp\">HINTERNET</a> handle returned by \n<b>WinHttpConnect</b>, it must be closed using the \n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpclosehandle\">WinHttpCloseHandle</a> function.\n\n<b>WinHttpConnect</b> specifies the target HTTP server, however a response can come from another server if the request was redirected.  You can determine the URL of the server sending the response by calling \n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpqueryoption\">WinHttpQueryOption</a> with the WINHTTP_OPTION_URL flag.\n\n<div class=\"alert\"><b>Note</b>  For Windows XP and Windows 2000, see the <a href=\"/windows/desktop/WinHttp/winhttp-start-page\">Run-Time Requirements</a> section of the WinHttp start page.</div>\n<div> </div>\n\n#### Examples\n\nThe following example shows how to use secure transaction semantics to download a resource from an HTTPS server. The sample code initializes the Microsoft Windows HTTP Services (WinHTTP) application programming interface (API), selects a target HTTPS server, then opens and sends a request for this secure resource.  \n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpquerydataavailable\">WinHttpQueryDataAvailable</a> is used with the request handle to determine how much data is available for download, then \n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpreaddata\">WinHttpReadData</a> is used to read that data.  This process repeats until the entire document has been retrieved and displayed.\n\n\n```cpp\n\n    DWORD dwSize = 0;\n    DWORD dwDownloaded = 0;\n    LPSTR pszOutBuffer;\n    BOOL  bResults = FALSE;\n    HINTERNET  hSession = NULL, \n               hConnect = NULL,\n               hRequest = NULL;\n\n    // Use WinHttpOpen to obtain a session handle.\n    hSession = WinHttpOpen( L\"WinHTTP Example/1.0\",  \n                            WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,\n                            WINHTTP_NO_PROXY_NAME, \n                            WINHTTP_NO_PROXY_BYPASS, 0);\n\n    // Specify an HTTP server.\n    if (hSession)\n        hConnect = WinHttpConnect( hSession, L\"www.microsoft.com\",\n                                   INTERNET_DEFAULT_HTTPS_PORT, 0);\n\n    // Create an HTTP request handle.\n    if (hConnect)\n        hRequest = WinHttpOpenRequest( hConnect, L\"GET\", NULL,\n                                       NULL, WINHTTP_NO_REFERER, \n                                       WINHTTP_DEFAULT_ACCEPT_TYPES, \n                                       WINHTTP_FLAG_SECURE);\n\n    // Send a request.\n    if (hRequest)\n        bResults = WinHttpSendRequest( hRequest,\n                                       WINHTTP_NO_ADDITIONAL_HEADERS,\n                                       0, WINHTTP_NO_REQUEST_DATA, 0, \n                                       0, 0);\n\n \n    // End the request.\n    if (bResults)\n        bResults = WinHttpReceiveResponse( hRequest, NULL);\n\n    // Keep checking for data until there is nothing left.\n    if (bResults)\n        do \n        {\n            // Check for available data.\n            dwSize = 0;\n            if (!WinHttpQueryDataAvailable( hRequest, &dwSize))\n                printf(\"Error %u in WinHttpQueryDataAvailable.\\n\", GetLastError());\n\n            // Allocate space for the buffer.\n            pszOutBuffer = new char[dwSize+1];\n            if (!pszOutBuffer)\n            {\n                printf(\"Out of memory\\n\");\n                dwSize=0;\n            }\n            else\n            {\n                // Read the Data.\n                ZeroMemory(pszOutBuffer, dwSize+1);\n\n                if (!WinHttpReadData( hRequest, (LPVOID)pszOutBuffer, \n                                      dwSize, &dwDownloaded))\n                    printf( \"Error %u in WinHttpReadData.\\n\", GetLastError());\n                else\n                    printf( \"%s\\n\", pszOutBuffer);\n            \n                // Free the memory allocated to the buffer.\n                delete [] pszOutBuffer;\n            }\n\n        } while (dwSize > 0);\n\n\n    // Report any errors.\n    if (!bResults)\n        printf(\"Error %d has occurred.\\n\", GetLastError());\n\n    // Close any open handles.\n    if (hRequest) WinHttpCloseHandle(hRequest);\n    if (hConnect) WinHttpCloseHandle(hConnect);\n    if (hSession) WinHttpCloseHandle(hSession);\n\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/WinHttp/about-winhttp\">About Microsoft Windows HTTP Services (WinHTTP)</a>\n\n\n\n<a href=\"/windows/desktop/WinHttp/winhttp-versions\">WinHTTP Versions</a>\n\n\n\n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpclosehandle\">WinHttpCloseHandle</a>\n\n\n\n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpopen\">WinHttpOpen</a>\n\n\n\n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpopenrequest\">WinHttpOpenRequest</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "set_server_for_hostname",
+   "file": "dlls/winhttp/session.c",
+   "start_line": 616,
+   "end_line": 673,
+   "static": false,
+   "called_from": [
+    "WinHttpConnect"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/request.c:3139"
+   ],
+   "signature": "BOOL set_server_for_hostname( struct connect *connect, const WCHAR *server, INTERNET_PORT port )",
+   "code": "BOOL set_server_for_hostname( struct connect *connect, const WCHAR *server, INTERNET_PORT port )\n{\n    struct session *session = connect->session;\n    BOOL ret = TRUE;\n\n    if (session->proxy_server && !should_bypass_proxy(session, server))\n    {\n        LPCWSTR colon;\n\n        if ((colon = wcschr( session->proxy_server, ':' )))\n        {\n            if (!connect->servername || wcsnicmp( connect->servername,\n                session->proxy_server, colon - session->proxy_server - 1 ))\n            {\n                free( connect->servername );\n                connect->resolved = FALSE;\n                if (!(connect->servername = malloc( (colon - session->proxy_server + 1) * sizeof(WCHAR) )))\n                {\n                    ret = FALSE;\n                    goto end;\n                }\n                memcpy( connect->servername, session->proxy_server, (colon - session->proxy_server) * sizeof(WCHAR) );\n                connect->servername[colon - session->proxy_server] = 0;\n                if (*(colon + 1))\n                    connect->serverport = wcstol( colon + 1, NULL, 10 );\n                else\n                    connect->serverport = INTERNET_DEFAULT_PORT;\n            }\n        }\n        else\n        {\n            if (!connect->servername || wcsicmp( connect->servername, session->proxy_server ))\n            {\n                free( connect->servername );\n                connect->resolved = FALSE;\n                if (!(connect->servername = wcsdup( session->proxy_server )))\n                {\n                    ret = FALSE;\n                    goto end;\n                }\n                connect->serverport = INTERNET_DEFAULT_PORT;\n            }\n        }\n    }\n    else if (server)\n    {\n        free( connect->servername );\n        connect->resolved = FALSE;\n        if (!(connect->servername = wcsdup( server )))\n        {\n            ret = FALSE;\n            goto end;\n        }\n        connect->serverport = port;\n    }\nend:\n    return ret;\n}"
+  },
+  {
+   "name": "send_callback",
+   "file": "dlls/winhttp/session.c",
+   "start_line": 48,
+   "end_line": 58,
+   "static": false,
+   "called_from": [
+    "WinHttpConnect"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/handle.c:79",
+    "dlls/winhttp/socket.c:173",
+    "dlls/winhttp/socket.c:421",
+    "dlls/winhttp/socket.c:429",
+    "dlls/winhttp/socket.c:865"
+   ],
+   "signature": "void send_callback( struct object_header *hdr, DWORD status, void *info, DWORD buflen )",
+   "code": "void send_callback( struct object_header *hdr, DWORD status, void *info, DWORD buflen )\n{\n    if (hdr->callback && (hdr->notify_mask & status))\n    {\n        TRACE( \"%p, %#lx, %p, %lu, %lu\\n\", hdr, status, info, buflen, hdr->recursion_count );\n        InterlockedIncrement( &hdr->recursion_count );\n        hdr->callback( hdr->handle, hdr->context, status, info, buflen );\n        InterlockedDecrement( &hdr->recursion_count );\n        TRACE(\"returning from %#lx callback\\n\", status);\n    }\n}"
+  },
+  {
+   "name": "should_bypass_proxy",
+   "file": "dlls/winhttp/session.c",
+   "start_line": 585,
+   "end_line": 614,
+   "static": true,
+   "called_from": [
+    "set_server_for_hostname"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL should_bypass_proxy(struct session *session, LPCWSTR server)",
+   "code": "static BOOL should_bypass_proxy(struct session *session, LPCWSTR server)\n{\n    LPCWSTR ptr;\n    BOOL ret = FALSE;\n\n    if (!session->proxy_bypass) return FALSE;\n    ptr = session->proxy_bypass;\n    do {\n        LPCWSTR tmp = ptr;\n\n        ptr = wcschr( ptr, ';' );\n        if (!ptr)\n            ptr = wcschr( tmp, ' ' );\n        if (ptr)\n        {\n            if (ptr - tmp < MAX_HOST_NAME_LENGTH)\n            {\n                WCHAR domain[MAX_HOST_NAME_LENGTH];\n\n                memcpy( domain, tmp, (ptr - tmp) * sizeof(WCHAR) );\n                domain[ptr - tmp] = 0;\n                ret = domain_matches( server, domain );\n            }\n            ptr += 1;\n        }\n        else if (*tmp)\n            ret = domain_matches( server, tmp );\n    } while (ptr && !ret);\n    return ret;\n}"
+  },
+  {
+   "name": "domain_matches",
+   "file": "dlls/winhttp/session.c",
+   "start_line": 532,
+   "end_line": 580,
+   "static": true,
+   "called_from": [
+    "should_bypass_proxy"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL domain_matches(LPCWSTR server, LPCWSTR domain)",
+   "code": "static BOOL domain_matches(LPCWSTR server, LPCWSTR domain)\n{\n    BOOL ret = FALSE;\n\n    if (!wcsicmp( domain, L\"<local>\" ) && !wcschr( server, '.' ))\n        ret = TRUE;\n    else if (*domain == '*')\n    {\n        if (domain[1] == '.')\n        {\n            LPCWSTR dot;\n\n            /* For a hostname to match a wildcard, the last domain must match\n             * the wildcard exactly.  E.g. if the wildcard is *.a.b, and the\n             * hostname is www.foo.a.b, it matches, but a.b does not.\n             */\n            dot = wcschr( server, '.' );\n            if (dot)\n            {\n                int len = lstrlenW( dot + 1 );\n\n                if (len > lstrlenW( domain + 2 ))\n                {\n                    LPCWSTR ptr;\n\n                    /* The server's domain is longer than the wildcard, so it\n                     * could be a subdomain.  Compare the last portion of the\n                     * server's domain.\n                     */\n                    ptr = dot + len + 1 - lstrlenW( domain + 2 );\n                    if (!wcsicmp( ptr, domain + 2 ))\n                    {\n                        /* This is only a match if the preceding character is\n                         * a '.', i.e. that it is a matching domain.  E.g.\n                         * if domain is '*.b.c' and server is 'www.ab.c' they\n                         * do not match.\n                         */\n                        ret = *(ptr - 1) == '.';\n                    }\n                }\n                else\n                    ret = !wcsicmp( dot + 1, domain + 2 );\n            }\n        }\n    }\n    else\n        ret = !wcsicmp( server, domain );\n    return ret;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(winhttp);"
+   },
+   {
+    "name": "connect_vtbl",
+    "type": "const struct object_vtbl",
+    "static": true,
+    "start_line": 524,
+    "end_line": 530,
+    "code": "static const struct object_vtbl connect_vtbl =\n{\n    NULL,\n    connect_destroy,\n    connect_query_option,\n    NULL\n};"
+   }
+  ],
+  "macros": [
+   {
+    "name": "MAX_HOST_NAME_LENGTH",
+    "start_line": 583,
+    "end_line": 583,
+    "code": "#define MAX_HOST_NAME_LENGTH 256"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "addref_object",
+    "file": "dlls/winhttp/handle.c",
+    "start_line": 48
+   },
+   {
+    "name": "alloc_handle",
+    "file": "dlls/winhttp/handle.c",
+    "start_line": 86
+   },
+   {
+    "name": "grab_object",
+    "file": "dlls/winhttp/handle.c",
+    "start_line": 55
+   },
+   {
+    "name": "release_object",
+    "file": "dlls/winhttp/handle.c",
+    "start_line": 71
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "calloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "wcschr",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:256"
+    ]
+   },
+   {
+    "name": "wcstol",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:669"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "_InterlockedDecrement",
+   "_InterlockedIncrement",
+   "debugstr_w",
+   "lstrlenW",
+   "wcsdup",
+   "wcsicmp",
+   "wcsnicmp",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "hdr->callback",
+    "in_function": "send_callback",
+    "at": "dlls/winhttp/session.c:54",
+    "candidates": [
+     "callback @ dlls/winhttp/session.c:2709",
+     "task @ dlls/winhttp/request.c:631"
+    ]
+   }
+  ]
+ },
+ "winebench": {
+  "id": "winhttp.WinHttpConnect",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "WinHTTP",
+   "header": "winhttp.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 58,
+   "body": 57,
+   "code": 39
+  },
+  "cyclomatic": 9,
+  "return_type": "HINTERNET",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 34,
+   "n_tests": 34,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/winhttp/tests/winhttp.c::test_WinHttpAddHeaders",
+    "dlls/winhttp/tests/winhttp.c::test_WinHttpOpenRequest",
+    "dlls/winhttp/tests/winhttp.c::test_WinHttpQueryOption",
+    "dlls/winhttp/tests/winhttp.c::test_WinHttpSendRequest",
+    "dlls/winhttp/tests/winhttp.c::test_bad_header",
+    "dlls/winhttp/tests/winhttp.c::test_basic_authentication",
+    "dlls/winhttp/tests/winhttp.c::test_basic_request",
+    "dlls/winhttp/tests/winhttp.c::test_chunked_read",
+    "dlls/winhttp/tests/winhttp.c::test_chunked_request",
+    "dlls/winhttp/tests/winhttp.c::test_client_cert_authentication",
+    "dlls/winhttp/tests/winhttp.c::test_connect_error",
+    "dlls/winhttp/tests/winhttp.c::test_connection_cache",
+    "dlls/winhttp/tests/winhttp.c::test_connection_info",
+    "dlls/winhttp/tests/winhttp.c::test_cookies",
+    "dlls/winhttp/tests/winhttp.c::test_credentials",
+    "dlls/winhttp/tests/winhttp.c::test_decompression",
+    "dlls/winhttp/tests/winhttp.c::test_empty_headers_param",
+    "dlls/winhttp/tests/winhttp.c::test_head_request",
+    "dlls/winhttp/tests/winhttp.c::test_large_data_authentication",
+    "dlls/winhttp/tests/winhttp.c::test_max_http_automatic_redirects",
+    "dlls/winhttp/tests/winhttp.c::test_multi_authentication",
+    "dlls/winhttp/tests/winhttp.c::test_multiple_reads",
+    "dlls/winhttp/tests/winhttp.c::test_no_content",
+    "dlls/winhttp/tests/winhttp.c::test_no_headers",
+    "dlls/winhttp/tests/winhttp.c::test_not_modified",
+    "dlls/winhttp/tests/winhttp.c::test_passport_auth",
+    "dlls/winhttp/tests/winhttp.c::test_recursive_async",
+    "dlls/winhttp/tests/winhttp.c::test_redirect",
+    "dlls/winhttp/tests/winhttp.c::test_request_parameter_defaults",
+    "dlls/winhttp/tests/winhttp.c::test_request_path_escapes",
+    "dlls/winhttp/tests/winhttp.c::test_resolve_timeout",
+    "dlls/winhttp/tests/winhttp.c::test_secure_connection",
+    "dlls/winhttp/tests/winhttp.c::test_timeouts",
+    "dlls/winhttp/tests/winhttp.c::test_websocket"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winhttp/nf-winhttp-winhttpconnect",
+   "source": "win32",
+   "description": "The WinHttpConnect function specifies the initial target server of an HTTP request and returns an HINTERNET connection handle to an HTTP session for that initial target.",
+   "min_windows": "Windows XP, Windows 2000 Professional with SP3 [desktop apps only]",
+   "documented_dll": "Winhttp.dll"
+  },
+  "exports": [
+   "winhttp.WinHttpConnect"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

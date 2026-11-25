@@ -1,0 +1,226 @@
+{
+ "id": "0054",
+ "function": {
+  "name": "NtCreateEvent",
+  "export_name": "NtCreateEvent",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll",
+   "ntoskrnl.exe"
+  ],
+  "side": "unix",
+  "file": "dlls/ntdll/unix/sync.c",
+  "start_line": 1094,
+  "end_line": 1121,
+  "body_lines": 25,
+  "signature": "NTSTATUS WINAPI NtCreateEvent( HANDLE *handle, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr, EVENT_TYPE type, BOOLEAN state )",
+  "header_comment": "/**************************************************************************\n *              NtCreateEvent (NTDLL.@)\n */",
+  "code": "NTSTATUS WINAPI NtCreateEvent( HANDLE *handle, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr,\n                               EVENT_TYPE type, BOOLEAN state )\n{\n    unsigned int ret;\n    data_size_t len;\n    struct object_attributes *objattr;\n\n    TRACE( \"access %#x, name %s, type %u, state %u\\n\", access,\n           attr ? debugstr_us(attr->ObjectName) : \"(null)\", type, state );\n\n    *handle = 0;\n    if (type != NotificationEvent && type != SynchronizationEvent) return STATUS_INVALID_PARAMETER;\n    if ((ret = wine_server_alloc_object_attributes( attr, &objattr, &len ))) return ret;\n\n    SERVER_START_REQ( create_event )\n    {\n        req->access = access;\n        req->manual_reset = (type == NotificationEvent);\n        req->initial_state = state;\n        wine_server_add_data( req, objattr, len );\n        ret = wine_server_call( req );\n        *handle = wine_server_ptr_handle( reply->handle );\n    }\n    SERVER_END_REQ;\n\n    free( objattr );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"config.h\"",
+   "#include <assert.h>",
+   "#include <errno.h>",
+   "#include <fcntl.h>",
+   "#include <inttypes.h>",
+   "#include <limits.h>",
+   "#include <signal.h>",
+   "#include <sys/types.h>",
+   "#include <sys/ioctl.h>",
+   "#include <sys/mman.h>",
+   "#include <sys/syscall.h>",
+   "#include <sys/time.h>",
+   "#include <poll.h>",
+   "#include <unistd.h>",
+   "# include <sched.h>",
+   "# include <sys/resource.h>",
+   "#include <string.h>",
+   "#include <stdarg.h>",
+   "#include <stdint.h>",
+   "#include <stdio.h>",
+   "#include <stdlib.h>",
+   "#include <time.h>",
+   "# include <mach/mach_time.h>",
+   "# include <sys/event.h>",
+   "# include <linux/ntsync.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ddk/wdm.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"unix_private.h\"",
+   "#include <linux/futex.h>",
+   "#include <AvailabilityMacros.h>",
+   "#include <os/os_sync_wait_on_address.h>"
+  ],
+  "resolution": [
+   "ntdll!NtCreateEvent [stdcall -syscall=0x0048]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntdll/tests/om.c",
+   "dlls/ntdll/tests/pipe.c",
+   "dlls/ntdll/tests/sync.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 13
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "ntifs",
+   "path": "wdk-ddi-src/content/ntifs/nf-ntifs-zwcreateevent.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/ntifs/nf-ntifs-zwcreateevent",
+   "documented_name": "zwcreateevent",
+   "file": "docs/0054_windows-driver-docs-ddi_nf-ntifs-zwcreateevent.md",
+   "text": "---\nUID: NF:ntifs.ZwCreateEvent\ntitle: ZwCreateEvent function (ntifs.h)\ndescription: The ZwCreateEvent routine creates an event object, sets the initial state of the event to the specified value, and opens a handle to the object with the specified desired access.\nold-location: kernel\\zwcreateevent.htm\ntech.root: kernel\nms.date: 06/30/2020\nkeywords: [\"ZwCreateEvent function\"]\nms.keywords: NtCreateEvent, ZwCreateEvent, ZwCreateEvent routine [Kernel-Mode Driver Architecture], k111_53554a99-3112-4f70-8c00-9d632a74d15b.xml, kernel.zwcreateevent, ntifs/NtCreateEvent, ntifs/ZwCreateEvent\nreq.header: ntifs.h\nreq.include-header: Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt: Windows XP.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: PowerIrpDDis, HwStorPortProhibitedDDIs\nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: PASSIVE_LEVEL\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - ZwCreateEvent\n - ntifs/ZwCreateEvent\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - ZwCreateEvent\n---\n\n# ZwCreateEvent function\n\n\n## -description\n\nThe **ZwCreateEvent** routine creates an event object, sets the initial state of the event to the specified value, and opens a handle to the object with the specified desired access.\n\n## -parameters\n\n### -param EventHandle [out]\n\n\nA pointer to a variable that will receive the event object handle. The handle includes bookkeeping information, such as a reference count and security context.\n\n### -param DesiredAccess [in]\n\n\nThe [**ACCESS_MASK**](/windows-hardware/drivers/kernel/access-mask) value that represents the desired types of access for the event object. The following table contains the event-specific ACCESS_MASK values.\n\n| Value | Desired access |\n| ----- | -------------- |\n| EVENT_QUERY_STATE  | Query the state of the event object. |\n| EVENT_MODIFY_STATE | Modify the state of the event object. |\n| EVENT_ALL_ACCESS   | All possible access rights to the event object. |\n\n### -param ObjectAttributes [in, optional]\n\n\nA pointer to the object attributes structure supplied by the caller to be used for the specified object. These attributes would include the **ObjectName** and the [**SECURITY_DESCRIPTOR**](./ns-ntifs-_security_descriptor.md), for example. This parameter is initialized by calling the [**InitializeObjectAttributes**](/windows/win32/api/ntdef/nf-ntdef-initializeobjectattributes) macro.\n\n### -param EventType [in]\n\n\nThe type of the event, which can be **SynchronizationEvent** or a **NotificationEvent**. These values belong to the **EVENT_TYPE** enumeration, which is defined in the *ntdef.h* header file.\n\n### -param InitialState [in]\n\n\nThe initial state of the event object. Set to **TRUE** to initialize the event object to the Signaled state. Set to **FALSE** to initialize the event object to the not-Signaled state.\n\n## -returns\n\n**ZwCreateEvent** returns STATUS_SUCCESS or an appropriate error status. Possible error status codes include the following:\n\n| Return code | Description |\n| ----------- | ----------- |\n| **STATUS_INSUFFICIENT_RESOURCES** | Resources required by this function could not be allocated. |\n| **STATUS_INVALID_PARAMETER**      | The supplied *ObjectAttributes* structure contained an invalid parameter value. |\n| **STATUS_INVALID_PARAMETER_4**    | The specified *EventType* parameter was invalid. |\n| **STATUS_OBJECT_NAME_INVALID**    | The *ObjectAttributes* parameter contained an **ObjectName** in the [**OBJECT_ATTRIBUTES**](/windows/win32/api/ntdef/ns-ntdef-_object_attributes) structure that was invalid. |\n| **STATUS_OBJECT_PATH_SYNTAX_BAD** | The *ObjectAttributes* parameter did not contain a **RootDirectory** member, but the **ObjectName** member in the **OBJECT_ATTRIBUTES** structure was an empty string or did not contain an OBJECT_NAME_PATH_SEPARATOR character. This indicates incorrect syntax for the object path. |\n| **STATUS_PRIVILEGE_NOT_HELD**     | The caller did not have the required privilege to create a handle with the access specified in the *DesiredAccess* parameter. |\n\n## -remarks\n\n**ZwCreateEvent** creates an event object, sets its initial state to the specified value, and opens a handle to the object with the specified desired access.\n\nEvents are used to coordinate execution. Events can be used by file system drivers to allow a caller to wait for completion of the requested operation until the given event is set to the Signaled state.\n\n**ZwCreateEvent** can create either notification or synchronization events:\n\n- Notification events can be used to notify one or more threads of execution that an event has occurred.\n- Synchronization events can be used in the serialization of access to hardware between two otherwise unrelated drivers.\n\nA synchronization event is auto-resetting. When a synchronization event is set to the Signaled state, a single thread of execution that was waiting for the event to be signaled is released, and the event is automatically reset to the Not-Signaled state.\n\nUnlike a synchronization event, a notification event is not auto-resetting. Once a notification event is in the Signaled state, it remains in that state until it is explicitly reset.\n\nTo synchronize on a notification event:\n\n1. Create the notification event with **ZwCreateEvent** with the *EventType* parameter set to **NotificationEvent**.\n\n2. Wait for the event to be signaled by calling [**ZwWaitForSingleObject**](./nf-ntifs-zwwaitforsingleobject.md) with the *EventHandle* returned by **ZwCreateEvent**. More than one thread of execution can wait for a given notification event to be signaled. To poll instead of stall, specify a *Timeout* of zero to **ZwWaitForSingleObject**.\n\n3. Close the handle to the notification event with [**ZwClose**](./nf-ntifs-ntclose.md) when access to the event is no longer needed.\n\nThe **ZwCreateEvent** function is called after the **InitializeObjectAttributes** macro is used to set attributes in the **OBJECT_ATTRIBUTES** structure for the object.\n\nThere are two alternate ways to specify the name of the object passed to **ZwCreateEvent**:\n\n- As a fully qualified pathname, supplied in the **ObjectName** member of the input *ObjectAttributes*.\n\n- As pathname relative to the directory represented by the handle in the **RootDirectory** member of the input *ObjectAttributes*.\n\nTo release the event, a driver calls [**ZwClose**](./nf-ntifs-ntclose.md) with the event handle.\n\nFor more information about events, see [**Event Objects**](/windows-hardware/drivers/kernel/event-objects).\n\n> [!NOTE]\n>\n> If the call to the **ZwCreateEvent** routine occurs in user mode, you should use the name \"**NtCreateEvent**\" instead of \"**ZwCreateEvent**\".\n\nFor calls from kernel-mode drivers, the **Nt*Xxx*** and **Zw*Xxx*** versions of a Windows Native System Services routine can behave differently in the way that they handle and interpret input parameters. For more information about the relationship between the **Nt*Xxx*** and **Zw*Xxx*** versions of a routine, see [Using Nt and Zw Versions of the Native System Services Routines](/windows-hardware/drivers/kernel/using-nt-and-zw-versions-of-the-native-system-services-routines).\n\n## -see-also\n\n[**ACCESS_MASK**](/windows-hardware/drivers/kernel/access-mask)\n\n[**InitializeObjectAttributes**](/windows/win32/api/ntdef/nf-ntdef-initializeobjectattributes)\n\n[**IoCreateNotificationEvent**](../wdm/nf-wdm-iocreatenotificationevent.md)\n\n[**IoCreateSynchronizationEvent**](../wdm/nf-wdm-iocreatesynchronizationevent.md)\n\n[**KeClearEvent**](../wdm/nf-wdm-keclearevent.md)\n\n[**KeResetEvent**](../wdm/nf-wdm-keresetevent.md)\n\n[**KeSetEvent**](../wdm/nf-wdm-kesetevent.md)\n\n[**KeWaitForSingleObject**](../wdm/nf-wdm-kewaitforsingleobject.md)\n\n[Using Nt and Zw Versions of the Native System Services Routines](/windows-hardware/drivers/kernel/using-nt-and-zw-versions-of-the-native-system-services-routines)\n\n[**ZwClose**](./nf-ntifs-ntclose.md)\n\n[**ZwSetEvent**](./nf-ntifs-zwsetevent.md)\n\n[**ZwWaitForSingleObject**](./nf-ntifs-zwwaitforsingleobject.md)\n\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "wine_server_alloc_object_attributes",
+   "file": "dlls/ntdll/unix/sync.c",
+   "start_line": 204,
+   "end_line": 294,
+   "static": false,
+   "called_from": [
+    "NtCreateEvent"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/file.c:4622",
+    "dlls/ntdll/unix/file.c:4776",
+    "dlls/ntdll/unix/file.c:4818",
+    "dlls/ntdll/unix/security.c:66",
+    "dlls/ntdll/unix/security.c:234"
+   ],
+   "signature": "unsigned int wine_server_alloc_object_attributes( const OBJECT_ATTRIBUTES *attr, struct object_attributes **ret, data_size_t *ret_len )",
+   "code": "unsigned int wine_server_alloc_object_attributes( const OBJECT_ATTRIBUTES *attr, struct object_attributes **ret,\n                                                  data_size_t *ret_len )\n{\n    unsigned int len = sizeof(**ret);\n    SID *owner = NULL, *group = NULL;\n    ACL *dacl = NULL, *sacl = NULL;\n    SECURITY_DESCRIPTOR *sd;\n\n    *ret = NULL;\n    *ret_len = 0;\n\n    if (!attr) return STATUS_SUCCESS;\n\n    if (attr->Length != sizeof(*attr)) return STATUS_INVALID_PARAMETER;\n\n    if ((sd = attr->SecurityDescriptor))\n    {\n        len += sizeof(struct security_descriptor);\n\tif (sd->Revision != SECURITY_DESCRIPTOR_REVISION) return STATUS_UNKNOWN_REVISION;\n        if (sd->Control & SE_SELF_RELATIVE)\n        {\n            SECURITY_DESCRIPTOR_RELATIVE *rel = (SECURITY_DESCRIPTOR_RELATIVE *)sd;\n            if (rel->Owner) owner = (PSID)((BYTE *)rel + rel->Owner);\n            if (rel->Group) group = (PSID)((BYTE *)rel + rel->Group);\n            if ((sd->Control & SE_SACL_PRESENT) && rel->Sacl) sacl = (PSID)((BYTE *)rel + rel->Sacl);\n            if ((sd->Control & SE_DACL_PRESENT) && rel->Dacl) dacl = (PSID)((BYTE *)rel + rel->Dacl);\n        }\n        else\n        {\n            owner = sd->Owner;\n            group = sd->Group;\n            if (sd->Control & SE_SACL_PRESENT) sacl = sd->Sacl;\n            if (sd->Control & SE_DACL_PRESENT) dacl = sd->Dacl;\n        }\n\n        if (owner) len += offsetof( SID, SubAuthority[owner->SubAuthorityCount] );\n        if (group) len += offsetof( SID, SubAuthority[group->SubAuthorityCount] );\n        if (sacl) len += sacl->AclSize;\n        if (dacl) len += dacl->AclSize;\n\n        /* fix alignment for the Unicode name that follows the structure */\n        len = (len + sizeof(WCHAR) - 1) & ~(sizeof(WCHAR) - 1);\n    }\n\n    if (attr->ObjectName)\n    {\n        if ((ULONG_PTR)attr->ObjectName->Buffer & (sizeof(WCHAR) - 1)) return STATUS_DATATYPE_MISALIGNMENT;\n        if (attr->ObjectName->Length & (sizeof(WCHAR) - 1)) return STATUS_OBJECT_NAME_INVALID;\n        len += attr->ObjectName->Length;\n    }\n    else if (attr->RootDirectory) return STATUS_OBJECT_NAME_INVALID;\n\n    len = (len + 3) & ~3;  /* DWORD-align the entire structure */\n\n    if (!(*ret = calloc( len, 1 ))) return STATUS_NO_MEMORY;\n\n    (*ret)->rootdir = wine_server_obj_handle( attr->RootDirectory );\n    (*ret)->attributes = attr->Attributes;\n\n    if (attr->SecurityDescriptor)\n    {\n        struct security_descriptor *descr = (struct security_descriptor *)(*ret + 1);\n        unsigned char *ptr = (unsigned char *)(descr + 1);\n\n        descr->control = sd->Control & ~SE_SELF_RELATIVE;\n        if (owner) descr->owner_len = offsetof( SID, SubAuthority[owner->SubAuthorityCount] );\n        if (group) descr->group_len = offsetof( SID, SubAuthority[group->SubAuthorityCount] );\n        if (sacl) descr->sacl_len = sacl->AclSize;\n        if (dacl) descr->dacl_len = dacl->AclSize;\n\n        memcpy( ptr, owner, descr->owner_len );\n        ptr += descr->owner_len;\n        memcpy( ptr, group, descr->group_len );\n        ptr += descr->group_len;\n        memcpy( ptr, sacl, descr->sacl_len );\n        ptr += descr->sacl_len;\n        memcpy( ptr, dacl, descr->dacl_len );\n        (*ret)->sd_len = (sizeof(*descr) + descr->owner_len + descr->group_len + descr->sacl_len +\n                          descr->dacl_len + sizeof(WCHAR) - 1) & ~(sizeof(WCHAR) - 1);\n    }\n\n    if (attr->ObjectName)\n    {\n        unsigned char *ptr = (unsigned char *)(*ret + 1) + (*ret)->sd_len;\n        (*ret)->name_len = attr->ObjectName->Length;\n        memcpy( ptr, attr->ObjectName->Buffer, (*ret)->name_len );\n    }\n\n    *ret_len = len;\n    return STATUS_SUCCESS;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 75,
+    "end_line": 75,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(sync);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "memcpy",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "memset",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   },
+   {
+    "name": "wine_server_call",
+    "impl": [
+     "dlls/ntdll/loader.c:3436"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_dbg_log",
+   "wine_server_add_data",
+   "wine_server_obj_handle",
+   "wine_server_ptr_handle"
+  ],
+  "system": [
+   "calloc",
+   "free"
+  ],
+  "unresolved": [
+   "debugstr_us"
+  ],
+  "server_requests": [
+   {
+    "request": "create_event",
+    "handler": "server/event.c:333"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ntdll.NtCreateEvent",
+  "category": {
+   "l1": "System services",
+   "l2": "Synchronization",
+   "header": "ntifs.h",
+   "textbook": "Process control",
+   "basis": "name_rule"
+  },
+  "loc": {
+   "total": 28,
+   "body": 26,
+   "code": 18
+  },
+  "cyclomatic": 5,
+  "return_type": "NTSTATUS",
+  "n_params": 5,
+  "tests": {
+   "n_tests_own": 13,
+   "n_tests": 13,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ntdll/tests/om.c::test_all_kernel_objects",
+    "dlls/ntdll/tests/om.c::test_case_sensitive",
+    "dlls/ntdll/tests/om.c::test_directory",
+    "dlls/ntdll/tests/om.c::test_name_collisions",
+    "dlls/ntdll/tests/om.c::test_name_limits",
+    "dlls/ntdll/tests/om.c::test_null_in_object_name",
+    "dlls/ntdll/tests/om.c::test_object_permanence",
+    "dlls/ntdll/tests/om.c::test_type_mismatch",
+    "dlls/ntdll/tests/om.c::test_zero_access",
+    "dlls/ntdll/tests/pipe.c::subtest_empty_name_pipe_operations",
+    "dlls/ntdll/tests/pipe.c::wait_pipe",
+    "dlls/ntdll/tests/sync.c::test_event",
+    "dlls/ntdll/tests/sync.c::test_keyed_events"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/ntifs/nf-ntifs-zwcreateevent",
+   "source": "ddi",
+   "description": "The ZwCreateEvent routine creates an event object, sets the initial state of the event to the specified value, and opens a handle to the object with the specified desired access.",
+   "min_windows": "Windows XP.",
+   "documented_dll": "NtosKrnl.exe"
+  },
+  "exports": [
+   "ntdll.NtCreateEvent",
+   "ntdll.ZwCreateEvent",
+   "ntoskrnl.exe.NtCreateEvent",
+   "ntoskrnl.exe.ZwCreateEvent"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

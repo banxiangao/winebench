@@ -1,0 +1,123 @@
+{
+ "id": "0343",
+ "function": {
+  "name": "WsCloseServiceProxy",
+  "export_name": "WsCloseServiceProxy",
+  "module": "webservices",
+  "source_module": "webservices",
+  "exported_by": [
+   "webservices"
+  ],
+  "side": "PE",
+  "file": "dlls/webservices/proxy.c",
+  "start_line": 340,
+  "end_line": 365,
+  "body_lines": 23,
+  "signature": "HRESULT WINAPI WsCloseServiceProxy( WS_SERVICE_PROXY *handle, const WS_ASYNC_CONTEXT *ctx, WS_ERROR *error )",
+  "header_comment": "/**************************************************************************\n *          WsCloseServiceProxy\t\t[webservices.@]\n */",
+  "code": "HRESULT WINAPI WsCloseServiceProxy( WS_SERVICE_PROXY *handle, const WS_ASYNC_CONTEXT *ctx, WS_ERROR *error )\n{\n    struct proxy *proxy = (struct proxy *)handle;\n    HRESULT hr;\n\n    TRACE( \"%p %p %p\\n\", handle, ctx, error );\n    if (error) FIXME( \"ignoring error parameter\\n\" );\n    if (ctx) FIXME( \"ignoring ctx parameter\\n\" );\n\n    if (!proxy) return E_INVALIDARG;\n\n    EnterCriticalSection( &proxy->cs );\n\n    if (proxy->magic != PROXY_MAGIC)\n    {\n        LeaveCriticalSection( &proxy->cs );\n        return E_INVALIDARG;\n    }\n\n    if ((hr = WsCloseChannel( proxy->channel, NULL, NULL )) == S_OK)\n        proxy->state = WS_SERVICE_PROXY_STATE_CLOSED;\n\n    LeaveCriticalSection( &proxy->cs );\n    TRACE( \"returning %#lx\\n\", hr );\n    return hr;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winuser.h\"",
+   "#include \"webservices.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"webservices_private.h\""
+  ],
+  "resolution": [
+   "webservices!WsCloseServiceProxy [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/webservices/tests/proxy.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "webservices",
+   "path": "sdk-api-src/content/webservices/nf-webservices-wscloseserviceproxy.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/webservices/nf-webservices-wscloseserviceproxy",
+   "documented_name": "wscloseserviceproxy",
+   "file": "docs/0343_sdk-api_nf-webservices-wscloseserviceproxy.md",
+   "text": "---\nUID: NF:webservices.WsCloseServiceProxy\ntitle: WsCloseServiceProxy function (webservices.h)\ndescription: Closes down communication with the specified service proxy.\nhelpviewer_keywords: [\"WsCloseServiceProxy\",\"WsCloseServiceProxy function [Web Services for Windows]\",\"webservices/WsCloseServiceProxy\",\"wsw.wscloseserviceproxy\"]\nold-location: wsw\\wscloseserviceproxy.htm\ntech.root: wsw\nms.assetid: 034f9c60-5616-4ec7-9773-b34bde2e26c6\nms.date: 12/05/2018\nms.keywords: WsCloseServiceProxy, WsCloseServiceProxy function [Web Services for Windows], webservices/WsCloseServiceProxy, wsw.wscloseserviceproxy\nreq.header: webservices.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 7 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 R2 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: WebServices.lib\nreq.dll: WebServices.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - WsCloseServiceProxy\n - webservices/WsCloseServiceProxy\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - WebServices.dll\napi_name:\n - WsCloseServiceProxy\n---\n\n# WsCloseServiceProxy function\n\n\n## -description\n\nCloses down communication with the specified <a href=\"/windows/desktop/wsw/service-proxy\">service proxy</a>.\n\n## -parameters\n\n### -param serviceProxy [in]\n\nPointer to a <a href=\"/windows/desktop/wsw/ws-service-proxy\">WS_SERVICE_PROXY</a> structure representing he service proxy to be closed.\n\n### -param asyncContext [in, optional]\n\nPointer to a <a href=\"/windows/desktop/api/webservices/ns-webservices-ws_async_context\">WS_ASYNC_CONTEXT</a> structure containing information for invoking the function asynchronously. Pass <b>NULL</b> to invoke the function synchronously.\n\n### -param error [in, optional]\n\nPointer to a <a href=\"/windows/desktop/wsw/ws-error\">WS_ERROR</a> structure  that receives additional error information if the function fails.\n\n## -returns\n\nIf the function succeeds, it returns NO_ERROR; otherwise, it returns an HRESULT error code.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WS_S_ASYNC</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe asynchronous operation is still pending.\n                \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WS_E_INVALID_OPERATION</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe current state of the service proxy is not valid for this operation. This is only  \n                   error for which close will fail. \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WS_E_ENDPOINT_DISCONNECTED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe underlying <a href=\"/windows/desktop/wsw/ws-channel\">WS_CHANNEL</a> was disconnected during the close operation. This error occurs only in cases where the underlying channel is session based.\n                \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WS_E_OPERATION_ABORTED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe operation was aborted.\n\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WS_E_ENDPOINT_FAILURE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe remote endpoint could not process the request.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WS_E_INVALID_FORMAT</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe input data was not in the expected format or did not have the expected value.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WS_E_OPERATION_TIMED_OUT</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe operation did not complete within the time allotted.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WS_E_QUOTA_EXCEEDED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA quota was exceeded.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_OUTOFMEMORY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nInsufficient memory to complete the operation.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_INVALIDARG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOne or more arguments are invalid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b> Other Errors </b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThis function may return other errors not listed above.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nIf a service operation call is pending on the service proxy, <b>WsCloseServiceProxy</b> waits for each call to complete. After calling <b>WsCloseServiceProxy</b> application should not perform any more calls on the service proxy.\n            \n\nNote that WS_E_INVALID_OPERATION is the only  \n                   error code that indicates that  closure has failed. Other error codes indicate that the operation succeeded, and the error code is for informational purposes only."
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "proxy",
+    "kind": "struct_decl",
+    "start_line": 44,
+    "end_line": 52,
+    "code": "struct proxy\n{\n    ULONG                   magic;\n    CRITICAL_SECTION        cs;\n    WS_SERVICE_PROXY_STATE  state;\n    WS_CHANNEL             *channel;\n    ULONG                   prop_count;\n    struct prop             prop[ARRAY_SIZE( proxy_props )];\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 31,
+    "end_line": 31,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(webservices);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "PROXY_MAGIC",
+    "start_line": 54,
+    "end_line": 54,
+    "code": "#define PROXY_MAGIC (('P' << 24) | ('R' << 16) | ('O' << 8) | 'X')"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "WsCloseChannel",
+    "impl": [
+     "dlls/webservices/channel.c:963"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

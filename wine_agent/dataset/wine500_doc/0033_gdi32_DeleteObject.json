@@ -1,0 +1,271 @@
+{
+ "id": "0033",
+ "function": {
+  "name": "DeleteObject",
+  "export_name": "DeleteObject",
+  "module": "gdi32",
+  "source_module": "gdi32",
+  "exported_by": [
+   "gdi.exe16",
+   "gdi32"
+  ],
+  "side": "PE",
+  "file": "dlls/gdi32/objects.c",
+  "start_line": 194,
+  "end_line": 233,
+  "body_lines": 37,
+  "signature": "BOOL WINAPI DeleteObject( HGDIOBJ obj )",
+  "header_comment": "/***********************************************************************\n *           DeleteObject    (GDI32.@)\n *\n * Delete a Gdi object.\n */",
+  "code": "BOOL WINAPI DeleteObject( HGDIOBJ obj )\n{\n    struct hdc_list *hdc_list = NULL;\n    struct wine_rb_entry *entry;\n\n    obj = get_full_gdi_handle( obj );\n    switch (gdi_handle_type( obj ))\n    {\n    case NTGDI_OBJ_DC:\n    case NTGDI_OBJ_MEMDC:\n    case NTGDI_OBJ_ENHMETADC:\n    case NTGDI_OBJ_METADC:\n        return DeleteDC( obj );\n    }\n\n    EnterCriticalSection( &obj_map_cs );\n\n    if ((entry = wine_rb_get( &obj_map, obj )))\n    {\n        struct obj_map_entry *obj_entry = WINE_RB_ENTRY_VALUE( entry, struct obj_map_entry, entry );\n        wine_rb_remove( &obj_map, entry );\n        hdc_list = obj_entry->list;\n        HeapFree( GetProcessHeap(), 0, obj_entry );\n    }\n\n    LeaveCriticalSection( &obj_map_cs );\n\n    while (hdc_list)\n    {\n        struct hdc_list *next = hdc_list->next;\n\n        TRACE( \"hdc %p has interest in %p\\n\", hdc_list->hdc, obj );\n\n        hdc_list->delete( hdc_list->hdc, obj );\n        HeapFree( GetProcessHeap(), 0, hdc_list );\n        hdc_list = next;\n    }\n\n    return NtGdiDeleteObjectApp( obj );\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdlib.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"gdi_private.h\"",
+   "#include \"ntuser.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winnls.h\"",
+   "#include \"initguid.h\"",
+   "#include \"devguid.h\"",
+   "#include \"setupapi.h\"",
+   "#include \"wine/rbtree.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "gdi32!DeleteObject [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdi32/tests/bitmap.c",
+   "dlls/gdi32/tests/brush.c",
+   "dlls/gdi32/tests/clipping.c",
+   "dlls/gdi32/tests/dc.c",
+   "dlls/gdi32/tests/dib.c",
+   "dlls/gdi32/tests/font.c",
+   "dlls/gdi32/tests/gdiobj.c",
+   "dlls/gdi32/tests/mapping.c",
+   "dlls/gdi32/tests/metafile.c",
+   "dlls/gdi32/tests/palette.c",
+   "dlls/gdi32/tests/path.c",
+   "dlls/gdi32/tests/pen.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "gdi.exe16",
+   "source_module": "gdi.exe16",
+   "exported_by": [
+    "gdi.exe16"
+   ],
+   "file": "dlls/gdi.exe16/gdi.c",
+   "start_line": 1437,
+   "resolution": [
+    "gdi.exe16!DeleteObject [pascal -ret16] -> internal symbol DeleteObject16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 1441,
+   "signature": "BOOL16 WINAPI DeleteObject16( HGDIOBJ16 obj )",
+   "code": "BOOL16 WINAPI DeleteObject16( HGDIOBJ16 obj )\n{\n    if (GetObjectType( HGDIOBJ_32(obj) ) == OBJ_BITMAP) free_segptr_bits( obj );\n    return DeleteObject( HGDIOBJ_32(obj) );\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-deleteobject.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-deleteobject",
+   "documented_name": "deleteobject",
+   "file": "docs/0033_sdk-api_nf-wingdi-deleteobject.md",
+   "text": "---\nUID: NF:wingdi.DeleteObject\ntitle: DeleteObject function (wingdi.h)\ndescription: The DeleteObject function deletes a logical pen, brush, font, bitmap, region, or palette, freeing all system resources associated with the object. After the object is deleted, the specified handle is no longer valid.\nhelpviewer_keywords: [\"DeleteObject\",\"DeleteObject function [Windows GDI]\",\"DeleteObjectW\",\"_win32_DeleteObject\",\"gdi.deleteobject\",\"wingdi/DeleteObject\",\"wingdi/DeleteObjectW\"]\nold-location: gdi\\deleteobject.htm\ntech.root: gdi\nms.assetid: cc679af0-6839-4c83-9c42-39d7ededda40\nms.date: 12/05/2018\nms.keywords: DeleteObject, DeleteObject function [Windows GDI], DeleteObjectW, _win32_DeleteObject, gdi.deleteobject, wingdi/DeleteObject, wingdi/DeleteObjectW\nreq.header: wingdi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: DeleteObjectW (Unicode)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - DeleteObject\n - wingdi/DeleteObject\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - gdi32.dll\n - Ext-MS-Win-RTCore-GDI-object-l1-1-0.dll\n - api-ms-win-gdi-ie-rgn-l1-1-0.dll\n - ie_shims.dll\n - ext-ms-win-gdi-dc-l1-1-0.dll\napi_name:\n - DeleteObject\n - DeleteObjectW\n---\n\n# DeleteObject function\n\n\n## -description\n\nThe <b>DeleteObject</b> function deletes a logical pen, brush, font, bitmap, region, or palette, freeing all system resources associated with the object. After the object is deleted, the specified handle is no longer valid.\n\n## -parameters\n\n### -param ho [in]\n\nA handle to a logical pen, brush, font, bitmap, region, or palette.\n\n## -returns\n\nIf the function succeeds, the return value is nonzero.\n\nIf the specified handle is not valid or is currently selected into a DC, the return value is zero.\n\n## -remarks\n\nDo not delete a drawing object (pen or brush) while it is still selected into a DC.\n\nWhen a pattern brush is deleted, the bitmap associated with the brush is not deleted. The bitmap must be deleted independently.\n\n\n#### Examples\n\nFor an example, see <a href=\"/windows/desktop/gdi/creating-colored-pens-and-brushes\">Creating Colored Pens and Brushes</a>.\n\n<div class=\"code\"></div>\n\n## -see-also\n\n<a href=\"/windows/desktop/gdi/device-context-functions\">Device Context Functions</a>\n\n\n\n<a href=\"/windows/desktop/gdi/device-contexts\">Device Contexts Overview</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-selectobject\">SelectObject</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_full_gdi_handle",
+   "file": "dlls/gdi32/objects.c",
+   "start_line": 127,
+   "end_line": 131,
+   "static": false,
+   "called_from": [
+    "DeleteObject"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/dc.c:2392",
+    "dlls/gdi32/objects.c:331",
+    "dlls/gdi32/objects.c:768",
+    "dlls/gdi32/objects.c:777"
+   ],
+   "signature": "HGDIOBJ get_full_gdi_handle( HGDIOBJ obj )",
+   "code": "HGDIOBJ get_full_gdi_handle( HGDIOBJ obj )\n{\n    GDI_HANDLE_ENTRY *entry = handle_entry( obj );\n    return entry ? entry_to_handle( entry ) : 0;\n}"
+  },
+  {
+   "name": "handle_entry",
+   "file": "dlls/gdi32/objects.c",
+   "start_line": 87,
+   "end_line": 99,
+   "static": true,
+   "called_from": [
+    "get_full_gdi_handle"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/objects.c:109",
+    "dlls/gdi32/objects.c:115",
+    "dlls/gdi32/objects.c:121",
+    "dlls/gdi32/objects.c:248",
+    "dlls/gdi32/objects.c:441"
+   ],
+   "signature": "static inline GDI_HANDLE_ENTRY *handle_entry( HGDIOBJ handle )",
+   "code": "static inline GDI_HANDLE_ENTRY *handle_entry( HGDIOBJ handle )\n{\n    GDI_SHARED_MEMORY *gdi_shared = get_gdi_shared();\n    unsigned int idx = LOWORD(handle);\n\n    if (idx < GDI_MAX_HANDLE_COUNT && gdi_shared->Handles[idx].Type)\n    {\n        if (!HIWORD( handle ) || HIWORD( handle ) == gdi_shared->Handles[idx].Unique)\n            return &gdi_shared->Handles[idx];\n    }\n    if (handle) WARN( \"invalid handle %p\\n\", handle );\n    return NULL;\n}"
+  },
+  {
+   "name": "entry_to_handle",
+   "file": "dlls/gdi32/objects.c",
+   "start_line": 101,
+   "end_line": 105,
+   "static": true,
+   "called_from": [
+    "get_full_gdi_handle"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/objects.c:441"
+   ],
+   "signature": "static HGDIOBJ entry_to_handle( GDI_HANDLE_ENTRY *entry )",
+   "code": "static HGDIOBJ entry_to_handle( GDI_HANDLE_ENTRY *entry )\n{\n    unsigned int idx = entry - get_gdi_shared()->Handles;\n    return ULongToHandle( idx | (entry->Unique << NTGDI_HANDLE_TYPE_SHIFT) );\n}"
+  },
+  {
+   "name": "get_gdi_shared",
+   "file": "dlls/gdi32/objects.c",
+   "start_line": 68,
+   "end_line": 79,
+   "static": true,
+   "called_from": [
+    "entry_to_handle",
+    "handle_entry"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static GDI_SHARED_MEMORY *get_gdi_shared(void)",
+   "code": "static GDI_SHARED_MEMORY *get_gdi_shared(void)\n{\n#ifndef _WIN64\n    if (NtCurrentTeb()->GdiBatchCount)\n    {\n        TEB64 *teb64 = (TEB64 *)(UINT_PTR)NtCurrentTeb()->GdiBatchCount;\n        PEB64 *peb64 = (PEB64 *)(UINT_PTR)teb64->Peb;\n        return (GDI_SHARED_MEMORY *)(UINT_PTR)peb64->GdiSharedHandleTable;\n    }\n#endif\n    return (GDI_SHARED_MEMORY *)NtCurrentTeb()->Peb->GdiSharedHandleTable;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "hdc_list",
+    "kind": "struct_decl",
+    "start_line": 45,
+    "end_line": 50,
+    "code": "struct hdc_list\n{\n    HDC hdc;\n    void (*delete)( HDC hdc, HGDIOBJ handle );\n    struct hdc_list *next;\n};"
+   },
+   {
+    "name": "obj_map_entry",
+    "kind": "struct_decl",
+    "start_line": 52,
+    "end_line": 57,
+    "code": "struct obj_map_entry\n{\n    struct wine_rb_entry entry;\n    struct hdc_list *list;\n    HGDIOBJ obj;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(gdi);"
+   },
+   {
+    "name": "obj_map",
+    "type": "struct rb_tree",
+    "static": false,
+    "start_line": 187,
+    "end_line": 187,
+    "code": "struct wine_rb_tree obj_map = { obj_map_cmp };"
+   },
+   {
+    "name": "obj_map_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 66,
+    "end_line": 66,
+    "code": "static CRITICAL_SECTION obj_map_cs = { &obj_map_debug, -1, 0, 0, 0, 0 };"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "DeleteDC",
+    "impl": [
+     "dlls/gdi32/dc.c:532"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "NtGdiDeleteObjectApp",
+    "module": "win32u",
+    "impl": [
+     "dlls/win32u/gdiobj.c:857"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "NtCurrentTeb",
+   "ULongToHandle",
+   "rb_get",
+   "rb_remove",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "gdi_handle_type"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "hdc_list->delete",
+    "in_function": "DeleteObject",
+    "at": "dlls/gdi32/objects.c:227",
+    "candidates": [
+     "delete @ dlls/gdi32/objects.c:277"
+    ]
+   }
+  ]
+ }
+}

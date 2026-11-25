@@ -1,0 +1,476 @@
+{
+ "id": "0192",
+ "function": {
+  "name": "SetupDiRemoveDevice",
+  "export_name": "SetupDiRemoveDevice",
+  "module": "setupapi",
+  "source_module": "setupapi",
+  "exported_by": [
+   "setupapi"
+  ],
+  "side": "PE",
+  "file": "dlls/setupapi/devinst.c",
+  "start_line": 1471,
+  "end_line": 1509,
+  "body_lines": 36,
+  "signature": "BOOL WINAPI SetupDiRemoveDevice(HDEVINFO devinfo, SP_DEVINFO_DATA *device_data)",
+  "header_comment": "/***********************************************************************\n *              SetupDiRemoveDevice (SETUPAPI.@)\n */",
+  "code": "BOOL WINAPI SetupDiRemoveDevice(HDEVINFO devinfo, SP_DEVINFO_DATA *device_data)\n{\n    SC_HANDLE manager = NULL, service = NULL;\n    struct device *device;\n    WCHAR *service_name = NULL;\n    DWORD size;\n\n    TRACE(\"devinfo %p, device_data %p.\\n\", devinfo, device_data);\n\n    if (!(device = get_device(devinfo, device_data)))\n        return FALSE;\n\n    if (!(manager = OpenSCManagerW(NULL, NULL, SC_MANAGER_CONNECT)))\n        return FALSE;\n\n    if (!RegGetValueW(device->key, NULL, L\"Service\", RRF_RT_REG_SZ, NULL, NULL, &size))\n    {\n        service_name = malloc(size);\n        if (!RegGetValueW(device->key, NULL, L\"Service\", RRF_RT_REG_SZ, NULL, service_name, &size))\n            service = OpenServiceW(manager, service_name, SERVICE_USER_DEFINED_CONTROL);\n    }\n\n    remove_device(device);\n\n    if (service)\n    {\n        SERVICE_STATUS status;\n        if (!ControlService(service, SERVICE_CONTROL_REENUMERATE_ROOT_DEVICES, &status))\n            ERR(\"Failed to control service %s, error %lu.\\n\", debugstr_w(service_name), GetLastError());\n        CloseServiceHandle(service);\n    }\n    CloseServiceHandle(manager);\n\n    free(service_name);\n\n    remove_all_device_ifaces(device);\n\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdbool.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnt.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winternl.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winsvc.h\"",
+   "#include \"setupapi.h\"",
+   "#include \"softpub.h\"",
+   "#include \"mscat.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"cfgmgr32.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"rpc.h\"",
+   "#include \"rpcdce.h\"",
+   "#include \"cguid.h\"",
+   "#include \"setupapi_private.h\"",
+   "#include \"initguid.h\"",
+   "#include \"devpkey.h\""
+  ],
+  "resolution": [
+   "setupapi!SetupDiRemoveDevice [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/setupapi/tests/devinst.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 10
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "setupapi",
+   "path": "sdk-api-src/content/setupapi/nf-setupapi-setupdiremovedevice.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/setupapi/nf-setupapi-setupdiremovedevice",
+   "documented_name": "setupdiremovedevice",
+   "file": "docs/0192_sdk-api_nf-setupapi-setupdiremovedevice.md",
+   "text": "---\nUID: NF:setupapi.SetupDiRemoveDevice\ntitle: SetupDiRemoveDevice function (setupapi.h)\ndescription: The SetupDiRemoveDevice function is the default handler for the DIF_REMOVE installation request.\nhelpviewer_keywords: [\"SetupDiRemoveDevice\",\"SetupDiRemoveDevice function [Device and Driver Installation]\",\"devinst.setupdiremovedevice\",\"di-rtns_ab1e54f4-687d-4db2-8799-c33c1e0e3d25.xml\",\"setupapi/SetupDiRemoveDevice\"]\nold-location: devinst\\setupdiremovedevice.htm\ntech.root: devinst\nms.assetid: 1070f6cc-e5de-4f4e-8325-b412751e9fb3\nms.date: 12/05/2018\nms.keywords: SetupDiRemoveDevice, SetupDiRemoveDevice function [Device and Driver Installation], devinst.setupdiremovedevice, di-rtns_ab1e54f4-687d-4db2-8799-c33c1e0e3d25.xml, setupapi/SetupDiRemoveDevice\nreq.header: setupapi.h\nreq.include-header: Setupapi.h\nreq.target-type: Desktop\nreq.target-min-winverclnt: Available in Microsoft Windows 2000 and later versions of Windows.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Setupapi.lib\nreq.dll: Setupapi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SetupDiRemoveDevice\n - setupapi/SetupDiRemoveDevice\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Setupapi.dll\napi_name:\n - SetupDiRemoveDevice\n---\n\n# SetupDiRemoveDevice function\n\n\n## -description\n\nThe <b>SetupDiRemoveDevice</b> function is the default handler for the <a href=\"/windows-hardware/drivers/install/dif-remove\">DIF_REMOVE</a> installation request.\n\n## -parameters\n\n### -param DeviceInfoSet [in]\n\nA handle to a <a href=\"/windows-hardware/drivers/install/device-information-sets\">device information set</a> for the local system that contains a device information element that represents the device to remove.\n\n### -param DeviceInfoData [in, out]\n\nA pointer to an <a href=\"/windows/desktop/api/setupapi/ns-setupapi-sp_devinfo_data\">SP_DEVINFO_DATA</a> structure that specifies the device information element in <i>DeviceInfoSet</i>. This is an IN-OUT parameter because <i>DeviceInfoSet</i>.<b>DevInst</b> might be updated with a new handle value upon return. If this is a global removal or the last hardware profile-specific removal, all traces of the device instance are deleted from the registry and the handle will be <b>NULL</b>.\n\n## -returns\n\nThe function returns <b>TRUE</b> if it is successful. Otherwise, it returns <b>FALSE</b> and the logged error can be retrieved by a call to <b>GetLastError</b>.\n\n## -remarks\n\n<b>SetupDiRemoveDevice</b> removes the device from the system. It deletes the device's hardware and software registry keys and any hardware-profile-specific registry keys (configuration-specific registry keys). This function dynamically stops the device if its <b>DevInst</b> is active and this is a global removal or the last configuration-specific removal. If the device cannot be dynamically stopped, flags are set in the Install Parameter block of the device information set that eventually cause the user to be prompted to restart the computer. \n\nDevice removal is either global to all hardware profiles or specific to one hardware profile as specified by the <b>Scope</b> member of the <a href=\"/windows/desktop/api/setupapi/ns-setupapi-sp_removedevice_params\">SP_REMOVEDEVICE_PARAMS</a> structure that supplies the class installation parameters for the DIF_REMOVE request. Configuration-specific removal is only appropriate for root-enumerated devices and should only be requested by system code. \n\nThe caller of <b>SetupDiRemoveDevice</b> must be a member of the Administrators group.\n\n<div class=\"alert\"><b>Note</b>  Only a <a href=\"/windows-hardware/drivers/\">class installer</a> should call <b>SetupDiRemoveDevice </b> and only in those situations where the class installer must perform device removal operations after <b>SetupDiRemoveDevice </b> completes the default device removal operation. In such situations, the class installer must directly call <b>SetupDiRemoveDevice</b> when the installer processes a DIF_REMOVE request. For more information about calling the default handler, see <a href=\"/windows-hardware/drivers/install/calling-the-default-dif-code-handlers\">Calling Default DIF Code Handlers</a>. </div>\n<div> </div>\n\n## -see-also\n\n<a href=\"/windows/desktop/api/setupapi/ns-setupapi-sp_devinfo_data\">SP_DEVINFO_DATA</a>\n\n\n\n<a href=\"/windows/desktop/api/setupapi/ns-setupapi-sp_removedevice_params\">SP_REMOVEDEVICE_PARAMS</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_device",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 200,
+   "end_line": 229,
+   "static": true,
+   "called_from": [
+    "SetupDiRemoveDevice"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:1261",
+    "dlls/setupapi/devinst.c:1457",
+    "dlls/setupapi/devinst.c:1520",
+    "dlls/setupapi/devinst.c:1636",
+    "dlls/setupapi/devinst.c:2253"
+   ],
+   "signature": "static struct device *get_device(HDEVINFO devinfo, const SP_DEVINFO_DATA *data)",
+   "code": "static struct device *get_device(HDEVINFO devinfo, const SP_DEVINFO_DATA *data)\n{\n    struct DeviceInfoSet *set;\n    struct device *device;\n\n    if (!(set = get_device_set(devinfo)))\n        return FALSE;\n\n    if (!data || data->cbSize != sizeof(*data) || !data->Reserved)\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return NULL;\n    }\n\n    device = (struct device *)data->Reserved;\n\n    if (device->set != set)\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return NULL;\n    }\n\n    if (device->removed)\n    {\n        SetLastError(ERROR_NO_SUCH_DEVINST);\n        return NULL;\n    }\n\n    return device;\n}"
+  },
+  {
+   "name": "remove_device",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 698,
+   "end_line": 731,
+   "static": true,
+   "called_from": [
+    "SetupDiRemoveDevice"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:744"
+   ],
+   "signature": "static void remove_device(struct device *device)",
+   "code": "static void remove_device(struct device *device)\n{\n    WCHAR id[MAX_DEVICE_ID_LEN], *p;\n    struct device_iface *iface;\n    HKEY enum_key;\n\n    delete_driver_key(device);\n\n    LIST_FOR_EACH_ENTRY(iface, &device->interfaces, struct device_iface, entry)\n    {\n        remove_device_iface(iface);\n    }\n\n    RegDeleteTreeW(device->key, NULL);\n    RegDeleteKeyW(device->key, L\"\");\n\n    /* delete all empty parents of the key */\n    if (!RegOpenKeyExW(HKEY_LOCAL_MACHINE, Enum, 0, KEY_ENUMERATE_SUB_KEYS, &enum_key))\n    {\n        lstrcpyW(id, device->instanceId);\n\n        while ((p = wcsrchr(id, '\\\\')))\n        {\n            *p = 0;\n            RegDeleteKeyW(enum_key, id);\n        }\n\n        RegCloseKey(enum_key);\n    }\n\n    RegCloseKey(device->key);\n    device->key = NULL;\n    device->removed = TRUE;\n}"
+  },
+  {
+   "name": "remove_all_device_ifaces",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 662,
+   "end_line": 696,
+   "static": true,
+   "called_from": [
+    "SetupDiRemoveDevice"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:745"
+   ],
+   "signature": "static void remove_all_device_ifaces(struct device *device)",
+   "code": "static void remove_all_device_ifaces(struct device *device)\n{\n    DEVINSTID_W instance = (DEVINSTID_W)device->instanceId;\n    WCHAR *tmp, iface_instance[MAX_PATH];\n    HKEY classes_key;\n    GUID class_guid;\n    LONG ret;\n\n    if ((ret = RegOpenKeyExW(HKEY_LOCAL_MACHINE, DeviceClasses, 0, KEY_READ, &classes_key)))\n    {\n        WARN(\"Failed to open classes key, error %lu.\\n\", ret);\n        return;\n    }\n\n    swprintf(iface_instance, ARRAY_SIZE(iface_instance), L\"##?#%s#\", device->instanceId);\n    for (tmp = wcschr(iface_instance, '\\\\'); tmp; tmp = wcschr(tmp + 1, '\\\\')) *tmp = '#';\n    for (UINT i = 0; !CM_Enumerate_Classes(i, &class_guid, CM_ENUMERATE_CLASSES_INTERFACE); i++)\n    {\n        UINT flags = CM_GET_DEVICE_INTERFACE_LIST_ALL_DEVICES;\n        WCHAR buf[MAX_PATH], guid_str[MAX_GUID_STRING_LEN];\n        ULONG size;\n\n        /* No interfaces for this device instance, continue. */\n        if (CM_Get_Device_Interface_List_SizeW(&size, &class_guid, instance, flags) || size <= 1) continue;\n\n        SETUPDI_GuidToString(&class_guid, guid_str);\n        swprintf(buf, ARRAY_SIZE(buf), L\"%s\\\\%s%s\", guid_str, iface_instance, guid_str);\n        if ((ret = RegDeleteTreeW(classes_key, buf)))\n            ERR(\"Failed to delete interface %s subkeys, error %lu.\\n\", debugstr_w(buf), ret);\n        if ((ret = RegDeleteKeyW(classes_key, buf)))\n            ERR(\"Failed to delete interface %s, error %lu.\\n\", debugstr_w(buf), ret);\n    }\n\n    RegCloseKey(classes_key);\n}"
+  },
+  {
+   "name": "get_device_set",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 187,
+   "end_line": 198,
+   "static": true,
+   "called_from": [
+    "get_device"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:233",
+    "dlls/setupapi/devinst.c:1358",
+    "dlls/setupapi/devinst.c:1573",
+    "dlls/setupapi/devinst.c:2169",
+    "dlls/setupapi/devinst.c:2193"
+   ],
+   "signature": "static struct DeviceInfoSet *get_device_set(HDEVINFO devinfo)",
+   "code": "static struct DeviceInfoSet *get_device_set(HDEVINFO devinfo)\n{\n    struct DeviceInfoSet *set = devinfo;\n\n    if (!devinfo || devinfo == INVALID_HANDLE_VALUE || set->magic != SETUP_DEVICE_INFO_SET_MAGIC)\n    {\n        SetLastError(ERROR_INVALID_HANDLE);\n        return NULL;\n    }\n\n    return set;\n}"
+  },
+  {
+   "name": "delete_driver_key",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 575,
+   "end_line": 587,
+   "static": true,
+   "called_from": [
+    "remove_device"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:4085",
+    "dlls/setupapi/devinst.c:4088"
+   ],
+   "signature": "static LONG delete_driver_key(struct device *device)",
+   "code": "static LONG delete_driver_key(struct device *device)\n{\n    HKEY key;\n    LONG l;\n\n    if (!(l = open_driver_key(device, KEY_READ | KEY_WRITE, &key)))\n    {\n        l = RegDeleteKeyW(key, L\"\");\n        RegCloseKey(key);\n    }\n\n    return l;\n}"
+  },
+  {
+   "name": "remove_device_iface",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 637,
+   "end_line": 648,
+   "static": true,
+   "called_from": [
+    "remove_device"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:1540"
+   ],
+   "signature": "static void remove_device_iface(struct device_iface *iface)",
+   "code": "static void remove_device_iface(struct device_iface *iface)\n{\n    RegDeleteTreeW(iface->refstr_key, NULL);\n    RegDeleteKeyW(iface->refstr_key, L\"\");\n    RegCloseKey(iface->refstr_key);\n    iface->refstr_key = NULL;\n    /* Also remove the class key if it's empty. */\n    RegDeleteKeyW(iface->class_key, L\"\");\n    RegCloseKey(iface->class_key);\n    iface->class_key = NULL;\n    iface->flags |= SPINT_REMOVED;\n}"
+  },
+  {
+   "name": "SETUPDI_GuidToString",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 260,
+   "end_line": 266,
+   "static": true,
+   "called_from": [
+    "remove_all_device_ifaces"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:281",
+    "dlls/setupapi/devinst.c:310",
+    "dlls/setupapi/devinst.c:358",
+    "dlls/setupapi/devinst.c:553",
+    "dlls/setupapi/devinst.c:815"
+   ],
+   "signature": "static void SETUPDI_GuidToString(const GUID *guid, LPWSTR guidStr)",
+   "code": "static void SETUPDI_GuidToString(const GUID *guid, LPWSTR guidStr)\n{\n    swprintf(guidStr, 39, L\"{%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}\",\n        guid->Data1, guid->Data2, guid->Data3,\n        guid->Data4[0], guid->Data4[1], guid->Data4[2], guid->Data4[3],\n        guid->Data4[4], guid->Data4[5], guid->Data4[6], guid->Data4[7]);\n}"
+  },
+  {
+   "name": "open_driver_key",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 507,
+   "end_line": 533,
+   "static": true,
+   "called_from": [
+    "delete_driver_key"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:543",
+    "dlls/setupapi/devinst.c:3780",
+    "dlls/setupapi/devinst.c:4039"
+   ],
+   "signature": "static LONG open_driver_key(struct device *device, REGSAM access, HKEY *key)",
+   "code": "static LONG open_driver_key(struct device *device, REGSAM access, HKEY *key)\n{\n    HKEY class_key;\n    WCHAR path[50];\n    DWORD size = sizeof(path);\n    LONG l;\n\n    if ((l = RegCreateKeyExW(HKEY_LOCAL_MACHINE, ControlClass, 0, NULL, 0,\n            KEY_CREATE_SUB_KEY, NULL, &class_key, NULL)))\n    {\n        ERR(\"Failed to open driver class root key, error %lu.\\n\", l);\n        return l;\n    }\n\n    if (!(l = RegGetValueW(device->key, NULL, L\"Driver\", RRF_RT_REG_SZ, NULL, path, &size)))\n    {\n        if (!(l = RegOpenKeyExW(class_key, path, 0, access, key)))\n        {\n            RegCloseKey(class_key);\n            return l;\n        }\n        TRACE(\"Failed to open driver key, error %lu.\\n\", l);\n    }\n\n    RegCloseKey(class_key);\n    return l;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "DeviceInfoSet",
+    "kind": "struct_decl",
+    "start_line": 86,
+    "end_line": 92,
+    "code": "struct DeviceInfoSet\n{\n    DWORD magic;        /* if is equal to SETUP_DEVICE_INFO_SET_MAGIC struct is okay */\n    GUID ClassGuid;\n    HWND hwndParent;\n    struct list devices;\n};"
+   },
+   {
+    "name": "device",
+    "kind": "struct_decl",
+    "start_line": 94,
+    "end_line": 109,
+    "code": "struct device\n{\n    struct DeviceInfoSet *set;\n    HKEY                  key;\n    BOOL                  phantom;\n    WCHAR                *instanceId;\n    struct list           interfaces;\n    GUID                  class;\n    DEVINST               devnode;\n    struct list           entry;\n    BOOL                  removed;\n    SP_DEVINSTALL_PARAMS_W params;\n    struct driver        *drivers;\n    unsigned int          driver_count;\n    struct driver        *selected_driver;\n};"
+   },
+   {
+    "name": "device_iface",
+    "kind": "struct_decl",
+    "start_line": 111,
+    "end_line": 121,
+    "code": "struct device_iface\n{\n    WCHAR           *refstr;\n    WCHAR           *symlink;\n    struct device   *device;\n    GUID             class;\n    DWORD            flags;\n    HKEY             class_key;\n    HKEY             refstr_key;\n    struct list      entry;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "ControlClass",
+    "type": "const WCHAR[39]",
+    "static": true,
+    "start_line": 66,
+    "end_line": 66,
+    "code": "static const WCHAR ControlClass[] = L\"System\\\\CurrentControlSet\\\\Control\\\\Class\";"
+   },
+   {
+    "name": "DeviceClasses",
+    "type": "const WCHAR[47]",
+    "static": true,
+    "start_line": 67,
+    "end_line": 67,
+    "code": "static const WCHAR DeviceClasses[] = L\"System\\\\CurrentControlSet\\\\Control\\\\DeviceClasses\";"
+   },
+   {
+    "name": "Enum",
+    "type": "const WCHAR[30]",
+    "static": true,
+    "start_line": 68,
+    "end_line": 68,
+    "code": "static const WCHAR Enum[] = L\"System\\\\CurrentControlSet\\\\Enum\";"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 52,
+    "end_line": 52,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(setupapi);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "SERVICE_CONTROL_REENUMERATE_ROOT_DEVICES",
+    "start_line": 70,
+    "end_line": 70,
+    "code": "#define SERVICE_CONTROL_REENUMERATE_ROOT_DEVICES 128"
+   },
+   {
+    "name": "SETUP_DEVICE_INFO_SET_MAGIC",
+    "start_line": 84,
+    "end_line": 84,
+    "code": "#define SETUP_DEVICE_INFO_SET_MAGIC 0xd00ff056"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "CM_Enumerate_Classes",
+    "impl": [
+     "dlls/cfgmgr32/cfgmgr32.c:1070"
+    ]
+   },
+   {
+    "name": "CM_Get_Device_Interface_List_SizeW",
+    "impl": [
+     "dlls/cfgmgr32/cfgmgr32.c:1378"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CloseServiceHandle",
+    "module": "advapi32",
+    "impl": [
+     "dlls/sechost/service.c:448"
+    ]
+   },
+   {
+    "name": "ControlService",
+    "module": "advapi32",
+    "impl": [
+     "dlls/sechost/service.c:1063"
+    ]
+   },
+   {
+    "name": "OpenSCManagerW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/sechost/service.c:270"
+    ]
+   },
+   {
+    "name": "OpenServiceW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/sechost/service.c:310"
+    ]
+   },
+   {
+    "name": "RegCloseKey",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1129"
+    ]
+   },
+   {
+    "name": "RegCreateKeyExW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:566"
+    ]
+   },
+   {
+    "name": "RegDeleteKeyW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/registry.c:320"
+    ]
+   },
+   {
+    "name": "RegDeleteTreeW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:3050"
+    ]
+   },
+   {
+    "name": "RegGetValueW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1900"
+    ]
+   },
+   {
+    "name": "RegOpenKeyExW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:644"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "wcschr",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:256"
+    ]
+   },
+   {
+    "name": "wcsrchr",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:429"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetLastError",
+   "SetLastError",
+   "debugstr_w",
+   "lstrcpyW",
+   "swprintf",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "setupapi.SetupDiRemoveDevice",
+  "category": {
+   "l1": "Devices",
+   "l2": "Device management and installation",
+   "header": "setupapi.h",
+   "textbook": "Device management",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 39,
+   "body": 38,
+   "code": 23
+  },
+  "cyclomatic": 7,
+  "return_type": "BOOL",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 10,
+   "n_tests": 10,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/setupapi/tests/devinst.c::test_class_device_order",
+    "dlls/setupapi/tests/devinst.c::test_device_info",
+    "dlls/setupapi/tests/devinst.c::test_device_interface_key",
+    "dlls/setupapi/tests/devinst.c::test_device_interface_properties",
+    "dlls/setupapi/tests/devinst.c::test_device_key",
+    "dlls/setupapi/tests/devinst.c::test_device_property",
+    "dlls/setupapi/tests/devinst.c::test_open_device_info",
+    "dlls/setupapi/tests/devinst.c::test_open_device_interface_key",
+    "dlls/setupapi/tests/devinst.c::test_register_device_iface",
+    "dlls/setupapi/tests/devinst.c::test_register_device_info"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/setupapi/nf-setupapi-setupdiremovedevice",
+   "source": "win32",
+   "description": "The SetupDiRemoveDevice function is the default handler for the DIF_REMOVE installation request.",
+   "min_windows": "Available in Microsoft Windows 2000 and later versions of Windows.",
+   "documented_dll": "Setupapi.dll"
+  },
+  "exports": [
+   "setupapi.SetupDiRemoveDevice"
+  ],
+  "subset": {
+   "selected_by": "topup",
+   "lower_bound_used": 6,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

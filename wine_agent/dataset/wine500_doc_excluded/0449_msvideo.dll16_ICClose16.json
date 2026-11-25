@@ -1,0 +1,176 @@
+{
+ "id": "0449",
+ "function": {
+  "name": "ICClose16",
+  "export_name": "ICClose",
+  "module": "msvideo.dll16",
+  "source_module": "msvideo.dll16",
+  "exported_by": [
+   "msvfw32",
+   "msvideo.dll16"
+  ],
+  "side": "PE",
+  "file": "dlls/msvideo.dll16/msvideo16.c",
+  "start_line": 848,
+  "end_line": 865,
+  "body_lines": 15,
+  "signature": "LRESULT WINAPI ICClose16(HIC16 hic)",
+  "header_comment": "/***********************************************************************\n *\t\tICClose\t\t\t[MSVIDEO.204]\n */",
+  "code": "LRESULT WINAPI ICClose16(HIC16 hic)\n{\n    BOOL ret = ICClose(HIC_32(hic));\n\n    EnterCriticalSection(&msvideo_cs);\n    if (ret)\n    {\n        struct msvideo_thunk* thunk;\n        if ((thunk = MSVIDEO_HasThunk(hic)))\n        {\n            thunk->pfn16 = 0;\n            thunk->hIC16 = 0;\n        }\n        else ret = FALSE;\n    }\n    LeaveCriticalSection(&msvideo_cs);\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <string.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winver.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winuser.h\"",
+   "#include \"wine/winbase16.h\"",
+   "#include \"wownt32.h\"",
+   "#include \"vfw16.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "msvideo.dll16!ICClose [pascal] -> internal symbol ICClose16"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/msvfw32/tests/msvfw.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "msvfw32",
+   "source_module": "msvfw32",
+   "exported_by": [
+    "msvfw32"
+   ],
+   "file": "dlls/msvfw32/msvideo_main.c",
+   "start_line": 1232,
+   "resolution": [
+    "msvfw32!ICClose [stdcall]"
+   ],
+   "macro_generated": false,
+   "win16": false,
+   "end_line": 1264,
+   "signature": "LRESULT WINAPI ICClose(HIC hic)",
+   "code": "LRESULT WINAPI ICClose(HIC hic)\n{\n    WINE_HIC* whic = MSVIDEO_GetHicPtr(hic);\n    WINE_HIC** p;\n\n    TRACE(\"(%p)\\n\",hic);\n\n    if (!whic) return ICERR_BADHANDLE;\n\n    if (whic->driverproc) \n    {\n        MSVIDEO_SendMessage(whic, DRV_CLOSE, 0, 0);\n        MSVIDEO_SendMessage(whic, DRV_DISABLE, 0, 0);\n        MSVIDEO_SendMessage(whic, DRV_FREE, 0, 0);\n    }\n    else\n    {\n        CloseDriver(whic->hdrv, 0, 0);\n    }\n\n    /* remove whic from list */\n    for (p = &MSVIDEO_FirstHic; *p != NULL; p = &((*p)->next))\n    {\n        if ((*p) == whic)\n        {\n            *p = whic->next;\n            break;\n        }\n    }\n\n    free(whic);\n    return 0;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "vfw",
+   "path": "sdk-api-src/content/vfw/nf-vfw-icclose.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/vfw/nf-vfw-icclose",
+   "documented_name": "icclose",
+   "file": "docs/0449_sdk-api_nf-vfw-icclose.md",
+   "text": "---\nUID: NF:vfw.ICClose\ntitle: ICClose function (vfw.h)\ndescription: The ICClose function closes a compressor or decompressor.\nhelpviewer_keywords: [\"ICClose\",\"ICClose function [Windows Multimedia]\",\"_win32_ICClose\",\"multimedia.icclose\",\"vfw/ICClose\"]\nold-location: multimedia\\icclose.htm\ntech.root: Multimedia\nms.assetid: 9a376412-5c16-44d5-b976-0cf1f766f72a\nms.date: 12/05/2018\nms.keywords: ICClose, ICClose function [Windows Multimedia], _win32_ICClose, multimedia.icclose, vfw/ICClose\nreq.header: vfw.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Vfw32.lib\nreq.dll: Msvfw32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ICClose\n - vfw/ICClose\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Msvfw32.dll\napi_name:\n - ICClose\n---\n\n# ICClose function\n\n\n## -description\n\nThe <b>ICClose</b> function closes a compressor or decompressor.\n\n## -parameters\n\n### -param hic\n\nHandle to a compressor or decompressor.\n\n## -returns\n\nReturns ICERR_OK if successful or an error otherwise.\n\n## -see-also\n\n<a href=\"/windows/desktop/Multimedia/video-compression-functions\">Video Compression Functions</a>\n\n\n\n<a href=\"/windows/desktop/Multimedia/video-compression-manager\">Video Compression Manager</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "MSVIDEO_HasThunk",
+   "file": "dlls/msvideo.dll16/msvideo16.c",
+   "start_line": 771,
+   "end_line": 783,
+   "static": true,
+   "called_from": [
+    "ICClose16"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msvideo.dll16/msvideo16.c:815"
+   ],
+   "signature": "static struct msvideo_thunk*    MSVIDEO_HasThunk(HIC16 hic)",
+   "code": "static struct msvideo_thunk*    MSVIDEO_HasThunk(HIC16 hic)\n{\n    struct msvideo_thunk* thunk;\n\n    if (!MSVIDEO_Thunks)\n        return NULL;\n\n    for (thunk = MSVIDEO_Thunks; thunk < &MSVIDEO_Thunks[MAX_THUNKS]; thunk++)\n    {\n        if (thunk->hIC16 == hic) return thunk;\n    }\n    return NULL;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "msvideo_thunk",
+    "kind": "struct_decl",
+    "start_line": 718,
+    "end_line": 727,
+    "code": "static struct msvideo_thunk\n{\n    BYTE        popl_eax;        /* popl  %eax (return address) */\n    BYTE        pushl_func;      /* pushl $pfn16 (16bit callback function) */\n    DWORD       pfn16;\n    BYTE        pushl_eax;       /* pushl %eax */\n    BYTE        jmp;             /* ljmp WDML_InvokeCallback16 */\n    DWORD       callback;\n    HIC16       hIC16;           /* driver's handle */\n} *MSVIDEO_Thunks;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "MSVIDEO_Thunks",
+    "type": "struct msvideo_thunk *",
+    "static": true,
+    "start_line": 727,
+    "end_line": 727,
+    "code": "{\n    BYTE        popl_eax;        /* popl  %eax (return address) */\n    BYTE        pushl_func;      /* pushl $pfn16 (16bit callback function) */\n    DWORD       pfn16;\n    BYTE        pushl_eax;       /* pushl %eax */\n    BYTE        jmp;             /* ljmp WDML_InvokeCallback16 */\n    DWORD       callback;\n    HIC16       hIC16;           /* driver's handle */\n} *MSVIDEO_Thunks;"
+   },
+   {
+    "name": "msvideo_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 737,
+    "end_line": 737,
+    "code": "static CRITICAL_SECTION msvideo_cs = { &critsect_debug, -1, 0, 0, 0, 0 };"
+   }
+  ],
+  "macros": [
+   {
+    "name": "HIC_32",
+    "start_line": 45,
+    "end_line": 45,
+    "code": "#define HIC_32(h16)\t\t((HIC)(ULONG_PTR)(h16))"
+   },
+   {
+    "name": "MAX_THUNKS",
+    "start_line": 715,
+    "end_line": 715,
+    "code": "#define MAX_THUNKS      32"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "ICClose",
+    "impl": [
+     "dlls/msvideo.dll16/msvideo16.c:848"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   }
+  ],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

@@ -1,0 +1,148 @@
+{
+ "id": "0325",
+ "function": {
+  "name": "WinHttpTimeToSystemTime",
+  "export_name": "WinHttpTimeToSystemTime",
+  "module": "winhttp",
+  "source_module": "winhttp",
+  "exported_by": [
+   "winhttp"
+  ],
+  "side": "PE",
+  "file": "dlls/winhttp/session.c",
+  "start_line": 2821,
+  "end_line": 2901,
+  "body_lines": 78,
+  "signature": "BOOL WINAPI WinHttpTimeToSystemTime( LPCWSTR string, SYSTEMTIME *time )",
+  "header_comment": "/***********************************************************************\n *           WinHttpTimeToSystemTime (WININET.@)\n */",
+  "code": "BOOL WINAPI WinHttpTimeToSystemTime( LPCWSTR string, SYSTEMTIME *time )\n{\n    unsigned int i;\n    const WCHAR *s = string;\n    WCHAR *end;\n\n    TRACE(\"%s, %p\\n\", debugstr_w(string), time);\n\n    if (!string || !time)\n    {\n        SetLastError( ERROR_INVALID_PARAMETER );\n        return FALSE;\n    }\n\n    /* Windows does this too */\n    GetSystemTime( time );\n\n    /*  Convert an RFC1123 time such as 'Fri, 07 Jan 2005 12:06:35 GMT' into\n     *  a SYSTEMTIME structure.\n     */\n\n    SetLastError( ERROR_SUCCESS );\n\n    while (*s && !iswalpha( *s )) s++;\n    if (s[0] == '\\0' || s[1] == '\\0' || s[2] == '\\0') return TRUE;\n    time->wDayOfWeek = 7;\n\n    for (i = 0; i < 7; i++)\n    {\n        if (towupper( wkday[i][0] ) == towupper( s[0] ) &&\n            towupper( wkday[i][1] ) == towupper( s[1] ) &&\n            towupper( wkday[i][2] ) == towupper( s[2] ) )\n        {\n            time->wDayOfWeek = i;\n            break;\n        }\n    }\n\n    if (time->wDayOfWeek > 6) return TRUE;\n    while (*s && !iswdigit( *s )) s++;\n    time->wDay = wcstol( s, &end, 10 );\n    s = end;\n\n    while (*s && !iswalpha( *s )) s++;\n    if (s[0] == '\\0' || s[1] == '\\0' || s[2] == '\\0') return TRUE;\n    time->wMonth = 0;\n\n    for (i = 0; i < 12; i++)\n    {\n        if (towupper( month[i][0]) == towupper( s[0] ) &&\n            towupper( month[i][1]) == towupper( s[1] ) &&\n            towupper( month[i][2]) == towupper( s[2] ) )\n        {\n            time->wMonth = i + 1;\n            break;\n        }\n    }\n    if (time->wMonth == 0) return TRUE;\n\n    while (*s && !iswdigit( *s )) s++;\n    if (*s == '\\0') return TRUE;\n    time->wYear = wcstol( s, &end, 10 );\n    s = end;\n\n    while (*s && !iswdigit( *s )) s++;\n    if (*s == '\\0') return TRUE;\n    time->wHour = wcstol( s, &end, 10 );\n    s = end;\n\n    while (*s && !iswdigit( *s )) s++;\n    if (*s == '\\0') return TRUE;\n    time->wMinute = wcstol( s, &end, 10 );\n    s = end;\n\n    while (*s && !iswdigit( *s )) s++;\n    if (*s == '\\0') return TRUE;\n    time->wSecond = wcstol( s, &end, 10 );\n\n    time->wMilliseconds = 0;\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winsock2.h\"",
+   "#include \"ws2ipdef.h\"",
+   "#include \"ws2tcpip.h\"",
+   "#include \"schannel.h\"",
+   "#include \"winhttp.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winternl.h\"",
+   "#include \"iphlpapi.h\"",
+   "#include \"dhcpcsdk.h\"",
+   "#include \"ole2.h\"",
+   "#include \"dispex.h\"",
+   "#include \"activscp.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"winhttp_private.h\""
+  ],
+  "resolution": [
+   "winhttp!WinHttpTimeToSystemTime [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/winhttp/tests/winhttp.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winhttp",
+   "path": "sdk-api-src/content/winhttp/nf-winhttp-winhttptimetosystemtime.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winhttp/nf-winhttp-winhttptimetosystemtime",
+   "documented_name": "winhttptimetosystemtime",
+   "file": "docs/0325_sdk-api_nf-winhttp-winhttptimetosystemtime.md",
+   "text": "---\nUID: NF:winhttp.WinHttpTimeToSystemTime\ntitle: WinHttpTimeToSystemTime function (winhttp.h)\ndescription: The WinHttpTimeToSystemTime function takes an HTTP time/date string and converts it to a SYSTEMTIME structure.\nhelpviewer_keywords: [\"WinHttpTimeToSystemTime\",\"WinHttpTimeToSystemTime function [WinHTTP]\",\"http.winhttptimetosystemtime\",\"winhttp.winhttptimetosystemtime_function\",\"winhttp/WinHttpTimeToSystemTime\"]\nold-location: http\\winhttptimetosystemtime.htm\ntech.root: http\nms.assetid: 4a587832-e1ce-42d4-97bb-a728f895906b\nms.date: 12/05/2018\nms.keywords: WinHttpTimeToSystemTime, WinHttpTimeToSystemTime function [WinHTTP], http.winhttptimetosystemtime, winhttp.winhttptimetosystemtime_function, winhttp/WinHttpTimeToSystemTime\nreq.header: winhttp.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP, Windows 2000 Professional with SP3 [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003, Windows 2000 Server with SP3 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Winhttp.lib\nreq.dll: Winhttp.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: WinHTTP 5.0 and Internet Explorer 5.01 or later on Windows XP and Windows 2000.\nms.custom: 19H1\nf1_keywords:\n - WinHttpTimeToSystemTime\n - winhttp/WinHttpTimeToSystemTime\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Winhttp.dll\napi_name:\n - WinHttpTimeToSystemTime\n---\n\n# WinHttpTimeToSystemTime function\n\n\n## -description\n\nThe <b>WinHttpTimeToSystemTime</b> function takes an HTTP time/date string and converts it to a \n<a href=\"/windows/desktop/api/minwinbase/ns-minwinbase-systemtime\">SYSTEMTIME</a> structure.\n\n## -parameters\n\n### -param pwszTime [in]\n\nPointer to a null-terminated date/time string to convert. This value must use the format defined in section 3.3 of the <a href=\"http://www.ietf.org/rfc/rfc2616.txt\">RFC2616</a>.\n\n### -param pst [out]\n\nPointer to the \n<a href=\"/windows/desktop/api/minwinbase/ns-minwinbase-systemtime\">SYSTEMTIME</a> structure that receives the converted time.\n\n## -returns\n\nReturns <b>TRUE</b> if successful, or <b>FALSE</b> otherwise. For extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>. Among the error codes returned is:\n\n<table>\n<tr>\n<th>Error Code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_INTERNAL_ERROR</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn internal error has occurred.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nEven when  WinHTTP is used in asynchronous mode (that is, when <b>WINHTTP_FLAG_ASYNC</b> has been set in <a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpopen\">WinHttpOpen</a>), this function operates synchronously. The return value indicates success or failure.  To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n<div class=\"alert\"><b>Note</b>  For Windows XP and Windows 2000, see the <a href=\"/windows/desktop/WinHttp/winhttp-start-page\">Run-Time Requirements</a> section of the WinHttp start page.</div>\n<div> </div>\n\n#### Examples\n\nThis example shows how to convert an HTTP formatted date to a \n<a href=\"/windows/desktop/api/minwinbase/ns-minwinbase-systemtime\">SYSTEMTIME</a> structure.\n\n\n```cpp\n    SYSTEMTIME  sTime;\n    LPCWSTR     pwszTimeStr = L\"Tue, 21 Nov 2000 01:06:53 GMT\";\n\n    // Convert the HTTP string to a SYSTEMTIME structure.\n    if (!WinHttpTimeToSystemTime( pwszTimeStr, &sTime))\n    {\n        printf( \"Error %u in WinHttpTimeToSystemTime.\\n\", GetLastError());\n    }\n    else\n    {\n        // Print the date.\n        printf( \"The U.S. formatted date is (%u/%u/%u)\\n\", \n                sTime.wMonth, sTime.wDay, sTime.wYear);\n    }\n\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/WinHttp/about-winhttp\">About Microsoft Windows HTTP Services (WinHTTP)</a>\n\n\n\n<a href=\"/windows/desktop/WinHttp/winhttp-versions\">WinHTTP Versions</a>\n\n\n\n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttptimefromsystemtime\">WinHttpTimeFromSystemTime</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(winhttp);"
+   },
+   {
+    "name": "month",
+    "type": "const WCHAR[12][4]",
+    "static": true,
+    "start_line": 2788,
+    "end_line": 2789,
+    "code": "static const WCHAR month[12][4] =\n    {L\"Jan\", L\"Feb\", L\"Mar\", L\"Apr\", L\"May\", L\"Jun\", L\"Jul\", L\"Aug\", L\"Sep\", L\"Oct\", L\"Nov\", L\"Dec\"};"
+   },
+   {
+    "name": "wkday",
+    "type": "const WCHAR[7][4]",
+    "static": true,
+    "start_line": 2786,
+    "end_line": 2787,
+    "code": "static const WCHAR wkday[7][4] =\n    {L\"Sun\", L\"Mon\", L\"Tue\", L\"Wed\", L\"Thu\", L\"Fri\", L\"Sat\"};"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "GetSystemTime",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:4197"
+    ]
+   },
+   {
+    "name": "iswalpha",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:577"
+    ]
+   },
+   {
+    "name": "iswdigit",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:595"
+    ]
+   },
+   {
+    "name": "towupper",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/locale.c:1105"
+    ]
+   },
+   {
+    "name": "wcstol",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:669"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "debugstr_w",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

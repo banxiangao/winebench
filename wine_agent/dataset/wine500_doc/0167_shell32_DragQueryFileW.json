@@ -1,0 +1,136 @@
+{
+ "id": "0167",
+ "function": {
+  "name": "DragQueryFileW",
+  "export_name": "DragQueryFileW",
+  "module": "shell32",
+  "source_module": "shell32",
+  "exported_by": [
+   "shell32",
+   "unicows",
+   "windows.storage"
+  ],
+  "side": "PE",
+  "file": "dlls/shell32/shellole.c",
+  "start_line": 602,
+  "end_line": 662,
+  "body_lines": 58,
+  "signature": "UINT WINAPI DragQueryFileW( HDROP hDrop, UINT lFile, LPWSTR lpszwFile, UINT lLength)",
+  "header_comment": "/*************************************************************************\n *  DragQueryFileW\t\t[SHELL32.@]\n */",
+  "code": "UINT WINAPI DragQueryFileW(\n\tHDROP hDrop,\n\tUINT lFile,\n\tLPWSTR lpszwFile,\n\tUINT lLength)\n{\n\tLPWSTR buffer = NULL;\n\tLPCWSTR filename;\n\tUINT i = 0;\n\tconst DROPFILES *lpDropFileStruct = GlobalLock(hDrop);\n\n\tTRACE(\"(%p, %x, %p, %u)\\n\", hDrop,lFile,lpszwFile,lLength);\n\n\tif(!lpDropFileStruct) goto end;\n\n        if(lpDropFileStruct->fWide)\n        {\n            LPCWSTR p = (LPCWSTR) ((LPCSTR)lpDropFileStruct + lpDropFileStruct->pFiles);\n            while (i++ < lFile)\n            {\n                while (*p++); /* skip filename */\n                if (!*p)\n                {\n                    i = (lFile == 0xFFFFFFFF) ? i : 0;\n                    goto end;\n                }\n            }\n            filename = p;\n        }\n        else\n        {\n            LPCSTR p = (LPCSTR)lpDropFileStruct + lpDropFileStruct->pFiles;\n            while (i++ < lFile)\n            {\n                while (*p++); /* skip filename */\n                if (!*p)\n                {\n                    i = (lFile == 0xFFFFFFFF) ? i : 0;\n                    goto end;\n                }\n            }\n            i = MultiByteToWideChar(CP_ACP, 0, p, -1, NULL, 0);\n            buffer = malloc(i * sizeof(WCHAR));\n            if (!buffer)\n            {\n                i = 0;\n                goto end;\n            }\n            MultiByteToWideChar(CP_ACP, 0, p, -1, buffer, i);\n            filename = buffer;\n        }\n\n\ti = lstrlenW(filename);\n\tif (!lpszwFile || !lLength) goto end;   /* needed buffer size */\n\tlstrcpynW(lpszwFile, filename, lLength);\n\ti = min(i, lLength - 1);\nend:\n\tGlobalUnlock(hDrop);\n\tfree(buffer);\n\treturn i;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"shellapi.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"shlobj.h\"",
+   "#include \"shlguid.h\"",
+   "#include \"shldisp.h\"",
+   "#include \"gdiplus.h\"",
+   "#include \"shimgdata.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winerror.h\"",
+   "#include \"shell32_main.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"debughlp.h\""
+  ],
+  "resolution": [
+   "shell32!DragQueryFileW [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/shell32/tests/shellole.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "shellapi",
+   "path": "sdk-api-src/content/shellapi/nf-shellapi-dragqueryfilew.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/shellapi/nf-shellapi-dragqueryfilew",
+   "documented_name": "dragqueryfilew",
+   "file": "docs/0167_sdk-api_nf-shellapi-dragqueryfilew.md",
+   "text": "---\nUID: NF:shellapi.DragQueryFileW\ntitle: DragQueryFileW function (shellapi.h)\ndescription: Retrieves the names of dropped files that result from a successful drag-and-drop operation. (Unicode)\nhelpviewer_keywords: [\"DragQueryFile\", \"DragQueryFile function [Windows Shell]\", \"DragQueryFileW\", \"_win32_DragQueryFile\", \"shell.DragQueryFile\", \"shellapi/DragQueryFile\", \"shellapi/DragQueryFileW\"]\nold-location: shell\\DragQueryFile.htm\ntech.root: shell\nms.assetid: 93fab381-9035-46c4-ba9d-efb2d0801d84\nms.date: 12/05/2018\nms.keywords: DragQueryFile, DragQueryFile function [Windows Shell], DragQueryFileA, DragQueryFileW, _win32_DragQueryFile, shell.DragQueryFile, shellapi/DragQueryFile, shellapi/DragQueryFileA, shellapi/DragQueryFileW\nreq.header: shellapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: DragQueryFileW (Unicode) and DragQueryFileA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Shell32.lib\nreq.dll: Shell32.dll (version 4.0 or later)\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - DragQueryFileW\n - shellapi/DragQueryFileW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-shell-shell32-l1-4-0.dll\n - ext-ms-win-shell-shell32-l1-3-0.dll\n - ext-ms-win-shell-shell32-l1-2-3.dll\n - api-ms-win-shell-dataobject-l1-1-1.dll\n - Shell32.dll\n - ext-ms-win-shell-shell32-l1-2-1.dll\n - Ext-MS-Win-Shell-Shell32-L1-2-2.dll\n - windows.storage.dll\napi_name:\n - DragQueryFile\n - DragQueryFileA\n - DragQueryFileW\nreq.apiset: ext-ms-win-shell-shell32-l1-2-1 (introduced in Windows 10, version 10.0.10240)\n---\n\n# DragQueryFileW function\n\n\n## -description\n\nRetrieves the names of dropped files that result from a successful drag-and-drop operation.\n\n## -parameters\n\n### -param hDrop [in]\n\nType: <b>HDROP</b>\n\nIdentifier of the structure that contains the file names of the dropped files.\n\n### -param iFile [in]\n\nType: <b>UINT</b>\n\nIndex of the file to query. If the value of this parameter is 0xFFFFFFFF, <b>DragQueryFile</b> returns a count of the files dropped. If the value of this parameter is between zero and the total number of files dropped, <b>DragQueryFile</b> copies the file name with the corresponding value to the buffer pointed to by the <i>lpszFile</i> parameter.\n\n### -param lpszFile [out]\n\nType: <b>LPTSTR</b>\n\nThe address of a buffer that receives the file name of a dropped file when the function returns. This file name is a null-terminated string. If this parameter is <b>NULL</b>, <b>DragQueryFile</b> returns the required size, in characters, of this buffer.\n\n### -param cch\n\nType: <b>UINT</b>\n\nThe size, in characters, of the <i>lpszFile</i> buffer.\n\n## -returns\n\nType: <b>UINT</b>\n\nA nonzero value indicates a successful call.\n\nWhen the function copies a file name to the buffer, the return value is a count of the characters copied, not including the terminating null character.\n\nIf the index value is 0xFFFFFFFF, the return value is a count of the dropped files. Note that the index variable itself returns unchanged, and therefore remains 0xFFFFFFFF.\n\nIf the index value is between zero and the total number of dropped files, and the <i>lpszFile</i> buffer address is <b>NULL</b>, the return value is the required size, in characters, of the buffer, <i>not including</i> the terminating null character.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/shellapi/nf-shellapi-dragquerypoint\">DragQueryPoint</a>\n\n## -remarks\n\n> [!NOTE]\n> The shellapi.h header defines DragQueryFile as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 46,
+    "end_line": 46,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(shell);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "GlobalLock",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernel32/heap.c:145"
+    ]
+   },
+   {
+    "name": "GlobalUnlock",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernel32/heap.c:167"
+    ]
+   },
+   {
+    "name": "MultiByteToWideChar",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7070"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   }
+  ],
+  "header_inline": [
+   "lstrcpynW",
+   "lstrlenW",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

@@ -1,0 +1,161 @@
+{
+ "id": "0115",
+ "function": {
+  "name": "GetIpForwardTable",
+  "export_name": "GetIpForwardTable",
+  "module": "iphlpapi",
+  "source_module": "iphlpapi",
+  "exported_by": [
+   "iphlpapi"
+  ],
+  "side": "PE",
+  "file": "dlls/iphlpapi/iphlpapi_main.c",
+  "start_line": 2113,
+  "end_line": 2181,
+  "body_lines": 66,
+  "signature": "DWORD WINAPI GetIpForwardTable( MIB_IPFORWARDTABLE *table, ULONG *size, BOOL sort )",
+  "header_comment": "/******************************************************************\n *    GetIpForwardTable (IPHLPAPI.@)\n *\n * Get the route table.\n *\n * PARAMS\n *  table           [Out]    buffer for route table\n *  size            [In/Out] length of output buffer\n *  sort            [In]     whether to sort the table\n *\n * RETURNS\n *  Success: NO_ERROR\n *  Failure: error code from winerror.h\n */",
+  "code": "DWORD WINAPI GetIpForwardTable( MIB_IPFORWARDTABLE *table, ULONG *size, BOOL sort )\n{\n    DWORD err, count, uni_count, needed, i, addr;\n    struct nsi_ipv4_forward_key *keys;\n    struct nsi_ip_forward_rw *rw;\n    struct nsi_ipv4_forward_dynamic *dyn;\n    struct nsi_ip_forward_static *stat;\n    struct nsi_ipv4_unicast_key *uni_keys = NULL;\n\n    TRACE( \"table %p, size %p, sort %d\\n\", table, size, sort );\n    if (!size) return ERROR_INVALID_PARAMETER;\n\n    err = NsiAllocateAndGetTable( 1, &NPI_MS_IPV4_MODULEID, NSI_IP_FORWARD_TABLE, (void **)&keys, sizeof(*keys),\n                                  (void **)&rw, sizeof(*rw), (void **)&dyn, sizeof(*dyn),\n                                  (void **)&stat, sizeof(*stat), &count, 0 );\n    if (err) return err;\n\n    needed = FIELD_OFFSET( MIB_IPFORWARDTABLE, table[count] );\n\n    if (!table || *size < needed)\n    {\n        *size = needed;\n        err = ERROR_INSUFFICIENT_BUFFER;\n        goto err;\n    }\n\n    err = NsiAllocateAndGetTable( 1, &NPI_MS_IPV4_MODULEID, NSI_IP_UNICAST_TABLE, (void **)&uni_keys, sizeof(*uni_keys),\n                                  NULL, 0, NULL, 0, NULL, 0, &uni_count, 0 );\n    if (err) goto err;\n\n    table->dwNumEntries = count;\n    for (i = 0; i < count; i++)\n    {\n        MIB_IPFORWARDROW *row = table->table + i;\n\n        row->dwForwardDest = keys[i].prefix.s_addr;\n        ConvertLengthToIpv4Mask( keys[i].prefix_len, &row->dwForwardMask );\n        row->dwForwardPolicy = 0;\n        row->dwForwardNextHop = keys[i].next_hop.s_addr;\n        row->dwForwardType = row->dwForwardNextHop ? MIB_IPROUTE_TYPE_INDIRECT : MIB_IPROUTE_TYPE_DIRECT;\n        if (!row->dwForwardNextHop) /* find the interface's addr */\n        {\n            for (addr = 0; addr < uni_count; addr++)\n            {\n                if (uni_keys[addr].luid.Value == keys[i].luid.Value)\n                {\n                    row->dwForwardNextHop = uni_keys[addr].addr.s_addr;\n                    break;\n                }\n            }\n        }\n        row->dwForwardIfIndex = stat[i].if_index;\n        row->dwForwardProto = rw[i].protocol;\n        row->dwForwardAge = dyn[i].age;\n        row->dwForwardNextHopAS = 0;\n        row->dwForwardMetric1 = rw[i].metric; /* FIXME: add interface metric */\n        row->dwForwardMetric2 = 0;\n        row->dwForwardMetric3 = 0;\n        row->dwForwardMetric4 = 0;\n        row->dwForwardMetric5 = 0;\n    }\n\n    if (sort) qsort( table->table, count, sizeof(MIB_IPFORWARDROW), ipforward_row_cmp );\nerr:\n    NsiFreeTable( uni_keys, NULL, NULL, NULL );\n    NsiFreeTable( keys, rw, dyn, stat );\n\n    return err;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winsock2.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ws2ipdef.h\"",
+   "#include \"windns.h\"",
+   "#include \"iphlpapi.h\"",
+   "#include \"ipifcons.h\"",
+   "#include \"fltdefs.h\"",
+   "#include \"ifdef.h\"",
+   "#include \"netioapi.h\"",
+   "#include \"ip2string.h\"",
+   "#include \"netiodef.h\"",
+   "#include \"icmpapi.h\"",
+   "#include \"psapi.h\"",
+   "#include \"wine/nsi.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "iphlpapi!GetIpForwardTable [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/iphlpapi/tests/iphlpapi.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "iphlpapi",
+   "path": "sdk-api-src/content/iphlpapi/nf-iphlpapi-getipforwardtable.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/iphlpapi/nf-iphlpapi-getipforwardtable",
+   "documented_name": "getipforwardtable",
+   "file": "docs/0115_sdk-api_nf-iphlpapi-getipforwardtable.md",
+   "text": "---\nUID: NF:iphlpapi.GetIpForwardTable\ntitle: GetIpForwardTable function (iphlpapi.h)\ndescription: The GetIpForwardTable function retrieves the IPv4 routing table.\nhelpviewer_keywords: [\"GetIpForwardTable\",\"GetIpForwardTable function [IP Helper]\",\"_iphlp_getipforwardtable\",\"iphlp.getipforwardtable\",\"iphlpapi/GetIpForwardTable\"]\nold-location: iphlp\\getipforwardtable.htm\ntech.root: IpHlp\nms.assetid: 5d645353-7c87-4f8a-b7fd-149675a94743\nms.date: 12/05/2018\nms.keywords: GetIpForwardTable, GetIpForwardTable function [IP Helper], _iphlp_getipforwardtable, iphlp.getipforwardtable, iphlpapi/GetIpForwardTable\nreq.header: iphlpapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Iphlpapi.lib\nreq.dll: Iphlpapi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetIpForwardTable\n - iphlpapi/GetIpForwardTable\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Iphlpapi.dll\napi_name:\n - GetIpForwardTable\n---\n\n# GetIpForwardTable function\n\n\n## -description\n\nThe \n<b>GetIpForwardTable</b> function retrieves the IPv4 routing table.\n\n## -parameters\n\n### -param pIpForwardTable [out]\n\nA pointer to a buffer that receives the IPv4 routing table as a \n<a href=\"/windows/desktop/api/ipmib/ns-ipmib-mib_ipforwardtable\">MIB_IPFORWARDTABLE</a> structure.\n\n### -param pdwSize [in, out]\n\nOn input, specifies the size in bytes  of the buffer pointed to by the <i>pIpForwardTable</i> parameter. \n\n\n\n\nOn output, if the buffer is not large enough to hold the returned routing table, the function sets this parameter equal to the required buffer size in bytes.\n\n### -param bOrder [in]\n\nA Boolean value that specifies whether the returned table should be sorted. If this parameter is <b>TRUE</b>, the table is sorted in the order of: \n\n\n<ol>\n<li>Destination address</li>\n<li>Protocol that generated the route</li>\n<li>Multipath routing policy</li>\n<li>Next-hop address</li>\n</ol>\n\n## -returns\n\nIf the function succeeds, the return value is <b>NO_ERROR</b> (zero).\n\nIf the function fails, the return value is one of the following error codes.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INSUFFICIENT_BUFFER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe buffer pointed to by the <i>pIpForwardTable</i> parameter is not large enough. The required size is returned in the <b>DWORD</b> variable pointed to by the <i>pdwSize</i> parameter.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <i>pdwSize</i> parameter is <b>NULL</b>, or \n<a href=\"/windows/desktop/api/iphlpapi/nf-iphlpapi-getipforwardtable\">GetIpForwardTable</a> is unable to write to the memory pointed to by the <i>pdwSize</i> parameter.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NO_DATA</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nNo data is available. This error is returned if there are no routes present on the local computer.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOT_SUPPORTED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThis function is not supported on the operating system in use on the local system. This error is returned if there is no IP stack installed on the local computer.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>Other</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nUse \n<a href=\"/windows/desktop/api/winbase/nf-winbase-formatmessage\">FormatMessage</a> to obtain the message string for the returned error.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe  <b>dwForwardProto</b> member of the \n<a href=\"/windows/desktop/api/ipmib/ns-ipmib-mib_ipforwardrow\">MIB_IPFORWARDROW</a> structure specifies the protocol or routing mechanism that generated the route. See \n<a href=\"/windows/desktop/RRAS/protocol-identifiers\">Protocol Identifiers</a> for a list of possible protocols and routing mechanisms.\n\nThe  <b>dwForwardDest</b>, <b>dwForwardMask</b>, and <b>dwForwardNextHop</b> members of the \n<a href=\"/windows/desktop/api/ipmib/ns-ipmib-mib_ipforwardrow\">MIB_IPFORWARDROW</a> structure represent an IPv4 address in network byte order.\n\nAn IPv4 address of 0.0.0.0 in the  <b>dwForwardDest</b> member of the \n<a href=\"/windows/desktop/api/ipmib/ns-ipmib-mib_ipforwardrow\">MIB_IPFORWARDROW</a> structure is considered a\n                default route. The <a href=\"/windows/desktop/api/ipmib/ns-ipmib-mib_ipforwardtable\">MIB_IPFORWARDTABLE</a> may contain multiple <b>MIB_IPFORWARDROW</b> entries with the <b>dwForwardDest</b> member set to 0.0.0.0 when there are multiple network adapters installed.\n\nWhen <b>dwForwardAge</b> is set to <b>INFINITE</b>, the route will not be removed based on a timeout\n \nvalue. Any other value for <b>dwForwardAge</b> specifies the number of seconds since the route was added or modified in the network routing table.\n\n\n\nOn Windows Server 2003 or\n  Windows 2000 Server when the Routing and Remote Access Service (RRAS) is running, the  <a href=\"/windows/desktop/api/ipmib/ns-ipmib-mib_ipforwardrow\">MIB_IPFORWARDROW</a> entries returned have the <b>dwForwardType</b> and <b>dwForwardAge</b> members set to zero. \n\nOn Windows Vista and Windows Server 2008, the route metric specified in the <b>dwForwardMetric1</b> member of the  <a href=\"/windows/desktop/api/ipmib/ns-ipmib-mib_ipforwardrow\">MIB_IPFORWARDROW</a> structure represents a combination of the route metric added to the interface metric specified in the <b>Metric</b> member of the <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_ipinterface_row\">MIB_IPINTERFACE_ROW</a> structure of the associated interface.  So the <b>dwForwardMetric1</b> member of the  <b>MIB_IPFORWARDROW</b> structure should be equal to or greater than <b>Metric</b> member of the associated <b>MIB_IPINTERFACE_ROW</b> structure. If an application would like to set the route metric to 0 on Windows Vista and Windows Server 2008, then the <b>dwForwardMetric1</b> member of the <b>MIB_IPFORWARDROW</b> structure  should be set equal to the value of the interface metric specified in the <b>Metric</b> member of the associated <b>MIB_IPINTERFACE_ROW</b> structure. An application can retrieve the interface metric by calling the <a href=\"/windows/desktop/api/netioapi/nf-netioapi-getipinterfaceentry\">GetIpInterfaceEntry</a> function.\n\nA number of members of the <a href=\"/windows/desktop/api/ipmib/ns-ipmib-mib_ipforwardrow\">MIB_IPFORWARDROW</a> structure  entries returned by <b>GetIpForwardTable</b> are not currently used by IPv4 routing. These members include <b>dwForwardPolicy</b>, <b>dwForwardNextHopAS</b>, <b>dwForwardMetric2</b>, <b>dwForwardMetric3</b>, <b>dwForwardMetric4</b>, and <b>dwForwardMetric5</b>. \n\n\n#### Examples\n\nThe following example retrieves the IP routing table then prints some fields for each route in the table.\n\n\n```cpp\n// Need to link with Ws2_32.lib and Iphlpapi.lib\n#include <winsock2.h>\n#include <ws2tcpip.h>\n#include <iphlpapi.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"iphlpapi.lib\")\n#pragma comment(lib, \"ws2_32.lib\")\n\n#define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))\n#define FREE(x) HeapFree(GetProcessHeap(), 0, (x))\n\n/* Note: could also use malloc() and free() */\n\nint main()\n{\n\n    // Declare and initialize variables.\n\n    /* variables used for GetIfForwardTable */\n    PMIB_IPFORWARDTABLE pIpForwardTable;\n    DWORD dwSize = 0;\n    DWORD dwRetVal = 0;\n\n    char szDestIp[128];\n    char szMaskIp[128];\n    char szGatewayIp[128];\n\n    struct in_addr IpAddr;\n\n    int i;\n\n    pIpForwardTable =\n        (MIB_IPFORWARDTABLE *) MALLOC(sizeof (MIB_IPFORWARDTABLE));\n    if (pIpForwardTable == NULL) {\n        printf(\"Error allocating memory\\n\");\n        return 1;\n    }\n\n    if (GetIpForwardTable(pIpForwardTable, &dwSize, 0) ==\n        ERROR_INSUFFICIENT_BUFFER) {\n        FREE(pIpForwardTable);\n        pIpForwardTable = (MIB_IPFORWARDTABLE *) MALLOC(dwSize);\n        if (pIpForwardTable == NULL) {\n            printf(\"Error allocating memory\\n\");\n            return 1;\n        }\n    }\n\n    /* Note that the IPv4 addresses returned in \n     * GetIpForwardTable entries are in network byte order \n     */\n    if ((dwRetVal = GetIpForwardTable(pIpForwardTable, &dwSize, 0)) == NO_ERROR) {\n        printf(\"\\tNumber of entries: %d\\n\",\n               (int) pIpForwardTable->dwNumEntries);\n        for (i = 0; i < (int) pIpForwardTable->dwNumEntries; i++) {\n            /* Convert IPv4 addresses to strings */\n            IpAddr.S_un.S_addr =\n                (u_long) pIpForwardTable->table[i].dwForwardDest;\n            strcpy_s(szDestIp, sizeof (szDestIp), inet_ntoa(IpAddr));\n            IpAddr.S_un.S_addr =\n                (u_long) pIpForwardTable->table[i].dwForwardMask;\n            strcpy_s(szMaskIp, sizeof (szMaskIp), inet_ntoa(IpAddr));\n            IpAddr.S_un.S_addr =\n                (u_long) pIpForwardTable->table[i].dwForwardNextHop;\n            strcpy_s(szGatewayIp, sizeof (szGatewayIp), inet_ntoa(IpAddr));\n\n            printf(\"\\n\\tRoute[%d] Dest IP: %s\\n\", i, szDestIp);\n            printf(\"\\tRoute[%d] Subnet Mask: %s\\n\", i, szMaskIp);\n            printf(\"\\tRoute[%d] Next Hop: %s\\n\", i, szGatewayIp);\n            printf(\"\\tRoute[%d] If Index: %ld\\n\", i,\n                   pIpForwardTable->table[i].dwForwardIfIndex);\n            printf(\"\\tRoute[%d] Type: %ld - \", i,\n                   pIpForwardTable->table[i].dwForwardType);\n            switch (pIpForwardTable->table[i].dwForwardType) {\n            case MIB_IPROUTE_TYPE_OTHER:\n                printf(\"other\\n\");\n                break;\n            case MIB_IPROUTE_TYPE_INVALID:\n                printf(\"invalid route\\n\");\n                break;\n            case MIB_IPROUTE_TYPE_DIRECT:\n                printf(\"local route where next hop is final destination\\n\");\n                break;\n            case MIB_IPROUTE_TYPE_INDIRECT:\n                printf\n                    (\"remote route where next hop is not final destination\\n\");\n                break;\n            default:\n                printf(\"UNKNOWN Type value\\n\");\n                break;\n            }\n            printf(\"\\tRoute[%d] Proto: %ld - \", i,\n                   pIpForwardTable->table[i].dwForwardProto);\n            switch (pIpForwardTable->table[i].dwForwardProto) {\n            case MIB_IPPROTO_OTHER:\n                printf(\"other\\n\");\n                break;\n            case MIB_IPPROTO_LOCAL:\n                printf(\"local interface\\n\");\n                break;\n            case MIB_IPPROTO_NETMGMT:\n                printf(\"static route set through network management \\n\");\n                break;\n            case MIB_IPPROTO_ICMP:\n                printf(\"result of ICMP redirect\\n\");\n                break;\n            case MIB_IPPROTO_EGP:\n                printf(\"Exterior Gateway Protocol (EGP)\\n\");\n                break;\n            case MIB_IPPROTO_GGP:\n                printf(\"Gateway-to-Gateway Protocol (GGP)\\n\");\n                break;\n            case MIB_IPPROTO_HELLO:\n                printf(\"Hello protocol\\n\");\n                break;\n            case MIB_IPPROTO_RIP:\n                printf(\"Routing Information Protocol (RIP)\\n\");\n                break;\n            case MIB_IPPROTO_IS_IS:\n                printf\n                    (\"Intermediate System-to-Intermediate System (IS-IS) protocol\\n\");\n                break;\n            case MIB_IPPROTO_ES_IS:\n                printf(\"End System-to-Intermediate System (ES-IS) protocol\\n\");\n                break;\n            case MIB_IPPROTO_CISCO:\n                printf(\"Cisco Interior Gateway Routing Protocol (IGRP)\\n\");\n                break;\n            case MIB_IPPROTO_BBN:\n                printf(\"BBN Internet Gateway Protocol (IGP) using SPF\\n\");\n                break;\n            case MIB_IPPROTO_OSPF:\n                printf(\"Open Shortest Path First (OSPF) protocol\\n\");\n                break;\n            case MIB_IPPROTO_BGP:\n                printf(\"Border Gateway Protocol (BGP)\\n\");\n                break;\n            case MIB_IPPROTO_NT_AUTOSTATIC:\n                printf(\"special Windows auto static route\\n\");\n                break;\n            case MIB_IPPROTO_NT_STATIC:\n                printf(\"special Windows static route\\n\");\n                break;\n            case MIB_IPPROTO_NT_STATIC_NON_DOD:\n                printf\n                    (\"special Windows static route not based on Internet standards\\n\");\n                break;\n            default:\n                printf(\"UNKNOWN Proto value\\n\");\n                break;\n            }\n\n            printf(\"\\tRoute[%d] Age: %ld\\n\", i,\n                   pIpForwardTable->table[i].dwForwardAge);\n            printf(\"\\tRoute[%d] Metric1: %ld\\n\", i,\n                   pIpForwardTable->table[i].dwForwardMetric1);\n        }\n        FREE(pIpForwardTable);\n        return 0;\n    } else {\n        printf(\"\\tGetIpForwardTable failed.\\n\");\n        FREE(pIpForwardTable);\n        return 1;\n    }\n\n}\n\n\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/api/iphlpapi/nf-iphlpapi-createipforwardentry\">CreateIpForwardEntry</a>\n\n\n\n<a href=\"/windows/desktop/api/iphlpapi/nf-iphlpapi-deleteipforwardentry\">DeleteIpForwardEntry</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-getipinterfaceentry\">GetIpInterfaceEntry</a>\n\n\n\n<a href=\"/windows/desktop/IpHlp/ip-helper-function-reference\">IP Helper Function Reference</a>\n\n\n\n<a href=\"/windows/desktop/IpHlp/ip-helper-start-page\">IP Helper Start Page</a>\n\n\n\n<a href=\"/windows/desktop/api/ipmib/ns-ipmib-mib_ipforwardtable\">MIB_IPFORWARDTABLE</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_ipinterface_row\">MIB_IPINTERFACE_ROW</a>\n\n\n\n<a href=\"/windows/desktop/RRAS/protocol-identifiers\">Protocol Identifiers</a>\n\n\n\n<a href=\"/windows/desktop/api/iphlpapi/nf-iphlpapi-setipforwardentry\">SetIpForwardEntry</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "ipforward_row_cmp",
+   "file": "dlls/iphlpapi/iphlpapi_main.c",
+   "start_line": 2085,
+   "end_line": 2097,
+   "static": true,
+   "called_from": [
+    "GetIpForwardTable"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static int ipforward_row_cmp( const void *a, const void *b )",
+   "code": "static int ipforward_row_cmp( const void *a, const void *b )\n{\n    const MIB_IPFORWARDROW *rowA = a, *rowB = b;\n    int ret;\n\n    if ((ret = DWORD_cmp(RtlUlongByteSwap( rowA->dwForwardDest ), RtlUlongByteSwap( rowB->dwForwardDest ))))\n        return ret;\n    if ((ret = DWORD_cmp(rowA->dwForwardProto, rowB->dwForwardProto)))\n        return ret;\n    if ((ret = DWORD_cmp(rowA->dwForwardPolicy, rowB->dwForwardPolicy)))\n        return ret;\n    return DWORD_cmp(RtlUlongByteSwap( rowA->dwForwardNextHop ), RtlUlongByteSwap( rowB->dwForwardNextHop ));\n}"
+  },
+  {
+   "name": "DWORD_cmp",
+   "file": "dlls/iphlpapi/iphlpapi_main.c",
+   "start_line": 1647,
+   "end_line": 1650,
+   "static": true,
+   "called_from": [
+    "ipforward_row_cmp"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/iphlpapi/iphlpapi_main.c:1655",
+    "dlls/iphlpapi/iphlpapi_main.c:1982",
+    "dlls/iphlpapi/iphlpapi_main.c:2342",
+    "dlls/iphlpapi/iphlpapi_main.c:2344",
+    "dlls/iphlpapi/iphlpapi_main.c:3155"
+   ],
+   "signature": "static int DWORD_cmp( DWORD a, DWORD b )",
+   "code": "static int DWORD_cmp( DWORD a, DWORD b )\n{\n    return a < b ? -1 : a > b ? 1 : 0; /* a subtraction would overflow */\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(iphlpapi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "ConvertLengthToIpv4Mask",
+    "impl": [
+     "dlls/iphlpapi/iphlpapi_main.c:4577"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NsiAllocateAndGetTable",
+    "module": "nsi",
+    "impl": [
+     "dlls/nsi/nsi.c:66"
+    ]
+   },
+   {
+    "name": "NsiFreeTable",
+    "module": "nsi",
+    "impl": [
+     "dlls/nsi/nsi.c:209"
+    ]
+   },
+   {
+    "name": "qsort",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/misc.c:173"
+    ]
+   }
+  ],
+  "header_inline": [
+   "RtlUlongByteSwap",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

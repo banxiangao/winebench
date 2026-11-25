@@ -1,0 +1,131 @@
+{
+ "id": "0091",
+ "function": {
+  "name": "TlsAlloc",
+  "export_name": "TlsAlloc",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/thread.c",
+  "start_line": 698,
+  "end_line": 729,
+  "body_lines": 29,
+  "signature": "DWORD WINAPI DECLSPEC_HOTPATCH TlsAlloc(void)",
+  "header_comment": "/**********************************************************************\n *           TlsAlloc   (kernelbase.@)\n */",
+  "code": "DWORD WINAPI DECLSPEC_HOTPATCH TlsAlloc(void)\n{\n    DWORD index;\n    PEB * const peb = NtCurrentTeb()->Peb;\n\n    RtlAcquirePebLock();\n    index = RtlFindClearBitsAndSet( peb->TlsBitmap, 1, 1 );\n    if (index != ~0U) NtCurrentTeb()->TlsSlots[index] = 0; /* clear the value */\n    else\n    {\n        index = RtlFindClearBitsAndSet( peb->TlsExpansionBitmap, 1, 0 );\n        if (index != ~0U)\n        {\n            if (!NtCurrentTeb()->TlsExpansionSlots &&\n                !(NtCurrentTeb()->TlsExpansionSlots = HeapAlloc( GetProcessHeap(), HEAP_ZERO_MEMORY,\n                                         8 * sizeof(peb->TlsExpansionBitmapBits) * sizeof(void*) )))\n            {\n                RtlClearBits( peb->TlsExpansionBitmap, index, 1 );\n                index = ~0U;\n                SetLastError( ERROR_NOT_ENOUGH_MEMORY );\n            }\n            else\n            {\n                NtCurrentTeb()->TlsExpansionSlots[index] = 0; /* clear the value */\n                index += TLS_MINIMUM_AVAILABLE;\n            }\n        }\n        else SetLastError( ERROR_NO_MORE_ITEMS );\n    }\n    RtlReleasePebLock();\n    return index;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include <limits.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/asm.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!TlsAlloc [stdcall -import] -> import from kernelbase",
+   "kernelbase!TlsAlloc [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/thread.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "processthreadsapi",
+   "path": "sdk-api-src/content/processthreadsapi/nf-processthreadsapi-tlsalloc.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-tlsalloc",
+   "documented_name": "tlsalloc",
+   "file": "docs/0091_sdk-api_nf-processthreadsapi-tlsalloc.md",
+   "text": "---\nUID: NF:processthreadsapi.TlsAlloc\ntitle: TlsAlloc function (processthreadsapi.h)\ndescription: Allocates a thread local storage (TLS) index. Any thread of the process can subsequently use this index to store and retrieve values that are local to the thread, because each thread receives its own slot for the index.\nhelpviewer_keywords: [\"TlsAlloc\",\"TlsAlloc function\",\"_win32_tlsalloc\",\"base.tlsalloc\",\"processthreadsapi/TlsAlloc\",\"winbase/TlsAlloc\"]\nold-location: base\\tlsalloc.htm\ntech.root: processthreadsapi\nms.assetid: cbb3d832-cd92-4875-8366-6b69be7a536f\nms.date: 12/05/2024\nms.keywords: TlsAlloc, TlsAlloc function, _win32_tlsalloc, base.tlsalloc, processthreadsapi/TlsAlloc, winbase/TlsAlloc\nreq.header: processthreadsapi.h\nreq.include-header: Windows.h on Windows Vista, Windows 7, Windows Server 2008  Windows Server 2008 R2\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib; WindowsPhoneCore.lib on Windows Phone 8.1\nreq.dll: KernelBase.dll on Windows Phone 8.1; Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - TlsAlloc\n - processthreadsapi/TlsAlloc\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-processthreads-l1-1-8.dll\n - api-ms-win-core-processthreads-l1-1-7.dll\n - api-ms-win-core-processthreads-l1-1-6.dll\n - api-ms-win-core-processthreads-l1-1-5.dll\n - api-ms-win-core-processthreads-l1-1-4.dll\n - KernelBase.dll\n - Kernel32.dll\n - API-MS-Win-Core-ProcessThreads-l1-1-0.dll\n - MinKernelBase.dll\n - API-MS-Win-Core-ProcessThreads-l1-1-1.dll\n - API-MS-Win-Core-ProcessThreads-l1-1-2.dll\n - api-ms-win-downlevel-kernel32-l1-1-0.dll\n - API-MS-Win-Core-ProcessThreads-L1-1-3.dll\n - vertdll.dll\napi_name:\n - TlsAlloc\n---\n\n# TlsAlloc function\n\n## -description\n\nAllocates a thread local storage (TLS) index. Any thread of the process can subsequently use this index to store and retrieve values that are local to the thread, because each thread receives its own slot for the index.\n\n## -returns\n\nIf the function succeeds, the return value is a TLS index. The slots for the index are initialized to zero.\n\nIf the function fails, the return value is <b>TLS_OUT_OF_INDEXES</b>. To get extended error information, call <a href=\"/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\n<b>Windows Phone 8.1:</b> This function is supported for Windows Phone Store apps on Windows Phone 8.1 and later. When a Windows Phone Store app calls this function, it is replaced with an inline call to <b>FlsAlloc</b>. Refer to <a href=\"/windows/win32/api/fibersapi/nf-fibersapi-flsalloc\">FlsAlloc</a> for function documentation.\n\n<b>Windows 8.1</b>,  <b>Windows Server 2012 R2</b>, and <b>Windows 10, version 1507</b>: This function is supported for Windows Store apps on Windows 8.1, Windows Server 2012 R2, and Windows 10, version 1507. When a Windows Store app calls this function, it is replaced with an inline call to <b>FlsAlloc</b>. Refer to <a href=\"/windows/win32/api/fibersapi/nf-fibersapi-flsalloc\">FlsAlloc</a> for function documentation.\n\n<b>Windows 10, version 1511</b> and <b>Windows 10, version 1607</b>: This function is fully supported for Universal Windows Platform (UWP) apps, and is no longer replaced with an inline call to <b>FlsAlloc</b>.\n\nThe threads of the process can use the TLS index in subsequent calls to the <a href=\"/windows/win32/api/processthreadsapi/nf-processthreadsapi-tlsfree\">TlsFree</a>, <a href=\"/windows/win32/api/processthreadsapi/nf-processthreadsapi-tlssetvalue\">TlsSetValue</a>, or <a href=\"/windows/win32/api/processthreadsapi/nf-processthreadsapi-tlsgetvalue\">TlsGetValue</a> functions. The value of the TLS index should be treated as an opaque value; do not assume that it is an index into a zero-based array.\n\nTLS indexes are typically allocated during process or dynamic-link library (DLL) initialization. When a TLS index is allocated, its storage slots are initialized to <b>NULL</b>. After a TLS index has been allocated, each thread of the process can use it to access its own TLS storage slot. To store a value in its TLS slot, a thread specifies the index in a call to [TlsSetValue](nf-processthreadsapi-tlssetvalue.md). The thread specifies the same index in a subsequent call to [TlsGetValue](nf-processthreadsapi-tlsgetvalue.md), to retrieve the stored value.\n\nTLS indexes are not valid across process boundaries. A DLL cannot assume that an index assigned in one process is valid in another process.\n\n#### Examples\n\nFor an example, see <a href=\"/windows/win32/ProcThread/using-thread-local-storage\">Using Thread Local Storage</a> or <a href=\"/windows/win32/Dlls/using-thread-local-storage-in-a-dynamic-link-library\">Using Thread Local Storage in a Dynamic-Link Library</a>.\n\n## -see-also\n\n[Process and Thread Functions](/windows/win32/ProcThread/process-and-thread-functions)\n\n[Thread Local Storage](/windows/win32/ProcThread/thread-local-storage)\n\n[TlsFree](nf-processthreadsapi-tlsfree.md)\n\n[TlsGetValue](nf-processthreadsapi-tlsgetvalue.md)\n\n[TlsSetValue](nf-processthreadsapi-tlssetvalue.md)\n\n[Vertdll APIs available in VBS enclaves](/windows/win32/trusted-execution/enclaves-available-in-vertdll)\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetProcessHeap",
+    "impl": [
+     "dlls/kernelbase/process.c:910"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "RtlAcquirePebLock",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/env.c:111"
+    ]
+   },
+   {
+    "name": "RtlAllocateHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "RtlClearBits",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlbitmap.c:139"
+    ]
+   },
+   {
+    "name": "RtlFindClearBitsAndSet",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlbitmap.c:334"
+    ]
+   },
+   {
+    "name": "RtlReleasePebLock",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/env.c:119"
+    ]
+   }
+  ],
+  "header_inline": [
+   "NtCurrentTeb"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

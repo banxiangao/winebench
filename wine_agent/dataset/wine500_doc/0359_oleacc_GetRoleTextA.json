@@ -1,0 +1,111 @@
+{
+ "id": "0359",
+ "function": {
+  "name": "GetRoleTextA",
+  "export_name": "GetRoleTextA",
+  "module": "oleacc",
+  "source_module": "oleacc",
+  "exported_by": [
+   "oleacc"
+  ],
+  "side": "PE",
+  "file": "dlls/oleacc/main.c",
+  "start_line": 554,
+  "end_line": 600,
+  "body_lines": 44,
+  "signature": "UINT WINAPI GetRoleTextA(DWORD role, LPSTR lpRole, UINT rolemax)",
+  "header_comment": null,
+  "code": "UINT WINAPI GetRoleTextA(DWORD role, LPSTR lpRole, UINT rolemax)\n{\n    UINT length;\n    WCHAR *roletextW;\n\n    TRACE(\"%lu %p %u\\n\", role, lpRole, rolemax);\n\n    if(lpRole && !rolemax)\n        return 0;\n\n    length = GetRoleTextW(role, NULL, 0);\n    if(!length) {\n        if(lpRole && rolemax)\n            lpRole[0] = 0;\n        return 0;\n    }\n\n    roletextW = HeapAlloc(GetProcessHeap(), 0, (length + 1)*sizeof(WCHAR));\n    if(!roletextW)\n        return 0;\n\n    GetRoleTextW(role, roletextW, length + 1);\n\n    length = WideCharToMultiByte( CP_ACP, 0, roletextW, -1, NULL, 0, NULL, NULL );\n\n    if(!lpRole){\n        HeapFree(GetProcessHeap(), 0, roletextW);\n        return length - 1;\n    }\n\n    if(rolemax < length) {\n        HeapFree(GetProcessHeap(), 0, roletextW);\n        lpRole[0] = 0;\n        return 0;\n    }\n\n    WideCharToMultiByte( CP_ACP, 0, roletextW, -1, lpRole, rolemax, NULL, NULL );\n\n    if(rolemax < length){\n        lpRole[rolemax-1] = '\\0';\n        length = rolemax;\n    }\n\n    HeapFree(GetProcessHeap(), 0, roletextW);\n\n    return length - 1;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"initguid.h\"",
+   "#include \"oleacc_private.h\"",
+   "#include \"resource.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "oleacc!GetRoleTextA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/oleacc/tests/main.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "oleacc",
+   "path": "sdk-api-src/content/oleacc/nf-oleacc-getroletexta.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/oleacc/nf-oleacc-getroletexta",
+   "documented_name": "getroletexta",
+   "file": "docs/0359_sdk-api_nf-oleacc-getroletexta.md",
+   "text": "---\nUID: NF:oleacc.GetRoleTextA\ntitle: GetRoleTextA function (oleacc.h)\ndescription: Retrieves the localized string that describes the object's role for the specified role value. (ANSI)\nhelpviewer_keywords: [\"GetRoleTextA\", \"oleacc/GetRoleTextA\"]\nold-location: winauto\\getroletext.htm\ntech.root: WinAuto\nms.assetid: 58436001-92d7-4afa-af07-169c8bbda9ba\nms.date: 12/05/2018\nms.keywords: GetRoleText, GetRoleText function [Windows Accessibility], GetRoleTextA, GetRoleTextW, _msaa_GetRoleText, msaa.getroletext, oleacc/GetRoleText, oleacc/GetRoleTextA, oleacc/GetRoleTextW, winauto.getroletext\nreq.header: oleacc.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: GetRoleTextW (Unicode) and GetRoleTextA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Oleacc.lib\nreq.dll: Oleacc.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: Active Accessibility 1.3 RDK on Windows NT 4.0 with SP6 and later and Windows 95\nms.custom: 19H1\nf1_keywords:\n - GetRoleTextA\n - oleacc/GetRoleTextA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Oleacc.dll\n - ext-ms-win-oleacc-l1-1-1.dll\napi_name:\n - GetRoleText\n - GetRoleTextA\n - GetRoleTextW\n---\n\n# GetRoleTextA function\n\n\n## -description\n\nRetrieves the localized string that describes the object's role for the specified role value.\n\n## -parameters\n\n### -param lRole [in]\n\nType: <b><a href=\"/windows/desktop/WinProg/windows-data-types\">DWORD</a></b>\n\nOne of the <a href=\"/windows/desktop/WinAuto/object-roles\">object role</a> constants.\n\n### -param lpszRole [out]\n\nType: <b><a href=\"/windows/desktop/WinProg/windows-data-types\">LPTSTR</a></b>\n\nAddress of a buffer that receives the role text string. If this parameter is <b>NULL</b>, the function returns the role string's length, not including the null character.\n\n### -param cchRoleMax [in]\n\nType: <b><a href=\"/windows/desktop/WinProg/windows-data-types\">UINT</a></b>\n\nThe size of the buffer that is pointed to by the <i>lpszRole</i> parameter. For ANSI strings, this value is measured in bytes; for Unicode strings, it is measured in characters.\n\n## -returns\n\nType: <b><a href=\"/windows/desktop/WinProg/windows-data-types\">UINT</a></b>\n\nIf successful, and if <i>lpszRole</i> is non-<b>NULL</b>, the return value is the number of bytes (ANSI strings) or characters (Unicode strings) copied into the buffer, not including the terminating null character. If <i>lpszRole</i> is <b>NULL</b>, the return value represents the string's length, not including the null character.\n\nIf the string resource does not exist, or if the <i>lpszRole</i> parameter is not a valid pointer, the return value is zero (0). To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\n> [!NOTE]\n> The oleacc.h header defines GetRoleText as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 29,
+    "end_line": 29,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(oleacc);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetRoleTextW",
+    "impl": [
+     "dlls/oleacc/main.c:534"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "HeapAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

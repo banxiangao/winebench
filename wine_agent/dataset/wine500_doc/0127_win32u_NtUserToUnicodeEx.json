@@ -1,0 +1,146 @@
+{
+ "id": "0127",
+ "function": {
+  "name": "NtUserToUnicodeEx",
+  "export_name": "ToUnicodeEx",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/input.c",
+  "start_line": 1411,
+  "end_line": 1435,
+  "body_lines": 22,
+  "signature": "INT WINAPI NtUserToUnicodeEx( UINT virt, UINT scan, const BYTE *state, WCHAR *str, int size, UINT flags, HKL layout )",
+  "header_comment": "/****************************************************************************\n *\t     NtUserToUnicodeEx    (win32u.@)\n */",
+  "code": "INT WINAPI NtUserToUnicodeEx( UINT virt, UINT scan, const BYTE *state,\n                              WCHAR *str, int size, UINT flags, HKL layout )\n{\n    const KBDTABLES *kbd_tables;\n    INT len;\n\n    TRACE_(keyboard)( \"virt %#x, scan %#x, state %p, str %p, size %d, flags %#x, layout %p.\\n\",\n                      virt, scan, state, str, size, flags, layout );\n\n    if (!state || !size) return 0;\n    if ((len = user_driver->pToUnicodeEx( virt, scan, state, str, size, flags, layout )) >= -1) return len;\n\n    if (!(kbd_tables = user_driver->pKbdLayerDescriptor( layout ))) kbd_tables = &kbdus_tables;\n    if (scan & 0x8000) str[0] = 0; /* key up */\n    else str[0] = kbd_tables_vkey_to_wchar( kbd_tables, virt, state );\n    if (size > 1) str[1] = 0;\n\n    if (str[0] != WCH_NONE) len = 1;\n    else str[0] = len = 0;\n\n    if (kbd_tables != &kbdus_tables) user_driver->pReleaseKbdTables( kbd_tables );\n\n    TRACE_(keyboard)( \"ret %d, str %s.\\n\", len, debugstr_wn(str, len) );\n    return len;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"win32u_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"kbd.h\""
+  ],
+  "resolution": [
+   "user32!ToUnicodeEx [stdcall] -> NtUserToUnicodeEx implicitly imported from win32u",
+   "win32u!NtUserToUnicodeEx [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/input.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-tounicodeex.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-tounicodeex",
+   "documented_name": "tounicodeex",
+   "file": "docs/0127_sdk-api_nf-winuser-tounicodeex.md",
+   "text": "---\nUID: NF:winuser.ToUnicodeEx\ntitle: ToUnicodeEx function (winuser.h)\ndescription: Translates the specified virtual-key code and keyboard state to the corresponding Unicode character or characters. (ToUnicodeEx)\nhelpviewer_keywords: [\"ToUnicodeEx\",\"ToUnicodeEx function [Keyboard and Mouse Input]\",\"_win32_ToUnicodeEx\",\"_win32_tounicodeex_cpp\",\"inputdev.tounicodeex\",\"winui._win32_tounicodeex\",\"winuser/ToUnicodeEx\"]\nold-location: inputdev\\tounicodeex.htm\ntech.root: inputdev\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\userinput\\keyboardinput\\keyboardinputreference\\keyboardinputfunctions\\tounicodeex.htm\nms.date: 12/05/2018\nms.keywords: ToUnicodeEx, ToUnicodeEx function [Keyboard and Mouse Input], _win32_ToUnicodeEx, _win32_tounicodeex_cpp, inputdev.tounicodeex, winui._win32_tounicodeex, winuser/ToUnicodeEx\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ToUnicodeEx\n - winuser/ToUnicodeEx\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-ntuser-keyboard-l1-3-2.dll\n - ext-ms-win-ntuser-keyboard-l1-3-1.dll\n - User32.dll\n - Ext-MS-Win-NTUser-Keyboard-l1-1-0.dll\n - Ext-MS-Win-NTUser-Keyboard-l1-1-1.dll\n - api-ms-win-ntuser-ie-keyboard-l1-1-0.dll\n - ie_stubs.dll\n - ext-ms-win-ntuser-keyboard-l1-1-2.dll\n - Ext-MS-Win-NTUser-Keyboard-L1-2-0.dll\n - Ext-MS-Win-NTUser-Keyboard-L1-2-1.dll\n - Ext-MS-Win-NTUser-Keyboard-L1-3-0.dll\napi_name:\n - ToUnicodeEx\n---\n\n# ToUnicodeEx function\n\n\n## -description\n\nTranslates the specified virtual-key code and keyboard state to the corresponding Unicode character or characters.\n\n## -parameters\n\n### -param wVirtKey [in]\n\nType: <b>UINT</b>\n\nThe virtual-key code to be translated. See <a href=\"/windows/desktop/inputdev/virtual-key-codes\">Virtual-Key Codes</a>.\n\n### -param wScanCode [in]\n\nType: <b>UINT</b>\n\nThe hardware <a href=\"/windows/win32/inputdev/about-keyboard-input#scan-codes\">scan code</a> of the key to be translated. The high-order bit of this value is set if the key is up.\n\n### -param lpKeyState [in]\n\nType: <b>const BYTE*</b>\n\nA pointer to a 256-byte array that contains the current keyboard state. Each element (byte) in the array contains the state of one key. \n\nIf the high-order bit of a byte is set, the key is down. The low bit, if set, indicates that the key is toggled on. In this function, only the toggle bit of the CAPS LOCK key is relevant. The toggle state of the NUM LOCK and SCROLL LOCK keys is ignored. See <a href=\"/windows/win32/api/winuser/nf-winuser-getkeyboardstate\">GetKeyboardState</a> for more info.\n\n### -param pwszBuff [out]\n\nType: <b>LPWSTR</b>\n\nThe buffer that receives the translated character or characters as array of UTF-16 code units. This buffer may be returned without being null-terminated even though the variable name suggests that it is null-terminated. You can use the return value of this method to determine how many characters were written.\n\n### -param cchBuff [in]\n\nType: <b>int</b>\n\nThe size, in characters, of the buffer pointed to by the <i>pwszBuff</i> parameter.\n\n### -param wFlags [in]\n\nType: <b>UINT</b>\n\nThe behavior of the function. \n\nIf bit 0 is set, a menu is active. In this mode <b>Alt+Numeric keypad</b> key combinations are not handled.\n\nIf bit 1 is set, **ToUnicodeEx** will translate scancodes marked as key break events in addition to its usual treatment of key make events.\n\nOn Windows 10, version 1607 and later, if bit 2 is set, the function does not change keyboard state. For a known issue that affects Alt+Numeric keypad input, see Remarks.\n\nAll other bits (through 31) are reserved.\n\n### -param dwhkl [in, optional]\n\nType: <b>HKL</b>\n\nThe input locale identifier used to translate the specified code. This parameter can be any input locale identifier previously returned by the <a href=\"/windows/desktop/api/winuser/nf-winuser-loadkeyboardlayouta\">LoadKeyboardLayout</a> function.\n\n## -returns\n\nType: <b>int</b>\n\nThe function returns one of the following values.\n\n<table>\n<tr>\n<th>Return value</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><i>value</i> < 0 </dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe specified virtual key is a <a href=\"/windows/win32/inputdev/about-keyboard-input#dead-character-messages\">dead key</a> character (accent or diacritic). This value is returned regardless of the keyboard layout, even if several characters have been typed and are stored in the keyboard state. If possible, even with Unicode keyboard layouts, the function has written a spacing version of the dead-key character to the buffer specified by <i>pwszBuff</i>. For example, the function writes the character ACUTE ACCENT (U+00B4), rather than the character COMBINING ACUTE ACCENT (U+0301).\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt>0</dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe specified virtual key has no translation for the current state of the keyboard. Nothing was written to the buffer specified by <i>pwszBuff</i>.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><i>value</i> > 0 </dt>\n</dl>\n</td>\n<td width=\"60%\">\nOne or more UTF-16 code units were written to the buffer specified by <i>pwszBuff</i>. Returned <i>pwszBuff</i> may contain more characters than the return value specifies. When this happens, any extra characters are invalid and should be ignored.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe input locale identifier is a broader concept than a keyboard layout, since it can also encompass a speech-to-text converter, an Input Method Editor (IME), or any other form of input.\n\nSome keyboard layouts may return several characters and/or supplementary characters as <a href=\"/windows/win32/intl/surrogates-and-supplementary-characters\">surrogate pairs</a> in <i>pwszBuff</i>. If dead key character (accent or diacritic) stored in the keyboard layout could not be combined with the specified virtual key to form a single character then the previous entered dead character can be combined with the current character.\n\nThe parameters supplied to the <b>ToUnicodeEx</b> function might not be sufficient to translate the virtual-key code because a previous <a href=\"/windows/win32/inputdev/about-keyboard-input#dead-character-messages\">dead key</a> is stored in the keyboard layout.\n\nTypically, <b>ToUnicodeEx</b> performs the translation based on the virtual-key code. In some cases, however, bit 15 of the <i>wScanCode</i> parameter can be used to distinguish between a key press and a key release (for example for ALT+numpad key entry).\n\nBy default, as <b>ToUnicodeEx</b> translates the virtual-key code, it also changes state in the kernel-mode keyboard buffer. This state affects dead keys, ligatures, <b>Alt+Numeric keypad</b> input, and so on. On Windows 10, version 1607 and later, setting bit 2 of the <i>wFlags</i> parameter prevents the function from changing keyboard state. State changes might cause undesired side effects if the function is used in conjunction with <a href=\"/windows/desktop/api/winuser/nf-winuser-translatemessage\">TranslateMessage</a>, which also changes the state of the kernel-mode keyboard buffer.\n\n> [!IMPORTANT]\n> **Known issue:** Setting bit 2 currently does not prevent changes to the keyboard state used for <b>Alt+Numeric keypad</b> input. As a result, another call to <b>ToUnicodeEx</b> in the same interactive session can affect an in-progress Alt+Numeric keypad sequence, including a call made from another thread. Microsoft is aware of this issue. Applications should not rely on this behavior.\n\n## -see-also\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/inputdev/keyboard-input\">Keyboard Input</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-loadkeyboardlayouta\">LoadKeyboardLayout</a>\n\n\n\n<b>Reference</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-toasciiex\">ToAsciiEx</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-vkkeyscana\">VkKeyScan</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "kbd_tables_vkey_to_wchar",
+   "file": "dlls/win32u/input.c",
+   "start_line": 519,
+   "end_line": 558,
+   "static": true,
+   "called_from": [
+    "NtUserToUnicodeEx"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static WCHAR kbd_tables_vkey_to_wchar( const KBDTABLES *tables, UINT vkey, const BYTE *state )",
+   "code": "static WCHAR kbd_tables_vkey_to_wchar( const KBDTABLES *tables, UINT vkey, const BYTE *state )\n{\n    UINT mod, caps_mod, alt, ctrl, caps;\n    const VK_TO_WCHAR_TABLE *table;\n    const VK_TO_WCHARS1 *entry;\n\n    alt = state[VK_MENU] & 0x80;\n    ctrl = state[VK_CONTROL] & 0x80;\n    caps = state[VK_CAPITAL] & 1;\n\n    if (ctrl && alt && !(tables->fLocaleFlags & KLLF_ALTGR)) return WCH_NONE;\n    if (!ctrl && vkey == VK_ESCAPE) return VK_ESCAPE;\n    if (ctrl && !alt)\n    {\n        if (vkey >= 'A' && vkey <= 'Z') return vkey - 'A' + 1;\n        tables = &kbdus_tables;\n    }\n    if (vkey >= VK_NUMPAD0 && vkey <= VK_NUMPAD9) tables = &kbdus_tables;\n\n    mod = caps_mod = kbd_tables_get_mod_num( tables, state, FALSE );\n    if (caps) caps_mod = kbd_tables_get_mod_num( tables, state, TRUE );\n\n    for (table = tables->pVkToWcharTable; table->pVkToWchars; table++)\n    {\n        if (table->nModifications <= mod) continue;\n        for (entry = table->pVkToWchars; entry->VirtualKey; entry = NEXT_ENTRY(table, entry))\n        {\n            if (entry->VirtualKey != vkey) continue;\n            /* SGCAPS attribute may be set on entries where VK_CAPITAL and VK_SHIFT behave differently.\n             * The entry corresponds to the mapping when Caps Lock is on, and a second entry follows it\n             * with the mapping when Caps Lock is off.\n             */\n            if ((entry->Attributes & SGCAPS) && !caps) entry = NEXT_ENTRY(table, entry);\n            if ((entry->Attributes & CAPLOK) && table->nModifications > caps_mod) return entry->wch[caps_mod];\n            return entry->wch[mod];\n        }\n    }\n\n    return WCH_NONE;\n}"
+  },
+  {
+   "name": "kbd_tables_get_mod_num",
+   "file": "dlls/win32u/input.c",
+   "start_line": 479,
+   "end_line": 491,
+   "static": true,
+   "called_from": [
+    "kbd_tables_vkey_to_wchar"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static UINT kbd_tables_get_mod_num( const KBDTABLES *tables, const BYTE *state, BOOL caps )",
+   "code": "static UINT kbd_tables_get_mod_num( const KBDTABLES *tables, const BYTE *state, BOOL caps )\n{\n    const MODIFIERS *mods = tables->pCharModifiers;\n    const VK_TO_BIT *entry;\n    WORD bits = 0;\n\n    for (entry = mods->pVkToBit; entry->Vk; ++entry)\n        if (state[entry->Vk] & 0x80) bits |= entry->ModBits;\n    if (caps) bits |= KBDSHIFT;\n\n    if (bits > mods->wMaxModBits) return -1;\n    return mods->ModNumber[bits];\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch_keyboard",
+    "type": "struct __wine_debug_channel",
+    "static": true,
+    "start_line": 41,
+    "end_line": 41,
+    "code": "WINE_DECLARE_DEBUG_CHANNEL(keyboard);"
+   },
+   {
+    "name": "kbdus_tables",
+    "type": "const KBDTABLES",
+    "static": true,
+    "start_line": 397,
+    "end_line": 408,
+    "code": "static const KBDTABLES kbdus_tables =\n{\n    .pCharModifiers = (MODIFIERS *)&modifiers,\n    .pVkToWcharTable = (VK_TO_WCHAR_TABLE *)vk_to_wchar_table,\n    .pKeyNames = (VSC_LPWSTR *)key_names,\n    .pKeyNamesExt = (VSC_LPWSTR *)key_names_ext,\n    .pusVSCtoVK = (USHORT *)vsc_to_vk,\n    .bMaxVSCtoVK = ARRAY_SIZE(vsc_to_vk) - 1,\n    .pVSCtoVK_E0 = (VSC_VK *)vsc_to_vk_e0,\n    .pVSCtoVK_E1 = (VSC_VK *)vsc_to_vk_e1,\n    .fLocaleFlags = MAKELONG(0, KBD_VERSION),\n};"
+   }
+  ],
+  "macros": [
+   {
+    "name": "NEXT_ENTRY",
+    "start_line": 449,
+    "end_line": 449,
+    "code": "#define NEXT_ENTRY(t, e) ((void *)&(e)->wch[(t)->nModifications])"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [],
+  "header_inline": [
+   "debugstr_wn",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "user_driver->pToUnicodeEx",
+    "in_function": "NtUserToUnicodeEx",
+    "at": "dlls/win32u/input.c:1421",
+    "candidates": []
+   },
+   {
+    "expr": "user_driver->pKbdLayerDescriptor",
+    "in_function": "NtUserToUnicodeEx",
+    "at": "dlls/win32u/input.c:1423",
+    "candidates": []
+   },
+   {
+    "expr": "user_driver->pReleaseKbdTables",
+    "in_function": "NtUserToUnicodeEx",
+    "at": "dlls/win32u/input.c:1431",
+    "candidates": []
+   }
+  ]
+ }
+}

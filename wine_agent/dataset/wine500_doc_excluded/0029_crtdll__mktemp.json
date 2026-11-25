@@ -1,0 +1,125 @@
+{
+ "id": "0029",
+ "function": {
+  "name": "_mktemp",
+  "export_name": "_mktemp",
+  "module": "crtdll",
+  "source_module": "msvcrt",
+  "exported_by": [
+   "crtdll",
+   "msvcr100",
+   "msvcr110",
+   "msvcr120",
+   "msvcr120_app",
+   "msvcr70",
+   "msvcr71",
+   "msvcr80",
+   "msvcr90",
+   "msvcrt",
+   "msvcrt20",
+   "msvcrt40",
+   "msvcrtd",
+   "ucrtbase"
+  ],
+  "side": "PE",
+  "file": "dlls/msvcrt/file.c",
+  "start_line": 2171,
+  "end_line": 2211,
+  "body_lines": 38,
+  "signature": "char * CDECL _mktemp(char *pattern)",
+  "header_comment": "/*********************************************************************\n *\t\t_mktemp (MSVCRT.@)\n */",
+  "code": "char * CDECL _mktemp(char *pattern)\n{\n  wchar_t *pathW, *p;\n  int numX = 0;\n  char *retVal = pattern;\n  int id;\n  char letter = 'a';\n\n  if(!pattern)\n      return NULL;\n\n  while(*pattern)\n    numX = (*pattern++ == 'X')? numX + 1 : 0;\n  if (numX < 6)\n    return NULL;\n  pattern--;\n  id = GetCurrentProcessId();\n  numX = 6;\n  while(numX--)\n  {\n    int tempNum = id / 10;\n    *pattern-- = id - (tempNum * 10) + '0';\n    id = tempNum;\n  }\n  pattern++;\n  if (!(pathW = wstrdupa_utf8(retVal)))\n    return NULL;\n  p = pathW + wcslen(pathW) - 6;\n  do\n  {\n    *p = letter++;\n    if (GetFileAttributesW(pathW) == INVALID_FILE_ATTRIBUTES)\n    {\n      *pattern = *p;\n      free(pathW);\n      return retVal;\n    }\n  } while(letter <= 'z');\n  free(pathW);\n  return NULL;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <direct.h>",
+   "#include <fcntl.h>",
+   "#include <io.h>",
+   "#include <share.h>",
+   "#include <stdarg.h>",
+   "#include <sys/locking.h>",
+   "#include <sys/types.h>",
+   "#include <sys/utime.h>",
+   "#include <time.h>",
+   "#include <limits.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wincon.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"msvcrt.h\"",
+   "#include \"mtdll.h\"",
+   "#include \"wine/asm.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/asm.h\""
+  ],
+  "resolution": [
+   "crtdll!_mktemp [cdecl]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/msvcrt/tests/file.c",
+   "dlls/ucrtbase/tests/file.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "cpp-docs",
+   "header": "crt",
+   "path": "docs/c-runtime-library/reference/mktemp-wmktemp.md",
+   "url": "https://learn.microsoft.com/cpp/c-runtime-library/reference/mktemp-wmktemp",
+   "documented_name": "_mktemp",
+   "file": "docs/0029_cpp-docs_mktemp-wmktemp.md",
+   "text": "---\ndescription: \"Learn more about: _mktemp, _wmktemp\"\ntitle: \"_mktemp, _wmktemp\"\nms.date: \"4/2/2020\"\napi_name: [\"_wmktemp\", \"_mktemp\", \"_o__mktemp\", \"_o__wmktemp\"]\napi_location: [\"msvcrt.dll\", \"msvcr80.dll\", \"msvcr90.dll\", \"msvcr100.dll\", \"msvcr100_clr0400.dll\", \"msvcr110.dll\", \"msvcr110_clr0400.dll\", \"msvcr120.dll\", \"msvcr120_clr0400.dll\", \"ucrtbase.dll\", \"api-ms-win-crt-stdio-l1-1-0.dll\"]\napi_type: [\"DLLExport\"]\ntopic_type: [\"apiref\"]\nf1_keywords: [\"_tmktemp\", \"wmktemp\", \"tmktemp\", \"_wmktemp\", \"_mktemp\"]\nhelpviewer_keywords: [\"_wmktemp function\", \"_mktemp function\", \"files [C++], temporary\", \"tmktemp function\", \"_tmktemp function\", \"wmktemp function\", \"mktemp function\", \"temporary files [C++]\"]\nms.assetid: 055eb539-a8c2-4a7d-be54-f5b6d1eb5c85\n---\n# `_mktemp`, `_wmktemp`\n\nCreates a unique file name. More secure versions of these functions are available; see [`_mktemp_s`, `_wmktemp_s`](mktemp-s-wmktemp-s.md).\n\n## Syntax\n\n```C\nchar *_mktemp(\n   char *nameTemplate\n);\nwchar_t *_wmktemp(\n   wchar_t *nameTemplate\n);\ntemplate <size_t size>\nchar *_mktemp(\n   char (&nameTemplate)[size]\n); // C++ only\ntemplate <size_t size>\nwchar_t *_wmktemp(\n   wchar_t (&nameTemplate)[size]\n); // C++ only\n```\n\n### Parameters\n\n*`nameTemplate`*\\\nFile name pattern.\n\n## Return value\n\nEach of these functions returns a pointer to the modified nameTemplate. The function returns `NULL` if *`nameTemplate`* is badly formed or no more unique names can be created from the given nameTemplate.\n\n## Remarks\n\nThe **`_mktemp`** function creates a unique file name by modifying the *`nameTemplate`* argument. **`_mktemp`** automatically handles multibyte-character string arguments as appropriate, recognizing multibyte-character sequences according to the multibyte code page currently in use by the run-time system. **`_wmktemp`** is a wide-character version of **`_mktemp`**; the argument and return value of **`_wmktemp`** are wide-character strings. **`_wmktemp`** and **`_mktemp`** behave identically otherwise, except that **`_wmktemp`** doesn't handle multibyte-character strings.\n\nBy default, this function's global state is scoped to the application. To change this behavior, see [Global state in the CRT](../global-state.md).\n\n### Generic-text routine mappings\n\n| Tchar.h routine | `_UNICODE` and `_MBCS` not defined | `_MBCS` defined | `_UNICODE` defined |\n|---|---|---|---|\n| `_tmktemp` | **`_mktemp`** | **`_mktemp`** | **`_wmktemp`** |\n\nThe *`nameTemplate`* argument has the form *`baseXXXXXX`*, where *`base`* is the part of the new file name that you supply and each X is a placeholder for a character supplied by **`_mktemp`**. Each placeholder character in *`nameTemplate`* must be an uppercase X. **`_mktemp`** preserves *`base`* and replaces the first trailing X with an alphabetic character. **`_mktemp`** replaces the trailing X characters with a five-digit value. This value is a unique number that identifies the calling process, or in multithreaded programs, the calling thread.\n\nEach successful call to **`_mktemp`** modifies *`nameTemplate`*. In each subsequent call from the same process or thread with the same *`nameTemplate`* argument, **`_mktemp`** checks for file names that match names returned by **`_mktemp`** in previous calls. If no file exists for a given name, **`_mktemp`** returns that name. If files exist for all previously returned names, **`_mktemp`** creates a new name by replacing the alphabetic character it used in the previously returned name with the next available lowercase letter, in order, from 'a' through 'z'. For example, if *`base`* is:\n\n> **`fn`**\n\nand the five-digit value supplied by **`_mktemp`** is 12345, the first name returned is:\n\n> **`fna12345`**\n\nIf this name is used to create file FNA12345 and this file still exists, the next name returned on a call from the same process or thread with the same *`base`* for *`nameTemplate`* is:\n\n> **`fnb12345`**\n\nIf FNA12345 doesn't exist, the next name returned is again:\n\n> **`fna12345`**\n\n**`_mktemp`** can create a maximum of 26 unique file names for any given combination of *`base`* and *`nameTemplate`* values. Therefore, FNZ12345 is the last unique file name **`_mktemp`** can create for the *`base`* and *`nameTemplate`* values used in this example.\n\nOn failure, `errno` is set. If *`nameTemplate`* has an invalid format (for example, fewer than six X characters), `errno` is set to `EINVAL`. If **`_mktemp`** is unable to create a unique name because all 26 possible file names already exist, **`_mktemp`** sets nameTemplate to an empty string and returns `EEXIST`.\n\nIn C++, these functions have template overloads that invoke the newer, secure counterparts of these functions. For more information, see [Secure template overloads](../secure-template-overloads.md).\n\n## Requirements\n\n| Routine | Required header |\n|---|---|\n| **`_mktemp`** | \\<io.h> |\n| **`_wmktemp`** | \\<io.h> or \\<wchar.h> |\n\nFor more compatibility information, see [Compatibility](../compatibility.md).\n\n## Example\n\n```C\n// crt_mktemp.c\n// compile with: /W3\n/* The program uses _mktemp to create\n* unique filenames. It opens each filename\n* to ensure that the next name is unique.\n*/\n\n#include <io.h>\n#include <string.h>\n#include <stdio.h>\n#include <errno.h>\n\nchar *template = \"fnXXXXXX\";\nchar *result;\nchar names[27][9];\n\nint main( void )\n{\n   int i;\n   FILE *fp;\n\n   for( i = 0; i < 27; i++ )\n   {\n      strcpy_s( names[i], sizeof( names[i] ), template );\n      /* Attempt to find a unique filename: */\n      result = _mktemp( names[i] );  // C4996\n      // Note: _mktemp is deprecated; consider using _mktemp_s instead\n      if( result == NULL )\n      {\n         printf( \"Problem creating the template\\n\" );\n         if (errno == EINVAL)\n         {\n             printf( \"Bad parameter\\n\");\n         }\n         else if (errno == EEXIST)\n         {\n             printf( \"Out of unique filenames\\n\");\n         }\n      }\n      else\n      {\n         fopen_s( &fp, result, \"w\" );\n         if( fp != NULL )\n            printf( \"Unique filename is %s\\n\", result );\n         else\n            printf( \"Cannot open %s\\n\", result );\n         fclose( fp );\n      }\n   }\n}\n```\n\n```Output\nUnique filename is fna03912\nUnique filename is fnb03912\nUnique filename is fnc03912\nUnique filename is fnd03912\nUnique filename is fne03912\nUnique filename is fnf03912\nUnique filename is fng03912\nUnique filename is fnh03912\nUnique filename is fni03912\nUnique filename is fnj03912\nUnique filename is fnk03912\nUnique filename is fnl03912\nUnique filename is fnm03912\nUnique filename is fnn03912\nUnique filename is fno03912\nUnique filename is fnp03912\nUnique filename is fnq03912\nUnique filename is fnr03912\nUnique filename is fns03912\nUnique filename is fnt03912\nUnique filename is fnu03912\nUnique filename is fnv03912\nUnique filename is fnw03912\nUnique filename is fnx03912\nUnique filename is fny03912\nUnique filename is fnz03912\nProblem creating the template.\nOut of unique filenames.\n```\n\n## See also\n\n[File handling](../file-handling.md)\\\n[`fopen`, `_wfopen`](fopen-wfopen.md)\\\n[`_getmbcp`](getmbcp.md)\\\n[`_getpid`](getpid.md)\\\n[`_open`, `_wopen`](open-wopen.md)\\\n[`_setmbcp`](setmbcp.md)\\\n[`_tempnam`, `_wtempnam`, `tmpnam`, `_wtmpnam`](tempnam-wtempnam-tmpnam-wtmpnam.md)\\\n[`tmpfile`](tmpfile.md)\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "free",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "wcslen",
+    "impl": [
+     "dlls/msvcrt/wcs.c:2971"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "GetFileAttributesW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:1783"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetCurrentProcessId"
+  ],
+  "system": [],
+  "unresolved": [
+   "wstrdupa_utf8"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

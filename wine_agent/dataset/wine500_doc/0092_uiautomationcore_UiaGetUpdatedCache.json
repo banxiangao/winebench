@@ -1,0 +1,354 @@
+{
+ "id": "0092",
+ "function": {
+  "name": "UiaGetUpdatedCache",
+  "export_name": "UiaGetUpdatedCache",
+  "module": "uiautomationcore",
+  "source_module": "uiautomationcore",
+  "exported_by": [
+   "uiautomationcore"
+  ],
+  "side": "PE",
+  "file": "dlls/uiautomationcore/uia_client.c",
+  "start_line": 3447,
+  "end_line": 3559,
+  "body_lines": 110,
+  "signature": "HRESULT WINAPI UiaGetUpdatedCache(HUIANODE huianode, struct UiaCacheRequest *cache_req, enum NormalizeState normalize_state, struct UiaCondition *normalize_cond, SAFEARRAY **out_req, BSTR *tree_struct)",
+  "header_comment": "/***********************************************************************\n *          UiaGetUpdatedCache (uiautomationcore.@)\n */",
+  "code": "HRESULT WINAPI UiaGetUpdatedCache(HUIANODE huianode, struct UiaCacheRequest *cache_req, enum NormalizeState normalize_state,\n        struct UiaCondition *normalize_cond, SAFEARRAY **out_req, BSTR *tree_struct)\n{\n    struct uia_node *node = unsafe_impl_from_IWineUiaNode((IWineUiaNode *)huianode);\n    struct UiaCondition *cond;\n    SAFEARRAYBOUND sabound[2];\n    HUIANODE ret_node;\n    SAFEARRAY *sa;\n    LONG idx[2];\n    HRESULT hr;\n    VARIANT v;\n    int i;\n\n    TRACE(\"(%p, %p, %u, %p, %p, %p)\\n\", huianode, cache_req, normalize_state, normalize_cond, out_req, tree_struct);\n\n    if (!node || !out_req || !tree_struct || !cache_req)\n        return E_INVALIDARG;\n\n    *tree_struct = NULL;\n    *out_req = NULL;\n\n    if (cache_req->Scope != TreeScope_Element)\n    {\n        FIXME(\"Unsupported cache request scope %#x\\n\", cache_req->Scope);\n        return E_NOTIMPL;\n    }\n\n    if (cache_req->cPatterns && cache_req->pPatterns)\n        FIXME(\"Pattern caching currently unimplemented\\n\");\n\n    if (cache_req->cProperties && cache_req->pProperties)\n    {\n        for (i = 0; i < cache_req->cProperties; i++)\n        {\n            if (!uia_prop_info_from_id(cache_req->pProperties[i]))\n                return E_INVALIDARG;\n        }\n    }\n\n    switch (normalize_state)\n    {\n    case NormalizeState_None:\n        cond = NULL;\n        break;\n\n    case NormalizeState_View:\n        cond = cache_req->pViewCondition;\n        break;\n\n    case NormalizeState_Custom:\n        cond = normalize_cond;\n        break;\n\n    default:\n        WARN(\"Invalid normalize_state %d\\n\", normalize_state);\n        return E_INVALIDARG;\n    }\n\n    hr = uia_node_normalize(huianode, cond, &ret_node);\n    if (FAILED(hr))\n        return hr;\n\n    if (!ret_node)\n    {\n        *tree_struct = SysAllocString(L\"\");\n        return S_OK;\n    }\n\n    sabound[0].cElements = 1;\n    sabound[1].cElements = 1 + cache_req->cProperties;\n    sabound[0].lLbound = sabound[1].lLbound = 0;\n    if (!(sa = SafeArrayCreate(VT_VARIANT, 2, sabound)))\n    {\n        WARN(\"Failed to create safearray\\n\");\n        hr = E_FAIL;\n        goto exit;\n    }\n\n    get_variant_for_node(ret_node, &v);\n    idx[0] = idx[1] = 0;\n\n    hr = SafeArrayPutElement(sa, idx, &v);\n    if (FAILED(hr))\n        goto exit;\n\n    idx[0] = 0;\n    VariantClear(&v);\n    for (i = 0; i < cache_req->cProperties; i++)\n    {\n        hr = UiaGetPropertyValue(ret_node, cache_req->pProperties[i], &v);\n        /* Don't fail on unimplemented properties. */\n        if (FAILED(hr) && hr != E_NOTIMPL)\n            goto exit;\n\n        idx[1] = 1 + i;\n        hr = SafeArrayPutElement(sa, idx, &v);\n        VariantClear(&v);\n        if (FAILED(hr))\n            goto exit;\n    }\n\n    *out_req = sa;\n    *tree_struct = SysAllocString(L\"P)\");\n\nexit:\n    if (FAILED(hr))\n    {\n        SafeArrayDestroy(sa);\n        UiaNodeRelease(ret_node);\n    }\n\n    return hr;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include \"uia_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "uiautomationcore!UiaGetUpdatedCache [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/uiautomationcore/tests/uiautomation.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "uiautomationcoreapi",
+   "path": "sdk-api-src/content/uiautomationcoreapi/nf-uiautomationcoreapi-uiagetupdatedcache.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/uiautomationcoreapi/nf-uiautomationcoreapi-uiagetupdatedcache",
+   "documented_name": "uiagetupdatedcache",
+   "file": "docs/0092_sdk-api_nf-uiautomationcoreapi-uiagetupdatedcache.md",
+   "text": "---\nUID: NF:uiautomationcoreapi.UiaGetUpdatedCache\ntitle: UiaGetUpdatedCache function (uiautomationcoreapi.h)\ndescription: Updates the cache of property values and control patterns.\nhelpviewer_keywords: [\"UiaGetUpdatedCache\",\"UiaGetUpdatedCache function [Windows Accessibility]\",\"uiauto.uiauto_UiaGetUpdatedCacheAutoMeth\",\"uiauto_UiaGetUpdatedCacheAutoMeth\",\"uiautomationcoreapi/UiaGetUpdatedCache\",\"winauto.uiauto_UiaGetUpdatedCacheAutoMeth\"]\nold-location: winauto\\uiauto_UiaGetUpdatedCacheAutoMeth.htm\ntech.root: WinAuto\nms.assetid: 06f0874d-ca25-4fa8-8cbc-96c1eee1b36c\nms.date: 12/05/2018\nms.keywords: UiaGetUpdatedCache, UiaGetUpdatedCache function [Windows Accessibility], uiauto.uiauto_UiaGetUpdatedCacheAutoMeth, uiauto_UiaGetUpdatedCacheAutoMeth, uiautomationcoreapi/UiaGetUpdatedCache, winauto.uiauto_UiaGetUpdatedCacheAutoMeth\nreq.header: uiautomationcoreapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Uiautomationcore.lib\nreq.dll: Uiautomationcore.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - UiaGetUpdatedCache\n - uiautomationcoreapi/UiaGetUpdatedCache\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Uiautomationcore.dll\napi_name:\n - UiaGetUpdatedCache\n---\n\n# UiaGetUpdatedCache function\n\n\n## -description\n\n<div class=\"alert\"><b>Note</b>  This function is deprecated. Client applications should use the Microsoft UI Automation Component Object Model (COM) interfaces instead.</div><div> </div>Updates the cache of property values and control patterns.\n\n## -parameters\n\n### -param hnode [in]\n\nType: <b>HUIANODE</b>\n\nThe element that updated information is being requested for.\n\n### -param pRequest [in]\n\nType: <b><a href=\"/windows/desktop/api/uiautomationcoreapi/ns-uiautomationcoreapi-uiacacherequest\">UiaCacheRequest</a>*</b>\n\nThe address of a <a href=\"/windows/desktop/api/uiautomationcoreapi/ns-uiautomationcoreapi-uiacacherequest\">UiaCacheRequest</a> structure that specifies the cached information to update.\n\n### -param normalizeState [in]\n\nType: <b><a href=\"/windows/desktop/api/uiautomationcoreapi/ne-uiautomationcoreapi-normalizestate\">NormalizeState</a></b>\n\nA value from the <a href=\"/windows/desktop/api/uiautomationcoreapi/ne-uiautomationcoreapi-normalizestate\">NormalizeState</a> enumerated type specifying the type of normalization.\n\n### -param pNormalizeCondition [in]\n\nType: <b><a href=\"/windows/desktop/api/uiautomationcoreapi/ns-uiautomationcoreapi-uiacondition\">UiaCondition</a>*</b>\n\nThe address of a <a href=\"/windows/desktop/api/uiautomationcoreapi/ns-uiautomationcoreapi-uiacondition\">UiaCondition</a> structure that specifies a condition against which the information can be normalized, if <i>normalizeState</i> is <a href=\"/windows/desktop/api/uiautomationcoreapi/ne-uiautomationcoreapi-normalizestate\">NormalizeState_Custom</a>.\n\n### -param ppRequestedData [out]\n\nType: <b><a href=\"/windows/win32/api/oaidl/ns-oaidl-safearray\">SAFEARRAY</a>**</b>\n\nThe address of a variable that receives a pointer to a <a href=\"/windows/win32/api/oaidl/ns-oaidl-safearray\">SAFEARRAY</a> that contains the requested data. This parameter is passed uninitialized. See Remarks.\n\n### -param ppTreeStructure [out]\n\nType: <b>BSTR*</b>\n\nA pointer to the description of the tree structure.\n\t\t\t\tThis parameter is passed uninitialized. See Remarks.\n\n## -returns\n\nType: <b><a href=\"/windows/desktop/WinProg/windows-data-types\">HRESULT</a></b>\n\nReturns S_OK if successful or an error value otherwise.\n\n## -remarks\n\nThe tree structure is described by a string where every character is either \"p\" or \")\". \n\t\t\tThe first character in the string always represents the root node. \nThe string is <b>NULL</b> if no elements are returned by the function.\n\t\t\t\n\nA \"p\" represents a node \n\t\t\t(UI Automation element). When one \"p\" directly follows another, the second node is a child of the first.\n\t\t\tA \")\" represents a step back up the tree. For example, \"pp)p\" represents a node followed\n\t\t\tby two child nodes that are siblings of one another. In \"pp))p\", the last node is a sibling of the first one."
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "unsafe_impl_from_IWineUiaNode",
+   "file": "dlls/uiautomationcore/uia_client.c",
+   "start_line": 624,
+   "end_line": 630,
+   "static": true,
+   "called_from": [
+    "UiaGetUpdatedCache",
+    "conditional_navigate_uia_node"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/uiautomationcore/uia_client.c:1095",
+    "dlls/uiautomationcore/uia_client.c:1121",
+    "dlls/uiautomationcore/uia_client.c:1160",
+    "dlls/uiautomationcore/uia_client.c:2579",
+    "dlls/uiautomationcore/uia_client.c:2797"
+   ],
+   "signature": "static struct uia_node *unsafe_impl_from_IWineUiaNode(IWineUiaNode *iface)",
+   "code": "static struct uia_node *unsafe_impl_from_IWineUiaNode(IWineUiaNode *iface)\n{\n    if (!iface || (iface->lpVtbl != &uia_node_vtbl))\n        return NULL;\n\n    return CONTAINING_RECORD(iface, struct uia_node, IWineUiaNode_iface);\n}"
+  },
+  {
+   "name": "uia_node_normalize",
+   "file": "dlls/uiautomationcore/uia_client.c",
+   "start_line": 3419,
+   "end_line": 3442,
+   "static": true,
+   "called_from": [
+    "UiaGetUpdatedCache"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static HRESULT uia_node_normalize(HUIANODE huianode, struct UiaCondition *cond, HUIANODE *normalized_node)",
+   "code": "static HRESULT uia_node_normalize(HUIANODE huianode, struct UiaCondition *cond, HUIANODE *normalized_node)\n{\n    struct uia_node *node = impl_from_IWineUiaNode((IWineUiaNode *)huianode);\n    HRESULT hr;\n\n    *normalized_node = NULL;\n    if (cond)\n    {\n        hr = uia_condition_check(huianode, cond);\n        if (FAILED(hr))\n            return hr;\n\n        /*\n         * If our initial node doesn't match our normalization condition, need\n         * to get the nearest ancestor that does.\n         */\n        if (!uia_condition_matched(hr))\n            return conditional_navigate_uia_node(node, NavigateDirection_Parent, cond, normalized_node);\n    }\n\n    *normalized_node = huianode;\n    IWineUiaNode_AddRef(&node->IWineUiaNode_iface);\n    return S_OK;\n}"
+  },
+  {
+   "name": "uia_condition_check",
+   "file": "dlls/uiautomationcore/uia_client.c",
+   "start_line": 3360,
+   "end_line": 3417,
+   "static": false,
+   "called_from": [
+    "conditional_navigate_uia_node",
+    "uia_node_normalize"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/uiautomationcore/uia_event.c:1878",
+    "dlls/uiautomationcore/uia_client.c:1112",
+    "dlls/uiautomationcore/uia_client.c:1164",
+    "dlls/uiautomationcore/uia_client.c:1178",
+    "dlls/uiautomationcore/uia_client.c:1225"
+   ],
+   "signature": "HRESULT uia_condition_check(HUIANODE node, struct UiaCondition *condition)",
+   "code": "HRESULT uia_condition_check(HUIANODE node, struct UiaCondition *condition)\n{\n    HRESULT hr;\n\n    switch (condition->ConditionType)\n    {\n    case ConditionType_True:\n        return S_OK;\n\n    case ConditionType_False:\n        return S_FALSE;\n\n    case ConditionType_Not:\n    {\n        struct UiaNotCondition *not_cond = (struct UiaNotCondition *)condition;\n\n        hr = uia_condition_check(node, not_cond->pConditions);\n        if (FAILED(hr))\n            return hr;\n\n        if (uia_condition_matched(hr))\n            return S_FALSE;\n        else\n            return S_OK;\n    }\n\n    case ConditionType_And:\n    case ConditionType_Or:\n    {\n        struct UiaAndOrCondition *and_or_cond = (struct UiaAndOrCondition *)condition;\n        int i;\n\n        for (i = 0; i < and_or_cond->cConditions; i++)\n        {\n            hr = uia_condition_check(node, and_or_cond->ppConditions[i]);\n            if (FAILED(hr))\n                return hr;\n\n            if (condition->ConditionType == ConditionType_And && !uia_condition_matched(hr))\n                return S_FALSE;\n            else if (condition->ConditionType == ConditionType_Or && uia_condition_matched(hr))\n                return S_OK;\n        }\n\n        if (condition->ConditionType == ConditionType_Or)\n            return S_FALSE;\n        else\n            return S_OK;\n    }\n\n    case ConditionType_Property:\n        return uia_property_condition_check(node, (struct UiaPropertyCondition *)condition);\n\n    default:\n        WARN(\"Invalid condition type %d\\n\", condition->ConditionType);\n        return E_INVALIDARG;\n    }\n}"
+  },
+  {
+   "name": "uia_condition_matched",
+   "file": "dlls/uiautomationcore/uia_client.c",
+   "start_line": 3299,
+   "end_line": 3305,
+   "static": false,
+   "called_from": [
+    "conditional_navigate_uia_node",
+    "uia_condition_check",
+    "uia_node_normalize"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/uiautomationcore/uia_event.c:1882",
+    "dlls/uiautomationcore/uia_client.c:1113",
+    "dlls/uiautomationcore/uia_client.c:1168",
+    "dlls/uiautomationcore/uia_client.c:1182",
+    "dlls/uiautomationcore/uia_client.c:1226"
+   ],
+   "signature": "BOOL uia_condition_matched(HRESULT hr)",
+   "code": "BOOL uia_condition_matched(HRESULT hr)\n{\n    if (hr == S_FALSE)\n        return FALSE;\n    else\n        return TRUE;\n}"
+  },
+  {
+   "name": "conditional_navigate_uia_node",
+   "file": "dlls/uiautomationcore/uia_client.c",
+   "start_line": 1002,
+   "end_line": 1061,
+   "static": true,
+   "called_from": [
+    "uia_node_normalize"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/uiautomationcore/uia_client.c:3580"
+   ],
+   "signature": "static HRESULT conditional_navigate_uia_node(struct uia_node *node, int nav_dir, struct UiaCondition *cond, HUIANODE *out_node)",
+   "code": "static HRESULT conditional_navigate_uia_node(struct uia_node *node, int nav_dir, struct UiaCondition *cond,\n        HUIANODE *out_node)\n{\n    HRESULT hr;\n\n    *out_node = NULL;\n    switch (nav_dir)\n    {\n    case NavigateDirection_Parent:\n    {\n        struct uia_node *node_data = node;\n        HUIANODE parent;\n\n        IWineUiaNode_AddRef(&node_data->IWineUiaNode_iface);\n        while (1)\n        {\n            hr = navigate_uia_node(node_data, NavigateDirection_Parent, &parent);\n            if (FAILED(hr) || !parent)\n                break;\n\n            hr = uia_condition_check(parent, cond);\n            if (FAILED(hr))\n            {\n                UiaNodeRelease(parent);\n                break;\n            }\n\n            if (uia_condition_matched(hr))\n            {\n                *out_node = parent;\n                break;\n            }\n\n            IWineUiaNode_Release(&node_data->IWineUiaNode_iface);\n            node_data = unsafe_impl_from_IWineUiaNode((IWineUiaNode *)parent);\n        }\n        IWineUiaNode_Release(&node_data->IWineUiaNode_iface);\n        break;\n    }\n\n    case NavigateDirection_NextSibling:\n    case NavigateDirection_PreviousSibling:\n    case NavigateDirection_FirstChild:\n    case NavigateDirection_LastChild:\n        if (cond->ConditionType != ConditionType_True)\n        {\n            FIXME(\"ConditionType %d based navigation for dir %d is not implemented.\\n\", cond->ConditionType, nav_dir);\n            return E_NOTIMPL;\n        }\n\n        hr = navigate_uia_node(node, nav_dir, out_node);\n        break;\n\n    default:\n        WARN(\"Invalid NavigateDirection %d\\n\", nav_dir);\n        return E_INVALIDARG;\n    }\n\n    return hr;\n}"
+  },
+  {
+   "name": "uia_property_condition_check",
+   "file": "dlls/uiautomationcore/uia_client.c",
+   "start_line": 3307,
+   "end_line": 3358,
+   "static": true,
+   "called_from": [
+    "uia_condition_check"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT uia_property_condition_check(HUIANODE node, struct UiaPropertyCondition *prop_cond)",
+   "code": "static HRESULT uia_property_condition_check(HUIANODE node, struct UiaPropertyCondition *prop_cond)\n{\n    const struct uia_prop_info *prop_info = uia_prop_info_from_id(prop_cond->PropertyId);\n    HRESULT hr;\n    VARIANT v;\n\n    if (!prop_info)\n        return E_INVALIDARG;\n\n    switch (prop_info->type)\n    {\n    case UIAutomationType_Bool:\n    case UIAutomationType_IntArray:\n        break;\n\n    default:\n        FIXME(\"PropertyCondition comparison unimplemented for type %#x\\n\", prop_info->type);\n        return E_NOTIMPL;\n    }\n\n    hr = UiaGetPropertyValue(node, prop_info->prop_id, &v);\n    if (FAILED(hr) || V_VT(&v) == VT_UNKNOWN)\n        return S_FALSE;\n\n    if (V_VT(&v) == V_VT(&prop_cond->Value))\n    {\n        switch (prop_info->type)\n        {\n        case UIAutomationType_Bool:\n            if (V_BOOL(&v) == V_BOOL(&prop_cond->Value))\n                hr = S_OK;\n            else\n                hr = S_FALSE;\n            break;\n\n        case UIAutomationType_IntArray:\n            if (!uia_compare_safearrays(V_ARRAY(&v), V_ARRAY(&prop_cond->Value), prop_info->type))\n                hr = S_OK;\n            else\n                hr = S_FALSE;\n            break;\n\n        default:\n            break;\n        }\n    }\n    else\n        hr = S_FALSE;\n\n    VariantClear(&v);\n    return hr;\n}"
+  },
+  {
+   "name": "navigate_uia_node",
+   "file": "dlls/uiautomationcore/uia_client.c",
+   "start_line": 914,
+   "end_line": 1000,
+   "static": false,
+   "called_from": [
+    "conditional_navigate_uia_node"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/uiautomationcore/uia_event.c:1871",
+    "dlls/uiautomationcore/uia_client.c:1104",
+    "dlls/uiautomationcore/uia_client.c:1108",
+    "dlls/uiautomationcore/uia_client.c:1206",
+    "dlls/uiautomationcore/uia_client.c:1208"
+   ],
+   "signature": "HRESULT navigate_uia_node(struct uia_node *node, int nav_dir, HUIANODE *out_node)",
+   "code": "HRESULT navigate_uia_node(struct uia_node *node, int nav_dir, HUIANODE *out_node)\n{\n    HRESULT hr;\n    VARIANT v;\n\n    *out_node = NULL;\n\n    VariantInit(&v);\n    switch (nav_dir)\n    {\n    case NavigateDirection_FirstChild:\n    case NavigateDirection_LastChild:\n        /* First child always comes from last provider index. */\n        if (nav_dir == NavigateDirection_FirstChild)\n            hr = get_child_for_node(node, node->prov_count - 1, nav_dir, &v);\n        else\n            hr = get_child_for_node(node, 0, nav_dir, &v);\n        if (FAILED(hr))\n            WARN(\"Child navigation failed with hr %#lx\\n\", hr);\n        break;\n\n    case NavigateDirection_NextSibling:\n    case NavigateDirection_PreviousSibling:\n    {\n        struct uia_node *node_data;\n        HUIANODE parent;\n        VARIANT tmp;\n\n        hr = get_sibling_from_node_provider(node, node->parent_link_idx, nav_dir, &v);\n        if (FAILED(hr))\n        {\n            WARN(\"Sibling navigation failed with hr %#lx\\n\", hr);\n            break;\n        }\n\n        if (V_VT(&v) != VT_EMPTY)\n            break;\n\n        hr = get_navigate_from_node_provider(&node->IWineUiaNode_iface, node->parent_link_idx,\n                NavigateDirection_Parent, &tmp);\n        if (FAILED(hr))\n        {\n            WARN(\"Parent navigation failed with hr %#lx\\n\", hr);\n            break;\n        }\n\n        hr = UiaHUiaNodeFromVariant(&tmp, &parent);\n        if (FAILED(hr))\n            break;\n\n        /*\n         * If the parent node has multiple providers, attempt to get a sibling\n         * from one of them.\n         */\n        node_data = impl_from_IWineUiaNode((IWineUiaNode *)parent);\n        if (node_data->prov_count > 1)\n        {\n            if (nav_dir == NavigateDirection_NextSibling)\n                hr = get_child_for_node(node_data, node_data->creator_prov_idx - 1, NavigateDirection_FirstChild, &v);\n            else\n                hr = get_child_for_node(node_data, node_data->creator_prov_idx + 1, NavigateDirection_LastChild, &v);\n        }\n\n        UiaNodeRelease(parent);\n        break;\n    }\n\n    case NavigateDirection_Parent:\n        hr = get_navigate_from_node_provider(&node->IWineUiaNode_iface, node->parent_link_idx, nav_dir, &v);\n        if (FAILED(hr))\n            WARN(\"Parent navigation failed with hr %#lx\\n\", hr);\n        break;\n\n    default:\n        WARN(\"Invalid NavigateDirection %d\\n\", nav_dir);\n        return E_INVALIDARG;\n    }\n\n    if (V_VT(&v) != VT_EMPTY)\n    {\n        hr = UiaHUiaNodeFromVariant(&v, (HUIANODE *)out_node);\n        if (FAILED(hr))\n            WARN(\"UiaHUiaNodeFromVariant failed with hr %#lx\\n\", hr);\n    }\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "get_child_for_node",
+   "file": "dlls/uiautomationcore/uia_client.c",
+   "start_line": 856,
+   "end_line": 912,
+   "static": true,
+   "called_from": [
+    "navigate_uia_node"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT get_child_for_node(struct uia_node *node, int start_prov_idx, int nav_dir, VARIANT *out_node)",
+   "code": "static HRESULT get_child_for_node(struct uia_node *node, int start_prov_idx, int nav_dir, VARIANT *out_node)\n{\n    int prov_idx = start_prov_idx;\n    HUIANODE tmp_node = NULL;\n    HRESULT hr;\n    VARIANT v;\n\n    while ((prov_idx >= 0) && (prov_idx < node->prov_count))\n    {\n        struct uia_node *node_data;\n\n        hr = get_navigate_from_node_provider(&node->IWineUiaNode_iface, prov_idx, nav_dir, &v);\n        if (FAILED(hr))\n            return hr;\n\n        if (nav_dir == NavigateDirection_FirstChild)\n            prov_idx--;\n        else\n            prov_idx++;\n\n        /* If we failed to get a child, try the next provider. */\n        hr = UiaHUiaNodeFromVariant(&v, &tmp_node);\n        if (FAILED(hr))\n            continue;\n\n        node_data = impl_from_IWineUiaNode((IWineUiaNode *)tmp_node);\n\n        /* This child is the parent link of its node, so we can return it. */\n        if (node_creator_is_parent_link(node_data))\n            break;\n\n        /*\n         * If the first child provider isn't the parent link of it's HUIANODE,\n         * we need to check the child provider for any valid siblings.\n         */\n        if (nav_dir == NavigateDirection_FirstChild)\n            hr = get_sibling_from_node_provider(node_data, node_data->creator_prov_idx,\n                    NavigateDirection_NextSibling, &v);\n        else\n            hr = get_sibling_from_node_provider(node_data, node_data->creator_prov_idx,\n                    NavigateDirection_PreviousSibling, &v);\n\n        UiaNodeRelease(tmp_node);\n        if (FAILED(hr))\n            return hr;\n\n        /* If we got a valid sibling from the child provider, return it. */\n        hr = UiaHUiaNodeFromVariant(&v, &tmp_node);\n        if (SUCCEEDED(hr))\n            break;\n    }\n\n    if (tmp_node)\n        *out_node = v;\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "get_sibling_from_node_provider",
+   "file": "dlls/uiautomationcore/uia_client.c",
+   "start_line": 808,
+   "end_line": 854,
+   "static": true,
+   "called_from": [
+    "get_child_for_node",
+    "navigate_uia_node"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT get_sibling_from_node_provider(struct uia_node *node, int prov_idx, int nav_dir, VARIANT *out_node)",
+   "code": "static HRESULT get_sibling_from_node_provider(struct uia_node *node, int prov_idx, int nav_dir,\n        VARIANT *out_node)\n{\n    HUIANODE tmp_node;\n    HRESULT hr;\n    VARIANT v;\n\n    hr = get_navigate_from_node_provider(&node->IWineUiaNode_iface, prov_idx, nav_dir, &v);\n    if (FAILED(hr))\n        return hr;\n\n    hr = UiaHUiaNodeFromVariant(&v, &tmp_node);\n    if (FAILED(hr))\n        goto exit;\n\n    while (1)\n    {\n        struct uia_node *node_data = impl_from_IWineUiaNode((IWineUiaNode *)tmp_node);\n\n        /*\n         * If our sibling provider is the parent link of it's HUIANODE, then\n         * it is a valid sibling of this node.\n         */\n        if (node_creator_is_parent_link(node_data))\n            break;\n\n        /*\n         * If our sibling provider is not the parent link of it's HUIANODE, we\n         * need to try the next sibling.\n         */\n        hr = get_navigate_from_node_provider((IWineUiaNode *)tmp_node, node_data->creator_prov_idx, nav_dir, &v);\n        UiaNodeRelease(tmp_node);\n        if (FAILED(hr))\n            return hr;\n\n        tmp_node = NULL;\n        hr = UiaHUiaNodeFromVariant(&v, &tmp_node);\n        if (FAILED(hr))\n            break;\n    }\n\nexit:\n    if (tmp_node)\n        *out_node = v;\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "get_navigate_from_node_provider",
+   "file": "dlls/uiautomationcore/uia_client.c",
+   "start_line": 334,
+   "end_line": 348,
+   "static": true,
+   "called_from": [
+    "get_child_for_node",
+    "get_sibling_from_node_provider",
+    "navigate_uia_node"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/uiautomationcore/uia_client.c:2408"
+   ],
+   "signature": "static HRESULT get_navigate_from_node_provider(IWineUiaNode *node, int idx, int nav_dir, VARIANT *ret_val)",
+   "code": "static HRESULT get_navigate_from_node_provider(IWineUiaNode *node, int idx, int nav_dir, VARIANT *ret_val)\n{\n    IWineUiaProvider *prov;\n    HRESULT hr;\n\n    VariantInit(ret_val);\n    hr = IWineUiaNode_get_provider(node, idx, &prov);\n    if (FAILED(hr))\n        return hr;\n\n    hr = IWineUiaProvider_navigate(prov, nav_dir, ret_val);\n    IWineUiaProvider_Release(prov);\n\n    return hr;\n}"
+  },
+  {
+   "name": "node_creator_is_parent_link",
+   "file": "dlls/uiautomationcore/uia_client.c",
+   "start_line": 800,
+   "end_line": 806,
+   "static": true,
+   "called_from": [
+    "get_child_for_node",
+    "get_sibling_from_node_provider"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL node_creator_is_parent_link(struct uia_node *node)",
+   "code": "static BOOL node_creator_is_parent_link(struct uia_node *node)\n{\n    if (node->creator_prov_idx == node->parent_link_idx)\n        return TRUE;\n    else\n        return FALSE;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 23,
+    "end_line": 23,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(uiautomation);"
+   },
+   {
+    "name": "uia_node_vtbl",
+    "type": "const IWineUiaNodeVtbl",
+    "static": true,
+    "start_line": 613,
+    "end_line": 622,
+    "code": "static const IWineUiaNodeVtbl uia_node_vtbl = {\n    uia_node_QueryInterface,\n    uia_node_AddRef,\n    uia_node_Release,\n    uia_node_get_provider,\n    uia_node_get_prop_val,\n    uia_node_disconnect,\n    uia_node_get_hwnd,\n    uia_node_attach_event,\n};"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "uia_compare_safearrays",
+    "file": "dlls/uiautomationcore/uia_utils.c",
+    "start_line": 334
+   },
+   {
+    "name": "uia_prop_info_from_id",
+    "file": "dlls/uiautomationcore/uia_ids.c",
+    "start_line": 332
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "UiaGetPropertyValue",
+    "impl": [
+     "dlls/uiautomationcore/uia_client.c:2910"
+    ]
+   },
+   {
+    "name": "UiaHUiaNodeFromVariant",
+    "impl": [
+     "dlls/uiautomationcore/uia_client.c:3098"
+    ]
+   },
+   {
+    "name": "UiaNodeRelease",
+    "impl": [
+     "dlls/uiautomationcore/uia_client.c:2877"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "SafeArrayCreate",
+    "module": "oleaut32",
+    "impl": [
+     "dlls/oleaut32/safearray.c:600"
+    ]
+   },
+   {
+    "name": "SafeArrayDestroy",
+    "module": "oleaut32",
+    "impl": [
+     "dlls/oleaut32/safearray.c:1347"
+    ]
+   },
+   {
+    "name": "SafeArrayPutElement",
+    "module": "oleaut32",
+    "impl": [
+     "dlls/oleaut32/safearray.c:864"
+    ]
+   },
+   {
+    "name": "SysAllocString",
+    "module": "oleaut32",
+    "impl": [
+     "dlls/oleaut32/oleaut.c:240"
+    ]
+   },
+   {
+    "name": "VariantClear",
+    "module": "oleaut32",
+    "impl": [
+     "dlls/oleaut32/variant.c:627"
+    ]
+   },
+   {
+    "name": "VariantInit",
+    "module": "oleaut32",
+    "impl": [
+     "dlls/oleaut32/variant.c:547"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "IWineUiaNode_AddRef",
+   "IWineUiaNode_Release",
+   "IWineUiaNode_get_provider",
+   "IWineUiaProvider_Release",
+   "IWineUiaProvider_navigate",
+   "get_variant_for_node",
+   "impl_from_IWineUiaNode"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

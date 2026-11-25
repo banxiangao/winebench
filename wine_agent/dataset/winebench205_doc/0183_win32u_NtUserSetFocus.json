@@ -1,0 +1,554 @@
+{
+ "id": "0183",
+ "function": {
+  "name": "NtUserSetFocus",
+  "export_name": "SetFocus",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "user.exe16",
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/input.c",
+  "start_line": 2266,
+  "end_line": 2321,
+  "body_lines": 53,
+  "signature": "HWND WINAPI NtUserSetFocus( HWND hwnd )",
+  "header_comment": "/*****************************************************************\n *           NtUserSetFocus  (win32u.@)\n */",
+  "code": "HWND WINAPI NtUserSetFocus( HWND hwnd )\n{\n    HWND hwndTop = hwnd, active;\n    HWND previous = get_focus();\n\n    TRACE( \"%p prev %p\\n\", hwnd, previous );\n\n    if (hwnd)\n    {\n        /* Check if we can set the focus to this window */\n        hwnd = get_full_window_handle( hwnd );\n        if (!is_window( hwnd ))\n        {\n            RtlSetLastWin32Error( ERROR_INVALID_WINDOW_HANDLE );\n            return 0;\n        }\n        if (hwnd == previous) return previous;  /* nothing to do */\n        for (;;)\n        {\n            HWND parent;\n            DWORD style = get_window_long( hwndTop, GWL_STYLE );\n            if (style & (WS_MINIMIZE | WS_DISABLED)) return 0;\n            if (!(style & WS_CHILD)) break;\n            parent = NtUserGetAncestor( hwndTop, GA_PARENT );\n            if (!parent || parent == get_desktop_window())\n            {\n                if ((style & (WS_POPUP|WS_CHILD)) == WS_CHILD) return 0;\n                break;\n            }\n            if (parent == get_hwnd_message_parent()) return 0;\n            hwndTop = parent;\n        }\n\n        /* call hooks */\n        if (call_hooks( WH_CBT, HCBT_SETFOCUS, (WPARAM)hwnd, (LPARAM)previous, 0 )) return 0;\n\n        /* activate hwndTop if needed. */\n        if (!(active = get_active_window()) && !set_foreground_window( hwndTop, FALSE, FALSE )) return 0;\n        if (hwndTop != active)\n        {\n            if (!set_active_window( hwndTop, NULL, FALSE, FALSE, 0 )) return 0;\n            if (!is_window( hwnd )) return 0;  /* Abort if window destroyed */\n\n            /* Do not change focus if the window is no longer active */\n            if (hwndTop != get_active_window()) return 0;\n        }\n    }\n    else /* NULL hwnd passed in */\n    {\n        if (!previous) return 0;  /* nothing to do */\n        if (call_hooks( WH_CBT, HCBT_SETFOCUS, 0, (LPARAM)previous, 0 )) return 0;\n    }\n\n    /* change focus and send messages */\n    return set_focus_window( hwnd );\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"win32u_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"kbd.h\""
+  ],
+  "resolution": [
+   "user32!SetFocus [stdcall] -> NtUserSetFocus implicitly imported from win32u",
+   "win32u!NtUserSetFocus [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/combo.c",
+   "dlls/user32/tests/dialog.c",
+   "dlls/user32/tests/edit.c",
+   "dlls/user32/tests/listbox.c",
+   "dlls/user32/tests/msg.c",
+   "dlls/user32/tests/win.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 38
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "user.exe16",
+   "source_module": "user.exe16",
+   "exported_by": [
+    "user.exe16"
+   ],
+   "file": "dlls/user.exe16/window.c",
+   "start_line": 148,
+   "resolution": [
+    "user.exe16!SetFocus [pascal -ret16] -> internal symbol SetFocus16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 151,
+   "signature": "HWND16 WINAPI SetFocus16( HWND16 hwnd )",
+   "code": "HWND16 WINAPI SetFocus16( HWND16 hwnd )\n{\n    return HWND_16( SetFocus( WIN_Handle32(hwnd) ));\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-setfocus.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-setfocus",
+   "documented_name": "setfocus",
+   "file": "docs/0183_sdk-api_nf-winuser-setfocus.md",
+   "text": "---\nUID: NF:winuser.SetFocus\ntitle: SetFocus function (winuser.h)\ndescription: Sets the keyboard focus to the specified window. The window must be attached to the calling thread's message queue.\nhelpviewer_keywords: [\"SetFocus\",\"SetFocus function [Keyboard and Mouse Input]\",\"_win32_SetFocus\",\"_win32_setfocus_cpp\",\"inputdev.setfocus\",\"winui._win32_setfocus\",\"winuser/SetFocus\"]\nold-location: inputdev\\setfocus.htm\ntech.root: inputdev\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\userinput\\keyboardinput\\keyboardinputreference\\keyboardinputfunctions\\setfocus.htm\nms.date: 12/05/2018\nms.keywords: SetFocus, SetFocus function [Keyboard and Mouse Input], _win32_SetFocus, _win32_setfocus_cpp, inputdev.setfocus, winui._win32_setfocus, winuser/SetFocus\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SetFocus\n - winuser/SetFocus\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-rtcore-ntuser-window-ext-l1-1-1.dll\n - ext-ms-win-ntuser-window-l1-1-6.dll\n - ext-ms-win-ntuser-window-l1-1-5.dll\n - User32.dll\n - API-MS-Win-NTUser-IE-Window-l1-1-0.dll\n - ie_shims.dll\n - API-MS-Win-RTCore-NTUser-Window-l1-1-0.dll\n - minuser.dll\n - Ext-MS-Win-NTUser-Keyboard-l1-1-0.dll\n - Ext-MS-Win-NTUser-Keyboard-l1-1-1.dll\n - Ext-MS-Win-RTCore-NTUser-Window-Ext-l1-1-0.dll\n - ext-ms-win-ntuser-keyboard-l1-1-2.dll\n - Ext-MS-Win-NTUser-Keyboard-L1-2-0.dll\n - Ext-MS-Win-NTUser-Keyboard-L1-2-1.dll\n - Ext-MS-Win-NTUser-Window-L1-1-4.dll\napi_name:\n - SetFocus\nreq.apiset: ext-ms-win-ntuser-window-l1-1-4 (introduced in Windows 10, version 10.0.14393)\n---\n\n# SetFocus function\n\n\n## -description\n\nSets the keyboard focus to the specified window. The window must be attached to the calling thread's message queue.\n\n## -parameters\n\n### -param hWnd [in, optional]\n\nType: **HWND**\n\nA handle to the window that will receive the keyboard input. If this parameter is NULL, keystrokes are ignored.\n\n## -returns\n\nType: **HWND**\n\nIf the function succeeds, the return value is the handle to the window that previously had the keyboard focus. If the *hWnd* parameter is invalid or the window is not attached to the calling thread's message queue, the return value is NULL. To get extended error information, call [GetLastError function](../errhandlingapi/nf-errhandlingapi-getlasterror.md).\n\nExtended error ERROR_INVALID_PARAMETER (0x57) means that window is in disabled state.\n\n## -remarks\n\nThis function sends a [WM_KILLFOCUS](/windows/desktop/inputdev/wm-killfocus) message to the window that loses the keyboard focus and a [WM_SETFOCUS](/windows/desktop/inputdev/wm-setfocus) message to the window that receives the keyboard focus. It also activates either the window that receives the focus or the parent of the window that receives the focus.\n\nIf a window is active but does not have the focus, any key pressed produces the [WM_SYSCHAR](/windows/desktop/menurc/wm-syschar), [WM_SYSKEYDOWN](/windows/desktop/inputdev/wm-syskeydown), or [WM_SYSKEYUP](/windows/desktop/inputdev/wm-syskeyup) message. If the VK_MENU key is also pressed, bit 30 of the *lParam* parameter of the message is set. Otherwise, the messages produced do not have this bit set.\n\nBy using the [AttachThreadInput function](nf-winuser-attachthreadinput.md), a thread can attach its input processing to another thread. This allows a thread to call SetFocus to set the keyboard focus to a window attached to another thread's message queue.\n\n### Examples\n\nFor an example, see [Initializing a Dialog Box](/windows/desktop/dlgbox/using-dialog-boxes).\n\n## -see-also\n\n[AttachThreadInput function](nf-winuser-attachthreadinput.md), [GetFocus function](nf-winuser-getfocus.md), [WM_KILLFOCUS](/windows/desktop/inputdev/wm-killfocus), [WM_SETFOCUS](/windows/desktop/inputdev/wm-setfocus), [WM_SYSCHAR](/windows/desktop/menurc/wm-syschar), [WM_SYSKEYDOWN](/windows/desktop/inputdev/wm-syskeydown), [WM_SYSKEYUP](/windows/desktop/inputdev/wm-syskeyup), [Keyboard Input](/windows/desktop/inputdev/keyboard-input)\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_focus",
+   "file": "dlls/win32u/input.c",
+   "start_line": 596,
+   "end_line": 601,
+   "static": false,
+   "called_from": [
+    "NtUserSetFocus",
+    "set_focus_window"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/window.c:1158",
+    "dlls/win32u/window.c:4826",
+    "dlls/win32u/window.c:5111",
+    "dlls/win32u/input.c:1490",
+    "dlls/win32u/scroll.c:587"
+   ],
+   "signature": "HWND get_focus(void)",
+   "code": "HWND get_focus(void)\n{\n    GUITHREADINFO info;\n    info.cbSize = sizeof(info);\n    return NtUserGetGUIThreadInfo( GetCurrentThreadId(), &info ) ? info.hwndFocus : 0;\n}"
+  },
+  {
+   "name": "get_active_window",
+   "file": "dlls/win32u/input.c",
+   "start_line": 580,
+   "end_line": 585,
+   "static": false,
+   "called_from": [
+    "NtUserSetFocus",
+    "set_active_window"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/window.c:2054",
+    "dlls/win32u/window.c:5108",
+    "dlls/win32u/window.c:6159",
+    "dlls/win32u/input.c:2256",
+    "dlls/win32u/defwnd.c:2212"
+   ],
+   "signature": "HWND get_active_window(void)",
+   "code": "HWND get_active_window(void)\n{\n    GUITHREADINFO info;\n    info.cbSize = sizeof(info);\n    return NtUserGetGUIThreadInfo( GetCurrentThreadId(), &info ) ? info.hwndActive : 0;\n}"
+  },
+  {
+   "name": "set_foreground_window",
+   "file": "dlls/win32u/input.c",
+   "start_line": 2334,
+   "end_line": 2373,
+   "static": false,
+   "called_from": [
+    "NtUserSetFocus"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/window.c:4192",
+    "dlls/win32u/window.c:4538",
+    "dlls/win32u/window.c:6278",
+    "dlls/win32u/input.c:2328",
+    "dlls/win32u/message.c:2241"
+   ],
+   "signature": "BOOL set_foreground_window( HWND hwnd, BOOL mouse, BOOL internal )",
+   "code": "BOOL set_foreground_window( HWND hwnd, BOOL mouse, BOOL internal )\n{\n    BOOL ret, send_msg_old = FALSE, send_msg_new = FALSE;\n    DWORD new_thread_id;\n    HWND previous = 0;\n\n    if (mouse) hwnd = get_full_window_handle( hwnd );\n    new_thread_id = get_window_thread( hwnd, NULL );\n\n    SERVER_START_REQ( set_foreground_window )\n    {\n        req->handle = wine_server_user_handle( hwnd );\n        req->internal = internal;\n        if ((ret = !wine_server_call_err( req )))\n        {\n            previous = wine_server_ptr_handle( reply->previous );\n            send_msg_old = reply->send_msg_old;\n            send_msg_new = reply->send_msg_new;\n        }\n    }\n    SERVER_END_REQ;\n\n    TRACE( \"hwnd %p, mouse %u, internal %u -> ret %u, previous %p\\n\", hwnd, mouse, internal, ret, previous );\n\n    if (ret && previous != hwnd)\n    {\n        if (send_msg_old)  /* old window belongs to other thread */\n            NtUserMessageCall( previous, WM_WINE_SETACTIVEWINDOW, 0, new_thread_id,\n                               0, NtUserSendNotifyMessage, FALSE );\n        else if (send_msg_new)  /* old window belongs to us but new one to other thread */\n            ret = set_active_window( 0, NULL, mouse, TRUE, new_thread_id );\n\n        if (send_msg_new)  /* new window belongs to other thread */\n            NtUserMessageCall( hwnd, WM_WINE_SETACTIVEWINDOW, (WPARAM)hwnd, 0,\n                               0, NtUserSendNotifyMessage, FALSE );\n        else  /* new window belongs to us */\n            ret = set_active_window( hwnd, NULL, mouse, TRUE, 0 );\n    }\n    return ret;\n}"
+  },
+  {
+   "name": "set_active_window",
+   "file": "dlls/win32u/input.c",
+   "start_line": 2120,
+   "end_line": 2232,
+   "static": false,
+   "called_from": [
+    "NtUserSetFocus",
+    "set_foreground_window"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/input.c:2259",
+    "dlls/win32u/message.c:2208",
+    "server/queue.c (other module)",
+    "server/request_handlers.h (other module)",
+    "server/request_trace.h (other module)"
+   ],
+   "signature": "BOOL set_active_window( HWND hwnd, HWND *prev, BOOL mouse, BOOL focus, DWORD new_active_thread_id )",
+   "code": "BOOL set_active_window( HWND hwnd, HWND *prev, BOOL mouse, BOOL focus, DWORD new_active_thread_id )\n{\n    HWND previous = get_active_window();\n    BOOL ret;\n    DWORD old_thread, new_thread;\n    CBTACTIVATESTRUCT cbt;\n\n    TRACE( \"hwnd %p, previous %p, mouse %u, focus %u, new_active_thread_id %04x\\n\",\n           hwnd, previous, mouse, focus, new_active_thread_id );\n\n    if (previous == hwnd)\n    {\n        if (prev) *prev = hwnd;\n        goto done;\n    }\n\n    /* call CBT hook chain */\n    cbt.fMouse     = mouse;\n    cbt.hWndActive = previous;\n    if (call_hooks( WH_CBT, HCBT_ACTIVATE, (WPARAM)hwnd, (LPARAM)&cbt, sizeof(cbt) )) return FALSE;\n\n    if (is_window( previous ))\n    {\n        send_message( previous, WM_NCACTIVATE, FALSE, (LPARAM)hwnd );\n        send_message( previous, WM_ACTIVATE,\n                      MAKEWPARAM( WA_INACTIVE, is_iconic(previous) ? 0x20 : 0 ), (LPARAM)hwnd );\n    }\n\n    SERVER_START_REQ( set_active_window )\n    {\n        req->handle = wine_server_user_handle( hwnd );\n        if ((ret = !wine_server_call_err( req )))\n            previous = wine_server_ptr_handle( reply->previous );\n    }\n    SERVER_END_REQ;\n    if (!ret) return FALSE;\n    if (prev) *prev = previous;\n    if (previous == hwnd) goto done;\n\n    if (hwnd)\n    {\n        NtUserNotifyWinEvent( EVENT_SYSTEM_FOREGROUND, hwnd, 0, 0 );\n\n        /* send palette messages */\n        if (send_message( hwnd, WM_QUERYNEWPALETTE, 0, 0 ))\n            send_message_timeout( HWND_BROADCAST, WM_PALETTEISCHANGING, (WPARAM)hwnd, 0,\n                                  SMTO_ABORTIFHUNG, 2000, FALSE );\n        if (!is_window(hwnd)) return FALSE;\n    }\n\n    old_thread = previous ? get_window_thread( previous, NULL ) : 0;\n    new_thread = hwnd ? get_window_thread( hwnd, NULL ) : 0;\n\n    if (old_thread != new_thread)\n    {\n        HWND *list, *phwnd;\n\n        if ((list = list_window_children( 0 )))\n        {\n            if (old_thread)\n            {\n                if (!new_active_thread_id) new_active_thread_id = new_thread;\n                for (phwnd = list; *phwnd; phwnd++)\n                {\n                    if (get_window_thread( *phwnd, NULL ) == old_thread)\n                        send_message( *phwnd, WM_ACTIVATEAPP, 0, new_active_thread_id );\n                }\n            }\n            if (new_thread)\n            {\n                for (phwnd = list; *phwnd; phwnd++)\n                {\n                    if (get_window_thread( *phwnd, NULL ) == new_thread)\n                        send_message( *phwnd, WM_ACTIVATEAPP, 1, old_thread );\n                }\n            }\n            free( list );\n        }\n    }\n\n    if (is_window(hwnd))\n    {\n        send_message( hwnd, WM_NCACTIVATE, hwnd == NtUserGetForegroundWindow(), (LPARAM)previous );\n        send_message( hwnd, WM_ACTIVATE,\n                      MAKEWPARAM( mouse ? WA_CLICKACTIVE : WA_ACTIVE, is_iconic(hwnd) ? 0x20 : 0 ),\n                      (LPARAM)previous );\n        if (NtUserGetAncestor( hwnd, GA_PARENT ) == get_desktop_window())\n            NtUserPostMessage( get_desktop_window(), WM_PARENTNOTIFY, WM_NCACTIVATE, (LPARAM)hwnd );\n    }\n\n    /* now change focus if necessary */\n    if (focus)\n    {\n        GUITHREADINFO info;\n\n        info.cbSize = sizeof(info);\n        NtUserGetGUIThreadInfo( GetCurrentThreadId(), &info );\n        /* Do not change focus if the window is no more active */\n        if (hwnd == info.hwndActive)\n        {\n            if (!info.hwndFocus || !hwnd || NtUserGetAncestor( info.hwndFocus, GA_ROOT ) != hwnd)\n                set_focus_window( hwnd );\n        }\n    }\n\ndone:\n    if (hwnd)\n    {\n        if (hwnd == NtUserGetForegroundWindow()) user_driver->pActivateWindow( hwnd, previous );\n        clip_fullscreen_window( hwnd, FALSE );\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "set_focus_window",
+   "file": "dlls/win32u/input.c",
+   "start_line": 2077,
+   "end_line": 2115,
+   "static": true,
+   "called_from": [
+    "NtUserSetFocus",
+    "set_active_window"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HWND set_focus_window( HWND hwnd )",
+   "code": "static HWND set_focus_window( HWND hwnd )\n{\n    HWND previous = 0, ime_hwnd;\n    BOOL ret;\n\n    SERVER_START_REQ( set_focus_window )\n    {\n        req->handle = wine_server_user_handle( hwnd );\n        if ((ret = !wine_server_call_err( req )))\n            previous = wine_server_ptr_handle( reply->previous );\n    }\n    SERVER_END_REQ;\n    if (!ret) return 0;\n    if (previous == hwnd) return previous;\n\n    if (previous)\n    {\n        send_message( previous, WM_KILLFOCUS, (WPARAM)hwnd, 0 );\n\n        ime_hwnd = get_default_ime_window( previous );\n        if (ime_hwnd)\n            send_message( ime_hwnd, WM_IME_INTERNAL, IME_INTERNAL_DEACTIVATE,\n                          HandleToUlong(previous) );\n\n        if (hwnd != get_focus()) return previous;  /* changed by the message */\n    }\n    if (is_window(hwnd))\n    {\n        ime_hwnd = get_default_ime_window( hwnd );\n        if (ime_hwnd)\n            send_message( ime_hwnd, WM_IME_INTERNAL, IME_INTERNAL_ACTIVATE,\n                          HandleToUlong(hwnd) );\n\n        NtUserNotifyWinEvent( EVENT_OBJECT_FOCUS, hwnd, OBJID_CLIENT, 0 );\n\n        send_message( hwnd, WM_SETFOCUS, (WPARAM)previous, 0 );\n    }\n    return previous;\n}"
+  },
+  {
+   "name": "clip_fullscreen_window",
+   "file": "dlls/win32u/input.c",
+   "start_line": 2801,
+   "end_line": 2849,
+   "static": false,
+   "called_from": [
+    "set_active_window"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/input.c:2877",
+    "dlls/win32u/message.c:2221",
+    "dlls/win32u/message.c:3926"
+   ],
+   "signature": "BOOL clip_fullscreen_window( HWND hwnd, BOOL reset )",
+   "code": "BOOL clip_fullscreen_window( HWND hwnd, BOOL reset )\n{\n    struct user_thread_info *thread_info = get_user_thread_info();\n    MONITORINFO monitor_info = {.cbSize = sizeof(MONITORINFO)};\n    RECT monitor_rect, window_rect, virtual_rect;\n    DWORD style;\n    UINT ctx;\n    BOOL ret;\n\n    if (hwnd == NtUserGetDesktopWindow()) return FALSE;\n    if (hwnd != NtUserGetForegroundWindow()) return FALSE;\n\n    style = NtUserGetWindowLongW( hwnd, GWL_STYLE );\n    if (!(style & WS_VISIBLE)) return FALSE;\n    if ((style & (WS_POPUP | WS_CHILD)) == WS_CHILD) return FALSE;\n    /* maximized windows don't count as full screen */\n    if ((style & WS_MAXIMIZE) && (style & WS_CAPTION) == WS_CAPTION) return FALSE;\n\n    ctx = set_thread_dpi_awareness_context( NTUSER_DPI_PER_MONITOR_AWARE );\n    if (!(ret = get_present_rect( hwnd, &window_rect, get_thread_dpi() )))\n        ret = get_window_rect( hwnd, &window_rect, get_thread_dpi() );\n    monitor_info = monitor_info_from_window( hwnd, MONITOR_DEFAULTTONEAREST );\n    virtual_rect = get_virtual_screen_rect( get_thread_dpi(), MDT_DEFAULT );\n    monitor_rect = map_rect_virt_to_raw( monitor_info.rcMonitor, get_thread_dpi() );\n    set_thread_dpi_awareness_context( ctx );\n\n    if (!ret || !is_fullscreen( &monitor_info, &window_rect )) return FALSE;\n    if (is_captured_by_system()) return FALSE;\n    if (NtGetTickCount() - thread_info->clipping_reset < 1000) return FALSE;\n    if (!reset && clipping_cursor && thread_info->clipping_cursor) return FALSE;  /* already clipping */\n\n    if (!grab_fullscreen)\n    {\n        if (!EqualRect( &monitor_info.rcMonitor, &virtual_rect )) return FALSE;\n        if (is_virtual_desktop()) return FALSE;\n    }\n\n    TRACE( \"win %p clipping fullscreen\\n\", hwnd );\n\n    SERVER_START_REQ( set_cursor )\n    {\n        req->flags = SET_CURSOR_CLIP | SET_CURSOR_FSCLIP;\n        req->clip  = wine_server_rectangle( monitor_rect );\n        ret = !wine_server_call( req );\n    }\n    SERVER_END_REQ;\n\n    return ret;\n}"
+  },
+  {
+   "name": "is_fullscreen",
+   "file": "dlls/win32u/input.c",
+   "start_line": 2790,
+   "end_line": 2794,
+   "static": true,
+   "called_from": [
+    "clip_fullscreen_window"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL is_fullscreen( const MONITORINFO *info, const RECT *rect )",
+   "code": "static BOOL is_fullscreen( const MONITORINFO *info, const RECT *rect )\n{\n    return rect->left <= info->rcMonitor.left && rect->right >= info->rcMonitor.right &&\n           rect->top <= info->rcMonitor.top && rect->bottom >= info->rcMonitor.bottom;\n}"
+  },
+  {
+   "name": "is_captured_by_system",
+   "file": "dlls/win32u/input.c",
+   "start_line": 2783,
+   "end_line": 2788,
+   "static": true,
+   "called_from": [
+    "clip_fullscreen_window"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL is_captured_by_system(void)",
+   "code": "static BOOL is_captured_by_system(void)\n{\n    GUITHREADINFO info;\n    info.cbSize = sizeof(info);\n    return NtUserGetGUIThreadInfo( GetCurrentThreadId(), &info ) && info.hwndCapture && (info.flags & (GUI_INMOVESIZE | GUI_INMENUMODE));\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(win);"
+   },
+   {
+    "name": "clipping_cursor",
+    "type": "LONG",
+    "static": true,
+    "start_line": 410,
+    "end_line": 411,
+    "code": "static LONG clipping_cursor; /* clipping thread counter */\nstatic LONG enable_mouse_in_pointer = -1;"
+   },
+   {
+    "name": "grab_fullscreen",
+    "type": "BOOL",
+    "static": false,
+    "start_line": 423,
+    "end_line": 423,
+    "code": "BOOL grab_fullscreen = FALSE;"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "call_hooks",
+    "file": "dlls/win32u/hook.c",
+    "start_line": 480
+   },
+   {
+    "name": "get_default_ime_window",
+    "file": "dlls/win32u/imm.c",
+    "start_line": 372
+   },
+   {
+    "name": "get_desktop_window",
+    "file": "dlls/win32u/winstation.c",
+    "start_line": 805
+   },
+   {
+    "name": "get_full_window_handle",
+    "file": "dlls/win32u/window.c",
+    "start_line": 560
+   },
+   {
+    "name": "get_hwnd_message_parent",
+    "file": "dlls/win32u/window.c",
+    "start_line": 547
+   },
+   {
+    "name": "get_present_rect",
+    "file": "dlls/win32u/window.c",
+    "start_line": 6253
+   },
+   {
+    "name": "get_thread_dpi",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 3267
+   },
+   {
+    "name": "get_user_thread_info",
+    "file": "dlls/win32u/syscall.c",
+    "start_line": 190
+   },
+   {
+    "name": "get_virtual_screen_rect",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 3436
+   },
+   {
+    "name": "get_window_long",
+    "file": "dlls/win32u/window.c",
+    "start_line": 1404
+   },
+   {
+    "name": "get_window_rect",
+    "file": "dlls/win32u/window.c",
+    "start_line": 2023
+   },
+   {
+    "name": "get_window_thread",
+    "file": "dlls/win32u/window.c",
+    "start_line": 656
+   },
+   {
+    "name": "is_iconic",
+    "file": "dlls/win32u/window.c",
+    "start_line": 1312
+   },
+   {
+    "name": "is_virtual_desktop",
+    "file": "dlls/win32u/winstation.c",
+    "start_line": 337
+   },
+   {
+    "name": "is_window",
+    "file": "dlls/win32u/window.c",
+    "start_line": 644
+   },
+   {
+    "name": "list_window_children",
+    "file": "dlls/win32u/window.c",
+    "start_line": 965
+   },
+   {
+    "name": "map_rect_virt_to_raw",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 3163
+   },
+   {
+    "name": "monitor_info_from_window",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 4853
+   },
+   {
+    "name": "send_message",
+    "file": "dlls/win32u/message.c",
+    "start_line": 4629
+   },
+   {
+    "name": "send_message_timeout",
+    "file": "dlls/win32u/message.c",
+    "start_line": 4602
+   },
+   {
+    "name": "set_thread_dpi_awareness_context",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 3290
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "NtUserGetAncestor",
+    "impl": [
+     "dlls/win32u/window.c:988"
+    ]
+   },
+   {
+    "name": "NtUserGetForegroundWindow",
+    "impl": [
+     "dlls/win32u/input.c:565"
+    ]
+   },
+   {
+    "name": "NtUserGetGUIThreadInfo",
+    "impl": [
+     "dlls/win32u/message.c:2292"
+    ]
+   },
+   {
+    "name": "NtUserMessageCall",
+    "impl": [
+     "dlls/win32u/message.c:4743"
+    ]
+   },
+   {
+    "name": "NtUserNotifyWinEvent",
+    "impl": [
+     "dlls/win32u/hook.c:556"
+    ]
+   },
+   {
+    "name": "NtUserPostMessage",
+    "impl": [
+     "dlls/win32u/message.c:4686"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtGetTickCount",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/time.c:401"
+    ]
+   },
+   {
+    "name": "PsGetCurrentThreadId",
+    "module": "ntoskrnl.exe",
+    "impl": [
+     "dlls/ntoskrnl.exe/ntoskrnl.c:3454"
+    ]
+   },
+   {
+    "name": "RtlSetLastWin32Error",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   },
+   {
+    "name": "wine_server_call",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/loader.c:3436"
+    ]
+   }
+  ],
+  "header_inline": [
+   "EqualRect",
+   "HandleToULong",
+   "NtUserGetDesktopWindow",
+   "NtUserGetWindowLongW",
+   "wine_dbg_log",
+   "wine_server_call_err",
+   "wine_server_ptr_handle",
+   "wine_server_rectangle",
+   "wine_server_user_handle"
+  ],
+  "system": [
+   "free",
+   "memset"
+  ],
+  "unresolved": [],
+  "server_requests": [
+   {
+    "request": "set_active_window",
+    "handler": "server/queue.c:3850"
+   },
+   {
+    "request": "set_cursor",
+    "handler": "server/queue.c:3998"
+   },
+   {
+    "request": "set_focus_window",
+    "handler": "server/queue.c:3831"
+   },
+   {
+    "request": "set_foreground_window",
+    "handler": "server/queue.c:3792"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "user_driver->pActivateWindow",
+    "in_function": "set_active_window",
+    "at": "dlls/win32u/input.c:2228",
+    "candidates": []
+   }
+  ]
+ },
+ "winebench": {
+  "id": "win32u.NtUserSetFocus",
+  "category": {
+   "l1": "User input and messaging",
+   "l2": "Keyboard and mouse input",
+   "header": "winuser.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 56,
+   "body": 55,
+   "code": 30
+  },
+  "cyclomatic": 20,
+  "return_type": "HWND",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 38,
+   "n_tests": 71,
+   "n_tests_other": 33,
+   "own_test_functions": [
+    "dlls/user32/tests/combo.c::test_window_proc",
+    "dlls/user32/tests/dialog.c::delayFocusDlgWinProc",
+    "dlls/user32/tests/dialog.c::focusChildDlgWinProc",
+    "dlls/user32/tests/dialog.c::messageBoxFontDlgWinProc",
+    "dlls/user32/tests/dialog.c::test_IsDialogMessage",
+    "dlls/user32/tests/dialog.c::test_SaveRestoreFocus",
+    "dlls/user32/tests/dialog.c::test_WM_NEXTDLGCTL",
+    "dlls/user32/tests/dialog.c::test_focus",
+    "dlls/user32/tests/edit.c::edit_dialog_proc",
+    "dlls/user32/tests/edit.c::edit_singleline_dialog_proc",
+    "dlls/user32/tests/edit.c::edit_wantreturn_dialog_proc",
+    "dlls/user32/tests/edit.c::multi_edit_dialog_proc",
+    "dlls/user32/tests/edit.c::test_contextmenu",
+    "dlls/user32/tests/edit.c::test_edit_control_2",
+    "dlls/user32/tests/listbox.c::test_missing_lbuttonup",
+    "dlls/user32/tests/msg.c::create_child_thread",
+    "dlls/user32/tests/msg.c::test_PeekMessage",
+    "dlls/user32/tests/msg.c::test_PeekMessage2",
+    "dlls/user32/tests/msg.c::test_SetFocus",
+    "dlls/user32/tests/msg.c::test_accelerators",
+    "dlls/user32/tests/msg.c::test_autoradio_BM_CLICK",
+    "dlls/user32/tests/msg.c::test_autoradio_kbd_move",
+    "dlls/user32/tests/msg.c::test_button_messages",
+    "dlls/user32/tests/msg.c::test_combobox_messages",
+    "dlls/user32/tests/msg.c::test_dialog_messages",
+    "dlls/user32/tests/msg.c::test_edit_messages",
+    "dlls/user32/tests/msg.c::test_listbox_messages",
+    "dlls/user32/tests/msg.c::test_mdi_messages",
+    "dlls/user32/tests/msg.c::test_messages",
+    "dlls/user32/tests/msg.c::test_paintingloop",
+    "dlls/user32/tests/msg.c::test_static_messages",
+    "dlls/user32/tests/win.c::set_focus_on_activate_proc",
+    "dlls/user32/tests/win.c::test_EnableWindow",
+    "dlls/user32/tests/win.c::test_SetFocus",
+    "dlls/user32/tests/win.c::test_SetParent",
+    "dlls/user32/tests/win.c::test_keyboard_input",
+    "dlls/user32/tests/win.c::test_minimize_window",
+    "dlls/user32/tests/win.c::test_thread_exit_destroy"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-setfocus",
+   "source": "win32",
+   "description": "Sets the keyboard focus to the specified window. The window must be attached to the calling thread's message queue.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "User32.dll"
+  },
+  "exports": [
+   "user32.SetFocus",
+   "win32u.NtUserSetFocus"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

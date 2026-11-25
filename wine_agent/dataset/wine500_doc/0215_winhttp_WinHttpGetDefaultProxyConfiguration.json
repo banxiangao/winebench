@@ -1,0 +1,226 @@
+{
+ "id": "0215",
+ "function": {
+  "name": "WinHttpGetDefaultProxyConfiguration",
+  "export_name": "WinHttpGetDefaultProxyConfiguration",
+  "module": "winhttp",
+  "source_module": "winhttp",
+  "exported_by": [
+   "winhttp"
+  ],
+  "side": "PE",
+  "file": "dlls/winhttp/session.c",
+  "start_line": 1986,
+  "end_line": 2101,
+  "body_lines": 113,
+  "signature": "BOOL WINAPI WinHttpGetDefaultProxyConfiguration( WINHTTP_PROXY_INFO *info )",
+  "header_comment": "/***********************************************************************\n *          WinHttpGetDefaultProxyConfiguration (winhttp.@)\n */",
+  "code": "BOOL WINAPI WinHttpGetDefaultProxyConfiguration( WINHTTP_PROXY_INFO *info )\n{\n    LONG l;\n    HKEY key;\n    BOOL got_from_reg = FALSE, direct = TRUE;\n    WCHAR *envproxy;\n\n    TRACE(\"%p\\n\", info);\n\n    l = RegOpenKeyExW( HKEY_LOCAL_MACHINE, path_connections, 0, KEY_READ, &key );\n    if (!l)\n    {\n        DWORD type, size = 0;\n\n        l = RegQueryValueExW( key, L\"WinHttpSettings\", NULL, &type, NULL, &size );\n        if (!l && type == REG_BINARY &&\n            size >= sizeof(struct connection_settings_header) + 2 * sizeof(DWORD))\n        {\n            BYTE *buf = malloc( size );\n\n            if (buf)\n            {\n                struct connection_settings_header *hdr =\n                    (struct connection_settings_header *)buf;\n                DWORD *len = (DWORD *)(hdr + 1);\n\n                l = RegQueryValueExW( key, L\"WinHttpSettings\", NULL, NULL, buf,\n                    &size );\n                if (!l && hdr->magic == WINHTTP_SETTINGS_MAGIC &&\n                    hdr->unknown == 0)\n                {\n                    if (hdr->flags & PROXY_TYPE_PROXY)\n                    {\n                       BOOL sane = FALSE;\n                       LPWSTR proxy = NULL;\n                       LPWSTR proxy_bypass = NULL;\n\n                        /* Sanity-check length of proxy string */\n                        if ((BYTE *)len - buf + *len <= size)\n                        {\n                            sane = TRUE;\n                            proxy = GlobalAlloc( 0, (*len + 1) * sizeof(WCHAR) );\n                            if (proxy)\n                                copy_char_to_wchar_sz( (BYTE *)(len + 1), *len, proxy );\n                            len = (DWORD *)((BYTE *)(len + 1) + *len);\n                        }\n                        if (sane)\n                        {\n                            /* Sanity-check length of proxy bypass string */\n                            if ((BYTE *)len - buf + *len <= size)\n                            {\n                                proxy_bypass = GlobalAlloc( 0, (*len + 1) * sizeof(WCHAR) );\n                                if (proxy_bypass)\n                                    copy_char_to_wchar_sz( (BYTE *)(len + 1), *len, proxy_bypass );\n                            }\n                            else\n                            {\n                                sane = FALSE;\n                                GlobalFree( proxy );\n                                proxy = NULL;\n                            }\n                        }\n                        info->lpszProxy = proxy;\n                        info->lpszProxyBypass = proxy_bypass;\n                        if (sane)\n                        {\n                            got_from_reg = TRUE;\n                            direct = FALSE;\n                            info->dwAccessType =\n                                WINHTTP_ACCESS_TYPE_NAMED_PROXY;\n                            TRACE(\"http proxy (from registry) = %s, bypass = %s\\n\",\n                                debugstr_w(info->lpszProxy),\n                                debugstr_w(info->lpszProxyBypass));\n                        }\n                    }\n                }\n                free( buf );\n            }\n        }\n        RegCloseKey( key );\n    }\n    if (!got_from_reg && (envproxy = _wgetenv( L\"http_proxy\" )))\n    {\n        WCHAR *colon, *http_proxy = NULL;\n\n        if (!(colon = wcschr( envproxy, ':' ))) http_proxy = envproxy;\n        else\n        {\n            if (*(colon + 1) == '/' && *(colon + 2) == '/')\n            {\n                /* It's a scheme, check that it's http */\n                if (!wcsncmp( envproxy, L\"http://\", 7 )) http_proxy = envproxy + 7;\n                else WARN(\"unsupported scheme in $http_proxy: %s\\n\", debugstr_w(envproxy));\n            }\n            else http_proxy = envproxy;\n        }\n\n        if (http_proxy && http_proxy[0])\n        {\n            direct = FALSE;\n            info->dwAccessType = WINHTTP_ACCESS_TYPE_NAMED_PROXY;\n            info->lpszProxy = GlobalAlloc( 0, (lstrlenW(http_proxy) + 1) * sizeof(WCHAR) );\n            wcscpy( info->lpszProxy, http_proxy );\n            info->lpszProxyBypass = NULL;\n            TRACE(\"http proxy (from environment) = %s\\n\", debugstr_w(info->lpszProxy));\n        }\n    }\n    if (direct)\n    {\n        info->dwAccessType    = WINHTTP_ACCESS_TYPE_NO_PROXY;\n        info->lpszProxy       = NULL;\n        info->lpszProxyBypass = NULL;\n    }\n    SetLastError( ERROR_SUCCESS );\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winsock2.h\"",
+   "#include \"ws2ipdef.h\"",
+   "#include \"ws2tcpip.h\"",
+   "#include \"schannel.h\"",
+   "#include \"winhttp.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winternl.h\"",
+   "#include \"iphlpapi.h\"",
+   "#include \"dhcpcsdk.h\"",
+   "#include \"ole2.h\"",
+   "#include \"dispex.h\"",
+   "#include \"activscp.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"winhttp_private.h\""
+  ],
+  "resolution": [
+   "winhttp!WinHttpGetDefaultProxyConfiguration [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/winhttp/tests/winhttp.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winhttp",
+   "path": "sdk-api-src/content/winhttp/nf-winhttp-winhttpgetdefaultproxyconfiguration.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winhttp/nf-winhttp-winhttpgetdefaultproxyconfiguration",
+   "documented_name": "winhttpgetdefaultproxyconfiguration",
+   "file": "docs/0215_sdk-api_nf-winhttp-winhttpgetdefaultproxyconfiguration.md",
+   "text": "---\nUID: NF:winhttp.WinHttpGetDefaultProxyConfiguration\ntitle: WinHttpGetDefaultProxyConfiguration function (winhttp.h)\ndescription: Retrieves the default WinHTTP proxy configuration from the registry.\nhelpviewer_keywords: [\"WinHttpGetDefaultProxyConfiguration\",\"WinHttpGetDefaultProxyConfiguration function [WinHTTP]\",\"http.winhttpgetdefaultproxyconfiguration\",\"winhttp.winhttpgetdefaultproxyconfiguration_function\",\"winhttp/WinHttpGetDefaultProxyConfiguration\"]\nold-location: http\\winhttpgetdefaultproxyconfiguration.htm\ntech.root: http\nms.assetid: e8038b4b-b9d0-481a-a49c-26201d72bc7a\nms.date: 12/05/2018\nms.keywords: WinHttpGetDefaultProxyConfiguration, WinHttpGetDefaultProxyConfiguration function [WinHTTP], http.winhttpgetdefaultproxyconfiguration, winhttp.winhttpgetdefaultproxyconfiguration_function, winhttp/WinHttpGetDefaultProxyConfiguration\nreq.header: winhttp.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP, Windows 2000 Professional with SP3 [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003, Windows 2000 Server with SP3 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Winhttp.lib\nreq.dll: Winhttp.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: WinHTTP 5.0 and Internet Explorer 5.01 or later on Windows XP and Windows 2000.\nms.custom: 19H1\nf1_keywords:\n - WinHttpGetDefaultProxyConfiguration\n - winhttp/WinHttpGetDefaultProxyConfiguration\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Winhttp.dll\napi_name:\n - WinHttpGetDefaultProxyConfiguration\n---\n\n# WinHttpGetDefaultProxyConfiguration function\n\n\n## -description\n\nThe <b>WinHttpGetDefaultProxyConfiguration</b> function retrieves the default WinHTTP proxy configuration from the registry.\n\n## -parameters\n\n### -param pProxyInfo [in, out]\n\nA pointer to a variable of type \n<a href=\"/windows/win32/api/winhttp/ns-winhttp-winhttp_proxy_info\">WINHTTP_PROXY_INFO</a> that receives the default proxy configuration.\n\n## -returns\n\nReturns <b>TRUE</b> if successful or <b>FALSE</b> otherwise. To retrieve a specific error message, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>. Error codes returned include the following.\n\n<table>\n<tr>\n<th>Error Code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_INTERNAL_ERROR</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn internal error has occurred.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOT_ENOUGH_MEMORY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nNot enough memory was available to complete the requested operation. (Windows error code)\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\n<b>WinHttpGetDefaultProxyConfiguration</b> retrieves the proxy configuration set by \n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpsetdefaultproxyconfiguration\">WinHttpSetDefaultProxyConfiguration</a> or \n<a href=\"/windows/desktop/WinHttp/proxycfg-exe--a-proxy-configuration-tool\">ProxyCfg.exe</a>.\n\nThe default proxy configuration can be overridden for a WinHTTP session by calling \n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpsetoption\">WinHttpSetOption</a> and specifying the \n<a href=\"/windows/desktop/WinHttp/option-flags\">WINHTTP_OPTION_PROXY</a> flag.  \n<b>WinHttpGetDefaultProxyConfiguration</b> does not retrieve the configuration for the current session.  It retrieves the configuration specified in the registry.\n\nIf the registry contains a list of proxy servers, the \n<b>dwAccessType</b> member of \n<i>pProxyInfo</i> is set to \n<b>WINHTTP_ACCESS_TYPE_NAMED_PROXY</b>.  Otherwise, it is set to \n<b>WINHTTP_ACCESS_TYPE_NO_PROXY</b>.\n\n<b>WinHttpGetDefaultProxyConfiguration</b> allocates memory for the string members of \n<i>pProxyInfo</i>.  To free this memory, call <a href=\"/windows/desktop/api/winbase/nf-winbase-globalfree\">GlobalFree</a>.\n\nEven when  WinHTTP is used in asynchronous mode (that is, when <b>WINHTTP_FLAG_ASYNC</b> has been set in <a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpopen\">WinHttpOpen</a>), this function operates synchronously. The return value indicates success or failure.  To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n<div class=\"alert\"><b>Note</b>  For Windows XP and Windows 2000, see the <a href=\"/windows/desktop/WinHttp/winhttp-start-page\">Run-Time Requirements</a> section of the WinHTTP Start Page.</div>\n<div> </div>\n\n#### Examples\n\nThe following code example shows how to retrieve the default proxy configuration from the registry.\n\n\n```cpp\n    WINHTTP_PROXY_INFO proxyInfo;\n\n    // Retrieve the default proxy configuration.\n    WinHttpGetDefaultProxyConfiguration( &proxyInfo );\n\n    // Display the proxy servers and free memory \n    // allocated to this string.\n    if (proxyInfo.lpszProxy != NULL)\n    {\n        printf(\"Proxy server list: %S\\n\", proxyInfo.lpszProxy);\n        GlobalFree( proxyInfo.lpszProxy );\n    }\n\n    // Display the bypass list and free memory \n    // allocated to this string.\n    if (proxyInfo.lpszProxyBypass != NULL)\n    {\n        printf(\"Proxy bypass list: %S\\n\", proxyInfo.lpszProxyBypass);\n        GlobalFree( proxyInfo.lpszProxyBypass );\n    }\n\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/WinHttp/proxycfg-exe--a-proxy-configuration-tool\">ProxyCfg.exe, a Proxy Configuration Tool</a>\n\n\n\n<a href=\"/windows/desktop/WinHttp/winhttp-versions\">WinHTTP Versions</a>\n\n\n\n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpsetdefaultproxyconfiguration\">WinHttpSetDefaultProxyConfiguration</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "copy_char_to_wchar_sz",
+   "file": "dlls/winhttp/session.c",
+   "start_line": 1974,
+   "end_line": 1981,
+   "static": true,
+   "called_from": [
+    "WinHttpGetDefaultProxyConfiguration"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/session.c:2146",
+    "dlls/winhttp/session.c:2155",
+    "dlls/winhttp/session.c:2164"
+   ],
+   "signature": "static inline void copy_char_to_wchar_sz(const BYTE *src, DWORD len, WCHAR *dst)",
+   "code": "static inline void copy_char_to_wchar_sz(const BYTE *src, DWORD len, WCHAR *dst)\n{\n    const BYTE *begin;\n\n    for (begin = src; src - begin < len; src++, dst++)\n        *dst = *src;\n    *dst = 0;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "connection_settings_header",
+    "kind": "struct_decl",
+    "start_line": 1967,
+    "end_line": 1972,
+    "code": "struct connection_settings_header\n{\n    DWORD magic;\n    DWORD unknown; /* always zero? */\n    DWORD flags;   /* one or more of PROXY_* */\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "PROXY_TYPE_PROXY",
+    "type": "const DWORD",
+    "static": true,
+    "start_line": 1963,
+    "end_line": 1963,
+    "code": "static const DWORD PROXY_TYPE_PROXY          = 2;"
+   },
+   {
+    "name": "WINHTTP_SETTINGS_MAGIC",
+    "type": "const DWORD",
+    "static": true,
+    "start_line": 1960,
+    "end_line": 1960,
+    "code": "static const DWORD WINHTTP_SETTINGS_MAGIC = 0x18;"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(winhttp);"
+   },
+   {
+    "name": "path_connections",
+    "type": "const WCHAR[72]",
+    "static": true,
+    "start_line": 1957,
+    "end_line": 1958,
+    "code": "static const WCHAR path_connections[] =\n    L\"Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Internet Settings\\\\Connections\";"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "GlobalAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:1018"
+    ]
+   },
+   {
+    "name": "GlobalFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:1038"
+    ]
+   },
+   {
+    "name": "RegCloseKey",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1129"
+    ]
+   },
+   {
+    "name": "RegOpenKeyExW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:644"
+    ]
+   },
+   {
+    "name": "RegQueryValueExW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1636"
+    ]
+   },
+   {
+    "name": "_wgetenv",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/environ.c:254"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "wcschr",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:256"
+    ]
+   },
+   {
+    "name": "wcscpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:184"
+    ]
+   },
+   {
+    "name": "wcsncmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:341"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "debugstr_w",
+   "lstrlenW",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

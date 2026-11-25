@@ -1,0 +1,113 @@
+{
+ "id": "0283",
+ "function": {
+  "name": "RtlAcquireSRWLockExclusive",
+  "export_name": "AcquireSRWLockExclusive",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "kernel32",
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/ntdll/sync.c",
+  "start_line": 514,
+  "end_line": 547,
+  "body_lines": 31,
+  "signature": "void WINAPI RtlAcquireSRWLockExclusive( RTL_SRWLOCK *lock )",
+  "header_comment": "/***********************************************************************\n *              RtlAcquireSRWLockExclusive (NTDLL.@)\n *\n * NOTES\n *  Unlike RtlAcquireResourceExclusive this function doesn't allow\n *  nested calls from the same thread. \"Upgrading\" a shared access lock\n *  to an exclusive access lock also doesn't seem to be supported.\n */",
+  "code": "void WINAPI RtlAcquireSRWLockExclusive( RTL_SRWLOCK *lock )\n{\n    union { RTL_SRWLOCK *rtl; struct srw_lock *s; LONG *l; } u = { lock };\n\n    InterlockedExchangeAdd16( &u.s->exclusive_waiters, 2 );\n\n    for (;;)\n    {\n        union { struct srw_lock s; LONG l; } old, new;\n        BOOL wait;\n\n        do\n        {\n            old.s = *u.s;\n            new.s = old.s;\n\n            if (!old.s.owners)\n            {\n                /* Not locked exclusive or shared. We can try to grab it. */\n                new.s.owners = 1;\n                new.s.exclusive_waiters -= 2;\n                new.s.exclusive_waiters |= 1;\n                wait = FALSE;\n            }\n            else\n            {\n                wait = TRUE;\n            }\n        } while (InterlockedCompareExchange( u.l, new.l, old.l ) != old.l);\n\n        if (!wait) return;\n        RtlWaitOnAddress( &u.s->owners, &new.s.owners, sizeof(short), NULL );\n    }\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <limits.h>",
+   "#include <string.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <stdlib.h>",
+   "#include <time.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winternl.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"ntdll_misc.h\""
+  ],
+  "resolution": [
+   "kernel32!AcquireSRWLockExclusive [stdcall] -> forward NTDLL.RtlAcquireSRWLockExclusive",
+   "ntdll!RtlAcquireSRWLockExclusive [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/sync.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "synchapi",
+   "path": "sdk-api-src/content/synchapi/nf-synchapi-acquiresrwlockexclusive.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/synchapi/nf-synchapi-acquiresrwlockexclusive",
+   "documented_name": "acquiresrwlockexclusive",
+   "file": "docs/0283_sdk-api_nf-synchapi-acquiresrwlockexclusive.md",
+   "text": "---\nUID: NF:synchapi.AcquireSRWLockExclusive\ntitle: AcquireSRWLockExclusive function (synchapi.h)\ndescription: Acquires a slim reader/writer (SRW) lock in exclusive mode.\nhelpviewer_keywords: [\"AcquireSRWLockExclusive\",\"AcquireSRWLockExclusive function\",\"base.acquiresrwlockexclusive\",\"synchapi/AcquireSRWLockExclusive\",\"winbase/AcquireSRWLockExclusive\"]\nold-location: base\\acquiresrwlockexclusive.htm\ntech.root: base\nms.assetid: 02e987a2-4c2f-4ccb-8816-c04320b568c1\nms.date: 02/05/2024\nms.keywords: AcquireSRWLockExclusive, AcquireSRWLockExclusive function, base.acquiresrwlockexclusive, synchapi/AcquireSRWLockExclusive, winbase/AcquireSRWLockExclusive\nreq.header: synchapi.h\nreq.include-header: Windows.h on Windows 7, Windows Server 2008  Windows Server 2008 R2\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - AcquireSRWLockExclusive\n - synchapi/AcquireSRWLockExclusive\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Kernel32.dll\n - API-MS-Win-Core-Synch-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-Synch-l1-2-0.dll\n - API-MS-Win-Core-Synch-l1-2-1.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\n - vertdll.dll\napi_name:\n - AcquireSRWLockExclusive\n---\n\n# AcquireSRWLockExclusive function\n\n## -description\n\nAcquires a slim reader/writer (SRW) lock in exclusive mode.\n\n## -parameters\n\n### -param SRWLock [in, out]\n\nA pointer to the SRW lock.\n\n## -see-also\n\n[ReleaseSRWLockExclusive](nf-synchapi-releasesrwlockexclusive.md)\n\n[Slim Reader/Writer (SRW) Locks](/windows/win32/Sync/slim-reader-writer--srw--locks)\n\n[Synchronization Functions](/windows/win32/Sync/synchronization-functions)\n\n[Vertdll APIs available in VBS enclaves](/windows/win32/trusted-execution/enclaves-available-in-vertdll)\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "srw_lock",
+    "kind": "struct_decl",
+    "start_line": 471,
+    "end_line": 488,
+    "code": "struct srw_lock\n{\n    /* bit 0 - if the lock is held exclusive. bit 1.. - number of exclusive waiters. */\n    short exclusive_waiters;\n\n    /* Number of owners.\n     *\n     * Sadly Windows has no equivalent to FUTEX_WAIT_BITSET, so in order to wake\n     * up *only* exclusive or *only* shared waiters (and thus avoid spurious\n     * wakeups), we need to wait on two different addresses.\n     * RtlAcquireSRWLockShared() needs to know the values of \"exclusive_waiters\"\n     * and \"owners\", but RtlAcquireSRWLockExclusive() only needs to know the\n     * value of \"owners\", so the former can wait on the entire structure, and\n     * the latter waits only on the \"owners\" member. Note then that \"owners\"\n     * must not be the first element in the structure.\n     */\n    unsigned short owners;\n};"
+   },
+   {
+    "name": "union (unnamed at /Users/xingangao/wine_fuzz/wine_src/wine/dlls/ntdll/sync.c:516:5)",
+    "kind": "union_decl",
+    "start_line": 516,
+    "end_line": 516,
+    "code": "    union { RTL_SRWLOCK *rtl; struct srw_lock *s; LONG *l; } u = { lock };"
+   },
+   {
+    "name": "union (unnamed at /Users/xingangao/wine_fuzz/wine_src/wine/dlls/ntdll/sync.c:522:9)",
+    "kind": "union_decl",
+    "start_line": 522,
+    "end_line": 522,
+    "code": "        union { struct srw_lock s; LONG l; } old, new;"
+   }
+  ],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "RtlWaitOnAddress",
+    "impl": [
+     "dlls/ntdll/sync.c:878"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "_InterlockedCompareExchange",
+   "_InterlockedExchangeAdd16"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

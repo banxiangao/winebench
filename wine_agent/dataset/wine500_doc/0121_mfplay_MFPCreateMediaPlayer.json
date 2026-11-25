@@ -1,0 +1,315 @@
+{
+ "id": "0121",
+ "function": {
+  "name": "MFPCreateMediaPlayer",
+  "export_name": "MFPCreateMediaPlayer",
+  "module": "mfplay",
+  "source_module": "mfplay",
+  "exported_by": [
+   "mfplay"
+  ],
+  "side": "PE",
+  "file": "dlls/mfplay/player.c",
+  "start_line": 2266,
+  "end_line": 2343,
+  "body_lines": 75,
+  "signature": "HRESULT WINAPI MFPCreateMediaPlayer(const WCHAR *url, BOOL start_playback, MFP_CREATION_OPTIONS options, IMFPMediaPlayerCallback *callback, HWND window, IMFPMediaPlayer **player)",
+  "header_comment": "/***********************************************************************\n *      MFPCreateMediaPlayer (mfplay.@)\n */",
+  "code": "HRESULT WINAPI MFPCreateMediaPlayer(const WCHAR *url, BOOL start_playback, MFP_CREATION_OPTIONS options,\n        IMFPMediaPlayerCallback *callback, HWND window, IMFPMediaPlayer **player)\n{\n    struct media_player *object;\n    IMFPMediaItem *item;\n    HRESULT hr;\n\n    TRACE(\"%s, %d, %#x, %p, %p, %p.\\n\", debugstr_w(url), start_playback, options, callback, window, player);\n\n    if (!player)\n        return E_POINTER;\n\n    *player = NULL;\n\n    if (!url && start_playback)\n        return E_INVALIDARG;\n\n    if (!(object = calloc(1, sizeof(*object))))\n        return E_OUTOFMEMORY;\n\n    platform_startup();\n\n    object->IMFPMediaPlayer_iface.lpVtbl = &media_player_vtbl;\n    object->IPropertyStore_iface.lpVtbl = &media_player_propstore_vtbl;\n    object->resolver_callback.lpVtbl = &media_player_resolver_callback_vtbl;\n    object->events_callback.lpVtbl = &media_player_events_callback_vtbl;\n    object->session_events_callback.lpVtbl = &media_player_session_events_callback_vtbl;\n    object->refcount = 1;\n    object->callback = callback;\n    if (object->callback)\n        IMFPMediaPlayerCallback_AddRef(object->callback);\n    object->options = options;\n    object->output_window = window;\n    InitializeCriticalSection(&object->cs);\n    if (FAILED(hr = CreatePropertyStore(&object->propstore)))\n        goto failed;\n    if (FAILED(hr = MFCreateSourceResolver(&object->resolver)))\n        goto failed;\n    if (FAILED(hr = MFCreateMediaSession(NULL, &object->session)))\n        goto failed;\n    if (FAILED(hr = IMFMediaSession_BeginGetEvent(object->session, &object->session_events_callback, NULL)))\n        goto failed;\n    if (!(object->options & MFP_OPTION_FREE_THREADED_CALLBACK))\n    {\n        object->event_window = CreateWindowW(eventclassW, NULL, 0, 0, 0, 0, 0, HWND_MESSAGE,\n                0, mfplay_instance, NULL);\n    }\n\n    if (url)\n    {\n        if (FAILED(hr = media_player_create_item_from_url(object, url, TRUE, 0, &item)))\n        {\n            WARN(\"Failed to create media item, hr %#lx.\\n\", hr);\n            goto failed;\n        }\n\n        hr = IMFPMediaPlayer_SetMediaItem(&object->IMFPMediaPlayer_iface, item);\n        IMFPMediaItem_Release(item);\n        if (FAILED(hr))\n        {\n            WARN(\"Failed to set media item, hr %#lx.\\n\", hr);\n            goto failed;\n        }\n\n        if (start_playback)\n            IMFPMediaPlayer_Play(&object->IMFPMediaPlayer_iface);\n    }\n\n    *player = &object->IMFPMediaPlayer_iface;\n\n    return S_OK;\n\nfailed:\n\n    IMFPMediaPlayer_Release(&object->IMFPMediaPlayer_iface);\n\n    return hr;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <assert.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"mfapi.h\"",
+   "#include \"mfplay.h\"",
+   "#include \"mferror.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"initguid.h\""
+  ],
+  "resolution": [
+   "mfplay!MFPCreateMediaPlayer [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/mfplay/tests/mfplay.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "mfplay",
+   "path": "sdk-api-src/content/mfplay/nf-mfplay-mfpcreatemediaplayer.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/mfplay/nf-mfplay-mfpcreatemediaplayer",
+   "documented_name": "mfpcreatemediaplayer",
+   "file": "docs/0121_sdk-api_nf-mfplay-mfpcreatemediaplayer.md",
+   "text": "---\nUID: NF:mfplay.MFPCreateMediaPlayer\ntitle: MFPCreateMediaPlayer function (mfplay.h)\ndescription: Creates a new instance of the MFPlay player object.\nhelpviewer_keywords: [\"MFPCreateMediaPlayer\",\"MFPCreateMediaPlayer function [Media Foundation]\",\"mf.mfpcreatemediaplayer\",\"mfplay/MFPCreateMediaPlayer\"]\nold-location: mf\\mfpcreatemediaplayer.htm\ntech.root: mfarchive\narchived: true\nms.assetid: 80c668e2-5e93-4af2-871c-646228e18717\nms.date: 12/05/2018\nms.keywords: MFPCreateMediaPlayer, MFPCreateMediaPlayer function [Media Foundation], mf.mfpcreatemediaplayer, mfplay/MFPCreateMediaPlayer\nreq.header: mfplay.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 7 [desktop apps only]\nreq.target-min-winversvr: Windows Server 2008 R2 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Mfplay.lib\nreq.dll: Mfplay.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - MFPCreateMediaPlayer\n - mfplay/MFPCreateMediaPlayer\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - mfplay.dll\napi_name:\n - MFPCreateMediaPlayer\n---\n\n# MFPCreateMediaPlayer function\n\n\n## -description\n\n\\[The feature associated with this page, MFPlay, is a legacy feature. It has been superseded by [MediaPlayer](/uwp/api/Windows.Media.Playback.MediaPlayer) and  [IMFMediaEngine](/windows/win32/api/mfmediaengine/nn-mfmediaengine-imfmediaengine). Those features have been optimized for Windows 10 and Windows 11. Microsoft strongly recommends that new code use **MediaPlayer** and **IMFMediaEngine** instead of **DirectShow**, when possible. Microsoft suggests that existing code that uses the legacy APIs be rewritten to use the new APIs if possible.\\]\n\n\nCreates a new instance of the MFPlay player object.\n\n## -parameters\n\n### -param pwszURL [in]\n\nNull-terminated string that contains the URL  of a media file to open. This parameter can be <b>NULL</b>. If the parameter is <b>NULL</b>, <i>fStartPlayback</i> must be <b>FALSE</b>.\n\nIf this parameter is <b>NULL</b>, you can open a URL later by calling <a href=\"/windows/desktop/api/mfplay/nf-mfplay-imfpmediaplayer-createmediaitemfromurl\">IMFPMediaPlayer::CreateMediaItemFromURL</a>.\n\n### -param fStartPlayback [in]\n\nIf <b>TRUE</b>, playback starts automatically. If <b>FALSE</b>, playback does not start until the application calls <a href=\"/windows/desktop/api/mfplay/nf-mfplay-imfpmediaplayer-play\">IMFMediaPlayer::Play</a>.\n\nIf <i>pwszURL</i> is <b>NULL</b>, this parameter is ignored.\n\n### -param creationOptions [in]\n\nBitwise <b>OR</b> of zero of more flags from the <a href=\"/windows/win32/api/mfplay/ne-mfplay-_mfp_creation_options\">_MFP_CREATION_OPTIONS</a> enumeration.\n\n### -param pCallback [in]\n\nPointer to the <a href=\"/windows/desktop/api/mfplay/nn-mfplay-imfpmediaplayercallback\">IMFPMediaPlayerCallback</a> interface of a callback object, implemented by the application. Use this interface to get event notifications from the MFPlay player object. This parameter can be <b>NULL</b>. If  the parameter is <b>NULL</b>, the application will not receive  event notifications from the player object.\n\n### -param hWnd [in]\n\nA handle to a window where the video will appear. For audio-only playback, this parameter can be <b>NULL</b>.\n\nThe window specified by <i>hWnd</i> is used for the first selected video stream in the source. If the source has multiple video streams, you must call <a href=\"/windows/desktop/api/mfplay/nf-mfplay-imfpmediaitem-setstreamsink\">IMFPMediaItem::SetStreamSink</a> to render any of the video streams after the first.\n\nIf <i>hWnd</i> is <b>NULL</b>, MFPlay will not display any video unless the application calls <a href=\"/windows/desktop/api/mfplay/nf-mfplay-imfpmediaitem-setstreamsink\">IMFPMediaItem::SetStreamSink</a> to specify a media sink for the video stream.\n\n### -param ppMediaPlayer [out]\n\nReceives a pointer to the <a href=\"/windows/desktop/api/mfplay/nn-mfplay-imfpmediaplayer\">IMFPMediaPlayer</a> interface. The caller must release the interface. This parameter can be <b>NULL</b>. If this parameter is <b>NULL</b>, <i>fStartPlayback</i> must be <b>TRUE</b> and <i>pwszURL</i> cannot be <b>NULL</b>.\n\n## -returns\n\nIf this function succeeds, it returns <b>S_OK</b>. Otherwise, it returns an <b>HRESULT</b> error code.\n\n## -remarks\n\nBefore calling this function, call <b>CoIntialize(Ex)</b> from the same thread to initialize the COM library.\n\nInternally, <b>MFPCreateMediaPlayer</b> calls <a href=\"/windows/desktop/api/mfapi/nf-mfapi-mfstartup\">MFStartup</a> to initialize the Microsoft Media Foundation platform. When the player object is destroyed, it calls  <a href=\"/windows/desktop/api/mfapi/nf-mfapi-mfshutdown\">MFShutdown</a> to shut down the platform. It is not necessary for an application to call <b>MFStartup</b> or <b>MFShutdown</b> when using MFPlay.\n\n<div class=\"alert\"><b>Note</b>  If you use other Media Foundation APIs outside the life time of the player object, then your application should call <a href=\"/windows/desktop/api/mfapi/nf-mfapi-mfstartup\">MFStartup</a> and <a href=\"/windows/desktop/api/mfapi/nf-mfapi-mfshutdown\">MFShutdown</a>.</div>\n<div> </div>\n\n## -see-also\n\n<a href=\"/windows/desktop/medfound/media-foundation-functions\">Media Foundation Functions</a>\n\n\n\n<a href=\"/windows/desktop/medfound/using-mfplay-for-audio-video-playback\">Using MFPlay for Audio/Video Playback</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "platform_startup",
+   "file": "dlls/mfplay/player.c",
+   "start_line": 44,
+   "end_line": 48,
+   "static": true,
+   "called_from": [
+    "MFPCreateMediaPlayer"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void platform_startup(void)",
+   "code": "static void platform_startup(void)\n{\n    if (InterlockedIncrement(&startup_refcount) == 1)\n        MFStartup(MF_VERSION, MFSTARTUP_FULL);\n}"
+  },
+  {
+   "name": "media_player_create_item_from_url",
+   "file": "dlls/mfplay/player.c",
+   "start_line": 1179,
+   "end_line": 1237,
+   "static": true,
+   "called_from": [
+    "MFPCreateMediaPlayer"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/mfplay/player.c:1251"
+   ],
+   "signature": "static HRESULT media_player_create_item_from_url(struct media_player *player, const WCHAR *url, BOOL sync, DWORD_PTR user_data, IMFPMediaItem **ret)",
+   "code": "static HRESULT media_player_create_item_from_url(struct media_player *player,\n        const WCHAR *url, BOOL sync, DWORD_PTR user_data, IMFPMediaItem **ret)\n{\n    struct media_item *item;\n    MF_OBJECT_TYPE obj_type;\n    IUnknown *object;\n    HRESULT hr;\n\n    if (sync && !ret)\n        return E_POINTER;\n\n    if (!sync && !player->callback)\n    {\n        WARN(\"Asynchronous item creation is not supported without user callback.\\n\");\n        return MF_E_INVALIDREQUEST;\n    }\n\n    if (FAILED(hr = create_media_item(player, user_data, &item)))\n        return hr;\n\n    if (url && !(item->url = wcsdup(url)))\n    {\n        IMFPMediaItem_Release(&item->IMFPMediaItem_iface);\n        return E_OUTOFMEMORY;\n    }\n    item->flags |= MEDIA_ITEM_SOURCE_NEEDS_SHUTDOWN;\n\n    if (sync)\n    {\n        *ret = NULL;\n\n        if (SUCCEEDED(hr = IMFSourceResolver_CreateObjectFromURL(player->resolver, url, MF_RESOLUTION_MEDIASOURCE\n                | MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE, player->propstore, &obj_type, &object)))\n        {\n            hr = media_item_set_source(item, object);\n            IUnknown_Release(object);\n        }\n\n        if (SUCCEEDED(hr))\n        {\n            *ret = &item->IMFPMediaItem_iface;\n            IMFPMediaItem_AddRef(*ret);\n        }\n\n        IMFPMediaItem_Release(&item->IMFPMediaItem_iface);\n    }\n    else\n    {\n        if (ret) *ret = NULL;\n\n        hr = IMFSourceResolver_BeginCreateObjectFromURL(player->resolver, url, MF_RESOLUTION_MEDIASOURCE\n                | MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE, player->propstore, NULL,\n                &player->resolver_callback, (IUnknown *)&item->IMFPMediaItem_iface);\n\n        IMFPMediaItem_Release(&item->IMFPMediaItem_iface);\n    }\n\n    return hr;\n}"
+  },
+  {
+   "name": "create_media_item",
+   "file": "dlls/mfplay/player.c",
+   "start_line": 883,
+   "end_line": 899,
+   "static": true,
+   "called_from": [
+    "media_player_create_item_from_url"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/mfplay/player.c:1268"
+   ],
+   "signature": "static HRESULT create_media_item(struct media_player *player, DWORD_PTR user_data, struct media_item **item)",
+   "code": "static HRESULT create_media_item(struct media_player *player, DWORD_PTR user_data, struct media_item **item)\n{\n    struct media_item *object;\n\n    if (!(object = calloc(1, sizeof(*object))))\n        return E_OUTOFMEMORY;\n\n    object->IMFPMediaItem_iface.lpVtbl = &media_item_vtbl;\n    object->refcount = 1;\n    object->user_data = user_data;\n    object->player = player;\n    IMFPMediaPlayer_AddRef(&object->player->IMFPMediaPlayer_iface);\n\n    *item = object;\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "media_item_set_source",
+   "file": "dlls/mfplay/player.c",
+   "start_line": 901,
+   "end_line": 921,
+   "static": true,
+   "called_from": [
+    "media_player_create_item_from_url"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/mfplay/player.c:1296",
+    "dlls/mfplay/player.c:1960"
+   ],
+   "signature": "static HRESULT media_item_set_source(struct media_item *item, IUnknown *object)",
+   "code": "static HRESULT media_item_set_source(struct media_item *item, IUnknown *object)\n{\n    IMFPresentationDescriptor *pd;\n    IMFMediaSource *source;\n    HRESULT hr;\n\n    if (FAILED(hr = IUnknown_QueryInterface(object, &IID_IMFMediaSource, (void **)&source)))\n        return hr;\n\n    if (FAILED(hr = IMFMediaSource_CreatePresentationDescriptor(source, &pd)))\n    {\n        WARN(\"Failed to get presentation descriptor, hr %#lx.\\n\", hr);\n        IMFMediaSource_Release(source);\n        return hr;\n    }\n\n    item->source = source;\n    item->pd = pd;\n\n    return hr;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "media_item",
+    "kind": "struct_decl",
+    "start_line": 69,
+    "end_line": 82,
+    "code": "struct media_item\n{\n    IMFPMediaItem IMFPMediaItem_iface;\n    LONG refcount;\n    struct media_player *player;\n    IMFMediaSource *source;\n    IMFPresentationDescriptor *pd;\n    DWORD_PTR user_data;\n    WCHAR *url;\n    IUnknown *object;\n    LONGLONG start_position;\n    LONGLONG stop_position;\n    unsigned int flags;\n};"
+   },
+   {
+    "name": "media_item_flags",
+    "kind": "enum_decl",
+    "start_line": 64,
+    "end_line": 67,
+    "code": "enum media_item_flags\n{\n    MEDIA_ITEM_SOURCE_NEEDS_SHUTDOWN = 0x1,\n};"
+   },
+   {
+    "name": "media_player",
+    "kind": "struct_decl",
+    "start_line": 84,
+    "end_line": 102,
+    "code": "struct media_player\n{\n    IMFPMediaPlayer IMFPMediaPlayer_iface;\n    IPropertyStore IPropertyStore_iface;\n    IMFAsyncCallback resolver_callback;\n    IMFAsyncCallback events_callback;\n    IMFAsyncCallback session_events_callback;\n    LONG refcount;\n    IMFPMediaPlayerCallback *callback;\n    IPropertyStore *propstore;\n    IMFSourceResolver *resolver;\n    IMFMediaSession *session;\n    IMFPMediaItem *item;\n    MFP_CREATION_OPTIONS options;\n    MFP_MEDIAPLAYER_STATE state;\n    HWND event_window;\n    HWND output_window;\n    CRITICAL_SECTION cs;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 34,
+    "end_line": 34,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(mfplat);"
+   },
+   {
+    "name": "eventclassW",
+    "type": "const WCHAR[30]",
+    "static": true,
+    "start_line": 39,
+    "end_line": 39,
+    "code": "static const WCHAR eventclassW[] = L\"MediaPlayerEventCallbackClass\";"
+   },
+   {
+    "name": "media_item_vtbl",
+    "type": "const IMFPMediaItemVtbl",
+    "static": true,
+    "start_line": 849,
+    "end_line": 873,
+    "code": "static const IMFPMediaItemVtbl media_item_vtbl =\n{\n    media_item_QueryInterface,\n    media_item_AddRef,\n    media_item_Release,\n    media_item_GetMediaPlayer,\n    media_item_GetURL,\n    media_item_GetObject,\n    media_item_GetUserData,\n    media_item_SetUserData,\n    media_item_GetStartStopPosition,\n    media_item_SetStartStopPosition,\n    media_item_HasVideo,\n    media_item_HasAudio,\n    media_item_IsProtected,\n    media_item_GetDuration,\n    media_item_GetNumberOfStreams,\n    media_item_GetStreamSelection,\n    media_item_SetStreamSelection,\n    media_item_GetStreamAttribute,\n    media_item_GetPresentationAttribute,\n    media_item_GetCharacteristics,\n    media_item_SetStreamSink,\n    media_item_GetMetadata,\n};"
+   },
+   {
+    "name": "media_player_events_callback_vtbl",
+    "type": "const IMFAsyncCallbackVtbl",
+    "static": true,
+    "start_line": 2024,
+    "end_line": 2031,
+    "code": "static const IMFAsyncCallbackVtbl media_player_events_callback_vtbl =\n{\n    media_player_callback_QueryInterface,\n    media_player_events_callback_AddRef,\n    media_player_events_callback_Release,\n    media_player_callback_GetParameters,\n    media_player_events_callback_Invoke,\n};"
+   },
+   {
+    "name": "media_player_propstore_vtbl",
+    "type": "const IPropertyStoreVtbl",
+    "static": true,
+    "start_line": 1891,
+    "end_line": 1901,
+    "code": "static const IPropertyStoreVtbl media_player_propstore_vtbl =\n{\n    media_player_propstore_QueryInterface,\n    media_player_propstore_AddRef,\n    media_player_propstore_Release,\n    media_player_propstore_GetCount,\n    media_player_propstore_GetAt,\n    media_player_propstore_GetValue,\n    media_player_propstore_SetValue,\n    media_player_propstore_Commit,\n};"
+   },
+   {
+    "name": "media_player_resolver_callback_vtbl",
+    "type": "const IMFAsyncCallbackVtbl",
+    "static": true,
+    "start_line": 1984,
+    "end_line": 1991,
+    "code": "static const IMFAsyncCallbackVtbl media_player_resolver_callback_vtbl =\n{\n    media_player_callback_QueryInterface,\n    media_player_resolver_callback_AddRef,\n    media_player_resolver_callback_Release,\n    media_player_callback_GetParameters,\n    media_player_resolver_callback_Invoke,\n};"
+   },
+   {
+    "name": "media_player_session_events_callback_vtbl",
+    "type": "const IMFAsyncCallbackVtbl",
+    "static": true,
+    "start_line": 2254,
+    "end_line": 2261,
+    "code": "static const IMFAsyncCallbackVtbl media_player_session_events_callback_vtbl =\n{\n    media_player_callback_QueryInterface,\n    media_player_session_events_callback_AddRef,\n    media_player_session_events_callback_Release,\n    media_player_callback_GetParameters,\n    media_player_session_events_callback_Invoke,\n};"
+   },
+   {
+    "name": "media_player_vtbl",
+    "type": "const IMFPMediaPlayerVtbl",
+    "static": true,
+    "start_line": 1784,
+    "end_line": 1825,
+    "code": "static const IMFPMediaPlayerVtbl media_player_vtbl =\n{\n    media_player_QueryInterface,\n    media_player_AddRef,\n    media_player_Release,\n    media_player_Play,\n    media_player_Pause,\n    media_player_Stop,\n    media_player_FrameStep,\n    media_player_SetPosition,\n    media_player_GetPosition,\n    media_player_GetDuration,\n    media_player_SetRate,\n    media_player_GetRate,\n    media_player_GetSupportedRates,\n    media_player_GetState,\n    media_player_CreateMediaItemFromURL,\n    media_player_CreateMediaItemFromObject,\n    media_player_SetMediaItem,\n    media_player_ClearMediaItem,\n    media_player_GetMediaItem,\n    media_player_GetVolume,\n    media_player_SetVolume,\n    media_player_GetBalance,\n    media_player_SetBalance,\n    media_player_GetMute,\n    media_player_SetMute,\n    media_player_GetNativeVideoSize,\n    media_player_GetIdealVideoSize,\n    media_player_SetVideoSourceRect,\n    media_player_GetVideoSourceRect,\n    media_player_SetAspectRatioMode,\n    media_player_GetAspectRatioMode,\n    media_player_GetVideoWindow,\n    media_player_UpdateVideo,\n    media_player_SetBorderColor,\n    media_player_GetBorderColor,\n    media_player_InsertEffect,\n    media_player_RemoveEffect,\n    media_player_RemoveAllEffects,\n    media_player_Shutdown,\n};"
+   },
+   {
+    "name": "mfplay_instance",
+    "type": "HINSTANCE",
+    "static": true,
+    "start_line": 42,
+    "end_line": 42,
+    "code": "static HINSTANCE mfplay_instance;"
+   },
+   {
+    "name": "startup_refcount",
+    "type": "LONG",
+    "static": true,
+    "start_line": 41,
+    "end_line": 41,
+    "code": "static LONG startup_refcount;"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "CreatePropertyStore",
+    "module": "mfplat",
+    "impl": [
+     "dlls/mfplat/main.c:8884"
+    ]
+   },
+   {
+    "name": "CreateWindowExW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/win.c:440"
+    ]
+   },
+   {
+    "name": "InitializeCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:200"
+    ]
+   },
+   {
+    "name": "MFCreateMediaSession",
+    "module": "mf",
+    "impl": [
+     "dlls/mf/session.c:5091"
+    ]
+   },
+   {
+    "name": "MFCreateSourceResolver",
+    "module": "mfplat",
+    "impl": [
+     "dlls/mfplat/main.c:6847"
+    ]
+   },
+   {
+    "name": "MFStartup",
+    "module": "mfplat",
+    "impl": [
+     "dlls/mfplat/main.c:1591"
+    ]
+   },
+   {
+    "name": "calloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   }
+  ],
+  "header_inline": [
+   "IMFMediaSession_BeginGetEvent",
+   "IMFMediaSource_CreatePresentationDescriptor",
+   "IMFMediaSource_Release",
+   "IMFPMediaItem_AddRef",
+   "IMFPMediaItem_Release",
+   "IMFPMediaPlayerCallback_AddRef",
+   "IMFPMediaPlayer_AddRef",
+   "IMFPMediaPlayer_Play",
+   "IMFPMediaPlayer_Release",
+   "IMFPMediaPlayer_SetMediaItem",
+   "IMFSourceResolver_BeginCreateObjectFromURL",
+   "IMFSourceResolver_CreateObjectFromURL",
+   "_InterlockedIncrement",
+   "debugstr_w",
+   "wcsdup",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "(This)->lpVtbl->QueryInterface",
+    "in_function": "media_item_set_source",
+    "at": "dlls/mfplay/player.c:907",
+    "candidates": []
+   }
+  ]
+ }
+}

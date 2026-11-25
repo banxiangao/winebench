@@ -1,0 +1,79 @@
+# Shared model list for every scenario (scenario configs include it via [paths].models).
+# A model is queried only if  enabled = true  AND its key is in secrets.toml (or the environment).
+#
+#   name        - folder name for the results (responses/<name>/).  Convention: <vendor>-<model>, e.g.
+#                 "deepseek-v4-flash", "openai-gpt-6-luna", "claude-haiku-5-5", so that several models of one
+#                 vendor can live side by side and the folder says which model it was.  One
+
+# Only the three models of the agent experiments are kept here (the full list is in wine_bench/scenarios/models.toml).
+
+[[models]]
+enabled     = true
+name        = "deepseek-v4-flash"
+provider    = "openai"
+base_url    = "https://api.deepseek.com/v1"
+model       = "deepseek-flash"                  # cheapest model; thinking is ON by default for this id -> switched off below
+api_key_env = "DEEPSEEK_API_KEY"
+extra       = { thinking = { type = "disabled" } }   # non-thinking mode (same as the old "deepseek-chat" alias; the thinking mode spends up to 64K tokens reasoning)
+max_tokens  = 8192                              # DeepSeek's own default in non-thinking mode (the hard limit is 393216)
+
+[[models]]
+enabled     = true
+name        = "openai-gpt-6-luna"
+provider    = "openai"
+base_url    = "https://api.openai.com/v1"
+model       = "gpt-6-luna"                      # cheapest current model
+api_key_env = "OPENAI_API_KEY"
+max_tokens_field = "max_completion_tokens"      # OpenAI's current models reject "max_tokens" ...
+send_temperature = false                        # ... and the temperature field (probe confirmed for gpt-6-luna)
+extra       = { reasoning_effort = "none" }     # reasoning is "medium" by default; "none" switches it off
+
+[[models]]
+enabled     = true
+name        = "claude-haiku-5-5"
+provider    = "anthropic"
+base_url    = "https://api.anthropic.com"
+model       = "claude-haiku-5-5"                # cheapest current model
+api_key_env = "ANTHROPIC_API_KEY"
+send_temperature = false                        # Claude 5.5 rejects the temperature field (so temperature = 0 cannot be enforced here)
+extra       = { thinking = { type = "disabled" } }   # "adaptive thinking" is on by default when the field is absent
+
+# ---------------------------------------------------------------- local models on Vulcan (vulcan/agents.sbatch)
+# Served by vLLM on the job's own node; the port is replaced by the job's own (WB_LOCAL_PORT).  No temperature is sent:
+# vLLM applies the sampling defaults of the model's generation_config.json.  Thinking is switched off (gpt-oss: "low").
+
+[[models]]
+enabled     = true
+name        = "qwen3.8-27b"
+provider    = "openai"
+base_url    = "http://127.0.0.1:8000/v1"
+model       = "qwen3.8-27b"
+api_key_env = "LOCAL_API_KEY"
+api_key     = "none"
+max_tokens  = 8192
+send_temperature = false
+extra       = { chat_template_kwargs = { enable_thinking = false } }
+
+[[models]]
+enabled     = true
+name        = "glm-4.7-flash"
+provider    = "openai"
+base_url    = "http://127.0.0.1:8000/v1"
+model       = "glm-4.7-flash"
+api_key_env = "LOCAL_API_KEY"
+api_key     = "none"
+max_tokens  = 8192
+send_temperature = false
+extra       = { chat_template_kwargs = { enable_thinking = false } }
+
+[[models]]
+enabled     = true
+name        = "gpt-oss-20b"
+provider    = "openai"
+base_url    = "http://127.0.0.1:8000/v1"
+model       = "gpt-oss-20b"
+api_key_env = "LOCAL_API_KEY"
+api_key     = "none"
+max_tokens  = 8192
+send_temperature = false
+extra       = { reasoning_effort = "low" }

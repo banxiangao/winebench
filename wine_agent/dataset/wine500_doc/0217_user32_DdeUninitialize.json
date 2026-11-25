@@ -1,0 +1,199 @@
+{
+ "id": "0217",
+ "function": {
+  "name": "DdeUninitialize",
+  "export_name": "DdeUninitialize",
+  "module": "user32",
+  "source_module": "user32",
+  "exported_by": [
+   "ddeml.dll16",
+   "user32"
+  ],
+  "side": "PE",
+  "file": "dlls/user32/dde_misc.c",
+  "start_line": 1112,
+  "end_line": 1174,
+  "body_lines": 60,
+  "signature": "BOOL WINAPI DdeUninitialize(DWORD idInst)",
+  "header_comment": null,
+  "code": "BOOL WINAPI DdeUninitialize(DWORD idInst)\n{\n    /*  Stage one - check if we have a handle for this instance\n     */\n    WDML_INSTANCE*\t\tpInstance;\n    WDML_CONV*\t\t\tpConv;\n    WDML_CONV*\t\t\tpConvNext;\n\n    TRACE(\"(%ld)\\n\", idInst);\n\n    /*  First check instance\n     */\n    pInstance = WDML_GetInstance(idInst);\n    if (pInstance == NULL)\n    {\n\t/*\n\t *\tNeeds something here to record NOT_INITIALIZED ready for DdeGetLastError\n\t */\n\treturn FALSE;\n    }\n\n    /* first terminate all conversations client side\n     * this shall close existing links...\n     */\n    for (pConv = pInstance->convs[WDML_CLIENT_SIDE]; pConv != NULL; pConv = pConvNext)\n    {\n\tpConvNext = pConv->next;\n\tDdeDisconnect((HCONV)pConv);\n    }\n    if (pInstance->convs[WDML_CLIENT_SIDE])\n\tFIXME(\"still pending conversations\\n\");\n\n    /* then unregister all known service names */\n    DdeNameService(idInst, 0, 0, DNS_UNREGISTER);\n\n    /* Free the nodes that were not freed by this instance\n     * and remove the nodes from the list of HSZ nodes.\n     */\n    WDML_FreeAllHSZ(pInstance);\n\n    NtUserDestroyWindow( pInstance->hwndEvent );\n\n    /* OK now delete the instance handle itself */\n\n    if (WDML_InstanceList == pInstance)\n    {\n\t/* special case - the first/only entry */\n\tWDML_InstanceList = pInstance->next;\n    }\n    else\n    {\n\t/* general case, remove entry */\n\tWDML_INSTANCE*\tinst;\n\n\tfor (inst = WDML_InstanceList; inst->next != pInstance; inst = inst->next);\n\tinst->next = pInstance->next;\n    }\n    /* release the heap entry\n     */\n    HeapFree(GetProcessHeap(), 0, pInstance);\n\n    return TRUE;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include \"user_private.h\"",
+   "#include \"dde_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "user32!DdeUninitialize [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/dde.c"
+  ]
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "ddeml.dll16",
+   "source_module": "ddeml.dll16",
+   "exported_by": [
+    "ddeml.dll16"
+   ],
+   "file": "dlls/ddeml.dll16/ddeml.c",
+   "start_line": 237,
+   "resolution": [
+    "ddeml.dll16!DdeUninitialize [pascal -ret16] -> internal symbol DdeUninitialize16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 256,
+   "signature": "BOOL16 WINAPI DdeUninitialize16(DWORD idInst)",
+   "code": "BOOL16 WINAPI DdeUninitialize16(DWORD idInst)\n{\n    struct ddeml_thunk* thunk;\n    BOOL16              ret = FALSE;\n\n    if (!DdeUninitialize(idInst)) return FALSE;\n    EnterCriticalSection(&ddeml_cs);\n    for (thunk = DDEML16_Thunks; thunk < &DDEML16_Thunks[MAX_THUNKS]; thunk++)\n    {\n        if (thunk->instId == idInst)\n        {\n            thunk->instId = 0;\n            ret = TRUE;\n            break;\n        }\n    }\n    LeaveCriticalSection(&ddeml_cs);\n    if (!ret) FIXME(\"Should never happen\\n\");\n    return ret;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "ddeml",
+   "path": "sdk-api-src/content/ddeml/nf-ddeml-ddeuninitialize.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/ddeml/nf-ddeml-ddeuninitialize",
+   "documented_name": "ddeuninitialize",
+   "file": "docs/0217_sdk-api_nf-ddeml-ddeuninitialize.md",
+   "text": "---\nUID: NF:ddeml.DdeUninitialize\ntitle: DdeUninitialize function (ddeml.h)\ndescription: Frees all Dynamic Data Exchange Management Library (DDEML) resources associated with the calling application.\nhelpviewer_keywords: [\"DdeUninitialize\",\"DdeUninitialize function [Data Exchange]\",\"_win32_DdeUninitialize\",\"_win32_ddeuninitialize_cpp\",\"dataxchg.ddeuninitialize\",\"ddeml/DdeUninitialize\",\"winui._win32_ddeuninitialize\"]\nold-location: dataxchg\\ddeuninitialize.htm\ntech.root: dataxchg\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\dataexchange\\dynamicdataexchangemanagementlibrary\\dynamicdataexchangemanagementreference\\dynamicdataexchangemanagementfunctions\\ddeuninitialize.htm\nms.date: 12/05/2018\nms.keywords: DdeUninitialize, DdeUninitialize function [Data Exchange], _win32_DdeUninitialize, _win32_ddeuninitialize_cpp, dataxchg.ddeuninitialize, ddeml/DdeUninitialize, winui._win32_ddeuninitialize\nreq.header: ddeml.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - DdeUninitialize\n - ddeml/DdeUninitialize\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - User32.dll\napi_name:\n - DdeUninitialize\n---\n\n# DdeUninitialize function\n\n\n## -description\n\nFrees all Dynamic Data Exchange Management Library (DDEML) resources associated with the calling application.\n\n## -parameters\n\n### -param idInst [in]\n\nType: <b>DWORD</b>\n\nThe application instance identifier obtained by a previous call to the <a href=\"/windows/desktop/api/ddeml/nf-ddeml-ddeinitializea\">DdeInitialize</a> function.\n\n## -returns\n\nType: <b>BOOL</b>\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero.\n\n## -remarks\n\n<b>DdeUninitialize</b> terminates any conversations currently open for the application.\n\n## -see-also\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/api/ddeml/nf-ddeml-ddedisconnect\">DdeDisconnect</a>\n\n\n\n<a href=\"/windows/desktop/api/ddeml/nf-ddeml-ddedisconnectlist\">DdeDisconnectList</a>\n\n\n\n<a href=\"/windows/desktop/api/ddeml/nf-ddeml-ddeinitializea\">DdeInitialize</a>\n\n\n\n<a href=\"/windows/desktop/dataxchg/dynamic-data-exchange-management-library\">Dynamic Data Exchange Management Library</a>\n\n\n\n<b>Reference</b>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "WDML_GetInstance",
+   "file": "dlls/user32/dde_misc.c",
+   "start_line": 1230,
+   "end_line": 1254,
+   "static": false,
+   "called_from": [
+    "DdeUninitialize"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/user32/dde_server.c:63",
+    "dlls/user32/dde_server.c:167",
+    "dlls/user32/dde_client.c:96",
+    "dlls/user32/dde_client.c:171",
+    "dlls/user32/dde_client.c:1232"
+   ],
+   "signature": "WDML_INSTANCE*\tWDML_GetInstance(DWORD instId)",
+   "code": "WDML_INSTANCE*\tWDML_GetInstance(DWORD instId)\n{\n    WDML_INSTANCE*\tpInstance;\n\n    EnterCriticalSection(&WDML_CritSect);\n\n    for (pInstance = WDML_InstanceList; pInstance != NULL; pInstance = pInstance->next)\n    {\n\tif (pInstance->instanceID == instId)\n\t{\n\t    if (GetCurrentThreadId() != pInstance->threadID)\n\t    {\n\t\tFIXME(\"Tried to get instance from wrong thread\\n\");\n\t\tcontinue;\n\t    }\n\t    break;\n\t}\n    }\n\n    LeaveCriticalSection(&WDML_CritSect);\n\n    if (!pInstance)\n        WARN(\"Instance entry missing for id %04lx\\n\", instId);\n    return pInstance;\n}"
+  },
+  {
+   "name": "WDML_FreeAllHSZ",
+   "file": "dlls/user32/dde_misc.c",
+   "start_line": 419,
+   "end_line": 427,
+   "static": true,
+   "called_from": [
+    "DdeUninitialize"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void WDML_FreeAllHSZ(WDML_INSTANCE* pInstance)",
+   "code": "static void WDML_FreeAllHSZ(WDML_INSTANCE* pInstance)\n{\n    /* Free any strings created in this instance.\n     */\n    while (pInstance->nodeList != NULL)\n    {\n\tDdeFreeStringHandle(pInstance->instanceID, pInstance->nodeList->hsz);\n    }\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "WDML_CritSect",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 48,
+    "end_line": 48,
+    "code": "static CRITICAL_SECTION WDML_CritSect = { &critsect_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "WDML_InstanceList",
+    "type": "WDML_INSTANCE *",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "static WDML_INSTANCE*\tWDML_InstanceList = NULL;"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 30,
+    "end_line": 30,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ddeml);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "DdeDisconnect",
+    "impl": [
+     "dlls/user32/dde_client.c:1365"
+    ]
+   },
+   {
+    "name": "DdeFreeStringHandle",
+    "impl": [
+     "dlls/user32/dde_misc.c:631"
+    ]
+   },
+   {
+    "name": "DdeNameService",
+    "impl": [
+     "dlls/user32/dde_server.c:156"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "NtUserDestroyWindow",
+    "module": "win32u",
+    "impl": [
+     "dlls/win32u/window.c:5607"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetCurrentThreadId",
+   "GetProcessHeap",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

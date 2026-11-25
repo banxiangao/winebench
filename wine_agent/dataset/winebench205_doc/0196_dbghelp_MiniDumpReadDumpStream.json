@@ -1,0 +1,133 @@
+{
+ "id": "0196",
+ "function": {
+  "name": "MiniDumpReadDumpStream",
+  "export_name": "MiniDumpReadDumpStream",
+  "module": "dbghelp",
+  "source_module": "dbghelp",
+  "exported_by": [
+   "dbghelp"
+  ],
+  "side": "PE",
+  "file": "dlls/dbghelp/minidump.c",
+  "start_line": 1106,
+  "end_line": 1131,
+  "body_lines": 23,
+  "signature": "BOOL WINAPI MiniDumpReadDumpStream(PVOID base, ULONG str_idx, PMINIDUMP_DIRECTORY* pdir, PVOID* stream, ULONG* size)",
+  "header_comment": "/******************************************************************\n *\t\tMiniDumpReadDumpStream (DEBUGHLP.@)\n *\n *\n */",
+  "code": "BOOL WINAPI MiniDumpReadDumpStream(PVOID base, ULONG str_idx,\n                                   PMINIDUMP_DIRECTORY* pdir,\n                                   PVOID* stream, ULONG* size)\n{\n    MINIDUMP_HEADER*    mdHead = base;\n\n    if (mdHead->Signature == MINIDUMP_SIGNATURE)\n    {\n        MINIDUMP_DIRECTORY* dir;\n        DWORD               i;\n\n        dir = (MINIDUMP_DIRECTORY*)((char*)base + mdHead->StreamDirectoryRva);\n        for (i = 0; i < mdHead->NumberOfStreams; i++, dir++)\n        {\n            if (dir->StreamType == str_idx)\n            {\n                if (pdir) *pdir = dir;\n                if (stream) *stream = (char*)base + dir->Location.Rva;\n                if (size) *size = dir->Location.DataSize;\n                return TRUE;\n            }\n        }\n    }\n    SetLastError(ERROR_INVALID_PARAMETER);\n    return FALSE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <time.h>",
+   "#include <intrin.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"dbghelp_private.h\"",
+   "#include \"winternl.h\"",
+   "#include \"psapi.h\"",
+   "#include \"wine/asm.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "dbghelp!MiniDumpReadDumpStream [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/dbghelp/tests/minidump.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 11
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 2067,
+  "parse_error_samples": [
+   "/usr/lib/gcc/x86_64-linux-gnu/11/include/ia32intrin.h:112: definition of builtin function '__rdtsc'",
+   "/usr/lib/gcc/x86_64-linux-gnu/11/include/cetintrin.h:49: too few arguments to function call, expected 1, have 0",
+   "/usr/lib/gcc/x86_64-linux-gnu/11/include/waitpkgintrin.h:48: too few arguments to function call, expected 3, have 2"
+  ]
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "minidumpapiset",
+   "path": "sdk-api-src/content/minidumpapiset/nf-minidumpapiset-minidumpreaddumpstream.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/minidumpapiset/nf-minidumpapiset-minidumpreaddumpstream",
+   "documented_name": "minidumpreaddumpstream",
+   "file": "docs/0196_sdk-api_nf-minidumpapiset-minidumpreaddumpstream.md",
+   "text": "---\nUID: NF:minidumpapiset.MiniDumpReadDumpStream\ntitle: MiniDumpReadDumpStream function (minidumpapiset.h)\ndescription: Reads a stream from a user-mode minidump file.\nhelpviewer_keywords: [\"MiniDumpReadDumpStream\",\"MiniDumpReadDumpStream function\",\"_win32_minidumpreaddumpstream\",\"base.minidumpreaddumpstream\",\"minidumpapiset/MiniDumpReadDumpStream\"]\nold-location: base\\minidumpreaddumpstream.htm\ntech.root: Debug\nms.assetid: 56df69aa-55b6-451b-a003-3ee88dc934f9\nms.date: 12/05/2018\nms.keywords: MiniDumpReadDumpStream, MiniDumpReadDumpStream function, _win32_minidumpreaddumpstream, base.minidumpreaddumpstream, minidumpapiset/MiniDumpReadDumpStream\nreq.header: minidumpapiset.h\nreq.include-header: Dbghelp.h\nreq.target-type: Windows\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Dbghelp.lib\nreq.dll: Dbghelp.dll; Dbgcore.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: DbgHelp.dll and Dbgcore.dll\nms.custom: 19H1\nf1_keywords:\n - MiniDumpReadDumpStream\n - minidumpapiset/MiniDumpReadDumpStream\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Dbghelp.dll\n - Dbgcore.dll\n - API-MS-Win-Core-Debug-MiniDump-L1-1-0.dll\n - DbgCore.dll\napi_name:\n - MiniDumpReadDumpStream\n---\n\n# MiniDumpReadDumpStream function\n\n\n## -description\n\nReads a stream from a user-mode minidump file.\n\n## -parameters\n\n### -param BaseOfDump [in]\n\nA pointer to the base of the mapped minidump file. The file should have been mapped into memory using the \n      <a href=\"/windows/desktop/api/memoryapi/nf-memoryapi-mapviewoffile\">MapViewOfFile</a> function.\n\n### -param StreamNumber [in]\n\nThe type of data to be read from the minidump file. This member can be one of the values in the \n      <a href=\"/windows/desktop/api/minidumpapiset/ne-minidumpapiset-minidump_stream_type\">MINIDUMP_STREAM_TYPE</a> enumeration.\n\n### -param Dir [out]\n\nA pointer to a <a href=\"/windows/desktop/api/minidumpapiset/ns-minidumpapiset-minidump_directory\">MINIDUMP_DIRECTORY</a> \n      structure.\n\n### -param StreamPointer [out]\n\nA pointer to the beginning of the minidump stream. The format of this stream depends on the value of \n      <i>StreamNumber</i>. For more information, see \n      <a href=\"/windows/desktop/api/minidumpapiset/ne-minidumpapiset-minidump_stream_type\">MINIDUMP_STREAM_TYPE</a>.\n\n### -param StreamSize [out]\n\nThe size of the stream pointed to by <i>StreamPointer</i>, in bytes.\n\n## -returns\n\nIf the function succeeds, the return value is <b>TRUE</b>; otherwise, the return \n       value is <b>FALSE</b>.\n\n## -remarks\n\nIn this context, a data stream is a block of data written to a minidump file.\n\n## -see-also\n\n<a href=\"/windows/desktop/Debug/dbghelp-functions\">DbgHelp Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/minidumpapiset/ns-minidumpapiset-minidump_directory\">MINIDUMP_DIRECTORY</a>\n\n\n\n<a href=\"/windows/desktop/api/minidumpapiset/ne-minidumpapiset-minidump_stream_type\">MINIDUMP_STREAM_TYPE</a>\n\n\n\n<a href=\"/windows/desktop/api/minidumpapiset/nf-minidumpapiset-minidumpwritedump\">MiniDumpWriteDump</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [],
+  "header_inline": [
+   "SetLastError"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "dbghelp.MiniDumpReadDumpStream",
+  "category": {
+   "l1": "Diagnostics",
+   "l2": "Debugging and error handling",
+   "header": "minidumpapiset.h",
+   "textbook": "Process control",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 26,
+   "body": 23,
+   "code": 13
+  },
+  "cyclomatic": 7,
+  "return_type": "BOOL",
+  "n_params": 5,
+  "tests": {
+   "n_tests_own": 11,
+   "n_tests": 11,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/dbghelp/tests/minidump.c::minidump_check_module",
+    "dlls/dbghelp/tests/minidump.c::minidump_check_nostream",
+    "dlls/dbghelp/tests/minidump.c::minidump_check_pid",
+    "dlls/dbghelp/tests/minidump.c::minidump_check_threads",
+    "dlls/dbghelp/tests/minidump.c::minidump_check_threads_name",
+    "dlls/dbghelp/tests/minidump.c::minidump_get_memory_description",
+    "dlls/dbghelp/tests/minidump.c::minidump_get_number_of_available_modules",
+    "dlls/dbghelp/tests/minidump.c::minidump_get_number_of_threads",
+    "dlls/dbghelp/tests/minidump.c::minidump_walk_memory",
+    "dlls/dbghelp/tests/minidump.c::test_exception",
+    "dlls/dbghelp/tests/minidump.c::test_minidump_contents"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/minidumpapiset/nf-minidumpapiset-minidumpreaddumpstream",
+   "source": "win32",
+   "description": "Reads a stream from a user-mode minidump file.",
+   "min_windows": "",
+   "documented_dll": "Dbghelp.dll; Dbgcore.dll"
+  },
+  "exports": [
+   "dbghelp.MiniDumpReadDumpStream"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 6,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

@@ -1,0 +1,503 @@
+{
+ "id": "0287",
+ "function": {
+  "name": "InternetGetCookieExW",
+  "export_name": "InternetGetCookieExW",
+  "module": "wininet",
+  "source_module": "wininet",
+  "exported_by": [
+   "wininet"
+  ],
+  "side": "PE",
+  "file": "dlls/wininet/cookie.c",
+  "start_line": 725,
+  "end_line": 781,
+  "body_lines": 54,
+  "signature": "BOOL WINAPI InternetGetCookieExW(LPCWSTR lpszUrl, LPCWSTR lpszCookieName, LPWSTR lpCookieData, LPDWORD lpdwSize, DWORD flags, void *reserved)",
+  "header_comment": "/***********************************************************************\n *           InternetGetCookieExW (WININET.@)\n *\n * Retrieve cookie from the specified url\n *\n *  It should be noted that on windows the lpszCookieName parameter is \"not implemented\".\n *    So it won't be implemented here.\n *\n * RETURNS\n *    TRUE  on success\n *    FALSE on failure\n *\n */",
+  "code": "BOOL WINAPI InternetGetCookieExW(LPCWSTR lpszUrl, LPCWSTR lpszCookieName,\n        LPWSTR lpCookieData, LPDWORD lpdwSize, DWORD flags, void *reserved)\n{\n    cookie_set_t cookie_set = {0};\n    substr_t host, path;\n    DWORD res;\n    BOOL ret;\n\n    TRACE(\"(%s, %s, %p, %p, %lx, %p)\\n\", debugstr_w(lpszUrl),debugstr_w(lpszCookieName), lpCookieData, lpdwSize, flags, reserved);\n\n    if (flags & ~INTERNET_COOKIE_HTTPONLY)\n        FIXME(\"flags 0x%08lx not supported\\n\", flags);\n\n    if (!lpszUrl)\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return FALSE;\n    }\n\n    ret = cookie_parse_url(lpszUrl, &host, &path);\n    if (!ret) {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return FALSE;\n    }\n\n    EnterCriticalSection(&cookie_cs);\n\n    res = get_cookie(host, path, flags, &cookie_set);\n    if(res != ERROR_SUCCESS) {\n        LeaveCriticalSection(&cookie_cs);\n        SetLastError(res);\n        return FALSE;\n    }\n\n    if(cookie_set.cnt) {\n        if(!lpCookieData || cookie_set.string_len+1 > *lpdwSize) {\n            *lpdwSize = (cookie_set.string_len + 1) * sizeof(WCHAR);\n            TRACE(\"returning %lu\\n\", *lpdwSize);\n            if(lpCookieData) {\n                SetLastError(ERROR_INSUFFICIENT_BUFFER);\n                ret = FALSE;\n            }\n        }else {\n            *lpdwSize = cookie_set.string_len + 1;\n            cookie_set_to_string(&cookie_set, lpCookieData);\n            lpCookieData[cookie_set.string_len] = 0;\n        }\n    }else {\n        TRACE(\"no cookies found for %s\\n\", debugstr_wn(host.str, host.len));\n        SetLastError(ERROR_NO_MORE_ITEMS);\n        ret = FALSE;\n    }\n\n    free(cookie_set.cookies);\n    LeaveCriticalSection(&cookie_cs);\n    return ret;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include \"ws2tcpip.h\"",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include <assert.h>",
+   "#include <wchar.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wininet.h\"",
+   "#include \"lmcons.h\"",
+   "#include \"winerror.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"internet.h\""
+  ],
+  "resolution": [
+   "wininet!InternetGetCookieExW [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/wininet/tests/ftp.c",
+   "dlls/wininet/tests/http.c",
+   "dlls/wininet/tests/internet.c",
+   "dlls/wininet/tests/url.c",
+   "dlls/wininet/tests/urlcache.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wininet",
+   "path": "sdk-api-src/content/wininet/nf-wininet-internetgetcookieexw.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wininet/nf-wininet-internetgetcookieexw",
+   "documented_name": "internetgetcookieexw",
+   "file": "docs/0287_sdk-api_nf-wininet-internetgetcookieexw.md",
+   "text": "---\nUID: NF:wininet.InternetGetCookieExW\ntitle: InternetGetCookieExW function (wininet.h)\ndescription: Retrieves data stored in cookies associated with a specified URL. (Unicode)\nhelpviewer_keywords: [\"INTERNET_COOKIE_HTTPONLY\", \"INTERNET_COOKIE_THIRD_PARTY\", \"INTERNET_FLAG_RESTRICTED_ZONE\", \"InternetGetCookieEx\", \"InternetGetCookieEx function [WinINet]\", \"InternetGetCookieExW\", \"wininet.internetgetcookieex\", \"wininet/InternetGetCookieEx\", \"wininet/InternetGetCookieExW\"]\nold-location: wininet\\internetgetcookieex.htm\ntech.root: wininet\nms.assetid: 5006f009-e217-4fdc-9e4e-800ff5fcbf03\nms.date: 12/05/2018\nms.keywords: INTERNET_COOKIE_HTTPONLY, INTERNET_COOKIE_THIRD_PARTY, INTERNET_FLAG_RESTRICTED_ZONE, InternetGetCookieEx, InternetGetCookieEx function [WinINet], InternetGetCookieExA, InternetGetCookieExW, wininet.internetgetcookieex, wininet/InternetGetCookieEx, wininet/InternetGetCookieExA, wininet/InternetGetCookieExW\nreq.header: wininet.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: InternetGetCookieExW (Unicode) and InternetGetCookieExA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Wininet.lib\nreq.dll: Wininet.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - InternetGetCookieExW\n - wininet/InternetGetCookieExW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Wininet.dll\napi_name:\n - InternetGetCookieEx\n - InternetGetCookieExA\n - InternetGetCookieExW\n---\n\n# InternetGetCookieExW function\n\n\n## -description\n\nThe <b>InternetGetCookieEx</b> function retrieves data stored in cookies associated with a specified URL. Unlike <a href=\"/windows/desktop/api/wininet/nf-wininet-internetgetcookiea\">InternetGetCookie</a>, <b>InternetGetCookieEx</b> can be used to  restrict data retrieved to a single cookie name or, by policy, associated with untrusted sites or third-party cookies.\n\n## -parameters\n\n### -param lpszUrl [in]\n\nA pointer to a <b>null</b>-terminated string that contains the URL with which the cookie to retrieve is associated. This parameter cannot be <b>NULL</b> or <b>InternetGetCookieEx</b> fails and returns an  <b>ERROR_INVALID_PARAMETER</b> error.\n\n### -param lpszCookieName [in]\n\nA pointer to a <b>null</b>-terminated string that contains the name of the cookie to retrieve. This name is case-sensitive.\n\n### -param lpszCookieData [in, out, optional]\n\nA pointer to a buffer to receive the cookie data.\n\n### -param lpdwSize [in, out]\n\nA pointer to a DWORD variable. \n\nOn entry, the variable must contain the size, in TCHARs, of the buffer pointed to by the <i>pchCookieData</i> parameter.\n\nOn exit, if the function is successful, this variable contains the number of TCHARs of cookie data copied into the buffer. If <b>NULL</b> was passed as the <i>lpszCookieData</i> parameter, or if the function fails with an error of <b>ERROR_INSUFFICIENT_BUFFER</b>, the variable contains the size, in BYTEs, of buffer required to receive the cookie data.\n\nThis parameter cannot be <b>NULL</b> or <b>InternetGetCookieEx</b> fails and returns an  <b>ERROR_INVALID_PARAMETER</b> error.\n\n### -param dwFlags [in]\n\nA flag that controls how the function retrieves cookie data. This parameter can be one of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_COOKIE_HTTPONLY\"></a><a id=\"internet_cookie_httponly\"></a><dl>\n<dt><b>INTERNET_COOKIE_HTTPONLY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nEnables the retrieval of cookies that are marked as \"HTTPOnly\".  \n\n\n\nDo  not use this flag if you expose a scriptable interface, because this has security implications. It is imperative that you use this flag only if you can guarantee that you will never expose the cookie to third-party code by way of an extensibility mechanism you provide.\n\n\n<b>Version:  </b>Requires Internet Explorer 8.0 or later.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_COOKIE_THIRD_PARTY\"></a><a id=\"internet_cookie_third_party\"></a><dl>\n<dt><b>INTERNET_COOKIE_THIRD_PARTY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nRetrieves only third-party cookies if policy explicitly allows all cookies for the specified URL to be retrieved.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_FLAG_RESTRICTED_ZONE\"></a><a id=\"internet_flag_restricted_zone\"></a><dl>\n<dt><b>INTERNET_FLAG_RESTRICTED_ZONE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nRetrieves only cookies that would be allowed if the specified URL were untrusted; that is, if it belonged to the URLZONE_UNTRUSTED zone.\n\n</td>\n</tr>\n</table>\n\n### -param lpReserved [in]\n\nReserved for future use. Set to <b>NULL</b>.\n\n## -returns\n\nIf the function succeeds, the function returns <b>TRUE</b>.\n\n\nIf the function fails, it returns <b>FALSE</b>. To get a specific error value, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\nIf <b>NULL</b> is passed to <i>lpszCookieData</i>, the call will succeed and the function will not set <b>ERROR_INSUFFICIENT_BUFFER</b>.\n\n\nThe following error codes may be set by this function.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INSUFFICIENT_BUFFER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturned if cookie data retrieved is larger than the buffer size pointed to by the <i>pcchCookieData</i> parameter or if that parameter is <b>NULL</b>.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturned if either the  <i>pchURL</i> or the <i>pcchCookieData</i> parameter is <b>NULL</b>.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NO_MORE_ITEMS</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturned if no cookied data as specified could be retrieved.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\n<div class=\"alert\"><b>Note</b>  WinINet does not support server implementations. In addition, it should not be used from a service.  For server implementations or services use <a href=\"/windows/desktop/WinHttp/winhttp-start-page\">Microsoft Windows HTTP Services (WinHTTP)</a>.</div>\n<div> </div>\n\n\n\n\n> [!NOTE]\n> The wininet.h header defines InternetGetCookieEx as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/WinInet/http-cookies\">HTTP Cookies</a>\n\n\n\n<a href=\"/windows/desktop/api/wininet/nf-wininet-internetgetcookiea\">InternetGetCookie</a>\n\n\n\n<a href=\"/windows/desktop/api/wininet/nf-wininet-internetsetcookiea\">InternetSetCookie</a>\n\n\n\n<a href=\"/windows/desktop/api/wininet/nf-wininet-internetsetcookieexa\">InternetSetCookieEx</a>\n\n\n\n<a href=\"/windows/desktop/WinInet/managing-cookies\">Managing Cookies</a>\n\n\n\n<a href=\"/windows/desktop/WinInet/wininet-functions\">WinINet Functions</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "cookie_parse_url",
+   "file": "dlls/wininet/cookie.c",
+   "start_line": 504,
+   "end_line": 521,
+   "static": true,
+   "called_from": [
+    "InternetGetCookieExW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/cookie.c:1091"
+   ],
+   "signature": "static BOOL cookie_parse_url(const WCHAR *url, substr_t *host, substr_t *path)",
+   "code": "static BOOL cookie_parse_url(const WCHAR *url, substr_t *host, substr_t *path)\n{\n    URL_COMPONENTSW comp = { sizeof(comp) };\n\n    comp.dwHostNameLength = 1;\n    comp.dwUrlPathLength = 1;\n\n    if(!InternetCrackUrlW(url, 0, 0, &comp) || !comp.dwHostNameLength)\n        return FALSE;\n\n    /* discard the webpage off the end of the path */\n    while(comp.dwUrlPathLength && comp.lpszUrlPath[comp.dwUrlPathLength-1] != '/')\n        comp.dwUrlPathLength--;\n\n    *host = substr(comp.lpszHostName, comp.dwHostNameLength);\n    *path = comp.dwUrlPathLength ? substr(comp.lpszUrlPath, comp.dwUrlPathLength) : substr(L\"/\", 1);\n    return TRUE;\n}"
+  },
+  {
+   "name": "get_cookie",
+   "file": "dlls/wininet/cookie.c",
+   "start_line": 531,
+   "end_line": 613,
+   "static": true,
+   "called_from": [
+    "InternetGetCookieExW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/cookie.c:651"
+   ],
+   "signature": "static DWORD get_cookie(substr_t host, substr_t path, DWORD flags, cookie_set_t *res)",
+   "code": "static DWORD get_cookie(substr_t host, substr_t path, DWORD flags, cookie_set_t *res)\n{\n    const WCHAR *p;\n    cookie_domain_t *domain;\n    cookie_container_t *container;\n    FILETIME tm;\n\n    GetSystemTimeAsFileTime(&tm);\n\n    p = host.str + host.len;\n    while(p > host.str && p[-1] != '.') p--;\n    while(p != host.str) {\n        p--;\n        while(p > host.str && p[-1] != '.') p--;\n        if(p == host.str) break;\n\n        load_persistent_cookie(substr(p, host.str+host.len-p), substr(L\"/\", 1));\n    }\n\n    p = path.str + path.len;\n    do {\n        load_persistent_cookie(host, substr(path.str, p-path.str));\n\n        p--;\n        while(p > path.str && p[-1] != '/') p--;\n    }while(p != path.str);\n\n    domain = get_cookie_domain(host, FALSE);\n    if(!domain) {\n        TRACE(\"Unknown host %s\\n\", debugstr_wn(host.str, host.len));\n        return ERROR_NO_MORE_ITEMS;\n    }\n\n    for(domain = get_cookie_domain(host, FALSE); domain; domain = domain->parent) {\n        LIST_FOR_EACH_ENTRY(container, &domain->path_list, cookie_container_t, entry) {\n            struct list *cursor, *cursor2;\n\n            if(!cookie_match_path(container, path))\n                continue;\n\n            LIST_FOR_EACH_SAFE(cursor, cursor2, &container->cookie_list) {\n                cookie_t *cookie_iter = LIST_ENTRY(cursor, cookie_t, entry);\n\n                /* check for expiry */\n                if((cookie_iter->expiry.dwLowDateTime != 0 || cookie_iter->expiry.dwHighDateTime != 0)\n                    && CompareFileTime(&tm, &cookie_iter->expiry)  > 0) {\n                    TRACE(\"Found expired cookie. deleting\\n\");\n                    delete_cookie(cookie_iter);\n                    continue;\n                }\n\n                if((cookie_iter->flags & INTERNET_COOKIE_HTTPONLY) && !(flags & INTERNET_COOKIE_HTTPONLY))\n                    continue;\n\n                if(!res->size) {\n                    res->cookies = malloc(4 * sizeof(*res->cookies));\n                    if(!res->cookies)\n                        continue;\n                    res->size = 4;\n                }else if(res->cnt == res->size) {\n                    cookie_t **new_cookies = realloc(res->cookies, res->size * 2 * sizeof(*res->cookies));\n                    if(!new_cookies)\n                        continue;\n                    res->cookies = new_cookies;\n                    res->size *= 2;\n                }\n\n                TRACE(\"%s = %s domain %s path %s\\n\", debugstr_w(cookie_iter->name), debugstr_w(cookie_iter->data),\n                      debugstr_w(domain->domain), debugstr_wn(container->path.str, container->path.len));\n\n                if(res->cnt)\n                    res->string_len += 2; /* '; ' */\n                res->cookies[res->cnt++] = cookie_iter;\n\n                res->string_len += lstrlenW(cookie_iter->name);\n                if(*cookie_iter->data)\n                    res->string_len += 1 /* = */ + lstrlenW(cookie_iter->data);\n            }\n        }\n    }\n\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "cookie_set_to_string",
+   "file": "dlls/wininet/cookie.c",
+   "start_line": 615,
+   "end_line": 640,
+   "static": true,
+   "called_from": [
+    "InternetGetCookieExW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/cookie.c:665"
+   ],
+   "signature": "static void cookie_set_to_string(const cookie_set_t *cookie_set, WCHAR *str)",
+   "code": "static void cookie_set_to_string(const cookie_set_t *cookie_set, WCHAR *str)\n{\n    WCHAR *ptr = str;\n    unsigned i, len;\n\n    for(i=0; i<cookie_set->cnt; i++) {\n        if(i) {\n            *ptr++ = ';';\n            *ptr++ = ' ';\n        }\n\n        len = lstrlenW(cookie_set->cookies[i]->name);\n        memcpy(ptr, cookie_set->cookies[i]->name, len*sizeof(WCHAR));\n        ptr += len;\n\n        if(*cookie_set->cookies[i]->data) {\n            *ptr++ = '=';\n            len = lstrlenW(cookie_set->cookies[i]->data);\n            memcpy(ptr, cookie_set->cookies[i]->data, len*sizeof(WCHAR));\n            ptr += len;\n        }\n    }\n\n    assert(ptr-str == cookie_set->string_len);\n    TRACE(\"%s\\n\", debugstr_wn(str, ptr-str));\n}"
+  },
+  {
+   "name": "load_persistent_cookie",
+   "file": "dlls/wininet/cookie.c",
+   "start_line": 304,
+   "end_line": 391,
+   "static": true,
+   "called_from": [
+    "get_cookie"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/cookie.c:1017"
+   ],
+   "signature": "static BOOL load_persistent_cookie(substr_t domain, substr_t path)",
+   "code": "static BOOL load_persistent_cookie(substr_t domain, substr_t path)\n{\n    INTERNET_CACHE_ENTRY_INFOW *info;\n    cookie_container_t *cookie_container;\n    cookie_t *new_cookie;\n    HANDLE cookie;\n    char *str = NULL, *pbeg, *pend;\n    DWORD size, flags;\n    WCHAR *name, *data;\n    FILETIME expiry, create, time;\n\n    cookie_container = get_cookie_container(domain, path, TRUE);\n    if(!cookie_container)\n        return FALSE;\n\n    size = 0;\n    RetrieveUrlCacheEntryStreamW(cookie_container->cookie_url, NULL, &size, FALSE, 0);\n    if(GetLastError() != ERROR_INSUFFICIENT_BUFFER)\n        return TRUE;\n    info = malloc(size);\n    if(!info)\n        return FALSE;\n    cookie = RetrieveUrlCacheEntryStreamW(cookie_container->cookie_url, info, &size, FALSE, 0);\n    size = info->dwSizeLow;\n    free(info);\n    if(!cookie)\n        return FALSE;\n\n    if(!(str = malloc(size + 1)) || !ReadUrlCacheEntryStream(cookie, 0, str, &size, 0)) {\n        UnlockUrlCacheEntryStream(cookie, 0);\n        free(str);\n        return FALSE;\n    }\n    str[size] = 0;\n    UnlockUrlCacheEntryStream(cookie, 0);\n\n    GetSystemTimeAsFileTime(&time);\n    for(pbeg=str; pbeg && *pbeg; name=data=NULL) {\n        pend = strchr(pbeg, '\\n');\n        if(!pend)\n            break;\n        *pend = 0;\n        name = strdupAtoW(pbeg);\n\n        pbeg = pend+1;\n        pend = strchr(pbeg, '\\n');\n        if(!pend)\n            break;\n        *pend = 0;\n        data = strdupAtoW(pbeg);\n\n        pbeg = strchr(pend+1, '\\n');\n        if(!pbeg)\n            break;\n        sscanf(pbeg, \"%lu %lu %lu %lu %lu\", &flags, &expiry.dwLowDateTime, &expiry.dwHighDateTime,\n                &create.dwLowDateTime, &create.dwHighDateTime);\n\n        /* skip \"*\\n\" */\n        pbeg = strchr(pbeg, '*');\n        if(pbeg) {\n            pbeg++;\n            if(*pbeg)\n                pbeg++;\n        }\n\n        if(!name || !data)\n            break;\n\n        if(CompareFileTime(&time, &expiry) <= 0) {\n            new_cookie = alloc_cookie(substr(NULL, 0), substr(NULL, 0), expiry, create, flags);\n            if(!new_cookie)\n                break;\n\n            new_cookie->name = name;\n            new_cookie->data = data;\n\n            replace_cookie(cookie_container, new_cookie);\n        }else {\n            free(name);\n            free(data);\n        }\n    }\n    free(str);\n    free(name);\n    free(data);\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "get_cookie_domain",
+   "file": "dlls/wininet/cookie.c",
+   "start_line": 98,
+   "end_line": 146,
+   "static": true,
+   "called_from": [
+    "get_cookie",
+    "get_cookie_container"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static cookie_domain_t *get_cookie_domain(substr_t domain, BOOL create)",
+   "code": "static cookie_domain_t *get_cookie_domain(substr_t domain, BOOL create)\n{\n    const WCHAR *ptr = domain.str + domain.len, *ptr_end, *subdomain_ptr;\n    cookie_domain_t *iter, *current_domain, *prev_domain = NULL;\n    struct list *current_list = &domain_list;\n\n    while(1) {\n        for(ptr_end = ptr--; ptr > domain.str && *ptr != '.'; ptr--);\n        subdomain_ptr = *ptr == '.' ? ptr+1 : ptr;\n\n        current_domain = NULL;\n        LIST_FOR_EACH_ENTRY(iter, current_list, cookie_domain_t, entry) {\n            if(ptr_end-subdomain_ptr == iter->subdomain_len\n                    && !memcmp(subdomain_ptr, iter->domain, iter->subdomain_len*sizeof(WCHAR))) {\n                current_domain = iter;\n                break;\n            }\n        }\n\n        if(!current_domain) {\n            if(!create)\n                return prev_domain;\n\n            current_domain = malloc(sizeof(*current_domain));\n            if(!current_domain)\n                return NULL;\n\n            current_domain->domain = strndupW(subdomain_ptr, domain.str + domain.len - subdomain_ptr);\n            if(!current_domain->domain) {\n                free(current_domain);\n                return NULL;\n            }\n\n            current_domain->subdomain_len = ptr_end-subdomain_ptr;\n\n            current_domain->parent = prev_domain;\n            list_init(&current_domain->path_list);\n            list_init(&current_domain->subdomain_list);\n\n            list_add_tail(current_list, &current_domain->entry);\n        }\n\n        if(ptr == domain.str)\n            return current_domain;\n\n        prev_domain = current_domain;\n        current_list = &current_domain->subdomain_list;\n    }\n}"
+  },
+  {
+   "name": "cookie_match_path",
+   "file": "dlls/wininet/cookie.c",
+   "start_line": 299,
+   "end_line": 302,
+   "static": true,
+   "called_from": [
+    "get_cookie"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL cookie_match_path(cookie_container_t *container, substr_t path)",
+   "code": "static BOOL cookie_match_path(cookie_container_t *container, substr_t path)\n{\n    return path.len >= container->path.len && !wcsnicmp(container->path.str, path.str, container->path.len);\n}"
+  },
+  {
+   "name": "delete_cookie",
+   "file": "dlls/wininet/cookie.c",
+   "start_line": 232,
+   "end_line": 239,
+   "static": true,
+   "called_from": [
+    "alloc_cookie",
+    "get_cookie",
+    "replace_cookie"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/cookie.c:410",
+    "dlls/wininet/cookie.c:699",
+    "dlls/wininet/cookie.c:1040"
+   ],
+   "signature": "static void delete_cookie(cookie_t *cookie)",
+   "code": "static void delete_cookie(cookie_t *cookie)\n{\n    list_remove(&cookie->entry);\n\n    free(cookie->name);\n    free(cookie->data);\n    free(cookie);\n}"
+  },
+  {
+   "name": "get_cookie_container",
+   "file": "dlls/wininet/cookie.c",
+   "start_line": 188,
+   "end_line": 230,
+   "static": true,
+   "called_from": [
+    "load_persistent_cookie"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/cookie.c:1019"
+   ],
+   "signature": "static cookie_container_t *get_cookie_container(substr_t domain, substr_t path, BOOL create)",
+   "code": "static cookie_container_t *get_cookie_container(substr_t domain, substr_t path, BOOL create)\n{\n    cookie_domain_t *cookie_domain;\n    cookie_container_t *cookie_container, *iter;\n\n    cookie_domain = get_cookie_domain(domain, create);\n    if(!cookie_domain)\n        return NULL;\n\n    LIST_FOR_EACH_ENTRY(cookie_container, &cookie_domain->path_list, cookie_container_t, entry) {\n        if(cookie_container->path.len < path.len)\n            break;\n\n        if(path.len == cookie_container->path.len && !wcsnicmp(cookie_container->path.str, path.str, path.len))\n            return cookie_container;\n    }\n\n    if(!create)\n        return NULL;\n\n    cookie_container = malloc(sizeof(*cookie_container));\n    if(!cookie_container)\n        return NULL;\n\n    cookie_container->cookie_url = create_cookie_url(substrz(cookie_domain->domain), path, &cookie_container->path);\n    if(!cookie_container->cookie_url) {\n        free(cookie_container);\n        return NULL;\n    }\n\n    cookie_container->domain = cookie_domain;\n    list_init(&cookie_container->cookie_list);\n\n    LIST_FOR_EACH_ENTRY(iter, &cookie_domain->path_list, cookie_container_t, entry) {\n        if(iter->path.len <= path.len) {\n            list_add_before(&iter->entry, &cookie_container->entry);\n            return cookie_container;\n        }\n    }\n\n    list_add_tail(&cookie_domain->path_list, &cookie_container->entry);\n    return cookie_container;\n}"
+  },
+  {
+   "name": "alloc_cookie",
+   "file": "dlls/wininet/cookie.c",
+   "start_line": 241,
+   "end_line": 265,
+   "static": true,
+   "called_from": [
+    "load_persistent_cookie"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/cookie.c:1050"
+   ],
+   "signature": "static cookie_t *alloc_cookie(substr_t name, substr_t data, FILETIME expiry, FILETIME create_time, DWORD flags)",
+   "code": "static cookie_t *alloc_cookie(substr_t name, substr_t data, FILETIME expiry, FILETIME create_time, DWORD flags)\n{\n    cookie_t *new_cookie;\n\n    new_cookie = calloc(1, sizeof(*new_cookie));\n    if(!new_cookie)\n        return NULL;\n\n    new_cookie->expiry = expiry;\n    new_cookie->create = create_time;\n    new_cookie->flags = flags;\n    list_init(&new_cookie->entry);\n\n    if(name.str && !(new_cookie->name = strndupW(name.str, name.len))) {\n        delete_cookie(new_cookie);\n        return NULL;\n    }\n\n    if(data.str && !(new_cookie->data = strndupW(data.str, data.len))) {\n        delete_cookie(new_cookie);\n        return NULL;\n    }\n\n    return new_cookie;\n}"
+  },
+  {
+   "name": "replace_cookie",
+   "file": "dlls/wininet/cookie.c",
+   "start_line": 288,
+   "end_line": 297,
+   "static": true,
+   "called_from": [
+    "load_persistent_cookie"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void replace_cookie(cookie_container_t *container, cookie_t *new_cookie)",
+   "code": "static void replace_cookie(cookie_container_t *container, cookie_t *new_cookie)\n{\n    cookie_t *old_cookie;\n\n    old_cookie = find_cookie(container, substrz(new_cookie->name));\n    if(old_cookie)\n        delete_cookie(old_cookie);\n\n    add_cookie(container, new_cookie);\n}"
+  },
+  {
+   "name": "create_cookie_url",
+   "file": "dlls/wininet/cookie.c",
+   "start_line": 148,
+   "end_line": 186,
+   "static": true,
+   "called_from": [
+    "get_cookie_container"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static WCHAR *create_cookie_url(substr_t domain, substr_t path, substr_t *ret_path)",
+   "code": "static WCHAR *create_cookie_url(substr_t domain, substr_t path, substr_t *ret_path)\n{\n    WCHAR *p, *url;\n    DWORD len, user_len, i;\n\n    static const WCHAR cookie_prefix[] = {'C','o','o','k','i','e',':'};\n\n    user_len = 0;\n    if(GetUserNameW(NULL, &user_len) || GetLastError() != ERROR_INSUFFICIENT_BUFFER)\n        return NULL;\n\n    /* user_len already accounts for terminating NULL */\n    len = ARRAY_SIZE(cookie_prefix) + user_len + 1 /* @ */ + domain.len + path.len;\n    url = malloc(len * sizeof(WCHAR));\n    if(!url)\n        return NULL;\n\n    memcpy(url, cookie_prefix, sizeof(cookie_prefix));\n    p = url + ARRAY_SIZE(cookie_prefix);\n\n    if(!GetUserNameW(p, &user_len)) {\n        free(url);\n        return NULL;\n    }\n    p += user_len;\n\n    *(p - 1) = '@';\n\n    memcpy(p, domain.str, domain.len*sizeof(WCHAR));\n    p += domain.len;\n\n    for(i=0; i < path.len; i++)\n        p[i] = towlower(path.str[i]);\n    p[path.len] = 0;\n\n    ret_path->str = p;\n    ret_path->len = path.len;\n    return url;\n}"
+  },
+  {
+   "name": "find_cookie",
+   "file": "dlls/wininet/cookie.c",
+   "start_line": 267,
+   "end_line": 277,
+   "static": true,
+   "called_from": [
+    "replace_cookie"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/cookie.c:1030"
+   ],
+   "signature": "static cookie_t *find_cookie(cookie_container_t *container, substr_t name)",
+   "code": "static cookie_t *find_cookie(cookie_container_t *container, substr_t name)\n{\n    cookie_t *iter;\n\n    LIST_FOR_EACH_ENTRY(iter, &container->cookie_list, cookie_t, entry) {\n        if(lstrlenW(iter->name) == name.len && !wcsnicmp(iter->name, name.str, name.len))\n            return iter;\n    }\n\n    return NULL;\n}"
+  },
+  {
+   "name": "add_cookie",
+   "file": "dlls/wininet/cookie.c",
+   "start_line": 279,
+   "end_line": 286,
+   "static": true,
+   "called_from": [
+    "replace_cookie"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/cookie.c:1056"
+   ],
+   "signature": "static void add_cookie(cookie_container_t *container, cookie_t *new_cookie)",
+   "code": "static void add_cookie(cookie_container_t *container, cookie_t *new_cookie)\n{\n    TRACE(\"Adding %s=%s to %s\\n\", debugstr_w(new_cookie->name), debugstr_w(new_cookie->data),\n          debugstr_w(container->cookie_url));\n\n    list_add_tail(&container->cookie_list, &new_cookie->entry);\n    new_cookie->container = container;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "_cookie_container_t",
+    "kind": "struct_decl",
+    "start_line": 65,
+    "end_line": 73,
+    "code": "typedef struct _cookie_container_t {\n    struct list entry;\n\n    WCHAR *cookie_url;\n    substr_t path;\n    struct _cookie_domain_t *domain;\n\n    struct list cookie_list;\n} cookie_container_t;"
+   },
+   {
+    "name": "_cookie_domain_t",
+    "kind": "struct_decl",
+    "start_line": 75,
+    "end_line": 86,
+    "code": "typedef struct _cookie_domain_t {\n    struct list entry;\n\n    WCHAR *domain;\n    unsigned subdomain_len;\n\n    struct _cookie_domain_t *parent;\n    struct list subdomain_list;\n\n    /* List of stored paths sorted by length of the path. */\n    struct list path_list;\n} cookie_domain_t;"
+   },
+   {
+    "name": "_cookie_t",
+    "kind": "struct_decl",
+    "start_line": 53,
+    "end_line": 63,
+    "code": "typedef struct _cookie_t {\n    struct list entry;\n\n    struct _cookie_container_t *container;\n\n    WCHAR *name;\n    WCHAR *data;\n    DWORD flags;\n    FILETIME expiry;\n    FILETIME create;\n} cookie_t;"
+   },
+   {
+    "name": "cookie_container_t",
+    "kind": "typedef_decl",
+    "start_line": 65,
+    "end_line": 73,
+    "code": "typedef struct _cookie_container_t {\n    struct list entry;\n\n    WCHAR *cookie_url;\n    substr_t path;\n    struct _cookie_domain_t *domain;\n\n    struct list cookie_list;\n} cookie_container_t;"
+   },
+   {
+    "name": "cookie_domain_t",
+    "kind": "typedef_decl",
+    "start_line": 75,
+    "end_line": 86,
+    "code": "typedef struct _cookie_domain_t {\n    struct list entry;\n\n    WCHAR *domain;\n    unsigned subdomain_len;\n\n    struct _cookie_domain_t *parent;\n    struct list subdomain_list;\n\n    /* List of stored paths sorted by length of the path. */\n    struct list path_list;\n} cookie_domain_t;"
+   },
+   {
+    "name": "cookie_set_t",
+    "kind": "typedef_decl",
+    "start_line": 523,
+    "end_line": 529,
+    "code": "typedef struct {\n    cookie_t **cookies;\n    unsigned cnt;\n    unsigned size;\n\n    unsigned string_len;\n} cookie_set_t;"
+   },
+   {
+    "name": "cookie_t",
+    "kind": "typedef_decl",
+    "start_line": 53,
+    "end_line": 63,
+    "code": "typedef struct _cookie_t {\n    struct list entry;\n\n    struct _cookie_container_t *container;\n\n    WCHAR *name;\n    WCHAR *data;\n    DWORD flags;\n    FILETIME expiry;\n    FILETIME create;\n} cookie_t;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 44,
+    "end_line": 44,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(wininet);"
+   },
+   {
+    "name": "cookie_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 95,
+    "end_line": 95,
+    "code": "static CRITICAL_SECTION cookie_cs = { &cookie_cs_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "domain_list",
+    "type": "struct list",
+    "static": true,
+    "start_line": 96,
+    "end_line": 96,
+    "code": "static struct list domain_list = LIST_INIT(domain_list);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "InternetCrackUrlW",
+    "impl": [
+     "dlls/wininet/internet.c:2045"
+    ]
+   },
+   {
+    "name": "ReadUrlCacheEntryStream",
+    "impl": [
+     "dlls/wininet/urlcache.c:3101"
+    ]
+   },
+   {
+    "name": "RetrieveUrlCacheEntryStreamW",
+    "impl": [
+     "dlls/wininet/urlcache.c:3179"
+    ]
+   },
+   {
+    "name": "UnlockUrlCacheEntryStream",
+    "impl": [
+     "dlls/wininet/urlcache.c:3233"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CompareFileTime",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:4135"
+    ]
+   },
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "GetSystemTimeAsFileTime",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:4226"
+    ]
+   },
+   {
+    "name": "GetUserNameW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/advapi.c:60"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "_assert",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/exit.c:319"
+    ]
+   },
+   {
+    "name": "calloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "realloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:459"
+    ]
+   },
+   {
+    "name": "strchr",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:359"
+    ]
+   },
+   {
+    "name": "towlower",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/locale.c:1095"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetLastError",
+   "SetLastError",
+   "debugstr_w",
+   "debugstr_wn",
+   "list_add_before",
+   "list_add_tail",
+   "list_init",
+   "list_remove",
+   "lstrlenW",
+   "sscanf",
+   "wcsnicmp",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "strdupAtoW",
+   "strndupW",
+   "substr",
+   "substrz"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

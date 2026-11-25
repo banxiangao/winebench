@@ -1,0 +1,163 @@
+{
+ "id": "0027",
+ "function": {
+  "name": "GetUnicastIpAddressEntry",
+  "export_name": "GetUnicastIpAddressEntry",
+  "module": "iphlpapi",
+  "source_module": "iphlpapi",
+  "exported_by": [
+   "iphlpapi"
+  ],
+  "side": "PE",
+  "file": "dlls/iphlpapi/iphlpapi_main.c",
+  "start_line": 3751,
+  "end_line": 3795,
+  "body_lines": 42,
+  "signature": "DWORD WINAPI GetUnicastIpAddressEntry(MIB_UNICASTIPADDRESS_ROW *row)",
+  "header_comment": null,
+  "code": "DWORD WINAPI GetUnicastIpAddressEntry(MIB_UNICASTIPADDRESS_ROW *row)\n{\n    struct nsi_ipv4_unicast_key key4;\n    struct nsi_ipv6_unicast_key key6;\n    struct nsi_ip_unicast_rw rw;\n    struct nsi_ip_unicast_dynamic dyn;\n    struct nsi_ip_unicast_static stat;\n    const NPI_MODULEID *mod;\n    DWORD err, key_size;\n    void *key;\n\n    TRACE( \"%p\\n\", row );\n\n    if (!row) return ERROR_INVALID_PARAMETER;\n    mod = ip_module_id( row->Address.si_family );\n    if (!mod) return ERROR_INVALID_PARAMETER;\n\n    if (!row->InterfaceLuid.Value)\n    {\n        err = ConvertInterfaceIndexToLuid( row->InterfaceIndex, &row->InterfaceLuid );\n        if (err) return err;\n    }\n\n    if (row->Address.si_family == AF_INET)\n    {\n        key4.luid = row->InterfaceLuid;\n        key4.addr = row->Address.Ipv4.sin_addr;\n        key4.pad = 0;\n        key = &key4;\n        key_size = sizeof(key4);\n    }\n    else if (row->Address.si_family == AF_INET6)\n    {\n        key6.luid = row->InterfaceLuid;\n        key6.addr = row->Address.Ipv6.sin6_addr;\n        key = &key6;\n        key_size = sizeof(key6);\n    }\n    else return ERROR_INVALID_PARAMETER;\n\n    err = NsiGetAllParameters( 1, mod, NSI_IP_UNICAST_TABLE, key, key_size, &rw, sizeof(rw),\n                               &dyn, sizeof(dyn), &stat, sizeof(stat) );\n    if (!err) unicast_row_fill( row, row->Address.si_family, key, &rw, &dyn, &stat );\n    return err;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winsock2.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ws2ipdef.h\"",
+   "#include \"windns.h\"",
+   "#include \"iphlpapi.h\"",
+   "#include \"ipifcons.h\"",
+   "#include \"fltdefs.h\"",
+   "#include \"ifdef.h\"",
+   "#include \"netioapi.h\"",
+   "#include \"ip2string.h\"",
+   "#include \"netiodef.h\"",
+   "#include \"icmpapi.h\"",
+   "#include \"psapi.h\"",
+   "#include \"wine/nsi.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "iphlpapi!GetUnicastIpAddressEntry [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/iphlpapi/tests/iphlpapi.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "netioapi",
+   "path": "sdk-api-src/content/netioapi/nf-netioapi-getunicastipaddressentry.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/netioapi/nf-netioapi-getunicastipaddressentry",
+   "documented_name": "getunicastipaddressentry",
+   "file": "docs/0027_sdk-api_nf-netioapi-getunicastipaddressentry.md",
+   "text": "---\nUID: NF:netioapi.GetUnicastIpAddressEntry\ntitle: GetUnicastIpAddressEntry function (netioapi.h)\ndescription: Retrieves information for an existing unicast IP address entry on the local computer.\nhelpviewer_keywords: [\"GetUnicastIpAddressEntry\",\"GetUnicastIpAddressEntry function [IP Helper]\",\"iphlp.getunicastipaddressentry\",\"netioapi/GetUnicastIpAddressEntry\"]\nold-location: iphlp\\getunicastipaddressentry.htm\ntech.root: IpHlp\nms.assetid: d5475c09-05dd-41d7-80ff-63c52d78468c\nms.date: 12/05/2018\nms.keywords: GetUnicastIpAddressEntry, GetUnicastIpAddressEntry function [IP Helper], iphlp.getunicastipaddressentry, netioapi/GetUnicastIpAddressEntry\nreq.header: netioapi.h\nreq.include-header: Iphlpapi.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps only]\nreq.target-min-winversvr: Windows Server 2008 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Iphlpapi.lib\nreq.dll: Iphlpapi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetUnicastIpAddressEntry\n - netioapi/GetUnicastIpAddressEntry\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Iphlpapi.dll\napi_name:\n - GetUnicastIpAddressEntry\n---\n\n# GetUnicastIpAddressEntry function\n\n\n## -description\n\nThe \n<b>GetUnicastIpAddressEntry</b> function  retrieves information for an existing unicast IP address entry on the local computer.\n\n## -parameters\n\n### -param Row [in, out]\n\nA pointer to a \n<a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_unicastipaddress_row\">MIB_UNICASTIPADDRESS_ROW</a> structure entry for a unicast IP address entry. On successful return, this structure will be updated with the properties for an existing unicast IP address.\n\n## -returns\n\nIf the function succeeds, the return value is NO_ERROR.\n\nIf the function fails, the return value is one of the following error codes.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_FILE_NOT_FOUND</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe system cannot find the file specified. This error is returned if the  network interface LUID or interface index specified by the <b>InterfaceLuid</b> or <b>InterfaceIndex</b> member of the <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_unicastipaddress_row\">MIB_UNICASTIPADDRESS_ROW</a> pointed to by the <i>Row</i> parameter is not a value on the local machine.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA parameter is incorrect. This error is returned if a <b>NULL</b> pointer is passed in the <i>Row</i> parameter, the <b>Address</b> member of the <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_unicastipaddress_row\">MIB_UNICASTIPADDRESS_ROW</a> pointed to by the <i>Row</i> parameter is not set to a valid unicast IPv4 or IPv6 address, or both the <b>InterfaceLuid</b> and <b>InterfaceIndex</b> members of the <b>MIB_UNICASTIPADDRESS_ROW</b> pointed to by the <i>Row</i> parameter are unspecified.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOT_FOUND</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nElement not found. This error is returned if the  network interface specified by the <b>InterfaceLuid</b> or <b>InterfaceIndex</b> member of the <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_unicastipaddress_row\">MIB_UNICASTIPADDRESS_ROW</a> structure pointed to by the <i>Row</i> parameter does not match the IP address specified in the <b>Address</b> member in the <b>MIB_UNICASTIPADDRESS_ROW</b> structure.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOT_SUPPORTED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe request is not supported. This error is returned if no IPv4 stack is on the local computer and an IPv4 address is specified in the <b>Address</b> member of the  <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_unicastipaddress_row\">MIB_UNICASTIPADDRESS_ROW</a> structure pointed to by the <i>Row</i> parameter. This error is also returned if no IPv6 stack is on the local computer and an IPv6 address is specified in the <b>Address</b> member. \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>Other</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nUse \n<a href=\"/windows/desktop/api/winbase/nf-winbase-formatmessage\">FormatMessage</a> to obtain the message string for the returned error.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe <b>GetUnicastIpAddressEntry</b> function is defined on Windows Vista and later. \n\nThe <b>GetUnicastIpAddressEntry</b> function is normally used to retrieve an existing <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_unicastipaddress_row\">MIB_UNICASTIPADDRESS_ROW</a> structure entry to be modified.  An application can then change the members in the <b>MIB_UNICASTIPADDRESS_ROW</b> entry it wishes to modify, and then call the <a href=\"/windows/desktop/api/netioapi/nf-netioapi-createunicastipaddressentry\">SetUnicastIpAddressEntry</a> function. \n\nOn input, the <b>Address</b> member in the <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_unicastipaddress_row\">MIB_UNICASTIPADDRESS_ROW</a> structure pointed to by the <i>Row</i> parameter must be initialized to a valid unicast IPv4 or IPv6 address. The <b>si_family</b> member of the <b>SOCKADDR_INET</b> structure  in the  <b>Address</b> member must be initialized to either <b>AF_INET</b> or <b>AF_INET6</b> and the related <b>Ipv4</b> or <b>Ipv6</b> member of the  <b>SOCKADDR_INET</b> structure must be set to a valid unicast IP address. In addition, at least one of the following members in the <b>MIB_UNICASTIPADDRESS_ROW</b> structure pointed to the <i>Row</i> parameter must be initialized: the <b>InterfaceLuid</b> or <b>InterfaceIndex</b>.\n\nThe fields are used in the order listed above. So if the <b>InterfaceLuid</b> is specified, then this member is used to determine the interface. If no value is set for the  <b>InterfaceLuid</b> member (the value of this member is set to zero), then the <b>InterfaceIndex</b> member is next used to determine the interface. \n\nOn output when the call is successful, <b>GetUnicastIpAddressEntry</b> retrieves the other properties for the unicast IP address and fills out the <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_unicastipaddress_row\">MIB_UNICASTIPADDRESS_ROW</a> structure pointed to by the <i>Row</i> parameter. \n\nThe <a href=\"/windows/desktop/api/netioapi/nf-netioapi-getunicastipaddresstable\">GetUnicastIpAddressTable</a> function can be called to enumerate the unicast IP address entries on a local computer.\n\n\n#### Examples\n\nThe following example retrieves a unicast IP address entry specified on the command line and prints some values from the retrieved <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_unicastipaddress_row\">MIB_UNICASTIPADDRESS_ROW</a> structure.\n\n\n```cpp\n\n#ifndef UNICODE\n#define UNICODE\n#endif\n\n#ifndef WIN32_LEAN_AND_MEAN\n#define WIN32_LEAN_AND_MEAN\n#endif\n\n#include <Windows.h.>\n#include <winsock2.h>\n#include <ws2tcpip.h>\n#include <ws2ipdef.h>\n#include <iphlpapi.h>\n#include <stdio.h>\n#include <stdlib.h>\n\n// Need to link with Iphlpapi.lib and Ws2_32.lib\n#pragma comment (lib, \"iphlpapi.lib\")\n#pragma comment (lib, \"Ws2_32.lib\")\n\nvoid PrintUnicastIpAddress(PMIB_UNICASTIPADDRESS_ROW pIpRow);\n\nint __cdecl wmain(int argc, WCHAR **argv)\n{\n\n    // Declare and initialize variables\n\n    ULONG Result = 0;\n    ULONG ifIndex;\n\n    // default to unspecified address family\n    ULONG addressFamily = AF_UNSPEC;\n\n    IN_ADDR Ipv4Addr;\n    IN6_ADDR Ipv6Addr;\n\n    MIB_UNICASTIPADDRESS_ROW ipRow = {0};\n    \n    // Validate the parameters\n    if (argc < 4) {\n        wprintf(L\"usage: %s <AddressFamily> <IPAddress> <InterfaceIndex>\\n\", argv[0]);\n        wprintf(L\"   Gets the UnicastIpAddressEntry for an AddressFamily,\\n\");\n        wprintf(L\"     Interface Index, and IP address\\n\");\n        wprintf(L\"   Examples\\n\");\n        wprintf(L\"     Get the IPv4 loopback at interface index=1\\n\");\n        wprintf(L\"       %s 4 127.0.0.1 1\\n\", argv[0]);\n        wprintf(L\"     Get the IPv6 loopback at interface index=1\\n\");\n        wprintf(L\"       %s 6 ::1 1\\n\", argv[0]);\n        exit(1);\n    }\n\n    if (_wtoi(argv[1]) == 4) {\n        addressFamily = AF_INET;\n        if (InetPtonW(addressFamily, argv[2], &Ipv4Addr) != 1) {\n            wprintf(L\"Unable to parse IPv4 address string: %s\\n\", argv[3]);\n            exit(1);\n        }\n    } else if (_wtoi(argv[1]) == 6) {\n        addressFamily = AF_INET6;\n        if (InetPton(addressFamily, argv[2], &Ipv6Addr) != 1) {\n            wprintf(L\"Unable to parse IPv6 address string: %s\\n\", argv[3]);\n            exit(1);\n        }\n    }\n\n    ifIndex = _wtoi(argv[3]);\n\n    ipRow.Address.si_family = (ADDRESS_FAMILY) addressFamily;\n    ipRow.InterfaceIndex = ifIndex;\n\n    if (addressFamily == AF_INET) {\n        ipRow.Address.si_family = AF_INET;\n        memcpy(&ipRow.Address.Ipv4.sin_addr, &Ipv4Addr, sizeof (IN_ADDR));\n    }\n    if (addressFamily == AF_INET6) {\n        ipRow.Address.si_family = AF_INET6;\n        memcpy(&ipRow.Address.Ipv6.sin6_addr, &Ipv6Addr, sizeof (IN6_ADDR));\n    }\n\n    Result = GetUnicastIpAddressEntry(&ipRow);\n    if (Result != NO_ERROR) {\n        wprintf(L\"GetUnicastIpAddressEntry returned error: %lu\\n\", Result);\n        exit(1);\n    }\n    PrintUnicastIpAddress(&ipRow);\n    \n    exit(0);\n}\n\nvoid PrintUnicastIpAddress(PMIB_UNICASTIPADDRESS_ROW pipRow)\n{\n\n    WCHAR Ipv4String[16] = { 0 };\n    WCHAR Ipv6String[46] = { 0 };\n\n    // Print some variables from the rows in the table\n    wprintf(L\"AddressFamily:\\t\\t\\t \");\n    switch (pipRow->Address.si_family) {\n    case AF_INET:\n        wprintf(L\"IPv4\\n\");\n        if (InetNtop(AF_INET, &pipRow->Address.Ipv4.sin_addr, Ipv4String, 16) !=\n            NULL)\n            wprintf(L\"IPv4 Address:\\t\\t\\t %ws\\n\", Ipv4String);\n        break;\n    case AF_INET6:\n        wprintf(L\"IPv6\\n\");\n        if (InetNtop(AF_INET6, &pipRow->Address.Ipv6.sin6_addr, Ipv6String, 46)\n            != NULL)\n            wprintf(L\"IPv6 Address:\\t\\t\\t %s\\n\", Ipv6String);\n        break;\n    default:\n        wprintf(L\"Other: %d\\n\", pipRow->Address.si_family);\n        break;\n    }\n\n    wprintf(L\"Interface LUID NetLuidIndex:\\t %lu\\n\",\n           pipRow->InterfaceLuid.Info.NetLuidIndex);\n    wprintf(L\"Interface LUID IfType:\\t\\t \");\n    switch (pipRow->InterfaceLuid.Info.IfType) {\n    case IF_TYPE_OTHER:\n        wprintf(L\"Other\\n\");\n        break;\n    case IF_TYPE_ETHERNET_CSMACD:\n        wprintf(L\"Ethernet\\n\");\n        break;\n    case IF_TYPE_ISO88025_TOKENRING:\n        wprintf(L\"Token ring\\n\");\n        break;\n    case IF_TYPE_PPP:\n        wprintf(L\"PPP\\n\");\n        break;\n    case IF_TYPE_SOFTWARE_LOOPBACK:\n        wprintf(L\"Software loopback\\n\");\n        break;\n    case IF_TYPE_ATM:\n        wprintf(L\"ATM\\n\");\n        break;\n    case IF_TYPE_IEEE80211:\n        wprintf(L\"802.11 wireless\\n\");\n        break;\n    case IF_TYPE_TUNNEL:\n        wprintf(L\"Tunnel encapsulation\\n\");\n        break;\n    case IF_TYPE_IEEE1394:\n        wprintf(L\"IEEE 1394 (Firewire)\\n\");\n        break;\n    default:\n        wprintf(L\"Unknown: %d\\n\", pipRow->InterfaceLuid.Info.IfType);\n        break;\n    }\n\n    wprintf(L\"Interface Index:\\t\\t %lu\\n\", pipRow->InterfaceIndex);\n\n    wprintf(L\"Prefix Origin:\\t\\t\\t \");\n    switch (pipRow->PrefixOrigin) {\n    case IpPrefixOriginOther:\n        wprintf(L\"IpPrefixOriginOther\\n\");\n        break;\n    case IpPrefixOriginManual:\n        wprintf(L\"IpPrefixOriginManual\\n\");\n        break;\n    case IpPrefixOriginWellKnown:\n        wprintf(L\"IpPrefixOriginWellKnown\\n\");\n        break;\n    case IpPrefixOriginDhcp:\n        wprintf(L\"IpPrefixOriginDhcp\\n\");\n        break;\n    case IpPrefixOriginRouterAdvertisement:\n        wprintf(L\"IpPrefixOriginRouterAdvertisement\\n\");\n        break;\n    case IpPrefixOriginUnchanged:\n        wprintf(L\"IpPrefixOriginUnchanged\\n\");\n        break;\n    default:\n        wprintf(L\"Unknown: %d\\n\", pipRow->PrefixOrigin);\n        break;\n    }\n\n    wprintf(L\"Suffix Origin:\\t\\t\\t \");\n    switch (pipRow->SuffixOrigin) {\n    case IpSuffixOriginOther:\n        wprintf(L\"IpSuffixOriginOther\\n\");\n        break;\n    case IpSuffixOriginManual:\n        wprintf(L\"IpSuffixOriginManual\\n\");\n        break;\n    case IpSuffixOriginWellKnown:\n        wprintf(L\"IpSuffixOriginWellKnown\\n\");\n        break;\n    case IpSuffixOriginDhcp:\n        wprintf(L\"IpSuffixOriginDhcp\\n\");\n        break;\n    case IpSuffixOriginLinkLayerAddress:\n        wprintf(L\"IpSuffixOriginLinkLayerAddress\\n\");\n        break;\n    case IpSuffixOriginRandom:\n        wprintf(L\"IpSuffixOriginRandom\\n\");\n        break;\n    case IpSuffixOriginUnchanged:\n        wprintf(L\"IpSuffixOriginUnchanged\\n\");\n        break;\n    default:\n        wprintf(L\"Unknown: %d\\n\", pipRow->SuffixOrigin);\n        break;\n    }\n\n    wprintf(L\"Valid Lifetime:\\t\\t\\t 0x%x (%u)\\n\",\n           pipRow->ValidLifetime, pipRow->ValidLifetime);\n\n    wprintf(L\"Preferred Lifetime:\\t\\t 0x%x (%u)\\n\",\n           pipRow->PreferredLifetime, pipRow->PreferredLifetime);\n\n    wprintf(L\"OnLink PrefixLength:\\t\\t %lu\\n\", pipRow->OnLinkPrefixLength);\n\n    wprintf(L\"Skip As Source:\\t\\t\\t \");\n    if (pipRow->SkipAsSource)\n        wprintf(L\"Yes\\n\");\n    else\n        wprintf(L\"No\\n\");\n\n    wprintf(L\"Dad State:\\t\\t\\t \");\n    switch (pipRow->DadState) {\n    case IpDadStateInvalid:\n        wprintf(L\"IpDadStateInvalid\\n\");\n        break;\n    case IpDadStateTentative:\n        wprintf(L\"IpDadStateTentative\\n\");\n        break;\n    case IpDadStateDuplicate:\n        wprintf(L\"IpDadStateDuplicate\\n\");\n        break;\n    case IpDadStateDeprecated:\n        wprintf(L\"IpDadStateDeprecated\\n\");\n        break;\n    case IpDadStatePreferred:\n        wprintf(L\"IpDadStatePreferred\\n\");\n        break;\n    default:\n        wprintf(L\"Unknown: %d\\n\", pipRow->DadState);\n        break;\n    }\n\n    wprintf(L\"\\n\");\n}\n\n\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-createunicastipaddressentry\">CreateUnicastIpAddressEntry</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-deleteunicastipaddressentry\">DeleteUnicastIpAddressEntry</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-getunicastipaddresstable\">GetUnicastIpAddressTable</a>\n\n\n\n<a href=\"/windows/desktop/IpHlp/ip-helper-function-reference\">IP Helper Function Reference</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-initializeunicastipaddressentry\">InitializeUnicastIpAddressEntry</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_unicastipaddress_row\">MIB_UNICASTIPADDRESS_ROW</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_unicastipaddress_table\">MIB_UNICASTIPADDRESS_TABLE</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-notifyunicastipaddresschange\">NotifyUnicastIpAddressChange</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-setunicastipaddressentry\">SetUnicastIpAddressEntry</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "ip_module_id",
+   "file": "dlls/iphlpapi/iphlpapi_main.c",
+   "start_line": 53,
+   "end_line": 58,
+   "static": true,
+   "called_from": [
+    "GetUnicastIpAddressEntry"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/iphlpapi/iphlpapi_main.c:960",
+    "dlls/iphlpapi/iphlpapi_main.c:1033",
+    "dlls/iphlpapi/iphlpapi_main.c:1560",
+    "dlls/iphlpapi/iphlpapi_main.c:2300",
+    "dlls/iphlpapi/iphlpapi_main.c:2517"
+   ],
+   "signature": "static const NPI_MODULEID *ip_module_id( USHORT family )",
+   "code": "static const NPI_MODULEID *ip_module_id( USHORT family )\n{\n    if (family == AF_INET) return &NPI_MS_IPV4_MODULEID;\n    if (family == AF_INET6) return &NPI_MS_IPV6_MODULEID;\n    return NULL;\n}"
+  },
+  {
+   "name": "unicast_row_fill",
+   "file": "dlls/iphlpapi/iphlpapi_main.c",
+   "start_line": 3718,
+   "end_line": 3749,
+   "static": true,
+   "called_from": [
+    "GetUnicastIpAddressEntry"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/iphlpapi/iphlpapi_main.c:3836",
+    "dlls/iphlpapi/iphlpapi_main.c:3844"
+   ],
+   "signature": "static void unicast_row_fill( MIB_UNICASTIPADDRESS_ROW *row, USHORT fam, void *key, struct nsi_ip_unicast_rw *rw, struct nsi_ip_unicast_dynamic *dyn, struct nsi_ip_unicast_static *stat )",
+   "code": "static void unicast_row_fill( MIB_UNICASTIPADDRESS_ROW *row, USHORT fam, void *key, struct nsi_ip_unicast_rw *rw,\n                              struct nsi_ip_unicast_dynamic *dyn, struct nsi_ip_unicast_static *stat )\n{\n    struct nsi_ipv4_unicast_key *key4 = (struct nsi_ipv4_unicast_key *)key;\n    struct nsi_ipv6_unicast_key *key6 = (struct nsi_ipv6_unicast_key *)key;\n\n    memset( &row->Address, 0, sizeof(row->Address) );\n    if (fam == AF_INET)\n    {\n        row->Address.Ipv4.sin_family = fam;\n        row->Address.Ipv4.sin_addr = key4->addr;\n        row->InterfaceLuid.Value = key4->luid.Value;\n    }\n    else\n    {\n        row->Address.Ipv6.sin6_family = fam;\n        row->Address.Ipv6.sin6_addr = key6->addr;\n        row->Address.Ipv6.sin6_scope_id = dyn->scope_id;\n        row->InterfaceLuid.Value = key6->luid.Value;\n    }\n\n    ConvertInterfaceLuidToIndex( &row->InterfaceLuid, &row->InterfaceIndex );\n    row->PrefixOrigin = rw->prefix_origin;\n    row->SuffixOrigin = rw->suffix_origin;\n    row->ValidLifetime = rw->valid_lifetime;\n    row->PreferredLifetime = rw->preferred_lifetime;\n    row->OnLinkPrefixLength = rw->on_link_prefix;\n    row->SkipAsSource = 0;\n    row->DadState = dyn->dad_state;\n    row->ScopeId.Value = dyn->scope_id;\n    row->CreationTimeStamp.QuadPart = stat->creation_time;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(iphlpapi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "ConvertInterfaceIndexToLuid",
+    "impl": [
+     "dlls/iphlpapi/iphlpapi_main.c:4374"
+    ]
+   },
+   {
+    "name": "ConvertInterfaceLuidToIndex",
+    "impl": [
+     "dlls/iphlpapi/iphlpapi_main.c:4433"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NsiGetAllParameters",
+    "module": "nsi",
+    "impl": [
+     "dlls/nsi/nsi.c:218"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

@@ -1,0 +1,127 @@
+{
+ "id": "0278",
+ "function": {
+  "name": "CertCreateCRLContext",
+  "export_name": "CertCreateCRLContext",
+  "module": "crypt32",
+  "source_module": "crypt32",
+  "exported_by": [
+   "crypt32"
+  ],
+  "side": "PE",
+  "file": "dlls/crypt32/crl.c",
+  "start_line": 179,
+  "end_line": 221,
+  "body_lines": 40,
+  "signature": "PCCRL_CONTEXT WINAPI CertCreateCRLContext(DWORD dwCertEncodingType, const BYTE* pbCrlEncoded, DWORD cbCrlEncoded)",
+  "header_comment": null,
+  "code": "PCCRL_CONTEXT WINAPI CertCreateCRLContext(DWORD dwCertEncodingType,\n const BYTE* pbCrlEncoded, DWORD cbCrlEncoded)\n{\n    crl_t *crl = NULL;\n    BOOL ret;\n    PCRL_INFO crlInfo = NULL;\n    BYTE *data = NULL;\n    DWORD size = 0;\n\n    TRACE(\"(%08lx, %p, %ld)\\n\", dwCertEncodingType, pbCrlEncoded,\n     cbCrlEncoded);\n\n    if ((dwCertEncodingType & CERT_ENCODING_TYPE_MASK) != X509_ASN_ENCODING)\n    {\n        SetLastError(E_INVALIDARG);\n        return NULL;\n    }\n    ret = CryptDecodeObjectEx(dwCertEncodingType, X509_CERT_CRL_TO_BE_SIGNED,\n     pbCrlEncoded, cbCrlEncoded, CRYPT_DECODE_ALLOC_FLAG, NULL,\n     &crlInfo, &size);\n    if (!ret)\n        return NULL;\n\n    crl = (crl_t*)Context_CreateDataContext(sizeof(CRL_CONTEXT), &crl_vtbl, &empty_store);\n    if (!crl)\n        return NULL;\n\n    data = CryptMemAlloc(cbCrlEncoded);\n    if (!data)\n    {\n        Context_Release(&crl->base);\n        return NULL;\n    }\n\n    memcpy(data, pbCrlEncoded, cbCrlEncoded);\n    crl->ctx.dwCertEncodingType = dwCertEncodingType;\n    crl->ctx.pbCrlEncoded       = data;\n    crl->ctx.cbCrlEncoded       = cbCrlEncoded;\n    crl->ctx.pCrlInfo           = crlInfo;\n    crl->ctx.hCertStore         = &empty_store;\n\n    return &crl->ctx;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wincrypt.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"crypt32_private.h\""
+  ],
+  "resolution": [
+   "crypt32!CertCreateCRLContext [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/crypt32/tests/crl.c",
+   "dlls/crypt32/tests/message.c",
+   "dlls/crypt32/tests/store.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wincrypt",
+   "path": "sdk-api-src/content/wincrypt/nf-wincrypt-certcreatecrlcontext.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wincrypt/nf-wincrypt-certcreatecrlcontext",
+   "documented_name": "certcreatecrlcontext",
+   "file": "docs/0278_sdk-api_nf-wincrypt-certcreatecrlcontext.md",
+   "text": "---\nUID: NF:wincrypt.CertCreateCRLContext\ntitle: CertCreateCRLContext function (wincrypt.h)\ndescription: The CertCreateCRLContext function creates a certificate revocation list (CRL) context from an encoded CRL. The created context is not persisted to a certificate store. It makes a copy of the encoded CRL within the created context.\nhelpviewer_keywords: [\"CertCreateCRLContext\",\"CertCreateCRLContext function [Security]\",\"_crypto2_certcreatecrlcontext\",\"security.certcreatecrlcontext\",\"wincrypt/CertCreateCRLContext\"]\nold-location: security\\certcreatecrlcontext.htm\ntech.root: security\nms.assetid: 23d9dfb0-926d-443e-b960-a03338f1cc1b\nms.date: 12/05/2018\nms.keywords: CertCreateCRLContext, CertCreateCRLContext function [Security], _crypto2_certcreatecrlcontext, security.certcreatecrlcontext, wincrypt/CertCreateCRLContext\nreq.header: wincrypt.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Crypt32.lib\nreq.dll: Crypt32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CertCreateCRLContext\n - wincrypt/CertCreateCRLContext\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Crypt32.dll\napi_name:\n - CertCreateCRLContext\n---\n\n# CertCreateCRLContext function\n\n\n## -description\n\nThe <b>CertCreateCRLContext</b> function creates a <a href=\"/windows/desktop/SecGloss/c-gly\">certificate revocation list</a> (CRL) <a href=\"/windows/desktop/SecGloss/c-gly\">context</a> from an encoded CRL. The created context is not persisted to a <a href=\"/windows/desktop/SecGloss/c-gly\">certificate store</a>. It makes a copy of the encoded CRL within the created context.\n\n## -parameters\n\n### -param dwCertEncodingType [in]\n\nSpecifies the type of encoding used. It is always acceptable to specify both the certificate and <a href=\"/windows/desktop/SecGloss/m-gly\">message encoding types</a> by combining them with a bitwise-<b>OR</b> operation as shown in the following example:\n\nX509_ASN_ENCODING | PKCS_7_ASN_ENCODING Currently defined encoding types are:\n\n<ul>\n<li>X509_ASN_ENCODING</li>\n<li>PKCS_7_ASN_ENCODING</li>\n</ul>\n\n### -param pbCrlEncoded [in]\n\nA pointer to a buffer containing the encoded <a href=\"/windows/desktop/SecGloss/c-gly\">CRL</a> from which the context is to be created.\n\n### -param cbCrlEncoded [in]\n\nThe size, in bytes, of the <i>pbCrlEncoded</i> buffer.\n\n## -returns\n\nIf the function succeeds, the return value is a pointer to a read-only \n<a href=\"/windows/desktop/api/wincrypt/ns-wincrypt-crl_context\">CRL_CONTEXT</a>.\n\nIf the function fails and is unable to decode and create the <a href=\"/windows/desktop/api/wincrypt/ns-wincrypt-crl_context\">CRL_CONTEXT</a>, the return value is <b>NULL</b>. For extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>. The following table shows a possible error code.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_INVALIDARG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nInvalid certificate encoding type. Currently, only the encoding type X509_ASN_ENCODING is supported.\n\n</td>\n</tr>\n</table>\n \n\nIf the function fails, <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> may return an <a href=\"/windows/desktop/SecGloss/a-gly\">Abstract Syntax Notation One</a> (ASN.1) encoding/decoding error. For information about these errors, see \n<a href=\"/windows/desktop/SecCrypto/asn-1-encoding-decoding-return-values\">ASN.1 Encoding/Decoding Return Values</a>.\n\n## -remarks\n\nThe \n<a href=\"/windows/desktop/api/wincrypt/ns-wincrypt-crl_context\">CRL_CONTEXT</a> must be freed by calling \n<a href=\"/windows/desktop/api/wincrypt/nf-wincrypt-certfreecrlcontext\">CertFreeCRLContext</a>. \n<a href=\"/windows/desktop/api/wincrypt/nf-wincrypt-certduplicatecrlcontext\">CertDuplicateCRLContext</a> can be called to make a duplicate. \n<a href=\"/windows/desktop/api/wincrypt/nf-wincrypt-certsetcrlcontextproperty\">CertSetCRLContextProperty</a> and \n<a href=\"/windows/desktop/api/wincrypt/nf-wincrypt-certgetcrlcontextproperty\">CertGetCRLContextProperty</a> can be called to store and read properties for the CRL.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/wincrypt/ns-wincrypt-crl_context\">CRL_CONTEXT</a>\n\n\n\n<a href=\"/windows/desktop/api/wincrypt/nf-wincrypt-certcreatectlcontext\">CertCreateCTLContext</a>\n\n\n\n<a href=\"/windows/desktop/api/wincrypt/nf-wincrypt-certcreatecertificatecontext\">CertCreateCertificateContext</a>\n\n\n\n<a href=\"/windows/desktop/api/wincrypt/nf-wincrypt-certduplicatecrlcontext\">CertDuplicateCRLContext</a>\n\n\n\n<a href=\"/windows/desktop/api/wincrypt/nf-wincrypt-certfreecrlcontext\">CertFreeCRLContext</a>\n\n\n\n<a href=\"/windows/desktop/api/wincrypt/nf-wincrypt-certgetcrlcontextproperty\">CertGetCRLContextProperty</a>\n\n\n\n<a href=\"/windows/desktop/api/wincrypt/nf-wincrypt-certsetcrlcontextproperty\">CertSetCRLContextProperty</a>\n\n\n\n<a href=\"/windows/desktop/SecCrypto/cryptography-functions\">Certificate Revocation List Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 29,
+    "end_line": 29,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(crypt);"
+   },
+   {
+    "name": "crl_vtbl",
+    "type": "const context_vtbl_t",
+    "static": true,
+    "start_line": 174,
+    "end_line": 177,
+    "code": "static const context_vtbl_t crl_vtbl = {\n    CRL_free,\n    CRL_clone\n};"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "Context_CreateDataContext",
+    "file": "dlls/crypt32/context.c",
+    "start_line": 28
+   },
+   {
+    "name": "Context_Release",
+    "file": "dlls/crypt32/context.c",
+    "start_line": 108
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "CryptDecodeObjectEx",
+    "impl": [
+     "dlls/crypt32/decode.c:7000"
+    ]
+   },
+   {
+    "name": "CryptMemAlloc",
+    "impl": [
+     "dlls/crypt32/main.c:136"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

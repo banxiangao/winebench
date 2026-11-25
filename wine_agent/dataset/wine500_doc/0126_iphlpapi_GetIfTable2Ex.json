@@ -1,0 +1,168 @@
+{
+ "id": "0126",
+ "function": {
+  "name": "GetIfTable2Ex",
+  "export_name": "GetIfTable2Ex",
+  "module": "iphlpapi",
+  "source_module": "iphlpapi",
+  "exported_by": [
+   "iphlpapi"
+  ],
+  "side": "PE",
+  "file": "dlls/iphlpapi/iphlpapi_main.c",
+  "start_line": 1868,
+  "end_line": 1908,
+  "body_lines": 38,
+  "signature": "DWORD WINAPI GetIfTable2Ex( MIB_IF_TABLE_LEVEL level, MIB_IF_TABLE2 **table )",
+  "header_comment": "/******************************************************************\n *    GetIfTable2Ex (IPHLPAPI.@)\n */",
+  "code": "DWORD WINAPI GetIfTable2Ex( MIB_IF_TABLE_LEVEL level, MIB_IF_TABLE2 **table )\n{\n    DWORD i, count, size, err;\n    NET_LUID *keys;\n    struct nsi_ndis_ifinfo_rw *rw;\n    struct nsi_ndis_ifinfo_dynamic *dyn;\n    struct nsi_ndis_ifinfo_static *stat;\n\n    TRACE( \"level %u, table %p\\n\", level, table );\n\n    if (!table || level > MibIfTableNormalWithoutStatistics)\n        return ERROR_INVALID_PARAMETER;\n\n    if (level != MibIfTableNormal)\n        FIXME(\"level %u not fully supported\\n\", level);\n\n    err = NsiAllocateAndGetTable( 1, &NPI_MS_NDIS_MODULEID, NSI_NDIS_IFINFO_TABLE, (void **)&keys, sizeof(*keys),\n                                  (void **)&rw, sizeof(*rw), (void **)&dyn, sizeof(*dyn),\n                                  (void **)&stat, sizeof(*stat), &count, 0 );\n    if (err) return err;\n\n    size = FIELD_OFFSET( MIB_IF_TABLE2, Table[count] );\n\n    if (!(*table = HeapAlloc( GetProcessHeap(), HEAP_ZERO_MEMORY, size )))\n    {\n        err = ERROR_OUTOFMEMORY;\n        goto err;\n    }\n\n    (*table)->NumEntries = count;\n    for (i = 0; i < count; i++)\n    {\n        MIB_IF_ROW2 *row = (*table)->Table + i;\n\n        row->InterfaceLuid.Value = keys[i].Value;\n        if_row2_fill( row, rw + i, dyn + i, stat + i );\n    }\nerr:\n    NsiFreeTable( keys, rw, dyn, stat );\n    return err;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winsock2.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ws2ipdef.h\"",
+   "#include \"windns.h\"",
+   "#include \"iphlpapi.h\"",
+   "#include \"ipifcons.h\"",
+   "#include \"fltdefs.h\"",
+   "#include \"ifdef.h\"",
+   "#include \"netioapi.h\"",
+   "#include \"ip2string.h\"",
+   "#include \"netiodef.h\"",
+   "#include \"icmpapi.h\"",
+   "#include \"psapi.h\"",
+   "#include \"wine/nsi.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "iphlpapi!GetIfTable2Ex [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/iphlpapi/tests/iphlpapi.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "netioapi",
+   "path": "sdk-api-src/content/netioapi/nf-netioapi-getiftable2ex.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/netioapi/nf-netioapi-getiftable2ex",
+   "documented_name": "getiftable2ex",
+   "file": "docs/0126_sdk-api_nf-netioapi-getiftable2ex.md",
+   "text": "---\nUID: NF:netioapi.GetIfTable2Ex\ntitle: GetIfTable2Ex function (netioapi.h)\ndescription: Retrieves the MIB-II interface table. (GetIfTable2Ex)\nhelpviewer_keywords: [\"GetIfTable2Ex\",\"GetIfTable2Ex function [IP Helper]\",\"MibIfTableNormal\",\"MibIfTableRaw\",\"iphlp.getiftable2ex\",\"netioapi/GetIfTable2Ex\"]\nold-location: iphlp\\getiftable2ex.htm\ntech.root: IpHlp\nms.assetid: d8663894-50b1-4ca2-a1f4-6ca0970795a7\nms.date: 12/05/2018\nms.keywords: GetIfTable2Ex, GetIfTable2Ex function [IP Helper], MibIfTableNormal, MibIfTableRaw, iphlp.getiftable2ex, netioapi/GetIfTable2Ex\nreq.header: netioapi.h\nreq.include-header: Iphlpapi.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps only]\nreq.target-min-winversvr: Windows Server 2008 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Iphlpapi.lib\nreq.dll: Iphlpapi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetIfTable2Ex\n - netioapi/GetIfTable2Ex\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Iphlpapi.dll\napi_name:\n - GetIfTable2Ex\n---\n\n# GetIfTable2Ex function\n\n\n## -description\n\nThe <b>GetIfTable2Ex</b> function  retrieves the MIB-II interface table.\n\n## -parameters\n\n### -param Level [in]\n\nThe level of interface information to retrieve. This parameter can be one of the values from the <b>MIB_IF_TABLE_LEVEL</b> enumeration type defined in the <i>Netioapi.h</i> header file.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MibIfTableNormal\"></a><a id=\"mibiftablenormal\"></a><a id=\"MIBIFTABLENORMAL\"></a><dl>\n<dt><b>MibIfTableNormal</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe values of statistics and state returned in members of the <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_if_row2\">MIB_IF_ROW2</a> structure in the <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_if_table2\">MIB_IF_TABLE2</a> structure pointed to by the <i>Table</i> parameter are returned from the top of the filter stack when this parameter is specified.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MibIfTableRaw\"></a><a id=\"mibiftableraw\"></a><a id=\"MIBIFTABLERAW\"></a><dl>\n<dt><b>MibIfTableRaw</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe values of statistics and state returned in members of the <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_if_row2\">MIB_IF_ROW2</a> structure in the <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_if_table2\">MIB_IF_TABLE2</a> structure pointed to by the <i>Table</i> parameter are returned directly for the interface being queried.\n\n</td>\n</tr>\n</table>\n\n### -param Table [out]\n\nA pointer to a buffer that receives the table of interfaces in a <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_if_table2\">MIB_IF_TABLE2</a> structure.\n\n## -returns\n\nIf the function succeeds, the return value is NO_ERROR.\n\nIf the function fails, the return value is one of the following error codes.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn invalid parameter was passed to the function. This error is returned if an illegal value was passed in the <i>Level</i> parameter.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOT_ENOUGH_MEMORY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nInsufficient memory resources are available to complete the operation.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>Other</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nUse \n<a href=\"/windows/desktop/api/winbase/nf-winbase-formatmessage\">FormatMessage</a> to obtain the message string for the returned error.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe  \n<b>GetIfTable2Ex</b> function enumerates the logical and physical interfaces on a local system and returns this information in a <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_if_table2\">MIB_IF_TABLE2</a> structure. <b>GetIfTable2Ex</b> is an enhanced version of the <b>GetIfTable</b> function that allows selecting the level of interface information to retrieve.\n\nA similar <a href=\"/windows/desktop/api/netioapi/nf-netioapi-getiftable2\">GetIfTable2</a> function can also be used to retrieve interfaces. but does not allow specifying the level of interfaces  to return. Calling the <b>GetIfTable2Ex</b> function with the <i>Level</i> parameter set to <b>MibIfTableNormal</b> retrieves the same results as calling the <b>GetIfTable2</b> function.\n\nInterfaces are returned in a <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_if_table2\">MIB_IF_TABLE2</a> structure in the buffer pointed to by the <i>Table</i> parameter. The <b>MIB_IF_TABLE2</b> structure contains an interface count and an array of <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_if_row2\">MIB_IF_ROW2</a> structures for each interface. Memory is allocated by the <a href=\"/windows/desktop/api/netioapi/nf-netioapi-getiftable2\">GetIfTable2</a> function for the <b>MIB_IF_TABLE2</b> structure and the <b>MIB_IF_ROW2</b> entries in this structure. When these returned structures are no longer required, free the memory by calling the <a href=\"/windows/desktop/api/netioapi/nf-netioapi-freemibtable\">FreeMibTable</a>.\n\nAll interfaces including NDIS intermediate driver interfaces and NDIS filter driver interfaces are returned for either of the possible values for the <i>Level</i> parameter. The setting for the <i>Level</i> parameter affects how statistics and state members of the <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_if_row2\">MIB_IF_ROW2</a> structure in the <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_if_table2\">MIB_IF_TABLE2</a> structure pointed to by the <i>Table</i> parameter for the interface are returned. For example, a network interface card (NIC)  will have a NDIS miniport driver.  An NDIS intermediate driver can be installed to  interface between upper-level protocol drivers and NDIS miniport drivers. An NDIS filter driver (LWF) can be attached on top of the NDIS intermediate driver. Assume that the NIC reports the MediaConnectState member of the  <b>MIB_IF_ROW2</b> structure as <b>MediaConnectStateConnected</b> but NDIS filter driver modifies the state and reports the state as <b>MediaConnectStateDisconnected</b>.\nWhen the interface information is queried with <i>Level</i> parameter set to <b>MibIfTableNormal</b>, the state at the top of the filter stack, that is <b>MediaConnectStateDisconnected</b> is reported. When the interface is queried with the <i>Level</i> parameter set to <b>MibIfTableRaw</b>, the state at the interface level directly, that is <b>MediaConnectStateConnected</b> is returned.\n\n\nNote that the returned <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_if_table2\">MIB_IF_TABLE2</a> structure pointed to by the <i>Table</i> parameter may contain padding for alignment between the <b>NumEntries</b> member and the first <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_if_row2\">MIB_IF_ROW2</a> array entry in the <b>Table</b> member of the <b>MIB_IF_TABLE2</b> structure. Padding for alignment may also be present between the <b>MIB_IF_ROW2</b> array entries. Any access to a <b>MIB_IF_ROW2</b> array entry should assume  padding may exist.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-freemibtable\">FreeMibTable</a>\n\n\n\n<a href=\"/windows/desktop/api/iphlpapi/nf-iphlpapi-getiftable\">GetIfTable</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-getiftable2\">GetIfTable2</a>\n\n\n\n<a href=\"/windows/desktop/IpHlp/ip-helper-function-reference\">IP Helper Function Reference</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_if_row2\">MIB_IF_ROW2</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_if_table2\">MIB_IF_TABLE2</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "if_row2_fill",
+   "file": "dlls/iphlpapi/iphlpapi_main.c",
+   "start_line": 1775,
+   "end_line": 1826,
+   "static": true,
+   "called_from": [
+    "GetIfTable2Ex"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/iphlpapi/iphlpapi_main.c:1853"
+   ],
+   "signature": "static void if_row2_fill( MIB_IF_ROW2 *row, struct nsi_ndis_ifinfo_rw *rw, struct nsi_ndis_ifinfo_dynamic *dyn, struct nsi_ndis_ifinfo_static *stat )",
+   "code": "static void if_row2_fill( MIB_IF_ROW2 *row, struct nsi_ndis_ifinfo_rw *rw, struct nsi_ndis_ifinfo_dynamic *dyn,\n                          struct nsi_ndis_ifinfo_static *stat )\n{\n    row->InterfaceIndex = stat->if_index;\n    row->InterfaceGuid = stat->if_guid;\n    if_counted_string_copy( row->Alias, ARRAY_SIZE(row->Alias), &rw->alias );\n    if_counted_string_copy( row->Description, ARRAY_SIZE(row->Description), &stat->descr );\n    row->PhysicalAddressLength = rw->phys_addr.Length;\n    if (row->PhysicalAddressLength > sizeof(row->PhysicalAddress)) row->PhysicalAddressLength = 0;\n    memcpy( row->PhysicalAddress, rw->phys_addr.Address, row->PhysicalAddressLength );\n    memcpy( row->PermanentPhysicalAddress, stat->perm_phys_addr.Address, row->PhysicalAddressLength );\n    row->Mtu = dyn->mtu;\n    row->Type = stat->type;\n    row->TunnelType = TUNNEL_TYPE_NONE; /* fixme */\n    row->MediaType = stat->media_type;\n    row->PhysicalMediumType = stat->phys_medium_type;\n    row->AccessType = stat->access_type;\n    row->DirectionType = NET_IF_DIRECTION_SENDRECEIVE; /* fixme */\n    row->InterfaceAndOperStatusFlags.HardwareInterface = stat->flags.hw;\n    row->InterfaceAndOperStatusFlags.FilterInterface = stat->flags.filter;\n    row->InterfaceAndOperStatusFlags.ConnectorPresent = !!stat->conn_present;\n    row->InterfaceAndOperStatusFlags.NotAuthenticated = 0; /* fixme */\n    row->InterfaceAndOperStatusFlags.NotMediaConnected = dyn->flags.not_media_conn;\n    row->InterfaceAndOperStatusFlags.Paused = 0; /* fixme */\n    row->InterfaceAndOperStatusFlags.LowPower = 0; /* fixme */\n    row->InterfaceAndOperStatusFlags.EndPointInterface = 0; /* fixme */\n    row->OperStatus = dyn->oper_status;\n    row->AdminStatus = rw->admin_status;\n    row->MediaConnectState = dyn->media_conn_state;\n    row->NetworkGuid = rw->network_guid;\n    row->ConnectionType = stat->conn_type;\n    row->TransmitLinkSpeed = dyn->xmit_speed;\n    row->ReceiveLinkSpeed = dyn->rcv_speed;\n    row->InOctets = dyn->in_octets;\n    row->InUcastPkts = dyn->in_ucast_pkts;\n    row->InNUcastPkts = dyn->in_bcast_pkts + dyn->in_mcast_pkts;\n    row->InDiscards = dyn->in_discards;\n    row->InErrors = dyn->in_errors;\n    row->InUnknownProtos = 0; /* fixme */\n    row->InUcastOctets = dyn->in_ucast_octs;\n    row->InMulticastOctets = dyn->in_mcast_octs;\n    row->InBroadcastOctets = dyn->in_bcast_octs;\n    row->OutOctets = dyn->out_octets;\n    row->OutUcastPkts = dyn->out_ucast_pkts;\n    row->OutNUcastPkts = dyn->out_bcast_pkts + dyn->out_mcast_pkts;\n    row->OutDiscards = dyn->out_discards;\n    row->OutErrors = dyn->out_errors;\n    row->OutUcastOctets = dyn->out_ucast_octs;\n    row->OutMulticastOctets = dyn->out_mcast_octs;\n    row->OutBroadcastOctets = dyn->out_bcast_octs;\n    row->OutQLen = 0; /* fixme */\n}"
+  },
+  {
+   "name": "if_counted_string_copy",
+   "file": "dlls/iphlpapi/iphlpapi_main.c",
+   "start_line": 86,
+   "end_line": 93,
+   "static": true,
+   "called_from": [
+    "if_row2_fill"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/iphlpapi/iphlpapi_main.c:1291",
+    "dlls/iphlpapi/iphlpapi_main.c:1294"
+   ],
+   "signature": "static void if_counted_string_copy( WCHAR *dst, unsigned int len, IF_COUNTED_STRING *src )",
+   "code": "static void if_counted_string_copy( WCHAR *dst, unsigned int len, IF_COUNTED_STRING *src )\n{\n    unsigned int copy = src->Length;\n\n    if (copy >= len * sizeof(WCHAR)) copy = 0;\n    memcpy( dst, src->String, copy );\n    memset( (char *)dst + copy, 0, len * sizeof(WCHAR) - copy );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(iphlpapi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "HeapAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "NsiAllocateAndGetTable",
+    "module": "nsi",
+    "impl": [
+     "dlls/nsi/nsi.c:66"
+    ]
+   },
+   {
+    "name": "NsiFreeTable",
+    "module": "nsi",
+    "impl": [
+     "dlls/nsi/nsi.c:209"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

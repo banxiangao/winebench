@@ -1,0 +1,155 @@
+{
+ "id": "0271",
+ "function": {
+  "name": "GetExplicitEntriesFromAclW",
+  "export_name": "GetExplicitEntriesFromAclW",
+  "module": "advapi32",
+  "source_module": "advapi32",
+  "exported_by": [
+   "advapi32"
+  ],
+  "side": "PE",
+  "file": "dlls/advapi32/security.c",
+  "start_line": 2468,
+  "end_line": 2549,
+  "body_lines": 79,
+  "signature": "DWORD WINAPI GetExplicitEntriesFromAclW( PACL pacl, PULONG count, PEXPLICIT_ACCESSW *list )",
+  "header_comment": "/******************************************************************************\n * GetExplicitEntriesFromAclW [ADVAPI32.@]\n */",
+  "code": "DWORD WINAPI GetExplicitEntriesFromAclW( PACL pacl, PULONG count, PEXPLICIT_ACCESSW *list )\n{\n    ACL_SIZE_INFORMATION sizeinfo;\n    EXPLICIT_ACCESSW *entries;\n    MAX_SID *sid_entries;\n    ACE_HEADER *ace;\n    NTSTATUS status;\n    int i;\n\n    TRACE(\"%p %p %p\\n\",pacl, count, list);\n\n    if (!count || !list)\n        return ERROR_INVALID_PARAMETER;\n\n    status = RtlQueryInformationAcl(pacl, &sizeinfo, sizeof(sizeinfo), AclSizeInformation);\n    if (status) return RtlNtStatusToDosError(status);\n\n    if (!sizeinfo.AceCount)\n    {\n        *count = 0;\n        *list = NULL;\n        return ERROR_SUCCESS;\n    }\n\n    entries = LocalAlloc(LMEM_FIXED | LMEM_ZEROINIT, (sizeof(EXPLICIT_ACCESSW) + sizeof(MAX_SID)) * sizeinfo.AceCount);\n    if (!entries) return ERROR_OUTOFMEMORY;\n    sid_entries = (MAX_SID *)(entries + sizeinfo.AceCount);\n\n    for (i = 0; i < sizeinfo.AceCount; i++)\n    {\n        status = RtlGetAce(pacl, i, (void**)&ace);\n        if (status) goto error;\n\n        switch (ace->AceType)\n        {\n            case ACCESS_ALLOWED_ACE_TYPE:\n            {\n                ACCESS_ALLOWED_ACE *allow = (ACCESS_ALLOWED_ACE *)ace;\n                entries[i].grfAccessMode = GRANT_ACCESS;\n                entries[i].grfInheritance = ace->AceFlags;\n                entries[i].grfAccessPermissions = allow->Mask;\n\n                CopySid(sizeof(MAX_SID), (PSID)&sid_entries[i], (PSID)&allow->SidStart);\n                entries[i].Trustee.pMultipleTrustee = NULL;\n                entries[i].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;\n                entries[i].Trustee.TrusteeForm = TRUSTEE_IS_SID;\n                entries[i].Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN;\n                entries[i].Trustee.ptstrName = (WCHAR *)&sid_entries[i];\n                break;\n            }\n\n            case ACCESS_DENIED_ACE_TYPE:\n            {\n                ACCESS_DENIED_ACE *deny = (ACCESS_DENIED_ACE *)ace;\n                entries[i].grfAccessMode = DENY_ACCESS;\n                entries[i].grfInheritance = ace->AceFlags;\n                entries[i].grfAccessPermissions = deny->Mask;\n\n                CopySid(sizeof(MAX_SID), (PSID)&sid_entries[i], (PSID)&deny->SidStart);\n                entries[i].Trustee.pMultipleTrustee = NULL;\n                entries[i].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;\n                entries[i].Trustee.TrusteeForm = TRUSTEE_IS_SID;\n                entries[i].Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN;\n                entries[i].Trustee.ptstrName = (WCHAR *)&sid_entries[i];\n                break;\n            }\n\n            default:\n                FIXME(\"Unhandled ace type %d\\n\", ace->AceType);\n                entries[i].grfAccessMode = NOT_USED_ACCESS;\n                continue;\n        }\n    }\n\n    *count = sizeinfo.AceCount;\n    *list = entries;\n    return ERROR_SUCCESS;\n\nerror:\n    LocalFree(entries);\n    return RtlNtStatusToDosError(status);\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winsafer.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"accctrl.h\"",
+   "#include \"sddl.h\"",
+   "#include \"winsvc.h\"",
+   "#include \"aclapi.h\"",
+   "#include \"objbase.h\"",
+   "#include \"iads.h\"",
+   "#include \"advapi32_misc.h\"",
+   "#include \"lmcons.h\"",
+   "#include \"userenv.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "advapi32!GetExplicitEntriesFromAclW [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/advapi32/tests/security.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "aclapi",
+   "path": "sdk-api-src/content/aclapi/nf-aclapi-getexplicitentriesfromaclw.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/aclapi/nf-aclapi-getexplicitentriesfromaclw",
+   "documented_name": "getexplicitentriesfromaclw",
+   "file": "docs/0271_sdk-api_nf-aclapi-getexplicitentriesfromaclw.md",
+   "text": "---\nUID: NF:aclapi.GetExplicitEntriesFromAclW\ntitle: GetExplicitEntriesFromAclW function (aclapi.h)\ndescription: Retrieves an array of structures that describe the access control entries (ACEs) in an access control list (ACL). (Unicode)\nhelpviewer_keywords: [\"GetExplicitEntriesFromAcl\", \"GetExplicitEntriesFromAcl function [Security]\", \"GetExplicitEntriesFromAclW\", \"_win32_getexplicitentriesfromacl\", \"aclapi/GetExplicitEntriesFromAcl\", \"aclapi/GetExplicitEntriesFromAclW\", \"security.getexplicitentriesfromacl\"]\nold-location: security\\getexplicitentriesfromacl.htm\ntech.root: security\nms.assetid: 186aa6aa-efc3-4f8a-acad-e257da3dac0b\nms.date: 12/05/2018\nms.keywords: GetExplicitEntriesFromAcl, GetExplicitEntriesFromAcl function [Security], GetExplicitEntriesFromAclA, GetExplicitEntriesFromAclW, _win32_getexplicitentriesfromacl, aclapi/GetExplicitEntriesFromAcl, aclapi/GetExplicitEntriesFromAclA, aclapi/GetExplicitEntriesFromAclW, security.getexplicitentriesfromacl\nreq.header: aclapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: GetExplicitEntriesFromAclW (Unicode) and GetExplicitEntriesFromAclA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Advapi32.lib\nreq.dll: Advapi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetExplicitEntriesFromAclW\n - aclapi/GetExplicitEntriesFromAclW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Advapi32.dll\n - API-MS-Win-Security-Provider-l1-1-0.dll\n - advapi32legacy.dll\n - API-MS-Win-DownLevel-AdvApi32-l3-1-0.dll\n - ntmarta.dll\n - API-MS-Win-Security-Provider-Ansi-L1-1-0.dll\napi_name:\n - GetExplicitEntriesFromAcl\n - GetExplicitEntriesFromAclA\n - GetExplicitEntriesFromAclW\n---\n\n# GetExplicitEntriesFromAclW function\n\n\n## -description\n\nThe <b>GetExplicitEntriesFromAcl</b> function retrieves an array of structures that describe the <a href=\"/windows/desktop/SecGloss/a-gly\">access control entries</a> (ACEs) in an <a href=\"/windows/desktop/SecGloss/a-gly\">access control list</a> (ACL).\n\n## -parameters\n\n### -param pacl [in]\n\nA pointer to an \n<a href=\"/windows/desktop/api/winnt/ns-winnt-acl\">ACL</a> structure from which to get \n<a href=\"/windows/desktop/SecAuthZ/ace\">ACE</a> information.\n\n### -param pcCountOfExplicitEntries [out]\n\nA pointer to a variable that receives the number of <a href=\"/windows/desktop/api/accctrl/ns-accctrl-explicit_access_a\">EXPLICIT_ACCESS</a> structures returned in the <i>pListOfExplicitEntries</i> array.\n\n### -param pListOfExplicitEntries [out]\n\nA pointer to a variable that receives a pointer to an array of <a href=\"/windows/desktop/api/accctrl/ns-accctrl-explicit_access_a\">EXPLICIT_ACCESS</a> structures that describe the ACEs in the ACL. If the function succeeds, you must call the \n<a href=\"/windows/desktop/api/winbase/nf-winbase-localfree\">LocalFree</a> function to free the returned buffer.\n\n## -returns\n\nIf the function succeeds, the function returns ERROR_SUCCESS.\n\nIf the function fails, it returns a nonzero error code defined in WinError.h.\n\n## -remarks\n\nEach entry in the array of \n<a href=\"/windows/desktop/api/accctrl/ns-accctrl-explicit_access_a\">EXPLICIT_ACCESS</a> structures describes access control information from an \n<a href=\"/windows/desktop/SecAuthZ/ace\">ACE</a> for a trustee. A trustee can be a user, group, or program (such as a Windows service).\n\nEach <a href=\"/windows/desktop/api/accctrl/ns-accctrl-explicit_access_a\">EXPLICIT_ACCESS</a> structure specifies a set of access rights and an access mode flag that indicates whether the ACE allows, denies, or audits the specified rights.\n\nFor a <a href=\"/windows/desktop/SecGloss/d-gly\">discretionary access control list</a> (DACL), the access mode flag can be  either GRANT_ACCESS or DENY_ACCESS. For information about these values, see <a href=\"/windows/desktop/api/accctrl/ne-accctrl-access_mode\">ACCESS_MODE</a>.\n\nFor a <a href=\"/windows/desktop/SecGloss/s-gly\">system access control list</a> (SACL), the access mode flag can be SET_AUDIT_ACCESS, SET_AUDIT_FAILURE, or both. For information about these values, see <a href=\"/windows/desktop/api/accctrl/ne-accctrl-access_mode\">ACCESS_MODE</a>.\n\n\n\n\n\n> [!NOTE]\n> The aclapi.h header defines GetExplicitEntriesFromAcl as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winnt/ns-winnt-access_allowed_ace\">ACCESS_ALLOWED_ACE</a>\n\n\n\n<a href=\"/windows/desktop/api/winnt/ns-winnt-access_denied_ace\">ACCESS_DENIED_ACE</a>\n\n\n\n<a href=\"/windows/desktop/api/accctrl/ne-accctrl-access_mode\">ACCESS_MODE</a>\n\n\n\n<a href=\"/windows/desktop/SecAuthZ/ace\">ACE</a>\n\n\n\n<a href=\"/windows/desktop/api/winnt/ns-winnt-acl\">ACL</a>\n\n\n\n<a href=\"/windows/desktop/SecAuthZ/access-control\">Access Control</a>\n\n\n\n<a href=\"/windows/desktop/SecAuthZ/authorization-functions\">Basic Access Control Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/accctrl/ns-accctrl-explicit_access_a\">EXPLICIT_ACCESS</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-localfree\">LocalFree</a>\n\n\n\n<a href=\"/windows/desktop/api/winnt/ns-winnt-system_audit_ace\">SYSTEM_AUDIT_ACE</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "MAX_SID",
+    "kind": "typedef_decl",
+    "start_line": 49,
+    "end_line": 56,
+    "code": "typedef struct _MAX_SID\n{\n    /* same fields as struct _SID */\n    BYTE Revision;\n    BYTE SubAuthorityCount;\n    SID_IDENTIFIER_AUTHORITY IdentifierAuthority;\n    DWORD SubAuthority[SID_MAX_SUB_AUTHORITIES];\n} MAX_SID;"
+   },
+   {
+    "name": "_MAX_SID",
+    "kind": "struct_decl",
+    "start_line": 49,
+    "end_line": 56,
+    "code": "typedef struct _MAX_SID\n{\n    /* same fields as struct _SID */\n    BYTE Revision;\n    BYTE SubAuthorityCount;\n    SID_IDENTIFIER_AUTHORITY IdentifierAuthority;\n    DWORD SubAuthority[SID_MAX_SUB_AUTHORITIES];\n} MAX_SID;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(advapi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "CopySid",
+    "impl": [
+     "dlls/kernelbase/security.c:229"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "LocalAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:1047"
+    ]
+   },
+   {
+    "name": "LocalFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:1107"
+    ]
+   },
+   {
+    "name": "RtlGetAce",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/sec.c:1534"
+    ]
+   },
+   {
+    "name": "RtlNtStatusToDosError",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:77"
+    ]
+   },
+   {
+    "name": "RtlQueryInformationAcl",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/sec.c:1799"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

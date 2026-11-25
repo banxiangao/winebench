@@ -1,0 +1,763 @@
+{
+ "id": "0051",
+ "function": {
+  "name": "RegQueryValueExA",
+  "export_name": "RegQueryValueExA",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "advapi32",
+   "kernel32",
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/registry.c",
+  "start_line": 1730,
+  "end_line": 1824,
+  "body_lines": 92,
+  "signature": "LSTATUS WINAPI DECLSPEC_HOTPATCH RegQueryValueExA( HKEY hkey, LPCSTR name, LPDWORD reserved, LPDWORD type, LPBYTE data, LPDWORD count )",
+  "header_comment": "/******************************************************************************\n * RegQueryValueExA   (kernelbase.@)\n *\n * Get the type and contents of a specified value under with a key.\n *\n * PARAMS\n *  hkey      [I]   Handle of the key to query\n *  name      [I]   Name of value under hkey to query\n *  reserved  [I]   Reserved - must be NULL\n *  type      [O]   Destination for the value type, or NULL if not required\n *  data      [O]   Destination for the values contents, or NULL if not required\n *  count     [I/O] Size of data, updated with the number of bytes returned\n *\n * RETURNS\n *  Success: ERROR_SUCCESS. *count is updated with the number of bytes copied to data.\n *  Failure: ERROR_INVALID_HANDLE, if hkey is invalid.\n *           ERROR_INVALID_PARAMETER, if any other parameter is invalid.\n *           ERROR_MORE_DATA, if on input *count is too small to hold the contents.\n *\n * NOTES\n *   MSDN states that if data is too small it is partially filled. In reality\n *   it remains untouched.\n */",
+  "code": "LSTATUS WINAPI DECLSPEC_HOTPATCH RegQueryValueExA( HKEY hkey, LPCSTR name, LPDWORD reserved,\n                                                   LPDWORD type, LPBYTE data, LPDWORD count )\n{\n    NTSTATUS status;\n    ANSI_STRING nameA;\n    UNICODE_STRING nameW;\n    DWORD total_size, datalen = 0;\n    char buffer[256], *buf_ptr = buffer;\n    KEY_VALUE_PARTIAL_INFORMATION *info = (KEY_VALUE_PARTIAL_INFORMATION *)buffer;\n    static const int info_size = offsetof( KEY_VALUE_PARTIAL_INFORMATION, Data );\n\n    TRACE(\"(%p,%s,%p,%p,%p,%p=%ld)\\n\",\n          hkey, debugstr_a(name), reserved, type, data, count, count ? *count : 0 );\n\n    if ((data && !count) || reserved) return ERROR_INVALID_PARAMETER;\n    if (!(hkey = get_special_root_hkey( hkey )))\n        return ERROR_INVALID_HANDLE;\n\n    if (count) datalen = *count;\n    if (!data && count) *count = 0;\n\n    /* this matches Win9x behaviour - NT sets *type to a random value */\n    if (type) *type = REG_NONE;\n\n    RtlInitAnsiString( &nameA, name );\n    if ((status = RtlAnsiStringToUnicodeString( &nameW, &nameA, TRUE )))\n        return RtlNtStatusToDosError(status);\n\n    if (is_perf_key( hkey ))\n    {\n        DWORD ret = query_perf_data( nameW.Buffer, type, data, count, FALSE );\n        RtlFreeUnicodeString( &nameW );\n        return ret;\n    }\n\n    status = NtQueryValueKey( hkey, &nameW, KeyValuePartialInformation,\n                              buffer, sizeof(buffer), &total_size );\n    if (status && status != STATUS_BUFFER_OVERFLOW) goto done;\n\n    /* we need to fetch the contents for a string type even if not requested,\n     * because we need to compute the length of the ANSI string. */\n    if (data || is_string(info->Type))\n    {\n        /* retry with a dynamically allocated buffer */\n        while (status == STATUS_BUFFER_OVERFLOW)\n        {\n            if (buf_ptr != buffer) HeapFree( GetProcessHeap(), 0, buf_ptr );\n            if (!(buf_ptr = HeapAlloc( GetProcessHeap(), 0, total_size )))\n            {\n                status = STATUS_NO_MEMORY;\n                goto done;\n            }\n            info = (KEY_VALUE_PARTIAL_INFORMATION *)buf_ptr;\n            status = NtQueryValueKey( hkey, &nameW, KeyValuePartialInformation,\n                                      buf_ptr, total_size, &total_size );\n        }\n\n        if (status) goto done;\n\n        if (is_string(info->Type))\n        {\n            DWORD len;\n\n            RtlUnicodeToMultiByteSize( &len, (WCHAR *)(buf_ptr + info_size),\n                                       total_size - info_size );\n            if (data && len)\n            {\n                if (len > datalen) status = STATUS_BUFFER_OVERFLOW;\n                else\n                {\n                    RtlUnicodeToMultiByteN( (char*)data, len, NULL, (WCHAR *)(buf_ptr + info_size),\n                                            total_size - info_size );\n                    /* if the type is REG_SZ and data is not 0-terminated\n                     * and there is enough space in the buffer NT appends a \\0 */\n                    if (len < datalen && data[len-1]) data[len] = 0;\n                }\n            }\n            total_size = len + info_size;\n        }\n        else if (data)\n        {\n            if (total_size - info_size > datalen) status = STATUS_BUFFER_OVERFLOW;\n            else memcpy( data, buf_ptr + info_size, total_size - info_size );\n        }\n    }\n    else status = STATUS_SUCCESS;\n\n    if (type) *type = info->Type;\n    if (count) *count = total_size - info_size;\n\n done:\n    if (buf_ptr != buffer) HeapFree( GetProcessHeap(), 0, buf_ptr );\n    RtlFreeUnicodeString( &nameW );\n    return RtlNtStatusToDosError(status);\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdlib.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winperf.h\"",
+   "#include \"winuser.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"sddl.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/list.h\""
+  ],
+  "resolution": [
+   "advapi32!RegQueryValueExA [stdcall -import] -> import from kernelbase",
+   "kernelbase!RegQueryValueExA [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/advapi32/tests/crypt.c",
+   "dlls/advapi32/tests/eventlog.c",
+   "dlls/advapi32/tests/registry.c",
+   "dlls/kernel32/tests/console.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 23
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winreg",
+   "path": "sdk-api-src/content/winreg/nf-winreg-regqueryvalueexa.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winreg/nf-winreg-regqueryvalueexa",
+   "documented_name": "regqueryvalueexa",
+   "file": "docs/0051_sdk-api_nf-winreg-regqueryvalueexa.md",
+   "text": "---\nUID: NF:winreg.RegQueryValueExA\ntitle: RegQueryValueExA function (winreg.h)\ndescription: Retrieves the type and data for the specified value name associated with an open registry key. (ANSI)\nhelpviewer_keywords: [\"RegQueryValueExA\", \"winreg/RegQueryValueExA\"]\nold-location: base\\regqueryvalueex.htm\ntech.root: winprog\nms.assetid: 202d253a-10ff-40e7-8eec-a49717443b81\nms.date: 12/05/2018\nms.keywords: RegQueryValueEx, RegQueryValueEx function, RegQueryValueExA, RegQueryValueExW, _win32_regqueryvalueex, base.regqueryvalueex, winreg/RegQueryValueEx, winreg/RegQueryValueExA, winreg/RegQueryValueExW\nreq.header: winreg.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: RegQueryValueExW (Unicode) and RegQueryValueExA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Advapi32.lib\nreq.dll: Advapi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - RegQueryValueExA\n - winreg/RegQueryValueExA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-registry-l1-1-2.dll\n - Advapi32.dll\n - API-MS-Win-Core-Localregistry-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-Registry-l1-1-0.dll\n - API-MS-Win-DownLevel-AdvApi32-l1-1-0.dll\n - API-MS-Win-DownLevel-AdvApi32-l1-1-1.dll\n - MinKernelBase.dll\n - api-ms-win-core-registry-l1-1-1.dll\n - kernel32.dll\napi_name:\n - RegQueryValueEx\n - RegQueryValueExA\n - RegQueryValueExW\n---\n\n# RegQueryValueExA function\n\n\n## -description\n\nRetrieves the type and data for the specified value name associated with an open registry key.\n\n> [!WARNING]\n> If the value being queried is a string (REG_SZ, REG_MULTI_SZ, and REG_EXPAND_SZ) the value returned is NOT guaranteed to be null-terminated. Use the <a href=\"/windows/desktop/api/winreg/nf-winreg-reggetvaluea\">RegGetValue</a> function if you want to ensure returned string values are null-terminated. More information is in the remarks below.\n\n## -parameters\n\n### -param hKey [in]\n\nA handle to an open registry key. The key must have been opened with the KEY_QUERY_VALUE access right. For more information, see \n<a href=\"/windows/desktop/SysInfo/registry-key-security-and-access-rights\">Registry Key Security and Access Rights</a>. \n\n\n\n\nThis handle is returned by the \n<a href=\"/windows/desktop/api/winreg/nf-winreg-regcreatekeyexa\">RegCreateKeyEx</a>, <a href=\"/windows/desktop/api/winreg/nf-winreg-regcreatekeytransacteda\">RegCreateKeyTransacted</a>, <a href=\"/windows/desktop/api/winreg/nf-winreg-regopenkeyexa\">RegOpenKeyEx</a>, or \n<a href=\"/windows/desktop/api/winreg/nf-winreg-regopenkeytransacteda\">RegOpenKeyTransacted</a> function. It can also be one of the following \n<a href=\"/windows/desktop/SysInfo/predefined-keys\">predefined keys</a>:<dl>\n<dd><b>HKEY_CLASSES_ROOT</b></dd>\n<dd><b>HKEY_CURRENT_CONFIG</b></dd>\n<dd><b>HKEY_CURRENT_USER</b></dd>\n<dd><b>HKEY_LOCAL_MACHINE</b></dd>\n<dd><b>HKEY_PERFORMANCE_DATA</b></dd>\n<dd><b>HKEY_PERFORMANCE_NLSTEXT</b></dd>\n<dd><b>HKEY_PERFORMANCE_TEXT</b></dd>\n<dd><b>HKEY_USERS</b></dd>\n</dl>\n\n### -param lpValueName [in, optional]\n\nThe name of the registry value. \n\n\n\n\nIf <i>lpValueName</i> is <b>NULL</b> or an empty string, \"\", the function retrieves the type and data for the key's unnamed or default value, if any. \n\nIf <i>lpValueName</i> specifies a value that is not in the registry, the function returns ERROR_FILE_NOT_FOUND.\n\nKeys do not automatically have an unnamed or default value. Unnamed values can be of any type. For more information, see \n<a href=\"/windows/desktop/SysInfo/registry-element-size-limits\">Registry Element Size Limits</a>.\n\n### -param lpReserved\n\nThis parameter is reserved and must be <b>NULL</b>.\n\n### -param lpType [out, optional]\n\nA pointer to a variable that receives a code indicating the type of data stored in the specified value. For a list of the possible type codes, see \n<a href=\"/windows/desktop/SysInfo/registry-value-types\">Registry Value Types</a>. The <i>lpType</i> parameter can be <b>NULL</b> if the type code is not required.\n\n### -param lpData [out, optional]\n\nA pointer to a buffer that receives the value's data. This parameter can be <b>NULL</b> if the data is not required.\n\n### -param lpcbData [in, out, optional]\n\nA pointer to a variable that specifies the size of the buffer pointed to by the <i>lpData</i> parameter, in bytes. When the function returns, this variable contains the size of the data copied to <i>lpData</i>. \n\n\n\n\nThe <i>lpcbData</i> parameter can be <b>NULL</b> only if <i>lpData</i> is <b>NULL</b>.\n\nIf the data has the REG_SZ, REG_MULTI_SZ or REG_EXPAND_SZ type, this size includes any terminating <b>null</b> character or characters unless the data was stored without them. For more information, see Remarks.\n\nIf the buffer specified by <i>lpData</i> parameter is not large enough to hold the data, the function returns ERROR_MORE_DATA and stores the required buffer size in the variable pointed to by <i>lpcbData</i>. In this case, the contents of the <i>lpData</i> buffer are undefined.\n\nIf <i>lpData</i> is <b>NULL</b>, and <i>lpcbData</i> is non-<b>NULL</b>, the function returns ERROR_SUCCESS and stores the size of the data, in bytes, in the variable pointed to by <i>lpcbData</i>. This enables an application to determine the best way to allocate a buffer for the value's data.\n\nIf <i>hKey</i> specifies <b>HKEY_PERFORMANCE_DATA</b> and the <i>lpData</i> buffer is not large enough to contain all of the returned data, \n<b>RegQueryValueEx</b> returns ERROR_MORE_DATA and the value returned through the <i>lpcbData</i> parameter is undefined. This is because the size of the performance data can change from one call to the next. In this case, you must increase the buffer size and call \n<b>RegQueryValueEx</b> again passing the updated buffer size in the <i>lpcbData</i> parameter. Repeat this until the function succeeds. You need to maintain a separate variable to keep track of the buffer size, because the value returned by <i>lpcbData</i> is unpredictable.\n\nIf the <i>lpValueName</i> registry value does not exist, <b>RegQueryValueEx</b> returns ERROR_FILE_NOT_FOUND and the value returned through the <i>lpcbData</i> parameter is undefined.\n\n## -returns\n\nIf the function succeeds, the return value is ERROR_SUCCESS.\n\nIf the function fails, the return value is a \n<a href=\"/windows/desktop/Debug/system-error-codes\">system error code</a>.\n\nIf the <i>lpData</i> buffer is too small to receive the data, the function returns ERROR_MORE_DATA.\n\nIf the <i>lpValueName</i> registry value does not exist, the function returns ERROR_FILE_NOT_FOUND.\n\n## -remarks\n\nAn application typically calls <a href=\"/windows/desktop/api/winreg/nf-winreg-regenumvaluea\">RegEnumValue</a> to determine the value names and then <b>RegQueryValueEx</b> to retrieve the data for the names.\n\nIf the data has the REG_SZ, REG_MULTI_SZ or REG_EXPAND_SZ type, the string may not have been stored with the proper terminating <b>null</b> characters. Therefore, even if the function returns ERROR_SUCCESS, the application should ensure that the string is properly terminated before using it; otherwise, it may overwrite a buffer. (Note that REG_MULTI_SZ strings should have two terminating <b>null</b> characters.) One way an application can ensure that the string is properly terminated is to use <a href=\"/windows/desktop/api/winreg/nf-winreg-reggetvaluea\">RegGetValue</a>, which adds terminating <b>null</b> characters if needed.\n\nIf the data has the REG_SZ, REG_MULTI_SZ or REG_EXPAND_SZ type, and the ANSI version of this function is used (either by explicitly calling <b>RegQueryValueExA</b> or by not defining UNICODE before including the Windows.h file), this function converts the stored Unicode string to an ANSI string before copying it to the buffer pointed to by <i>lpData</i>.\n\nWhen calling the \n<b>RegQueryValueEx</b> function with <i>hKey</i> set to the <b>HKEY_PERFORMANCE_DATA</b> handle and a value string of a specified object, the returned data structure sometimes has unrequested objects. Do not be surprised; this is normal behavior. When calling the \n<b>RegQueryValueEx</b> function, you should always expect to walk the returned data structure to look for the requested object.\n\nNote that operations that access certain registry keys are redirected. For more information,  see <a href=\"/windows/desktop/SysInfo/registry-virtualization\">Registry Virtualization</a> and <a href=\"/windows/desktop/SysInfo/32-bit-and-64-bit-application-data-in-the-registry\">32-bit and 64-bit Application Data in the Registry</a>.\n\n\n#### Examples\n\nEnsure that you reinitialize the value  pointed to by the <i>lpcbData</i> parameter each time  you  call this function. This is very important when you call this function in a loop, as in the following code example.\n\n\n```cpp\n#include <windows.h>\n#include <malloc.h>\n#include <stdio.h>\n\n#define TOTALBYTES    8192\n#define BYTEINCREMENT 4096\n\nvoid main()\n{\n    DWORD BufferSize = TOTALBYTES;\n    DWORD cbData;\n    DWORD dwRet;\n\n    PPERF_DATA_BLOCK PerfData = (PPERF_DATA_BLOCK) malloc( BufferSize );\n    cbData = BufferSize;\n\n    printf(\"\\nRetrieving the data...\");\n\n    dwRet = RegQueryValueEx( HKEY_PERFORMANCE_DATA,\n                             TEXT(\"Global\"),\n                             NULL,\n                             NULL,\n                             (LPBYTE) PerfData,\n                             &cbData );\n    while( dwRet == ERROR_MORE_DATA )\n    {\n        // Get a buffer that is big enough.\n\n        BufferSize += BYTEINCREMENT;\n        PerfData = (PPERF_DATA_BLOCK) realloc( PerfData, BufferSize );\n        cbData = BufferSize;\n\n        printf(\".\");\n        dwRet = RegQueryValueEx( HKEY_PERFORMANCE_DATA,\n                         TEXT(\"Global\"),\n                         NULL,\n                         NULL,\n                         (LPBYTE) PerfData,\n                         &cbData );\n    }\n    if( dwRet == ERROR_SUCCESS )\n        printf(\"\\n\\nFinal buffer size is %d\\n\", BufferSize);\n    else printf(\"\\nRegQueryValueEx failed (%d)\\n\", dwRet);\n}\n\n```\n\n\n\n\n\n\n> [!NOTE]\n> The winreg.h header defines RegQueryValueEx as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/api/rrascfg/nn-rrascfg-ieapproviderconfig\">ExpandEnvironmentStrings</a>\n\n\n\n<a href=\"/windows/desktop/api/winreg/nf-winreg-regcreatekeyexa\">RegCreateKeyEx</a>\n\n\n\n<a href=\"/windows/desktop/api/winreg/nf-winreg-regenumkeyexa\">RegEnumKeyEx</a>\n\n\n\n<a href=\"/windows/desktop/api/winreg/nf-winreg-regenumvaluea\">RegEnumValue</a>\n\n\n\n<a href=\"/windows/desktop/api/winreg/nf-winreg-reggetvaluea\">RegGetValue</a>\n\n\n\n<a href=\"/windows/desktop/api/winreg/nf-winreg-regopenkeyexa\">RegOpenKeyEx</a>\n\n\n\n<a href=\"/windows/desktop/api/winreg/nf-winreg-regqueryinfokeya\">RegQueryInfoKey</a>\n\n\n\n<a href=\"/windows/desktop/SysInfo/registry-functions\">Registry Functions</a>\n\n\n\n<a href=\"/windows/desktop/SysInfo/registry\">Registry Overview</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_special_root_hkey",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 480,
+   "end_line": 499,
+   "static": true,
+   "called_from": [
+    "RegQueryValueExA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/registry.c:574",
+    "dlls/kernelbase/registry.c:621",
+    "dlls/kernelbase/registry.c:661",
+    "dlls/kernelbase/registry.c:708",
+    "dlls/kernelbase/registry.c:813"
+   ],
+   "signature": "static inline HKEY get_special_root_hkey( HKEY hkey )",
+   "code": "static inline HKEY get_special_root_hkey( HKEY hkey )\n{\n    unsigned int index = HandleToUlong(hkey) - HandleToUlong(HKEY_SPECIAL_ROOT_FIRST);\n\n    switch (HandleToUlong(hkey))\n    {\n        case (LONG)(LONG_PTR)HKEY_CLASSES_ROOT:\n        case (LONG)(LONG_PTR)HKEY_CURRENT_USER:\n        case (LONG)(LONG_PTR)HKEY_LOCAL_MACHINE:\n        case (LONG)(LONG_PTR)HKEY_USERS:\n        case (LONG)(LONG_PTR)HKEY_CURRENT_CONFIG:\n        case (LONG)(LONG_PTR)HKEY_DYN_DATA:\n            if (special_root_keys[index])\n                return special_root_keys[index];\n            return create_special_root_hkey( hkey, MAXIMUM_ALLOWED );\n\n        default:\n            return hkey;\n    }\n}"
+  },
+  {
+   "name": "is_perf_key",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 501,
+   "end_line": 506,
+   "static": true,
+   "called_from": [
+    "RegQueryValueExA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/registry.c:1652"
+   ],
+   "signature": "static BOOL is_perf_key( HKEY key )",
+   "code": "static BOOL is_perf_key( HKEY key )\n{\n    return HandleToUlong(key) == HandleToUlong(HKEY_PERFORMANCE_DATA)\n            || HandleToUlong(key) == HandleToUlong(HKEY_PERFORMANCE_TEXT)\n            || HandleToUlong(key) == HandleToUlong(HKEY_PERFORMANCE_NLSTEXT);\n}"
+  },
+  {
+   "name": "query_perf_data",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 1506,
+   "end_line": 1629,
+   "static": true,
+   "called_from": [
+    "RegQueryValueExA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/registry.c:1653"
+   ],
+   "signature": "static DWORD query_perf_data( const WCHAR *query, DWORD *type, void *data, DWORD *ret_size, BOOL unicode )",
+   "code": "static DWORD query_perf_data( const WCHAR *query, DWORD *type, void *data, DWORD *ret_size, BOOL unicode )\n{\n    DWORD err, i, data_size;\n    HKEY root;\n    PERF_DATA_BLOCK *pdb;\n\n    if (!ret_size)\n        return ERROR_INVALID_PARAMETER;\n\n    if (!wcsnicmp( query, L\"counter\", 7 ))\n        return query_perf_names( type, data, ret_size, unicode );\n    if (!wcsnicmp( query, L\"help\", 4 ))\n        return query_perf_help( type, data, ret_size, unicode );\n\n    data_size = *ret_size;\n    *ret_size = 0;\n\n    if (type)\n        *type = REG_BINARY;\n\n    if (!data || data_size < sizeof(*pdb))\n        return ERROR_MORE_DATA;\n\n    pdb = data;\n\n    pdb->Signature[0] = 'P';\n    pdb->Signature[1] = 'E';\n    pdb->Signature[2] = 'R';\n    pdb->Signature[3] = 'F';\n#ifdef WORDS_BIGENDIAN\n    pdb->LittleEndian = FALSE;\n#else\n    pdb->LittleEndian = TRUE;\n#endif\n    pdb->Version = PERF_DATA_VERSION;\n    pdb->Revision = PERF_DATA_REVISION;\n    pdb->TotalByteLength = 0;\n    pdb->HeaderLength = sizeof(*pdb);\n    pdb->NumObjectTypes = 0;\n    pdb->DefaultObject = 0;\n    NtQueryPerformanceCounter( &pdb->PerfTime, &pdb->PerfFreq );\n\n    data = pdb + 1;\n    pdb->SystemNameOffset = sizeof(*pdb);\n    pdb->SystemNameLength = (data_size - sizeof(*pdb)) / sizeof(WCHAR);\n    if (!GetComputerNameExW(ComputerNameNetBIOS, data, &pdb->SystemNameLength))\n        return ERROR_MORE_DATA;\n\n    pdb->SystemNameLength++;\n    pdb->SystemNameLength *= sizeof(WCHAR);\n\n    pdb->HeaderLength += pdb->SystemNameLength;\n\n    /* align to 8 bytes */\n    if (pdb->SystemNameLength & 7)\n        pdb->HeaderLength += 8 - (pdb->SystemNameLength & 7);\n\n    if (data_size < pdb->HeaderLength)\n        return ERROR_MORE_DATA;\n\n    pdb->TotalByteLength = pdb->HeaderLength;\n\n    data_size -= pdb->HeaderLength;\n    data = (char *)data + pdb->HeaderLength;\n\n    err = RegOpenKeyExW(HKEY_LOCAL_MACHINE, L\"System\\\\CurrentControlSet\\\\Services\", 0, KEY_READ, &root);\n    if (err != ERROR_SUCCESS)\n        return err;\n\n    i = 0;\n    for (;;)\n    {\n        DWORD collected_size = data_size, obj_count = 0;\n        struct perf_provider provider;\n        WCHAR name[MAX_SERVICE_NAME];\n        DWORD len = ARRAY_SIZE( name );\n        void *collected_data = data;\n\n        err = RegEnumKeyExW(root, i++, name, &len, NULL, NULL, NULL, NULL);\n        if (err == ERROR_NO_MORE_ITEMS)\n        {\n            err = ERROR_SUCCESS;\n            break;\n        }\n\n        if (err != ERROR_SUCCESS)\n            continue;\n\n        if (!load_provider(root, name, &provider))\n            continue;\n\n        err = collect_data(&provider, query, &collected_data, &collected_size, &obj_count);\n        FreeLibrary(provider.perflib);\n\n        if (err == ERROR_MORE_DATA)\n            break;\n\n        if (err == ERROR_SUCCESS)\n        {\n            PERF_OBJECT_TYPE *obj = (PERF_OBJECT_TYPE *)data;\n\n            TRACE(\"Collect: obj->TotalByteLength %lu, collected_size %lu\\n\",\n                obj->TotalByteLength, collected_size);\n\n            data_size -= collected_size;\n            data = collected_data;\n\n            pdb->TotalByteLength += collected_size;\n            pdb->NumObjectTypes += obj_count;\n        }\n    }\n\n    RegCloseKey(root);\n\n    if (err == ERROR_SUCCESS)\n    {\n        *ret_size = pdb->TotalByteLength;\n\n        GetSystemTime(&pdb->SystemTime);\n        GetSystemTimeAsFileTime((FILETIME *)&pdb->PerfTime100nSec);\n    }\n\n    return err;\n}"
+  },
+  {
+   "name": "is_string",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 88,
+   "end_line": 91,
+   "static": true,
+   "called_from": [
+    "RegQueryValueExA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/registry.c:1218",
+    "dlls/kernelbase/registry.c:1257",
+    "dlls/kernelbase/registry.c:1265",
+    "dlls/kernelbase/registry.c:1688",
+    "dlls/kernelbase/registry.c:1938"
+   ],
+   "signature": "static inline BOOL is_string( DWORD type )",
+   "code": "static inline BOOL is_string( DWORD type )\n{\n    return (type == REG_SZ) || (type == REG_EXPAND_SZ) || (type == REG_MULTI_SZ);\n}"
+  },
+  {
+   "name": "create_special_root_hkey",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 448,
+   "end_line": 477,
+   "static": true,
+   "called_from": [
+    "get_special_root_hkey"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HKEY create_special_root_hkey( HKEY hkey, DWORD access )",
+   "code": "static HKEY create_special_root_hkey( HKEY hkey, DWORD access )\n{\n    HKEY ret = 0;\n    int idx = HandleToUlong(hkey) - HandleToUlong(HKEY_SPECIAL_ROOT_FIRST);\n\n    if (HandleToUlong(hkey) == HandleToUlong(HKEY_CURRENT_USER))\n    {\n        if (RtlOpenCurrentUser( access, (HANDLE *)&hkey )) return 0;\n        TRACE( \"HKEY_CURRENT_USER -> %p\\n\", hkey );\n    }\n    else\n    {\n        UNICODE_STRING name;\n\n        RtlInitUnicodeString( &name, root_key_names[idx] );\n        if (create_key( &hkey, 0, name, 0, access, NULL, NULL )) return 0;\n        TRACE( \"%s -> %p\\n\", debugstr_w(name.Buffer), hkey );\n    }\n\n    if (!cache_disabled[idx])\n    {\n        if (!(ret = InterlockedCompareExchangePointer( (void **)&special_root_keys[idx], hkey, 0 )))\n            ret = hkey;\n        else\n            NtClose( hkey );  /* somebody beat us to it */\n    }\n    else\n        ret = hkey;\n    return ret;\n}"
+  },
+  {
+   "name": "query_perf_names",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 1332,
+   "end_line": 1349,
+   "static": true,
+   "called_from": [
+    "query_perf_data"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD query_perf_names( DWORD *type, void *data, DWORD *ret_size, BOOL unicode )",
+   "code": "static DWORD query_perf_names( DWORD *type, void *data, DWORD *ret_size, BOOL unicode )\n{\n    static const WCHAR names[] = L\"1\\0\" \"1847\\0\" \"1846\\0End Marker\\0\";\n    DWORD size = *ret_size;\n\n    if (type) *type = REG_MULTI_SZ;\n    *ret_size = sizeof(names);\n    if (!unicode) *ret_size /= sizeof(WCHAR);\n\n    if (!data) return ERROR_SUCCESS;\n    if (size < *ret_size) return ERROR_MORE_DATA;\n\n    if (unicode)\n        memcpy( data, names, sizeof(names) );\n    else\n        RtlUnicodeToMultiByteN( data, size, NULL, names, sizeof(names) );\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "query_perf_help",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 1353,
+   "end_line": 1370,
+   "static": true,
+   "called_from": [
+    "query_perf_data"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD query_perf_help( DWORD *type, void *data, DWORD *ret_size, BOOL unicode )",
+   "code": "static DWORD query_perf_help( DWORD *type, void *data, DWORD *ret_size, BOOL unicode )\n{\n    static const WCHAR names[] = L\"1847\\0End Marker\\0\";\n    DWORD size = *ret_size;\n\n    if (type) *type = REG_MULTI_SZ;\n    *ret_size = sizeof(names);\n    if (!unicode) *ret_size /= sizeof(WCHAR);\n\n    if (!data) return ERROR_SUCCESS;\n    if (size < *ret_size) return ERROR_MORE_DATA;\n\n    if (unicode)\n        memcpy( data, names, sizeof(names) );\n    else\n        RtlUnicodeToMultiByteN( data, size, NULL, names, sizeof(names) );\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "load_provider",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 1398,
+   "end_line": 1475,
+   "static": true,
+   "called_from": [
+    "query_perf_data"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL load_provider(HKEY root, const WCHAR *name, struct perf_provider *provider)",
+   "code": "static BOOL load_provider(HKEY root, const WCHAR *name, struct perf_provider *provider)\n{\n    WCHAR buf[MAX_PATH], buf2[MAX_PATH];\n    DWORD err, type, len;\n    HKEY service, perf;\n\n    err = RegOpenKeyExW(root, name, 0, KEY_READ, &service);\n    if (err != ERROR_SUCCESS)\n        return FALSE;\n\n    provider->linkage[0] = 0;\n    err = RegOpenKeyExW(service, L\"Linkage\", 0, KEY_READ, &perf);\n    if (err == ERROR_SUCCESS)\n    {\n        len = sizeof(buf) - sizeof(WCHAR);\n        err = RegQueryValueExW(perf, L\"Export\", NULL, &type, (BYTE *)buf, &len);\n        if (err == ERROR_SUCCESS && (type == REG_SZ || type == REG_MULTI_SZ))\n        {\n            memcpy(provider->linkage, buf, len);\n            provider->linkage[len / sizeof(WCHAR)] = 0;\n            TRACE(\"Export: %s\\n\", debugstr_w(provider->linkage));\n        }\n        RegCloseKey(perf);\n    }\n\n    err = RegOpenKeyExW(service, L\"Performance\", 0, KEY_READ, &perf);\n    RegCloseKey(service);\n    if (err != ERROR_SUCCESS)\n        return FALSE;\n\n    provider->objects[0] = 0;\n    len = sizeof(buf) - sizeof(WCHAR);\n    err = RegQueryValueExW(perf, L\"Object List\", NULL, &type, (BYTE *)buf, &len);\n    if (err == ERROR_SUCCESS && (type == REG_SZ || type == REG_MULTI_SZ))\n    {\n        memcpy(provider->objects, buf, len);\n        provider->objects[len / sizeof(WCHAR)] = 0;\n        TRACE(\"Object List: %s\\n\", debugstr_w(provider->objects));\n    }\n\n    len = sizeof(buf) - sizeof(WCHAR);\n    err = RegQueryValueExW(perf, L\"Library\", NULL, &type, (BYTE *)buf, &len);\n    if (err != ERROR_SUCCESS || !(type == REG_SZ || type == REG_EXPAND_SZ))\n        goto error;\n\n    buf[len / sizeof(WCHAR)] = 0;\n    if (type == REG_EXPAND_SZ)\n    {\n        len = ExpandEnvironmentStringsW(buf, buf2, MAX_PATH);\n        if (!len || len > MAX_PATH) goto error;\n        lstrcpyW(buf, buf2);\n    }\n\n    if (!(provider->perflib = LoadLibraryW(buf)))\n    {\n        WARN(\"Failed to load %s\\n\", debugstr_w(buf));\n        goto error;\n    }\n\n    GetModuleFileNameW(provider->perflib, buf, MAX_PATH);\n    TRACE(\"Loaded provider %s\\n\", wine_dbgstr_w(buf));\n\n    provider->pOpen = get_provider_entry(perf, provider->perflib, \"Open\");\n    provider->pClose = get_provider_entry(perf, provider->perflib, \"Close\");\n    provider->pCollect = get_provider_entry(perf, provider->perflib, \"Collect\");\n    if (provider->pOpen && provider->pClose && provider->pCollect)\n    {\n        RegCloseKey(perf);\n        return TRUE;\n    }\n\n    TRACE(\"Provider is missing required exports\\n\");\n    FreeLibrary(provider->perflib);\n\nerror:\n    RegCloseKey(perf);\n    return FALSE;\n}"
+  },
+  {
+   "name": "collect_data",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 1477,
+   "end_line": 1502,
+   "static": true,
+   "called_from": [
+    "query_perf_data"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static DWORD collect_data(struct perf_provider *provider, const WCHAR *query, void **data, DWORD *size, DWORD *obj_count)",
+   "code": "static DWORD collect_data(struct perf_provider *provider, const WCHAR *query, void **data, DWORD *size, DWORD *obj_count)\n{\n    WCHAR *linkage = provider->linkage[0] ? provider->linkage : NULL;\n    DWORD err;\n\n    if (!query || !query[0])\n        query = L\"Global\";\n\n    err = provider->pOpen(linkage);\n    if (err != ERROR_SUCCESS)\n    {\n        TRACE(\"Open(%s) error %lu (%#lx)\\n\", debugstr_w(linkage), err, err);\n        return err;\n    }\n\n    *obj_count = 0;\n    err = provider->pCollect((WCHAR *)query, data, size, obj_count);\n    if (err != ERROR_SUCCESS)\n    {\n        TRACE(\"Collect error %lu (%#lx)\\n\", err, err);\n        *obj_count = 0;\n    }\n\n    provider->pClose();\n    return err;\n}"
+  },
+  {
+   "name": "create_key",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 394,
+   "end_line": 445,
+   "static": true,
+   "called_from": [
+    "create_special_root_hkey",
+    "create_subkey"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/registry.c:360",
+    "dlls/kernelbase/registry.c:579",
+    "dlls/kernelbase/registry.c:631"
+   ],
+   "signature": "static NTSTATUS create_key( HKEY *retkey, HKEY root, UNICODE_STRING name, ULONG options, ACCESS_MASK access, const UNICODE_STRING *class, PULONG dispos )",
+   "code": "static NTSTATUS create_key( HKEY *retkey, HKEY root, UNICODE_STRING name, ULONG options, ACCESS_MASK access,\n                            const UNICODE_STRING *class, PULONG dispos )\n{\n    NTSTATUS status = STATUS_OBJECT_NAME_NOT_FOUND;\n    HKEY subkey, subkey_root = root;\n\n    *retkey = NULL;\n\n    if (!(is_win64 && (access & KEY_WOW64_32KEY)))\n    {\n        OBJECT_ATTRIBUTES attr;\n\n        InitializeObjectAttributes( &attr, &name, 0, root, NULL );\n        if (options & REG_OPTION_OPEN_LINK) attr.Attributes |= OBJ_OPENLINK;\n\n        status = NtCreateKey( (HANDLE *)retkey, access, &attr, 0, class, options, dispos );\n        if (status == STATUS_PREDEFINED_HANDLE)\n        {\n            *retkey = get_perflib_key( *retkey );\n            status = STATUS_SUCCESS;\n        }\n\n        if (!status || status != STATUS_OBJECT_NAME_NOT_FOUND)\n            return status;\n    }\n\n    status = open_key( &subkey_root, root, &name, options & REG_OPTION_OPEN_LINK, access, TRUE );\n    if (!status && (options & REG_OPTION_CREATE_LINK))\n    {\n        NtClose( subkey_root );\n        status = STATUS_OBJECT_NAME_COLLISION;\n    }\n\n    if (!status)\n        if (dispos) *dispos = REG_OPENED_EXISTING_KEY;\n\n    if (status == STATUS_OBJECT_NAME_NOT_FOUND)\n    {\n        status = STATUS_SUCCESS;\n        while (!status && name.Length)\n        {\n            status = create_subkey( &subkey, subkey_root, &name, options, access, class, dispos );\n            if (subkey_root && subkey_root != root) NtClose( subkey_root );\n            subkey_root = subkey;\n        }\n    }\n\n    if (!status)\n        *retkey = subkey_root;\n\n    return status;\n}"
+  },
+  {
+   "name": "get_provider_entry",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 1382,
+   "end_line": 1396,
+   "static": true,
+   "called_from": [
+    "load_provider"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void *get_provider_entry(HKEY perf, HMODULE perflib, const char *name)",
+   "code": "static void *get_provider_entry(HKEY perf, HMODULE perflib, const char *name)\n{\n    char buf[MAX_PATH];\n    DWORD err, type, len;\n\n    len = sizeof(buf) - 1;\n    err = RegQueryValueExA(perf, name, NULL, &type, (BYTE *)buf, &len);\n    if (err != ERROR_SUCCESS || type != REG_SZ)\n        return NULL;\n\n    buf[len] = 0;\n    TRACE(\"Loading function pointer for %s: %s\\n\", name, debugstr_a(buf));\n\n    return GetProcAddress(perflib, buf);\n}"
+  },
+  {
+   "name": "get_perflib_key",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 178,
+   "end_line": 195,
+   "static": true,
+   "called_from": [
+    "create_key",
+    "open_key"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HKEY get_perflib_key( HANDLE key )",
+   "code": "static HKEY get_perflib_key( HANDLE key )\n{\n    static const WCHAR performance_text[] =\n            L\"\\\\Registry\\\\Machine\\\\Software\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Perflib\\\\009\";\n    char buffer[200];\n    OBJECT_NAME_INFORMATION *info = (OBJECT_NAME_INFORMATION *)buffer;\n\n    if (!NtQueryObject( key, ObjectNameInformation, buffer, sizeof(buffer), NULL ))\n    {\n        if (!wcsicmp( info->Name.Buffer, performance_text ))\n        {\n            NtClose( key );\n            return HKEY_PERFORMANCE_TEXT;\n        }\n    }\n\n    return key;\n}"
+  },
+  {
+   "name": "open_key",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 301,
+   "end_line": 358,
+   "static": true,
+   "called_from": [
+    "create_key",
+    "open_subkey"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/registry.c:664",
+    "dlls/kernelbase/registry.c:715"
+   ],
+   "signature": "static NTSTATUS open_key( HKEY *retkey, HKEY root, UNICODE_STRING *name, DWORD options, ACCESS_MASK access, BOOL create )",
+   "code": "static NTSTATUS open_key( HKEY *retkey, HKEY root, UNICODE_STRING *name, DWORD options, ACCESS_MASK access, BOOL create )\n{\n    BOOL is_wow64_key = (is_win64 && (access & KEY_WOW64_32KEY)) || (is_wow64 && !(access & KEY_WOW64_64KEY));\n    HKEY subkey = 0, subkey_root = root;\n    NTSTATUS status = STATUS_SUCCESS;\n    BOOL was_wow6432node = TRUE;\n\n    *retkey = NULL;\n\n    if (!(is_win64 && (access & KEY_WOW64_32KEY)) && !create)\n    {\n        OBJECT_ATTRIBUTES attr;\n\n        InitializeObjectAttributes( &attr, name, 0, root, NULL );\n        if (options & REG_OPTION_OPEN_LINK) attr.Attributes |= OBJ_OPENLINK;\n        status = NtOpenKeyEx( (HANDLE *)retkey, access, &attr, options );\n        if (status == STATUS_PREDEFINED_HANDLE)\n        {\n            *retkey = get_perflib_key( *retkey );\n            status = STATUS_SUCCESS;\n        }\n        return status;\n    }\n\n    if (root && (access & KEY_WOW64_32KEY) && !is_wow6432node( name ))\n        status = open_wow6432node_parent( &subkey_root, root, options, access );\n    else if (root && is_wow64 && !(access & KEY_WOW64_64KEY) && !is_wow6432node( name ))\n    {\n        subkey_root = open_wow6432node( root );\n        if (!is_classes_wow6432node( subkey_root ) && subkey_root != root)\n        {\n            NtClose( subkey_root );\n            subkey_root = root;\n        }\n    }\n\n    while (!status && (name->Length || !subkey))\n    {\n        was_wow6432node = is_wow6432node( name );\n        status = open_subkey( &subkey, subkey_root, name, options, access );\n        if (subkey && subkey_root && subkey_root != root) NtClose( subkey_root );\n        if (subkey) subkey_root = subkey;\n    }\n\n    /* Return the shared parent if we didn't explicitly look for the Wow6432Node */\n    if (!status && !was_wow6432node && is_wow64_key && is_classes_wow6432node( subkey_root ))\n    {\n        if (subkey_root && subkey_root != root) NtClose( subkey_root );\n        subkey_root = open_classes_root();\n    }\n\n    if (!status || (status == STATUS_OBJECT_NAME_NOT_FOUND && create))\n        *retkey = subkey_root;\n    else if (subkey_root && subkey_root != root)\n        NtClose( subkey_root );\n\n    return status;\n}"
+  },
+  {
+   "name": "create_subkey",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 363,
+   "end_line": 391,
+   "static": true,
+   "called_from": [
+    "create_key"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS create_subkey( HKEY *subkey, HKEY root, UNICODE_STRING *name, DWORD options, ACCESS_MASK access, const UNICODE_STRING *class, PULONG dispos )",
+   "code": "static NTSTATUS create_subkey( HKEY *subkey, HKEY root, UNICODE_STRING *name, DWORD options, ACCESS_MASK access,\n                               const UNICODE_STRING *class, PULONG dispos )\n{\n    ACCESS_MASK access_64 = access & ~KEY_WOW64_32KEY;\n    DWORD i = 0, len = name->Length / sizeof(WCHAR);\n    WCHAR *buffer = name->Buffer;\n    UNICODE_STRING str;\n    NTSTATUS status;\n\n    if (i < len && buffer[i] == '\\\\') return STATUS_OBJECT_PATH_INVALID;\n    while (i < len && buffer[i] != '\\\\') i++;\n\n    str.Buffer = name->Buffer;\n    str.Length = i * sizeof(WCHAR);\n\n    if (i < len)\n        options &= ~REG_OPTION_CREATE_LINK;\n\n    status = create_key( subkey, root, str, options, access_64, class, dispos );\n    if (!status)\n    {\n        while (i < len && buffer[i] == '\\\\') i++;\n\n        name->Buffer += i;\n        name->Length -= i * sizeof(WCHAR);\n    }\n\n    return status;\n}"
+  },
+  {
+   "name": "is_wow6432node",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 99,
+   "end_line": 103,
+   "static": true,
+   "called_from": [
+    "is_classes_wow6432node",
+    "open_key",
+    "open_subkey"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL is_wow6432node( const UNICODE_STRING *name )",
+   "code": "static BOOL is_wow6432node( const UNICODE_STRING *name )\n{\n    DWORD len = name->Length / sizeof(WCHAR);\n    return (len >= 11 && !wcsnicmp( name->Buffer, L\"Wow6432Node\\\\\", min( len, 12 ) ));\n}"
+  },
+  {
+   "name": "open_wow6432node_parent",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 255,
+   "end_line": 298,
+   "static": true,
+   "called_from": [
+    "open_key"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS open_wow6432node_parent( HKEY *retkey, HKEY root, DWORD options, ACCESS_MASK access )",
+   "code": "static NTSTATUS open_wow6432node_parent( HKEY *retkey, HKEY root, DWORD options, ACCESS_MASK access )\n{\n    char buffer[256], *buf_ptr = buffer;\n    KEY_NAME_INFORMATION *info = (KEY_NAME_INFORMATION *)buffer;\n    DWORD len = sizeof(buffer);\n    UNICODE_STRING name;\n    NTSTATUS status;\n\n    /* Obtain the name of the root key */\n    status = NtQueryKey( root, KeyNameInformation, info, len, &len );\n    if (status && status != STATUS_BUFFER_OVERFLOW) return status;\n\n    /* Retry with a dynamically allocated buffer */\n    while (status == STATUS_BUFFER_OVERFLOW)\n    {\n        if (buf_ptr != buffer) HeapFree( GetProcessHeap(), 0, buf_ptr );\n        if (!(buf_ptr = HeapAlloc( GetProcessHeap(), 0, len )))\n            return STATUS_NO_MEMORY;\n        info = (KEY_NAME_INFORMATION *)buf_ptr;\n        status = NtQueryKey( root, KeyNameInformation, info, len, &len );\n    }\n\n    if (status)\n    {\n        if (buf_ptr != buffer) HeapFree( GetProcessHeap(), 0, buf_ptr );\n        return status;\n    }\n\n    name.Buffer = info->Name;\n    name.Length = info->NameLength;\n    root = 0;\n\n    /* Obtain the parent Wow6432Node if it exists */\n    while (!status && name.Length)\n    {\n        status = open_subkey( retkey, root, &name, options & ~REG_OPTION_OPEN_LINK, access );\n        if (root) NtClose( root );\n        root = *retkey;\n    }\n\n    if (buf_ptr != buffer) HeapFree( GetProcessHeap(), 0, buf_ptr );\n\n    return status;\n}"
+  },
+  {
+   "name": "open_wow6432node",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 154,
+   "end_line": 163,
+   "static": true,
+   "called_from": [
+    "open_key",
+    "open_subkey"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HANDLE open_wow6432node( HANDLE key )",
+   "code": "static HANDLE open_wow6432node( HANDLE key )\n{\n    UNICODE_STRING nameW = RTL_CONSTANT_STRING( L\"Wow6432Node\" );\n    OBJECT_ATTRIBUTES attr;\n    HANDLE ret;\n\n    InitializeObjectAttributes( &attr, &nameW, 0, key, NULL );\n    if (NtOpenKeyEx( &ret, MAXIMUM_ALLOWED | KEY_WOW64_64KEY, &attr, 0 )) return key;\n    return ret;\n}"
+  },
+  {
+   "name": "is_classes_wow6432node",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 113,
+   "end_line": 151,
+   "static": true,
+   "called_from": [
+    "open_key",
+    "open_subkey"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL is_classes_wow6432node( HKEY key )",
+   "code": "static BOOL is_classes_wow6432node( HKEY key )\n{\n    char buffer[256], *buf_ptr = buffer;\n    KEY_NAME_INFORMATION *info = (KEY_NAME_INFORMATION *)buffer;\n    DWORD len = sizeof(buffer);\n    UNICODE_STRING name;\n    NTSTATUS status;\n    BOOL ret = FALSE;\n\n    /* Obtain the name of the root key */\n    status = NtQueryKey( key, KeyNameInformation, info, len, &len );\n    if (status && status != STATUS_BUFFER_OVERFLOW) return FALSE;\n\n    /* Retry with a dynamically allocated buffer */\n    while (status == STATUS_BUFFER_OVERFLOW)\n    {\n        if (buf_ptr != buffer) HeapFree( GetProcessHeap(), 0, buf_ptr );\n        if (!(buf_ptr = HeapAlloc( GetProcessHeap(), 0, len ))) return FALSE;\n        info = (KEY_NAME_INFORMATION *)buf_ptr;\n        status = NtQueryKey( key, KeyNameInformation, info, len, &len );\n    }\n\n    /* Check if the key ends in Wow6432Node and if the root is the Classes key*/\n    if (!status && info->NameLength / sizeof(WCHAR) >= 11)\n    {\n        name.Buffer = info->Name + info->NameLength / sizeof(WCHAR) - 11;\n        name.Length = 11 * sizeof(WCHAR);\n        if (is_wow6432node( &name ))\n        {\n            name.Buffer = info->Name;\n            name.Length = info->NameLength;\n            ret = is_classes_root( &name );\n        }\n    }\n\n    if (buf_ptr != buffer) HeapFree( GetProcessHeap(), 0, buf_ptr );\n\n    return ret;\n}"
+  },
+  {
+   "name": "open_subkey",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 199,
+   "end_line": 253,
+   "static": true,
+   "called_from": [
+    "open_key",
+    "open_wow6432node_parent"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS open_subkey( HKEY *subkey, HKEY root, UNICODE_STRING *name, DWORD options, ACCESS_MASK access )",
+   "code": "static NTSTATUS open_subkey( HKEY *subkey, HKEY root, UNICODE_STRING *name, DWORD options, ACCESS_MASK access )\n{\n    BOOL is_wow64_key = (is_win64 && (access & KEY_WOW64_32KEY)) || (is_wow64 && !(access & KEY_WOW64_64KEY));\n    ACCESS_MASK access_64 = (access & ~KEY_WOW64_32KEY) | KEY_WOW64_64KEY;\n    DWORD i = 0, len = name->Length / sizeof(WCHAR);\n    WCHAR *buffer = name->Buffer;\n    UNICODE_STRING str;\n    NTSTATUS status;\n\n    if (!root && len > 10 && !wcsnicmp( buffer, L\"\\\\Registry\\\\\", 10 )) i += 10;\n    if (i < len && buffer[i] == '\\\\') return STATUS_OBJECT_PATH_INVALID;\n    while (i < len && buffer[i] != '\\\\') i++;\n\n    str.Buffer = name->Buffer;\n    str.Length = i * sizeof(WCHAR);\n\n    if (i < len)\n        options &= ~REG_OPTION_OPEN_LINK;\n\n    status = open_key( subkey, root, &str, options, access_64, FALSE );\n    if (status == STATUS_OBJECT_NAME_NOT_FOUND && root && is_wow64_key)\n    {\n        /* Try to open the shared parent if we can't find the key in the Wow6432Node */\n        if (!is_classes_wow6432node( root ))\n            return STATUS_OBJECT_NAME_NOT_FOUND;\n\n        root = open_classes_root();\n        status = open_key( subkey, root, &str, options, access_64, FALSE );\n\n        if (!status)\n            NtClose( root );\n        else\n            *subkey = root;\n    }\n\n    if (!status)\n    {\n        while (i < len && buffer[i] == '\\\\') i++;\n\n        name->Buffer += i;\n        name->Length -= i * sizeof(WCHAR);\n\n        if (is_wow64_key && !is_wow6432node( name ))\n        {\n            HKEY wow6432node = open_wow6432node( *subkey );\n            if (wow6432node != *subkey)\n            {\n                NtClose( *subkey );\n                *subkey = wow6432node;\n            }\n        }\n    }\n\n    return status;\n}"
+  },
+  {
+   "name": "open_classes_root",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 166,
+   "end_line": 176,
+   "static": true,
+   "called_from": [
+    "open_key",
+    "open_subkey"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HANDLE open_classes_root( void )",
+   "code": "static HANDLE open_classes_root( void )\n{\n    OBJECT_ATTRIBUTES attr;\n    UNICODE_STRING nameW;\n    HANDLE ret = 0;\n\n    InitializeObjectAttributes( &attr, &nameW, 0, 0, NULL );\n    RtlInitUnicodeString( &nameW, root_key_names[0] );\n    NtOpenKeyEx( &ret, MAXIMUM_ALLOWED, &attr, 0 );\n    return ret;\n}"
+  },
+  {
+   "name": "is_classes_root",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 105,
+   "end_line": 111,
+   "static": true,
+   "called_from": [
+    "is_classes_wow6432node"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL is_classes_root( const UNICODE_STRING *name )",
+   "code": "static BOOL is_classes_root( const UNICODE_STRING *name )\n{\n    static const WCHAR classes_root[] = L\"\\\\Registry\\\\Machine\\\\Software\\\\Classes\\\\\";\n    DWORD classes_root_len = ARRAY_SIZE( classes_root ) - 1;\n    DWORD len = name->Length / sizeof(WCHAR);\n    return (len >= classes_root_len - 1 && !wcsnicmp( name->Buffer, classes_root, min( len, classes_root_len ) ));\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "perf_provider",
+    "kind": "struct_decl",
+    "start_line": 1372,
+    "end_line": 1380,
+    "code": "struct perf_provider\n{\n    HMODULE perflib;\n    WCHAR linkage[MAX_PATH];\n    WCHAR objects[MAX_PATH];\n    PM_OPEN_PROC *pOpen;\n    PM_CLOSE_PROC *pClose;\n    PM_COLLECT_PROC *pCollect;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 46,
+    "end_line": 46,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(reg);"
+   },
+   {
+    "name": "cache_disabled",
+    "type": "BOOL[7]",
+    "static": true,
+    "start_line": 63,
+    "end_line": 63,
+    "code": "static BOOL cache_disabled[ARRAY_SIZE(root_key_names)];"
+   },
+   {
+    "name": "root_key_names",
+    "type": "const WCHAR *const[7]",
+    "static": true,
+    "start_line": 51,
+    "end_line": 60,
+    "code": "static const WCHAR * const root_key_names[] =\n{\n    L\"\\\\Registry\\\\Machine\\\\Software\\\\Classes\",\n    NULL,         /* HKEY_CURRENT_USER is determined dynamically */\n    L\"\\\\Registry\\\\Machine\",\n    L\"\\\\Registry\\\\User\",\n    NULL,         /* HKEY_PERFORMANCE_DATA is not a real key */\n    L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Hardware Profiles\\\\Current\",\n    L\"\\\\Registry\\\\DynData\"\n};"
+   },
+   {
+    "name": "special_root_keys",
+    "type": "HKEY[7]",
+    "static": true,
+    "start_line": 62,
+    "end_line": 62,
+    "code": "static HKEY special_root_keys[ARRAY_SIZE(root_key_names)];"
+   }
+  ],
+  "macros": [
+   {
+    "name": "HKEY_SPECIAL_ROOT_FIRST",
+    "start_line": 48,
+    "end_line": 48,
+    "code": "#define HKEY_SPECIAL_ROOT_FIRST   HKEY_CLASSES_ROOT"
+   },
+   {
+    "name": "MAX_SERVICE_NAME",
+    "start_line": 1504,
+    "end_line": 1504,
+    "code": "#define MAX_SERVICE_NAME 260"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "ExpandEnvironmentStringsW",
+    "impl": [
+     "dlls/kernelbase/process.c:1520"
+    ]
+   },
+   {
+    "name": "FreeLibrary",
+    "impl": [
+     "dlls/kernelbase/loader.c:232"
+    ]
+   },
+   {
+    "name": "GetComputerNameExW",
+    "impl": [
+     "dlls/kernelbase/registry.c:3312"
+    ]
+   },
+   {
+    "name": "GetModuleFileNameW",
+    "impl": [
+     "dlls/kernelbase/loader.c:300"
+    ]
+   },
+   {
+    "name": "GetProcAddress",
+    "impl": [
+     "dlls/kernelbase/loader.c:453",
+     "dlls/kernelbase/loader.c:498"
+    ]
+   },
+   {
+    "name": "GetProcessHeap",
+    "impl": [
+     "dlls/kernelbase/process.c:910"
+    ]
+   },
+   {
+    "name": "GetSystemTime",
+    "impl": [
+     "dlls/kernelbase/file.c:4198"
+    ]
+   },
+   {
+    "name": "GetSystemTimeAsFileTime",
+    "impl": [
+     "dlls/kernelbase/file.c:4227"
+    ]
+   },
+   {
+    "name": "LoadLibraryW",
+    "impl": [
+     "dlls/kernelbase/loader.c:534"
+    ]
+   },
+   {
+    "name": "RegCloseKey",
+    "impl": [
+     "dlls/kernelbase/registry.c:1129"
+    ]
+   },
+   {
+    "name": "RegEnumKeyExW",
+    "impl": [
+     "dlls/kernelbase/registry.c:801"
+    ]
+   },
+   {
+    "name": "RegOpenKeyExW",
+    "impl": [
+     "dlls/kernelbase/registry.c:644"
+    ]
+   },
+   {
+    "name": "RegQueryValueExA",
+    "impl": [
+     "dlls/kernelbase/registry.c:1730"
+    ]
+   },
+   {
+    "name": "RegQueryValueExW",
+    "impl": [
+     "dlls/kernelbase/registry.c:1636"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtClose",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/server.c:1940"
+    ]
+   },
+   {
+    "name": "NtCreateKey",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/registry.c:74"
+    ]
+   },
+   {
+    "name": "NtOpenKeyEx",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/registry.c:133"
+    ]
+   },
+   {
+    "name": "NtQueryKey",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/registry.c:369"
+    ]
+   },
+   {
+    "name": "NtQueryObject",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/file.c:7808"
+    ]
+   },
+   {
+    "name": "NtQueryPerformanceCounter",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/sync.c:2474"
+    ]
+   },
+   {
+    "name": "NtQueryValueKey",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/registry.c:489"
+    ]
+   },
+   {
+    "name": "RtlAllocateHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "RtlAnsiStringToUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:563"
+    ]
+   },
+   {
+    "name": "RtlFreeHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "RtlFreeUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:272"
+    ]
+   },
+   {
+    "name": "RtlInitAnsiString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:56"
+    ]
+   },
+   {
+    "name": "RtlInitUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:173"
+    ]
+   },
+   {
+    "name": "RtlNtStatusToDosError",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:77"
+    ]
+   },
+   {
+    "name": "RtlOpenCurrentUser",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/reg.c:223"
+    ]
+   },
+   {
+    "name": "RtlUnicodeToMultiByteN",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/locale.c:854"
+    ]
+   },
+   {
+    "name": "RtlUnicodeToMultiByteSize",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/locale.c:872"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "_InterlockedCompareExchangePointer",
+   "debugstr_a",
+   "debugstr_w",
+   "lstrcpyW",
+   "wcsicmp",
+   "wcsnicmp",
+   "wine_dbg_log",
+   "wine_dbgstr_w"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "provider->pOpen",
+    "in_function": "collect_data",
+    "at": "dlls/kernelbase/registry.c:1485",
+    "candidates": []
+   },
+   {
+    "expr": "provider->pCollect",
+    "in_function": "collect_data",
+    "at": "dlls/kernelbase/registry.c:1493",
+    "candidates": []
+   },
+   {
+    "expr": "provider->pClose",
+    "in_function": "collect_data",
+    "at": "dlls/kernelbase/registry.c:1500",
+    "candidates": []
+   }
+  ]
+ },
+ "winebench": {
+  "id": "kernelbase.RegQueryValueExA",
+  "category": {
+   "l1": "System services",
+   "l2": "Registry",
+   "header": "winreg.h",
+   "textbook": "Information maintenance",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 95,
+   "body": 93,
+   "code": 56
+  },
+  "cyclomatic": 31,
+  "return_type": "LSTATUS",
+  "n_params": 6,
+  "tests": {
+   "n_tests_own": 23,
+   "n_tests": 91,
+   "n_tests_other": 68,
+   "own_test_functions": [
+    "dlls/advapi32/tests/crypt.c::FindDfltProvRegVals",
+    "dlls/advapi32/tests/crypt.c::FindProvRegVals",
+    "dlls/advapi32/tests/crypt.c::FindProvTypesRegVals",
+    "dlls/advapi32/tests/crypt.c::test_machine_guid",
+    "dlls/advapi32/tests/eventlog.c::test_autocreation",
+    "dlls/advapi32/tests/registry.c::_test_hkey_main_Value_A",
+    "dlls/advapi32/tests/registry.c::get_key_value",
+    "dlls/advapi32/tests/registry.c::test_RegLoadMUIString",
+    "dlls/advapi32/tests/registry.c::test_classesroot",
+    "dlls/advapi32/tests/registry.c::test_control_set_symlink",
+    "dlls/advapi32/tests/registry.c::test_delete_key_value",
+    "dlls/advapi32/tests/registry.c::test_delete_value",
+    "dlls/advapi32/tests/registry.c::test_deleted_key",
+    "dlls/advapi32/tests/registry.c::test_multistring_termination",
+    "dlls/advapi32/tests/registry.c::test_perflib_key",
+    "dlls/advapi32/tests/registry.c::test_performance_keys",
+    "dlls/advapi32/tests/registry.c::test_query_value_ex",
+    "dlls/advapi32/tests/registry.c::test_redirection",
+    "dlls/advapi32/tests/registry.c::test_reg_copy_tree",
+    "dlls/advapi32/tests/registry.c::test_reg_delete_tree",
+    "dlls/advapi32/tests/registry.c::test_string_termination",
+    "dlls/advapi32/tests/registry.c::test_symlinks",
+    "dlls/kernel32/tests/console.c::START_TEST(console)"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winreg/nf-winreg-regqueryvalueexa",
+   "source": "win32",
+   "description": "Retrieves the type and data for the specified value name associated with an open registry key. (ANSI)",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Advapi32.dll"
+  },
+  "exports": [
+   "advapi32.RegQueryValueExA",
+   "kernel32.RegQueryValueExA",
+   "kernelbase.RegQueryValueExA"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

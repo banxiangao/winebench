@@ -1,0 +1,114 @@
+{
+ "id": "0280",
+ "function": {
+  "name": "ldap_search_init_pageW",
+  "export_name": "ldap_search_init_pageW",
+  "module": "wldap32",
+  "source_module": "wldap32",
+  "exported_by": [
+   "wldap32"
+  ],
+  "side": "PE",
+  "file": "dlls/wldap32/page.c",
+  "start_line": 287,
+  "end_line": 330,
+  "body_lines": 41,
+  "signature": "LDAPSearch * CDECL ldap_search_init_pageW( LDAP *ld, WCHAR *dn, ULONG scope, WCHAR *filter, WCHAR **attrs, ULONG attrsonly, LDAPControlW **serverctrls, LDAPControlW **clientctrls, ULONG timelimit, ULONG sizelimit, LDAPSortKeyW **sortkeys )",
+  "header_comment": null,
+  "code": "LDAPSearch * CDECL ldap_search_init_pageW( LDAP *ld, WCHAR *dn, ULONG scope, WCHAR *filter, WCHAR **attrs,\n                                           ULONG attrsonly, LDAPControlW **serverctrls, LDAPControlW **clientctrls,\n                                           ULONG timelimit, ULONG sizelimit, LDAPSortKeyW **sortkeys )\n{\n    LDAPSearch *search;\n    DWORD i, len;\n\n    TRACE( \"(%p, %s, %#lx, %s, %p, %#lx, %p, %p, %#lx, %#lx, %p)\\n\", ld, debugstr_w(dn), scope,\n           debugstr_w(filter), attrs, attrsonly, serverctrls, clientctrls, timelimit, sizelimit, sortkeys );\n\n    if (!(search = calloc( 1, sizeof(*search) )))\n    {\n        ld->ld_errno = WLDAP32_LDAP_NO_MEMORY;\n        return NULL;\n    }\n\n    if (dn && !(search->dn = wcsdup( dn ))) goto fail;\n    if (filter && !(search->filter = wcsdup( filter ))) goto fail;\n    if (attrs && !(search->attrs = strarraydupW( attrs ))) goto fail;\n\n    len = serverctrls ? controlarraylenW( serverctrls ) : 0;\n    if (!(search->serverctrls = malloc( sizeof(LDAPControlW *) * (len + 2) ))) goto fail;\n    search->serverctrls[0] = NULL; /* reserve 0 for page control */\n    for (i = 0; i < len; i++)\n    {\n        if (!(search->serverctrls[i + 1] = controldupW( serverctrls[i] ))) goto fail;\n    }\n    search->serverctrls[len + 1] = NULL;\n\n    if (clientctrls && !(search->clientctrls = controlarraydupW( clientctrls ))) goto fail;\n\n    search->scope           = scope;\n    search->attrsonly       = attrsonly;\n    search->timeout.tv_sec  = timelimit;\n    search->timeout.tv_usec = 0;\n    search->sizelimit       = sizelimit;\n    search->cookie          = NULL;\n    return search;\n\nfail:\n    ldap_search_abandon_page( ld, search );\n    ld->ld_errno = WLDAP32_LDAP_NO_MEMORY;\n    return NULL;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <limits.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"winldap_private.h\""
+  ],
+  "resolution": [
+   "wldap32!ldap_search_init_pageW [cdecl]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/wldap32/tests/parse.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winldap",
+   "path": "sdk-api-src/content/winldap/nf-winldap-ldap_search_init_pagew.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winldap/nf-winldap-ldap_search_init_pagew",
+   "documented_name": "ldap_search_init_pagew",
+   "file": "docs/0280_sdk-api_nf-winldap-ldap_search_init_pagew.md",
+   "text": "---\nUID: NF:winldap.ldap_search_init_pageW\ntitle: ldap_search_init_pageW function (winldap.h)\ndescription: The ldap_search_init_pageW (Unicode) function (winldap.h) initializes a search block for a simple paged-results search.\nhelpviewer_keywords: [\"LDAP_SCOPE_BASE\", \"LDAP_SCOPE_ONELEVEL\", \"LDAP_SCOPE_SUBTREE\", \"_ldap_ldap_search_init_page\", \"ldap.ldap__search__init__page\", \"ldap.ldap_search_init_page\", \"ldap_search_init_page\", \"ldap_search_init_page function [LDAP]\", \"ldap_search_init_pageW\", \"winldap/ldap_search_init_page\", \"winldap/ldap_search_init_pageW\"]\nold-location: ldap\\ldap_search_init_page.htm\ntech.root: ldap\nms.assetid: f88d32e3-ac5f-4934-bf84-4007ffd72ac2\nms.date: 08/04/2022\nms.keywords: LDAP_SCOPE_BASE, LDAP_SCOPE_ONELEVEL, LDAP_SCOPE_SUBTREE, _ldap_ldap_search_init_page, ldap.ldap__search__init__page, ldap.ldap_search_init_page, ldap_search_init_page, ldap_search_init_page function [LDAP], ldap_search_init_pageA, ldap_search_init_pageW, winldap/ldap_search_init_page, winldap/ldap_search_init_pageA, winldap/ldap_search_init_pageW\nreq.header: winldap.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista\nreq.target-min-winversvr: Windows Server 2008\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: ldap_search_init_pageW (Unicode) and ldap_search_init_pageA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Wldap32.lib\nreq.dll: Wldap32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ldap_search_init_pageW\n - winldap/ldap_search_init_pageW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Wldap32.dll\napi_name:\n - ldap_search_init_page\n - ldap_search_init_pageA\n - ldap_search_init_pageW\n---\n\n# ldap_search_init_pageW function\n\n\n## -description\n\nThe <b>ldap_search_init_page</b> function initializes a search block for a simple paged-results search. This function is supported in LDAP 3.\n\n## -parameters\n\n### -param ExternalHandle [in]\n\nThe session handle.\n\n### -param DistinguishedName [in]\n\nA pointer to a null-terminated string that contains the distinguished name of the entry at which to start the search.\n\n### -param ScopeOfSearch [in]\n\nA data type that specifies one of the following values to indicate the scope of the search.\n\n\n\n#### LDAP_SCOPE_BASE\n\nSearch the base entry only.\n\n\n\n#### LDAP_SCOPE_ONELEVEL\n\nSearch all entries in the first level below the base entry, excluding the base entry.\n\n\n\n#### LDAP_SCOPE_SUBTREE\n\nSearch the base entry and all entries in the tree below the base.\n\n### -param SearchFilter [in]\n\nA pointer to a null-terminated string that specifies the search filter. For more information, see \n<a href=\"/windows/desktop/ADSI/search-filter-syntax\">Search Filter Syntax</a>.\n\n### -param AttributeList [in]\n\nA null-terminated array of null-terminated strings indicating which attributes to return for each matching entry. Pass <b>NULL</b> to retrieve all available attributes.\n\n### -param AttributesOnly [in]\n\nA Boolean value that should be zero if both attribute types and values are to be returned, nonzero if only types are to be returned.\n\n### -param ServerControls [in]\n\nA list of LDAP server controls.\n\n### -param ClientControls [in]\n\nA list of client controls.\n\n### -param PageTimeLimit [in]\n\nThe time value, in seconds, that the client will wait for the server to return a page.\n\n### -param TotalSizeLimit [in]\n\nThe maximum number of entries the client will accept.  The <i>TotalSizeLimit</i> value affects only the individual pages within the paged search (not the overall paged search).  So if <i>TotalSizeLimit</i> is greater than page size, then <i>TotalSizeLimit</i> will have no effect.\n\n### -param SortKeys [in]\n\nA pointer to an \n<a href=\"/previous-versions/windows/desktop/api/winldap/ns-winldap-ldapsortkeya\">LDAPSortKey</a> structure, which specifies the attribute type, the ordering rule, and the direction for the search.\n\n\n##### - ScopeOfSearch.LDAP_SCOPE_BASE\n\nSearch the base entry only.\n\n\n##### - ScopeOfSearch.LDAP_SCOPE_ONELEVEL\n\nSearch all entries in the first level below the base entry, excluding the base entry.\n\n\n##### - ScopeOfSearch.LDAP_SCOPE_SUBTREE\n\nSearch the base entry and all entries in the tree below the base.\n\n## -returns\n\nIf the function succeeds, it returns a pointer to an \n<a href=\"/previous-versions/windows/desktop/legacy/aa366129(v=vs.85)\">LDAPSearch</a> structure.\n\nIf the function fails, the return value is <b>NULL</b>. Use \n<a href=\"/previous-versions/windows/desktop/api/winldap/nf-winldap-ldapgetlasterror\">LdapGetLastError</a> or \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> to retrieve the error code.\n\nCall the <a href=\"/previous-versions/windows/desktop/api/winldap/nf-winldap-ldap_search_abandon_page\">ldap_search_abandon_page</a> to free the returned structure.\n\n## -remarks\n\nThe \n<b>ldap_search_init_page</b> function creates an LDAPSearch structure for managing paged searches and returns a handle to the structure. The \n<a href=\"/previous-versions/windows/desktop/api/winldap/nf-winldap-ldap_get_next_page\">ldap_get_next_page</a>, \n<a href=\"/previous-versions/windows/desktop/api/winldap/nf-winldap-ldap_get_next_page_s\">ldap_get_next_page_s</a>, and \n<a href=\"/previous-versions/windows/desktop/api/winldap/nf-winldap-ldap_get_paged_count\">ldap_get_paged_count</a> functions require this search handle as a parameter. When the paged search is completed, call \n<a href=\"/previous-versions/windows/desktop/api/winldap/nf-winldap-ldap_search_abandon_page\">ldap_search_abandon_page</a> to free this structure and its handle.\n\nTo determine whether a server supports paged-results searches, check the supportedControl property off of the root for an object identifier (OID) of 1.2.840.113556.1.4.319.\n\n\n\n\n\n> [!NOTE]\n> The winldap.h header defines ldap_search_init_page as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/previous-versions/windows/desktop/ldap/functions\">Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>\n\n\n\n<a href=\"/previous-versions/windows/desktop/legacy/aa366129(v=vs.85)\">LDAPSearch</a>\n\n\n\n<a href=\"/previous-versions/windows/desktop/api/winldap/ns-winldap-ldapsortkeya\">LDAPSortKey</a>\n\n\n\n<a href=\"/previous-versions/windows/desktop/api/winldap/nf-winldap-ldapgetlasterror\">LdapGetLastError</a>\n\n\n\n<a href=\"/previous-versions/windows/desktop/api/winldap/nf-winldap-ldap_get_next_page\">ldap_get_next_page</a>\n\n\n\n<a href=\"/previous-versions/windows/desktop/api/winldap/nf-winldap-ldap_get_next_page_s\">ldap_get_next_page_s</a>\n\n\n\n<a href=\"/previous-versions/windows/desktop/api/winldap/nf-winldap-ldap_search_abandon_page\">ldap_search_abandon_page</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 31,
+    "end_line": 31,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(wldap32);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "ldap_search_abandon_page",
+    "impl": [
+     "dlls/wldap32/page.c:255"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "calloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_w",
+   "wcsdup",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "controlarraydupW",
+   "controlarraylenW",
+   "controldupW",
+   "strarraydupW"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

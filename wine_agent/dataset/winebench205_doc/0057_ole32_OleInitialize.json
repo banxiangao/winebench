@@ -1,0 +1,591 @@
+{
+ "id": "0057",
+ "function": {
+  "name": "OleInitialize",
+  "export_name": "OleInitialize",
+  "module": "ole32",
+  "source_module": "ole32",
+  "exported_by": [
+   "ole2.dll16",
+   "ole32"
+  ],
+  "side": "PE",
+  "file": "dlls/ole32/ole2.c",
+  "start_line": 162,
+  "end_line": 213,
+  "body_lines": 49,
+  "signature": "HRESULT WINAPI DECLSPEC_HOTPATCH OleInitialize(LPVOID reserved)",
+  "header_comment": "/***********************************************************************\n *           OleInitialize       (OLE32.@)\n */",
+  "code": "HRESULT WINAPI DECLSPEC_HOTPATCH OleInitialize(LPVOID reserved)\n{\n  HRESULT hr;\n\n  TRACE(\"(%p)\\n\", reserved);\n\n  /*\n   * The first duty of the OleInitialize is to initialize the COM libraries.\n   */\n  hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);\n\n  /*\n   * If the CoInitializeEx call failed, the OLE libraries can't be\n   * initialized.\n   */\n  if (FAILED(hr))\n    return hr;\n\n  if (!COM_CurrentInfo()->ole_inits)\n    hr = S_OK;\n  else\n    hr = S_FALSE;\n\n  /*\n   * Then, it has to initialize the OLE specific modules.\n   * This includes:\n   *     Clipboard\n   *     Drag and Drop\n   *     Object linking and Embedding\n   *     In-place activation\n   */\n  if (!COM_CurrentInfo()->ole_inits++ &&\n      InterlockedIncrement(&OLE_moduleLockCount) == 1)\n  {\n    /*\n     * Initialize the libraries.\n     */\n    TRACE(\"() - Initializing the OLE libraries\\n\");\n\n    /*\n     * Drag and Drop\n     */\n    OLEDD_Initialize();\n\n    /*\n     * OLE shared menu\n     */\n    OLEMenu_Initialize();\n  }\n\n  return hr;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdlib.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <string.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winreg.h\"",
+   "#include \"ole2.h\"",
+   "#include \"ole2ver.h\"",
+   "#include \"compobj_private.h\"",
+   "#include \"olestd.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "ole32!OleInitialize [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ole32/tests/clipboard.c",
+   "dlls/ole32/tests/compobj.c",
+   "dlls/ole32/tests/defaulthandler.c",
+   "dlls/ole32/tests/dragdrop.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 18
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "ole2.dll16",
+   "source_module": "ole2.dll16",
+   "exported_by": [
+    "ole2.dll16"
+   ],
+   "file": "dlls/ole2.dll16/ole2.c",
+   "start_line": 71,
+   "resolution": [
+    "ole2.dll16!OleInitialize [pascal] -> internal symbol OleInitialize16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 74,
+   "signature": "HRESULT WINAPI OleInitialize16(LPVOID reserved)",
+   "code": "HRESULT WINAPI OleInitialize16(LPVOID reserved)\n{\n    return OleInitialize( reserved );\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "ole2",
+   "path": "sdk-api-src/content/ole2/nf-ole2-oleinitialize.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/ole2/nf-ole2-oleinitialize",
+   "documented_name": "oleinitialize",
+   "file": "docs/0057_sdk-api_nf-ole2-oleinitialize.md",
+   "text": "---\nUID: NF:ole2.OleInitialize\ntitle: OleInitialize function (ole2.h)\ndescription: Initializes the COM library on the current apartment, identifies the concurrency model as single-thread apartment (STA), and enables additional functionality described in the Remarks section below.\nhelpviewer_keywords: [\"OleInitialize\",\"OleInitialize function [COM]\",\"_ole_OleInitialize\",\"com.oleinitialize\",\"ole2/OleInitialize\"]\nold-location: com\\oleinitialize.htm\ntech.root: com\nms.assetid: 9a13e7a0-f2e2-466b-98f5-38d5972fa391\nms.date: 12/05/2018\nms.keywords: OleInitialize, OleInitialize function [COM], _ole_OleInitialize, com.oleinitialize, ole2/OleInitialize\nreq.header: ole2.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ole32.lib\nreq.dll: Ole32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - OleInitialize\n - ole2/OleInitialize\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-com-ole32-l1-4-0.dll\n - ext-ms-win-com-ole32-l1-3-0.dll\n - ext-ms-win-com-ole32-l1-2-0.dll\n - ext-ms-win-com-ole32-l1-1-5.dll\n - Ole32.dll\n - Ext-MS-Win-COM-OLE32-l1-1-0.dll\n - Ext-MS-Win-COM-OLE32-l1-1-1.dll\n - Ext-MS-Win-COM-OLE32-l1-1-2.dll\n - ext-ms-win-com-ole32-l1-1-3.dll\n - Ext-MS-Win-Com-Ole32-L1-1-4.dll\napi_name:\n - OleInitialize\nreq.apiset: ext-ms-win-com-ole32-l1-1-0 (introduced in Windows 8)\n---\n\n# OleInitialize function\n\n\n## -description\n\nInitializes the COM library on the current apartment, identifies the concurrency model as single-thread apartment (STA), and enables additional functionality described in the Remarks section below. Applications must initialize the COM library before they can call COM library functions other than <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-cogetmalloc\">CoGetMalloc</a> and memory allocation functions.\n\n## -parameters\n\n### -param pvReserved [in]\n\nThis parameter is reserved and must be <b>NULL</b>.\n\n## -returns\n\nThis function returns S_OK on success. Other possible values include the following.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>S_FALSE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe COM library is already initialized on this apartment.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>OLE_E_WRONGCOMPOBJ</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe versions of COMPOBJ.DLL and OLE2.DLL on your machine are incompatible with each other.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>RPC_E_CHANGED_MODE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA previous call to <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-coinitializeex\">CoInitializeEx</a> specified the concurrency model for this apartment as multithread apartment (MTA). This could also mean that a change from neutral threaded apartment to single threaded apartment occurred.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nApplications that use the following functionality must call <b>OleInitialize</b> before calling any other function in the COM library: \n\n\n\n<ul>\n<li>Clipboard</li>\n<li>Drag and Drop</li>\n<li>Object linking and embedding (OLE)</li>\n<li>In-place activation</li>\n</ul>\n<b>OleInitialize</b> calls <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-coinitializeex\">CoInitializeEx</a> internally to initialize the COM library on the current apartment. Because OLE operations are not thread-safe, <b>OleInitialize</b> specifies the concurrency model as single-thread apartment.\n\nOnce the concurrency model for an apartment is set, it cannot be changed. A call to <b>OleInitialize</b> on an apartment that was previously initialized as multithreaded will fail and return RPC_E_CHANGED_MODE.\n\nYou need to initialize the COM library on an apartment before you call any of the library functions except <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-cogetmalloc\">CoGetMalloc</a>, to get a pointer to the standard allocator, and the memory allocation functions.\n\nTypically, the COM library is initialized on an apartment only once. Subsequent calls will succeed, as long as they do not attempt to change the concurrency model of the apartment, but will return S_FALSE. To close the COM library gracefully, each successful call to <b>OleInitialize</b>, including those that return S_FALSE, must be balanced by a corresponding call to <a href=\"/windows/desktop/api/ole2/nf-ole2-oleuninitialize\">OleUninitialize</a>.\n\nBecause there is no way to control the order in which in-process servers are loaded or unloaded, do not call <b>OleInitialize</b> or <a href=\"/windows/desktop/api/ole2/nf-ole2-oleuninitialize\">OleUninitialize</a> from the <a href=\"/windows/desktop/Dlls/dllmain\">DllMain</a> function.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-coinitializeex\">CoInitializeEx</a>\n\n\n\n<a href=\"/windows/desktop/api/ole2/nf-ole2-oleinitialize\">OleInitialize</a>\n\n\n\n<a href=\"/windows/desktop/api/ole2/nf-ole2-oleuninitialize\">OleUninitialize</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "OLEDD_Initialize",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 2112,
+   "end_line": 2126,
+   "static": true,
+   "called_from": [
+    "OleInitialize"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void OLEDD_Initialize(void)",
+   "code": "static void OLEDD_Initialize(void)\n{\n    WNDCLASSW wndClass;\n\n    ZeroMemory (&wndClass, sizeof(WNDCLASSW));\n    wndClass.style         = CS_GLOBALCLASS;\n    wndClass.lpfnWndProc   = OLEDD_DragTrackerWindowProc;\n    wndClass.cbClsExtra    = 0;\n    wndClass.cbWndExtra    = sizeof(TrackerWindowInfo*);\n    wndClass.hCursor       = 0;\n    wndClass.hbrBackground = 0;\n    wndClass.lpszClassName = OLEDD_DRAGTRACKERCLASS;\n\n    RegisterClassW (&wndClass);\n}"
+  },
+  {
+   "name": "OLEMenu_Initialize",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 1398,
+   "end_line": 1400,
+   "static": true,
+   "called_from": [
+    "OleInitialize"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void OLEMenu_Initialize(void)",
+   "code": "static void OLEMenu_Initialize(void)\n{\n}"
+  },
+  {
+   "name": "OLEDD_DragTrackerWindowProc",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 2139,
+   "end_line": 2181,
+   "static": true,
+   "called_from": [
+    "OLEDD_Initialize"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static LRESULT WINAPI OLEDD_DragTrackerWindowProc( HWND   hwnd, UINT   uMsg, WPARAM wParam, LPARAM   lParam)",
+   "code": "static LRESULT WINAPI OLEDD_DragTrackerWindowProc(\n\t\t\t HWND   hwnd,\n\t\t\t UINT   uMsg,\n\t\t\t WPARAM wParam,\n\t\t\t LPARAM   lParam)\n{\n  switch (uMsg)\n  {\n    case WM_CREATE:\n    {\n      LPCREATESTRUCTA createStruct = (LPCREATESTRUCTA)lParam;\n\n      SetWindowLongPtrW(hwnd, 0, (LONG_PTR)createStruct->lpCreateParams);\n      SetTimer(hwnd, DRAG_TIMER_ID, 50, NULL);\n\n      break;\n    }\n    case WM_TIMER:\n    case WM_MOUSEMOVE:\n    case WM_LBUTTONUP:\n    case WM_MBUTTONUP:\n    case WM_RBUTTONUP:\n    case WM_LBUTTONDOWN:\n    case WM_MBUTTONDOWN:\n    case WM_RBUTTONDOWN:\n    {\n      TrackerWindowInfo *trackerInfo = (TrackerWindowInfo*)GetWindowLongPtrA(hwnd, 0);\n      if (trackerInfo->trackingDone) break;\n      OLEDD_TrackStateChange(trackerInfo);\n      break;\n    }\n    case WM_DESTROY:\n    {\n      KillTimer(hwnd, DRAG_TIMER_ID);\n      break;\n    }\n  }\n\n  /*\n   * This is a window proc after all. Let's call the default.\n   */\n  return DefWindowProcW (hwnd, uMsg, wParam, lParam);\n}"
+  },
+  {
+   "name": "OLEDD_TrackStateChange",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 2283,
+   "end_line": 2342,
+   "static": true,
+   "called_from": [
+    "OLEDD_DragTrackerWindowProc"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ole32/ole2.c:813"
+   ],
+   "signature": "static void OLEDD_TrackStateChange(TrackerWindowInfo* trackerInfo)",
+   "code": "static void OLEDD_TrackStateChange(TrackerWindowInfo* trackerInfo)\n{\n  HWND   hwndNewTarget = 0;\n  POINT pt;\n\n  /*\n   * This method may be called from QueryContinueDrag again,\n   * (i.e. by running message loop) so avoid recursive call chain.\n   */\n  if (trackerInfo->inTrackCall) return;\n  trackerInfo->inTrackCall = TRUE;\n\n  /*\n   * Get the handle of the window under the mouse\n   */\n  pt.x = trackerInfo->curMousePos.x;\n  pt.y = trackerInfo->curMousePos.y;\n  hwndNewTarget = WindowFromPoint(pt);\n\n  trackerInfo->returnValue = IDropSource_QueryContinueDrag(trackerInfo->dropSource,\n                                                           trackerInfo->escPressed,\n                                                           trackerInfo->dwKeyState);\n\n  if (trackerInfo->curTargetHWND != hwndNewTarget &&\n      (trackerInfo->returnValue == S_OK ||\n       trackerInfo->returnValue == DRAGDROP_S_DROP))\n  {\n    if (trackerInfo->curDragTarget)\n    {\n      IDropTarget_DragLeave(trackerInfo->curDragTarget);\n      IDropTarget_Release(trackerInfo->curDragTarget);\n      trackerInfo->curDragTarget = NULL;\n      trackerInfo->curTargetHWND = NULL;\n    }\n\n    if (hwndNewTarget)\n      drag_enter( trackerInfo, hwndNewTarget );\n\n    give_feedback( trackerInfo );\n\n  }\n\n  if (trackerInfo->returnValue == S_OK)\n  {\n    if (trackerInfo->curDragTarget)\n    {\n      *trackerInfo->pdwEffect = trackerInfo->dwOKEffect;\n      IDropTarget_DragOver(trackerInfo->curDragTarget,\n                           trackerInfo->dwKeyState,\n                           trackerInfo->curMousePos,\n                           trackerInfo->pdwEffect);\n      *trackerInfo->pdwEffect &= trackerInfo->dwOKEffect;\n    }\n    give_feedback( trackerInfo );\n  }\n  else\n    drag_end( trackerInfo );\n\n  trackerInfo->inTrackCall = FALSE;\n}"
+  },
+  {
+   "name": "drag_enter",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 2183,
+   "end_line": 2210,
+   "static": true,
+   "called_from": [
+    "OLEDD_TrackStateChange"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void drag_enter( TrackerWindowInfo *info, HWND new_target )",
+   "code": "static void drag_enter( TrackerWindowInfo *info, HWND new_target )\n{\n    HRESULT hr;\n\n    info->curTargetHWND = new_target;\n\n    while (new_target && !is_droptarget( new_target ))\n        new_target = GetParent( new_target );\n\n    info->curDragTarget = get_droptarget_pointer( new_target );\n\n    if (info->curDragTarget)\n    {\n        *info->pdwEffect = info->dwOKEffect;\n        hr = IDropTarget_DragEnter( info->curDragTarget, info->dataObject,\n                                    info->dwKeyState, info->curMousePos,\n                                    info->pdwEffect );\n        *info->pdwEffect &= info->dwOKEffect;\n\n        /* failed DragEnter() means invalid target */\n        if (hr != S_OK)\n        {\n            IDropTarget_Release( info->curDragTarget );\n            info->curDragTarget = NULL;\n            info->curTargetHWND = NULL;\n        }\n    }\n}"
+  },
+  {
+   "name": "give_feedback",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 2244,
+   "end_line": 2271,
+   "static": true,
+   "called_from": [
+    "OLEDD_TrackStateChange"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT give_feedback( TrackerWindowInfo *info )",
+   "code": "static HRESULT give_feedback( TrackerWindowInfo *info )\n{\n    HRESULT hr;\n    int res;\n    HCURSOR cur;\n\n    if (info->curDragTarget == NULL)\n        *info->pdwEffect = DROPEFFECT_NONE;\n\n    hr = IDropSource_GiveFeedback( info->dropSource, *info->pdwEffect );\n\n    if (hr == DRAGDROP_S_USEDEFAULTCURSORS)\n    {\n        if (*info->pdwEffect & DROPEFFECT_MOVE)\n            res = CURSOR_MOVE;\n        else if (*info->pdwEffect & DROPEFFECT_COPY)\n            res = CURSOR_COPY;\n        else if (*info->pdwEffect & DROPEFFECT_LINK)\n            res = CURSOR_LINK;\n        else\n            res = CURSOR_NODROP;\n\n        cur = LoadCursorW( hProxyDll, MAKEINTRESOURCEW( res ) );\n        SetCursor( cur );\n    }\n\n    return hr;\n}"
+  },
+  {
+   "name": "drag_end",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 2212,
+   "end_line": 2242,
+   "static": true,
+   "called_from": [
+    "OLEDD_TrackStateChange"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void drag_end( TrackerWindowInfo *info )",
+   "code": "static void drag_end( TrackerWindowInfo *info )\n{\n    HRESULT hr;\n\n    info->trackingDone = TRUE;\n    ReleaseCapture();\n\n    if (info->curDragTarget)\n    {\n        if (info->returnValue == DRAGDROP_S_DROP &&\n            *info->pdwEffect != DROPEFFECT_NONE)\n        {\n            *info->pdwEffect = info->dwOKEffect;\n            hr = IDropTarget_Drop( info->curDragTarget, info->dataObject, info->dwKeyState,\n                                   info->curMousePos, info->pdwEffect );\n            *info->pdwEffect &= info->dwOKEffect;\n\n            if (FAILED( hr ))\n                info->returnValue = hr;\n        }\n        else\n        {\n            IDropTarget_DragLeave( info->curDragTarget );\n            *info->pdwEffect = DROPEFFECT_NONE;\n        }\n        IDropTarget_Release( info->curDragTarget );\n        info->curDragTarget = NULL;\n    }\n    else\n        *info->pdwEffect = DROPEFFECT_NONE;\n}"
+  },
+  {
+   "name": "is_droptarget",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 280,
+   "end_line": 283,
+   "static": true,
+   "called_from": [
+    "drag_enter"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ole32/ole2.c:580"
+   ],
+   "signature": "static inline BOOL is_droptarget(HWND hwnd)",
+   "code": "static inline BOOL is_droptarget(HWND hwnd)\n{\n    return get_droptarget_handle(hwnd) != 0;\n}"
+  },
+  {
+   "name": "get_droptarget_pointer",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 519,
+   "end_line": 535,
+   "static": true,
+   "called_from": [
+    "drag_enter"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static IDropTarget* get_droptarget_pointer(HWND hwnd)",
+   "code": "static IDropTarget* get_droptarget_pointer(HWND hwnd)\n{\n    IDropTarget *droptarget = NULL;\n    HANDLE map;\n    IStream *stream;\n\n    map = get_droptarget_local_handle(hwnd);\n    if(!map) return NULL;\n\n    if(SUCCEEDED(create_stream_from_map(map, &stream)))\n    {\n        CoUnmarshalInterface(stream, &IID_IDropTarget, (void**)&droptarget);\n        IStream_Release(stream);\n    }\n    CloseHandle(map);\n    return droptarget;\n}"
+  },
+  {
+   "name": "get_droptarget_handle",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 270,
+   "end_line": 273,
+   "static": true,
+   "called_from": [
+    "get_droptarget_local_handle",
+    "is_droptarget"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ole32/ole2.c:644"
+   ],
+   "signature": "static inline HANDLE get_droptarget_handle(HWND hwnd)",
+   "code": "static inline HANDLE get_droptarget_handle(HWND hwnd)\n{\n    return GetPropW(hwnd, prop_marshalleddroptarget);\n}"
+  },
+  {
+   "name": "get_droptarget_local_handle",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 291,
+   "end_line": 311,
+   "static": true,
+   "called_from": [
+    "get_droptarget_pointer"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HANDLE get_droptarget_local_handle(HWND hwnd)",
+   "code": "static HANDLE get_droptarget_local_handle(HWND hwnd)\n{\n    HANDLE handle, local_handle = 0;\n\n    handle = get_droptarget_handle(hwnd);\n\n    if(handle)\n    {\n        DWORD pid;\n        HANDLE process;\n\n        GetWindowThreadProcessId(hwnd, &pid);\n        process = OpenProcess(PROCESS_DUP_HANDLE, FALSE, pid);\n        if(process)\n        {\n            DuplicateHandle(process, handle, GetCurrentProcess(), &local_handle, 0, FALSE, DUPLICATE_SAME_ACCESS);\n            CloseHandle(process);\n        }\n    }\n    return local_handle;\n}"
+  },
+  {
+   "name": "create_stream_from_map",
+   "file": "dlls/ole32/ole2.c",
+   "start_line": 346,
+   "end_line": 368,
+   "static": true,
+   "called_from": [
+    "get_droptarget_pointer"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ole32/ole2.c:653"
+   ],
+   "signature": "static HRESULT create_stream_from_map(HANDLE map, IStream **stream)",
+   "code": "static HRESULT create_stream_from_map(HANDLE map, IStream **stream)\n{\n    HRESULT hr = E_OUTOFMEMORY;\n    HGLOBAL hmem;\n    void *data;\n    MEMORY_BASIC_INFORMATION info;\n\n    data = MapViewOfFile(map, FILE_MAP_READ, 0, 0, 0);\n    if(!data) return hr;\n\n    VirtualQuery(data, &info, sizeof(info));\n    TRACE(\"size %d\\n\", (int)info.RegionSize);\n\n    hmem = GlobalAlloc(GMEM_MOVEABLE, info.RegionSize);\n    if(hmem)\n    {\n        memcpy(GlobalLock(hmem), data, info.RegionSize);\n        GlobalUnlock(hmem);\n        hr = CreateStreamOnHGlobal(hmem, TRUE, stream);\n    }\n    UnmapViewOfFile(data);\n    return hr;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "TrackerWindowInfo",
+    "kind": "typedef_decl",
+    "start_line": 60,
+    "end_line": 75,
+    "code": "typedef struct tagTrackerWindowInfo\n{\n  IDataObject* dataObject;\n  IDropSource* dropSource;\n  DWORD        dwOKEffect;\n  DWORD*       pdwEffect;\n  BOOL       trackingDone;\n  BOOL         inTrackCall;\n  HRESULT      returnValue;\n\n  BOOL       escPressed;\n  HWND       curTargetHWND;\t/* window the mouse is hovering over */\n  IDropTarget* curDragTarget;\n  POINTL     curMousePos;       /* current position of the mouse in screen coordinates */\n  DWORD      dwKeyState;        /* current state of the shift and ctrl keys and the mouse buttons */\n} TrackerWindowInfo;"
+   },
+   {
+    "name": "tagTrackerWindowInfo",
+    "kind": "struct_decl",
+    "start_line": 60,
+    "end_line": 75,
+    "code": "typedef struct tagTrackerWindowInfo\n{\n  IDataObject* dataObject;\n  IDropSource* dropSource;\n  DWORD        dwOKEffect;\n  DWORD*       pdwEffect;\n  BOOL       trackingDone;\n  BOOL         inTrackCall;\n  HRESULT      returnValue;\n\n  BOOL       escPressed;\n  HWND       curTargetHWND;\t/* window the mouse is hovering over */\n  IDropTarget* curDragTarget;\n  POINTL     curMousePos;       /* current position of the mouse in screen coordinates */\n  DWORD      dwKeyState;        /* current state of the shift and ctrl keys and the mouse buttons */\n} TrackerWindowInfo;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "OLEDD_DRAGTRACKERCLASS",
+    "type": "const WCHAR[22]",
+    "static": true,
+    "start_line": 106,
+    "end_line": 106,
+    "code": "static const WCHAR OLEDD_DRAGTRACKERCLASS[] = L\"WineDragDropTracker32\";"
+   },
+   {
+    "name": "OLE_moduleLockCount",
+    "type": "LONG",
+    "static": true,
+    "start_line": 101,
+    "end_line": 101,
+    "code": "static LONG OLE_moduleLockCount = 0;"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 50,
+    "end_line": 50,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ole);"
+   },
+   {
+    "name": "prop_marshalleddroptarget",
+    "type": "const WCHAR[25]",
+    "static": true,
+    "start_line": 117,
+    "end_line": 117,
+    "code": "static const WCHAR prop_marshalleddroptarget[] = L\"WineMarshalledDropTarget\";"
+   }
+  ],
+  "macros": [
+   {
+    "name": "DRAG_TIMER_ID",
+    "start_line": 2137,
+    "end_line": 2137,
+    "code": "#define DRAG_TIMER_ID 1"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "CoInitializeEx",
+    "impl": [
+     "dlls/combase/combase.c:2975"
+    ]
+   },
+   {
+    "name": "CoUnmarshalInterface",
+    "impl": [
+     "dlls/combase/marshal.c:785"
+    ]
+   },
+   {
+    "name": "CreateStreamOnHGlobal",
+    "impl": [
+     "dlls/combase/hglobalstream.c:413"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CloseHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "DefWindowProcW",
+    "module": "user32",
+    "impl": []
+   },
+   {
+    "name": "DuplicateHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:745"
+    ]
+   },
+   {
+    "name": "GetParent",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/win.c:1200"
+    ]
+   },
+   {
+    "name": "GetPropW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/property.c:116"
+    ]
+   },
+   {
+    "name": "GetWindowLongA",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/win.c:878"
+    ]
+   },
+   {
+    "name": "GetWindowThreadProcessId",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/win.c:1191"
+    ]
+   },
+   {
+    "name": "GlobalAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:1018"
+    ]
+   },
+   {
+    "name": "GlobalLock",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernel32/heap.c:145"
+    ]
+   },
+   {
+    "name": "GlobalUnlock",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernel32/heap.c:167"
+    ]
+   },
+   {
+    "name": "KillTimer",
+    "module": "user32",
+    "impl": [
+     "dlls/win32u/message.c:4530"
+    ]
+   },
+   {
+    "name": "LoadCursorW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/cursoricon.c:1642"
+    ]
+   },
+   {
+    "name": "MapViewOfFile",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:279"
+    ]
+   },
+   {
+    "name": "OpenProcess",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:1129"
+    ]
+   },
+   {
+    "name": "RegisterClassW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/class.c:326"
+    ]
+   },
+   {
+    "name": "ReleaseCapture",
+    "module": "user32",
+    "impl": [
+     "dlls/win32u/input.c:2065"
+    ]
+   },
+   {
+    "name": "SetCursor",
+    "module": "user32",
+    "impl": [
+     "dlls/win32u/cursoricon.c:110"
+    ]
+   },
+   {
+    "name": "SetTimer",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/message.c:1167"
+    ]
+   },
+   {
+    "name": "SetWindowLongW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/win.c:1021"
+    ]
+   },
+   {
+    "name": "UnmapViewOfFile",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:385"
+    ]
+   },
+   {
+    "name": "VirtualQuery",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:586"
+    ]
+   },
+   {
+    "name": "WindowFromPoint",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/win.c:699"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetCurrentProcess",
+   "IDropSource_GiveFeedback",
+   "IDropSource_QueryContinueDrag",
+   "IDropTarget_DragEnter",
+   "IDropTarget_DragLeave",
+   "IDropTarget_DragOver",
+   "IDropTarget_Drop",
+   "IDropTarget_Release",
+   "IStream_Release",
+   "_InterlockedIncrement",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "COM_CurrentInfo"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ole32.OleInitialize",
+  "category": {
+   "l1": "System services",
+   "l2": "COM",
+   "header": "ole2.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 52,
+   "body": 51,
+   "code": 15
+  },
+  "cyclomatic": 5,
+  "return_type": "HRESULT",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 18,
+   "n_tests": 41,
+   "n_tests_other": 23,
+   "own_test_functions": [
+    "dlls/ole32/tests/clipboard.c::sta_clipboard_set_thread",
+    "dlls/ole32/tests/clipboard.c::test_consumer_refs",
+    "dlls/ole32/tests/clipboard.c::test_flushed_getdata",
+    "dlls/ole32/tests/clipboard.c::test_get_clipboard_locked",
+    "dlls/ole32/tests/clipboard.c::test_getdatahere",
+    "dlls/ole32/tests/clipboard.c::test_multithreaded_clipboard",
+    "dlls/ole32/tests/clipboard.c::test_nonole_clipboard",
+    "dlls/ole32/tests/clipboard.c::test_set_clipboard",
+    "dlls/ole32/tests/clipboard.c::test_set_clipboard_DRAWCLIPBOARD",
+    "dlls/ole32/tests/clipboard.c::test_sta_clipboard_reuse",
+    "dlls/ole32/tests/compobj.c::test_CoCreateInstance",
+    "dlls/ole32/tests/compobj.c::test_CoInitializeEx",
+    "dlls/ole32/tests/compobj.c::test_OleInitialize_InitCounting",
+    "dlls/ole32/tests/compobj.c::test_TreatAsClass",
+    "dlls/ole32/tests/defaulthandler.c::START_TEST(defaulthandler)",
+    "dlls/ole32/tests/dragdrop.c::test_DoDragDrop",
+    "dlls/ole32/tests/dragdrop.c::test_Register_Revoke",
+    "dlls/ole32/tests/dragdrop.c::test_mismatched_cleanup"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/ole2/nf-ole2-oleinitialize",
+   "source": "win32",
+   "description": "Initializes the COM library on the current apartment, identifies the concurrency model as single-thread apartment (STA), and enables additional functionality described in the Remarks section below.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Ole32.dll"
+  },
+  "exports": [
+   "ole32.OleInitialize"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

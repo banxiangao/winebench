@@ -1,0 +1,210 @@
+{
+ "id": "0142",
+ "function": {
+  "name": "DeleteFileW",
+  "export_name": "DeleteFileW",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase",
+   "unicows"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/file.c",
+  "start_line": 1120,
+  "end_line": 1144,
+  "body_lines": 22,
+  "signature": "BOOL WINAPI DECLSPEC_HOTPATCH DeleteFileW( LPCWSTR path )",
+  "header_comment": "/***********************************************************************\n *\tDeleteFileW   (kernelbase.@)\n */",
+  "code": "BOOL WINAPI DECLSPEC_HOTPATCH DeleteFileW( LPCWSTR path )\n{\n    UNICODE_STRING nameW;\n    OBJECT_ATTRIBUTES attr;\n    NTSTATUS status;\n    HANDLE hFile;\n    IO_STATUS_BLOCK io;\n\n    TRACE( \"%s\\n\", debugstr_w(path) );\n\n    if (!RtlDosPathNameToNtPathName_U( path, &nameW, NULL, NULL ))\n    {\n        SetLastError( ERROR_PATH_NOT_FOUND );\n        return FALSE;\n    }\n\n    InitializeObjectAttributes( &attr, &nameW, OBJ_CASE_INSENSITIVE, 0, NULL );\n    status = NtCreateFile( &hFile, SYNCHRONIZE | DELETE, &attr, &io, NULL, 0,\n                           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_OPEN,\n                           FILE_DELETE_ON_CLOSE | FILE_NON_DIRECTORY_FILE | FILE_OPEN_REPARSE_POINT, NULL, 0 );\n    if (status == STATUS_SUCCESS) status = NtClose(hFile);\n\n    RtlFreeUnicodeString( &nameW );\n    return set_ntstatus( status );\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include \"winerror.h\"",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"wincon.h\"",
+   "#include \"fileapi.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"ddk/ntddser.h\"",
+   "#include \"ioringapi.h\"",
+   "#include \"ddk/ntifs.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!DeleteFileW [stdcall -import] -> import from kernelbase",
+   "kernelbase!DeleteFileW [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/change.c",
+   "dlls/kernel32/tests/file.c",
+   "dlls/kernel32/tests/loader.c",
+   "dlls/kernel32/tests/module.c",
+   "dlls/kernel32/tests/path.c",
+   "dlls/kernel32/tests/resource.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 22
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "fileapi",
+   "path": "sdk-api-src/content/fileapi/nf-fileapi-deletefilew.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/fileapi/nf-fileapi-deletefilew",
+   "documented_name": "deletefilew",
+   "file": "docs/0142_sdk-api_nf-fileapi-deletefilew.md",
+   "text": "---\nUID: NF:fileapi.DeleteFileW\ntitle: DeleteFileW function (fileapi.h)\ndescription: Deletes an existing file. (DeleteFileW)\nhelpviewer_keywords: [\"DeleteFile\", \"DeleteFile function [Files]\", \"DeleteFileW\", \"_win32_deletefile\", \"base.deletefile\", \"fileapi/DeleteFile\", \"fileapi/DeleteFileW\", \"fs.deletefile\"]\nold-location: fs\\deletefile.htm\ntech.root: fs\nms.assetid: 0b947a85-816b-4374-a8f8-c369e366a17d\nms.date: 12/15/2023\nms.keywords: DeleteFile, DeleteFile function [Files], DeleteFileA, DeleteFileW, _win32_deletefile, base.deletefile, fileapi/DeleteFile, fileapi/DeleteFileA, fileapi/DeleteFileW, fs.deletefile, winbase/DeleteFile, winbase/DeleteFileA, winbase/DeleteFileW\nreq.header: fileapi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: DeleteFileW (Unicode) and DeleteFileA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - DeleteFileW\n - fileapi/DeleteFileW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-file-l1-2-5.dll\n - api-ms-win-core-file-l1-2-4.dll\n - api-ms-win-core-file-l1-2-3.dll\n - Kernel32.dll\n - API-MS-Win-Core-File-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-File-l1-2-0.dll\n - API-MS-Win-Core-File-l1-2-1.dll\n - API-MS-Win-Core-File-l1-2-2.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\napi_name:\n - DeleteFile\n - DeleteFileA\n - DeleteFileW\n---\n\n# DeleteFileW function\n\n## -description\n\nDeletes an existing file.\n\nTo perform this operation as a transacted operation, use the [DeleteFileTransacted](/windows/win32/api/winbase/nf-winbase-deletefiletransactedw) function.\n\n## -parameters\n\n### -param lpFileName [in]\n\nThe name of the file to be deleted.\n\nBy default, the name is limited to MAX_PATH characters. To extend this limit to 32,767 wide characters, prepend \"\\\\\\\\?\\\\\" to the path. For more information, see [Naming Files, Paths, and Namespaces](/windows/win32/fileio/naming-a-file).\n\n> [!TIP]\n> Starting with Windows 10, Version 1607, you can opt-in to remove the MAX_PATH limitation without prepending \"\\\\\\\\?\\\\\". See the \"Maximum Path Length Limitation\" section of [Naming Files, Paths, and Namespaces](/windows/win32/fileio/naming-a-file) for details.\n\n## -returns\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero (0). To get extended error information, call [GetLastError](/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror).\n\n## -remarks\n\nIf an application attempts to delete a file that does not exist, the **DeleteFile** function fails with **ERROR_FILE_NOT_FOUND**. If the file is a read-only file, the function fails with **ERROR_ACCESS_DENIED**.\n\nThe following list identifies some tips for deleting, removing, or closing files:\n\n- To delete a read-only file, first you must remove the read-only attribute.\n- To delete or rename a file, you must have either delete permission on the file, or delete child permission in the parent directory.\n- To recursively delete the files in a directory, use the [SHFileOperation](/windows/win32/api/shellapi/nf-shellapi-shfileoperationw) function.\n- To remove an empty directory, use the [RemoveDirectory](/windows/win32/api/fileapi/nf-fileapi-removedirectoryw) function.\n- To close an open file, use the [CloseHandle](/windows/win32/api/handleapi/nf-handleapi-closehandle) function.\n\nIf you set up a directory with all access except delete and delete child, and the access control lists (ACL) of new files are inherited, then you can create a file without being able to delete it. However, then you can create a file, and then get all the access you request on the handle that is returned to you at the time you create the file.\n\nIf you request delete permission at the time you create a file, you can delete or rename the file with that handle, but not with any other handle. For more information, see [File Security and Access Rights](/windows/win32/FileIO/file-security-and-access-rights).\n\nThe **DeleteFile** function fails if an application attempts to delete a file that has other handles open for normal I/O or as a memory-mapped file (**FILE_SHARE_DELETE** must have been specified when other handles were opened).\n\nThe **DeleteFile** function marks a file for deletion on close. Therefore, the file deletion does not occur until the last handle to the file is closed. Subsequent calls to [CreateFile](/windows/win32/api/fileapi/nf-fileapi-createfilew) to open the file fail with **ERROR_ACCESS_DENIED**.\n\nThe use of POSIX delete causes the file to be deleted while handles remain open. Subsequent calls to [CreateFile](/windows/win32/api/fileapi/nf-fileapi-createfilew) to open the file fail with **ERROR_FILE_NOT_FOUND**.\n\n\nSymbolic link behavior:\n\nIf the path points to a symbolic link, the symbolic link is deleted, not the target. To delete a target, you must call [CreateFile](/windows/win32/api/fileapi/nf-fileapi-createfilew) and specify **FILE_FLAG_DELETE_ON_CLOSE**.\n\nIn Windows 8 and Windows Server 2012, this function is supported by the following technologies:\n\n| Technology | Supported |\n|------------|-----------|\n| Server Message Block (SMB) 3.0 protocol | Yes |\n| SMB 3.0 Transparent Failover (TFO) | Yes |\n| SMB 3.0 with Scale-out File Shares (SO) | Yes |\n| Cluster Shared Volume File System (CsvFS) | Yes |\n| Resilient File System (ReFS) | Yes |\n\n#### Examples\n\nFor an example, see [Locking and Unlocking Byte Ranges in Files](/windows/win32/FileIO/locking-and-unlocking-byte-ranges-in-files).\n\n> [!NOTE]\n> The `fileapi.h` header defines DeleteFile as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n[CloseHandle](/windows/win32/api/handleapi/nf-handleapi-closehandle)\n\n[CreateFile](/windows/win32/api/fileapi/nf-fileapi-createfilew)\n\n[DeleteFileTransacted](/windows/win32/api/winbase/nf-winbase-deletefiletransactedw)\n\n[File Management Functions](/windows/win32/FileIO/file-management-functions)\n\n[Symbolic Links](/windows/win32/FileIO/symbolic-links)\n\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(file);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtClose",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/server.c:1940"
+    ]
+   },
+   {
+    "name": "NtCreateFile",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/file.c:4645"
+    ]
+   },
+   {
+    "name": "RtlDosPathNameToNtPathName_U",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/path.c:297"
+    ]
+   },
+   {
+    "name": "RtlFreeUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:272"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_w",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "set_ntstatus"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "kernelbase.DeleteFileW",
+  "category": {
+   "l1": "Data access and storage",
+   "l2": "Files and I/O",
+   "header": "fileapi.h",
+   "textbook": "File management",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 25,
+   "body": 24,
+   "code": 16
+  },
+  "cyclomatic": 3,
+  "return_type": "BOOL",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 22,
+   "n_tests": 192,
+   "n_tests_other": 170,
+   "own_test_functions": [
+    "dlls/kernel32/tests/change.c::test_ffcn",
+    "dlls/kernel32/tests/change.c::test_readdirectorychanges_cr",
+    "dlls/kernel32/tests/change.c::test_readdirectorychanges_filedir",
+    "dlls/kernel32/tests/file.c::test_CopyFile2",
+    "dlls/kernel32/tests/file.c::test_CopyFileW",
+    "dlls/kernel32/tests/file.c::test_CreateFile2",
+    "dlls/kernel32/tests/file.c::test_CreateFileW",
+    "dlls/kernel32/tests/file.c::test_DeleteFileW",
+    "dlls/kernel32/tests/file.c::test_GetFinalPathNameByHandleW",
+    "dlls/kernel32/tests/file.c::test_MoveFileW",
+    "dlls/kernel32/tests/file.c::test_ReplaceFileW",
+    "dlls/kernel32/tests/file.c::test_SetFileRenameInfo",
+    "dlls/kernel32/tests/file.c::test_posix_semantics",
+    "dlls/kernel32/tests/file.c::test_symbolic_link",
+    "dlls/kernel32/tests/loader.c::delete_load_path",
+    "dlls/kernel32/tests/loader.c::init_load_path",
+    "dlls/kernel32/tests/loader.c::test_import_resolution",
+    "dlls/kernel32/tests/module.c::test_AddDllDirectory",
+    "dlls/kernel32/tests/path.c::test_GetLongPathNameW",
+    "dlls/kernel32/tests/path.c::test_GetShortPathNameW",
+    "dlls/kernel32/tests/path.c::test_SearchPathW",
+    "dlls/kernel32/tests/resource.c::test_mui"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/fileapi/nf-fileapi-deletefilew",
+   "source": "win32",
+   "description": "Deletes an existing file. (DeleteFileW)",
+   "min_windows": "Windows XP [desktop apps \\| UWP apps]",
+   "documented_dll": "Kernel32.dll"
+  },
+  "exports": [
+   "kernel32.DeleteFileW",
+   "kernelbase.DeleteFileW",
+   "shlwapi.DeleteFileWrapW",
+   "unicows.DeleteFileW"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

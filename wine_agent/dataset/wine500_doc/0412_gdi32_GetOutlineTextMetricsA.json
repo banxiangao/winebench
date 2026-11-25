@@ -1,0 +1,150 @@
+{
+ "id": "0412",
+ "function": {
+  "name": "GetOutlineTextMetricsA",
+  "export_name": "GetOutlineTextMetricsA",
+  "module": "gdi32",
+  "source_module": "gdi32",
+  "exported_by": [
+   "gdi32"
+  ],
+  "side": "PE",
+  "file": "dlls/gdi32/text.c",
+  "start_line": 1564,
+  "end_line": 1726,
+  "body_lines": 160,
+  "signature": "UINT WINAPI GetOutlineTextMetricsA( HDC hdc, UINT size, OUTLINETEXTMETRICA *otm )",
+  "header_comment": "/***********************************************************************\n *           GetOutlineTextMetricsA    (GDI32.@)\n *\n * Gets metrics for TrueType fonts.\n *\n * NOTES\n *    If the supplied buffer isn't big enough Windows partially fills it up to\n *    its given length and returns that length.\n */",
+  "code": "UINT WINAPI GetOutlineTextMetricsA( HDC hdc, UINT size, OUTLINETEXTMETRICA *otm )\n{\n    char buf[512], *ptr;\n    UINT ret, needed;\n    OUTLINETEXTMETRICW *otmW = (OUTLINETEXTMETRICW *)buf;\n    OUTLINETEXTMETRICA *output = otm;\n    INT left, len;\n\n    if ((ret = GetOutlineTextMetricsW( hdc, 0, NULL )) == 0) return 0;\n    if (ret > sizeof(buf) && !(otmW = HeapAlloc( GetProcessHeap(), 0, ret )))\n        return 0;\n\n    GetOutlineTextMetricsW( hdc, ret, otmW );\n\n    needed = sizeof(OUTLINETEXTMETRICA);\n    if (otmW->otmpFamilyName)\n        needed += WideCharToMultiByte( CP_ACP, 0,\n                                       (WCHAR *)((char *)otmW + (ptrdiff_t)otmW->otmpFamilyName),\n                                       -1, NULL, 0, NULL, NULL );\n    if (otmW->otmpFaceName)\n        needed += WideCharToMultiByte( CP_ACP, 0,\n                                       (WCHAR *)((char *)otmW + (ptrdiff_t)otmW->otmpFaceName),\n                                       -1, NULL, 0, NULL, NULL );\n    if (otmW->otmpStyleName)\n        needed += WideCharToMultiByte( CP_ACP, 0,\n                                       (WCHAR *)((char *)otmW + (ptrdiff_t)otmW->otmpStyleName),\n                                       -1, NULL, 0, NULL, NULL );\n    if (otmW->otmpFullName)\n        needed += WideCharToMultiByte( CP_ACP, 0,\n                                       (WCHAR *)((char *)otmW + (ptrdiff_t)otmW->otmpFullName),\n                                       -1, NULL, 0, NULL, NULL );\n\n    if (!otm)\n    {\n        ret = needed;\n        goto end;\n    }\n\n    TRACE( \"needed = %d\\n\", needed );\n    if (needed > size)\n        /* Since the supplied buffer isn't big enough, we'll alloc one\n           that is and memcpy the first size bytes into the otm at\n           the end. */\n        output = HeapAlloc( GetProcessHeap(), 0, needed );\n\n    ret = output->otmSize = min( needed, size );\n    text_metric_WtoA( &otmW->otmTextMetrics, &output->otmTextMetrics );\n    output->otmFiller = 0;\n    output->otmPanoseNumber = otmW->otmPanoseNumber;\n    output->otmfsSelection = otmW->otmfsSelection;\n    output->otmfsType = otmW->otmfsType;\n    output->otmsCharSlopeRise = otmW->otmsCharSlopeRise;\n    output->otmsCharSlopeRun = otmW->otmsCharSlopeRun;\n    output->otmItalicAngle = otmW->otmItalicAngle;\n    output->otmEMSquare = otmW->otmEMSquare;\n    output->otmAscent = otmW->otmAscent;\n    output->otmDescent = otmW->otmDescent;\n    output->otmLineGap = otmW->otmLineGap;\n    output->otmsCapEmHeight = otmW->otmsCapEmHeight;\n    output->otmsXHeight = otmW->otmsXHeight;\n    output->otmrcFontBox = otmW->otmrcFontBox;\n    output->otmMacAscent = otmW->otmMacAscent;\n    output->otmMacDescent = otmW->otmMacDescent;\n    output->otmMacLineGap = otmW->otmMacLineGap;\n    output->otmusMinimumPPEM = otmW->otmusMinimumPPEM;\n    output->otmptSubscriptSize = otmW->otmptSubscriptSize;\n    output->otmptSubscriptOffset = otmW->otmptSubscriptOffset;\n    output->otmptSuperscriptSize = otmW->otmptSuperscriptSize;\n    output->otmptSuperscriptOffset = otmW->otmptSuperscriptOffset;\n    output->otmsStrikeoutSize = otmW->otmsStrikeoutSize;\n    output->otmsStrikeoutPosition = otmW->otmsStrikeoutPosition;\n    output->otmsUnderscoreSize = otmW->otmsUnderscoreSize;\n    output->otmsUnderscorePosition = otmW->otmsUnderscorePosition;\n\n    ptr = (char *)(output + 1);\n    left = needed - sizeof(*output);\n\n    if (otmW->otmpFamilyName)\n    {\n        output->otmpFamilyName = (char *)(ptr - (char *)output);\n        len = WideCharToMultiByte( CP_ACP, 0,\n                                   (WCHAR *)((char *)otmW + (ptrdiff_t)otmW->otmpFamilyName),\n                                   -1, ptr, left, NULL, NULL );\n        left -= len;\n        ptr += len;\n    }\n    else output->otmpFamilyName = 0;\n\n    if (otmW->otmpFaceName)\n    {\n        output->otmpFaceName = (char *)(ptr - (char *)output);\n        len = WideCharToMultiByte( CP_ACP, 0,\n                                   (WCHAR *)((char *)otmW + (ptrdiff_t)otmW->otmpFaceName),\n                                   -1, ptr, left, NULL, NULL );\n        left -= len;\n        ptr += len;\n    }\n    else output->otmpFaceName = 0;\n\n    if (otmW->otmpStyleName)\n    {\n        output->otmpStyleName = (char *)(ptr - (char *)output);\n        len = WideCharToMultiByte( CP_ACP, 0,\n                                   (WCHAR *)((char *)otmW + (ptrdiff_t)otmW->otmpStyleName),\n                                   -1, ptr, left, NULL, NULL);\n        left -= len;\n        ptr += len;\n    }\n    else output->otmpStyleName = 0;\n\n    if (otmW->otmpFullName)\n    {\n        output->otmpFullName = (char *)(ptr - (char *)output);\n        len = WideCharToMultiByte( CP_ACP, 0,\n                                   (WCHAR *)((char *)otmW + (ptrdiff_t)otmW->otmpFullName),\n                                   -1, ptr, left, NULL, NULL );\n        left -= len;\n    }\n    else output->otmpFullName = 0;\n\n    assert( left == 0 );\n\n    if (output != otm)\n    {\n        memcpy( otm, output, size );\n        HeapFree( GetProcessHeap(), 0, output );\n\n        /* check if the string offsets really fit into the provided size */\n        /* FIXME: should we check string length as well? */\n        /* make sure that we don't read/write beyond the provided buffer */\n        if (otm->otmSize >= FIELD_OFFSET(OUTLINETEXTMETRICA, otmpFamilyName) + sizeof(char *))\n        {\n            if ((UINT_PTR)otm->otmpFamilyName >= otm->otmSize)\n                otm->otmpFamilyName = 0; /* doesn't fit */\n        }\n\n        /* make sure that we don't read/write beyond the provided buffer */\n        if (otm->otmSize >= FIELD_OFFSET(OUTLINETEXTMETRICA, otmpFaceName) + sizeof(char *))\n        {\n            if ((UINT_PTR)otm->otmpFaceName >= otm->otmSize)\n                otm->otmpFaceName = 0; /* doesn't fit */\n        }\n\n            /* make sure that we don't read/write beyond the provided buffer */\n        if (otm->otmSize >= FIELD_OFFSET(OUTLINETEXTMETRICA, otmpStyleName) + sizeof(char *))\n        {\n            if ((UINT_PTR)otm->otmpStyleName >= otm->otmSize)\n                otm->otmpStyleName = 0; /* doesn't fit */\n        }\n\n        /* make sure that we don't read/write beyond the provided buffer */\n        if (otm->otmSize >= FIELD_OFFSET(OUTLINETEXTMETRICA, otmpFullName) + sizeof(char *))\n        {\n            if ((UINT_PTR)otm->otmpFullName >= otm->otmSize)\n                otm->otmpFullName = 0; /* doesn't fit */\n        }\n    }\n\nend:\n    if (otmW != (OUTLINETEXTMETRICW *)buf)\n        HeapFree(GetProcessHeap(), 0, otmW);\n    return ret;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <limits.h>",
+   "#include <assert.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winnls.h\"",
+   "#include \"usp10.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"gdi_private.h\"",
+   "#include \"resource.h\""
+  ],
+  "resolution": [
+   "gdi32!GetOutlineTextMetricsA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdi32/tests/font.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-getoutlinetextmetricsa.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-getoutlinetextmetricsa",
+   "documented_name": "getoutlinetextmetricsa",
+   "file": "docs/0412_sdk-api_nf-wingdi-getoutlinetextmetricsa.md",
+   "text": "---\nUID: NF:wingdi.GetOutlineTextMetricsA\ntitle: GetOutlineTextMetricsA function (wingdi.h)\ndescription: The GetOutlineTextMetrics function retrieves text metrics for TrueType fonts. (ANSI)\nhelpviewer_keywords: [\"GetOutlineTextMetricsA\", \"wingdi/GetOutlineTextMetricsA\"]\nold-location: gdi\\getoutlinetextmetrics.htm\ntech.root: gdi\nms.assetid: b8c7a557-ca35-41a4-9043-8496e5b01564\nms.date: 12/05/2018\nms.keywords: GetOutlineTextMetrics, GetOutlineTextMetrics function [Windows GDI], GetOutlineTextMetricsA, GetOutlineTextMetricsW, _win32_GetOutlineTextMetrics, gdi.getoutlinetextmetrics, wingdi/GetOutlineTextMetrics, wingdi/GetOutlineTextMetricsA, wingdi/GetOutlineTextMetricsW\nreq.header: wingdi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: GetOutlineTextMetricsW (Unicode) and GetOutlineTextMetricsA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetOutlineTextMetricsA\n - wingdi/GetOutlineTextMetricsA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - gdi32.dll\n - Ext-MS-Win-GDI-Font-l1-1-1.dll\n - ext-ms-win-gdi-font-l1-1-2.dll\n - Ext-MS-Win-GDI-Font-L1-1-3.dll\n - GDI32Full.dll\napi_name:\n - GetOutlineTextMetrics\n - GetOutlineTextMetricsA\n - GetOutlineTextMetricsW\n---\n\n# GetOutlineTextMetricsA function\n\n\n## -description\n\nThe <b>GetOutlineTextMetrics</b> function retrieves text metrics for TrueType fonts.\n\n## -parameters\n\n### -param hdc [in]\n\nA handle to the device context.\n\n### -param cjCopy [in]\n\nThe size, in bytes, of the array that receives the text metrics.\n\n### -param potm [out, optional]\n\nA pointer to an <a href=\"/windows/desktop/api/wingdi/ns-wingdi-outlinetextmetrica\">OUTLINETEXTMETRIC</a> structure. If this parameter is <b>NULL</b>, the function returns the size of the buffer required for the retrieved metric data.\n\n## -returns\n\nIf the function succeeds, the return value is nonzero or the size of the required buffer.\n\nIf the function fails, the return value is zero.\n\n## -remarks\n\nThe <a href=\"/windows/desktop/api/wingdi/ns-wingdi-outlinetextmetrica\">OUTLINETEXTMETRIC</a> structure contains most of the text metric information provided for TrueType fonts (including a <a href=\"/windows/desktop/api/wingdi/ns-wingdi-textmetrica\">TEXTMETRIC</a> structure). The sizes returned in <b>OUTLINETEXTMETRIC</b> are in logical units; they depend on the current mapping mode.\n\n\n\n\n\n> [!NOTE]\n> The wingdi.h header defines GetOutlineTextMetrics as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/gdi/font-and-text-functions\">Font and Text Functions</a>\n\n\n\n<a href=\"/windows/desktop/gdi/fonts-and-text\">Fonts and Text Overview</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-gettextmetrics\">GetTextMetrics</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-outlinetextmetrica\">OUTLINETEXTMETRIC</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-textmetrica\">TEXTMETRIC</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "text_metric_WtoA",
+   "file": "dlls/gdi32/text.c",
+   "start_line": 733,
+   "end_line": 769,
+   "static": true,
+   "called_from": [
+    "GetOutlineTextMetricsA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/text.c:773",
+    "dlls/gdi32/text.c:1551"
+   ],
+   "signature": "static void text_metric_WtoA( const TEXTMETRICW *tmW, TEXTMETRICA *tmA )",
+   "code": "static void text_metric_WtoA( const TEXTMETRICW *tmW, TEXTMETRICA *tmA )\n{\n    tmA->tmHeight = tmW->tmHeight;\n    tmA->tmAscent = tmW->tmAscent;\n    tmA->tmDescent = tmW->tmDescent;\n    tmA->tmInternalLeading = tmW->tmInternalLeading;\n    tmA->tmExternalLeading = tmW->tmExternalLeading;\n    tmA->tmAveCharWidth = tmW->tmAveCharWidth;\n    tmA->tmMaxCharWidth = tmW->tmMaxCharWidth;\n    tmA->tmWeight = tmW->tmWeight;\n    tmA->tmOverhang = tmW->tmOverhang;\n    tmA->tmDigitizedAspectX = tmW->tmDigitizedAspectX;\n    tmA->tmDigitizedAspectY = tmW->tmDigitizedAspectY;\n    tmA->tmFirstChar = min( tmW->tmFirstChar, 255 );\n    if (tmW->tmCharSet == SYMBOL_CHARSET)\n    {\n        tmA->tmFirstChar = 0x1e;\n        tmA->tmLastChar = 0xff;  /* win9x behaviour - we need the OS2 table data to calculate correctly */\n    }\n    else if (tmW->tmPitchAndFamily & TMPF_TRUETYPE)\n    {\n        tmA->tmFirstChar = tmW->tmDefaultChar - 1;\n        tmA->tmLastChar = min( tmW->tmLastChar, 0xff );\n    }\n    else\n    {\n        tmA->tmFirstChar = min( tmW->tmFirstChar, 0xff );\n        tmA->tmLastChar  = min( tmW->tmLastChar,  0xff );\n    }\n    tmA->tmDefaultChar = tmW->tmDefaultChar;\n    tmA->tmBreakChar = tmW->tmBreakChar;\n    tmA->tmItalic = tmW->tmItalic;\n    tmA->tmUnderlined = tmW->tmUnderlined;\n    tmA->tmStruckOut = tmW->tmStruckOut;\n    tmA->tmPitchAndFamily = tmW->tmPitchAndFamily;\n    tmA->tmCharSet = tmW->tmCharSet;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 59,
+    "end_line": 59,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(bidi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetOutlineTextMetricsW",
+    "impl": [
+     "dlls/gdi32/text.c:1731"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "HeapAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   },
+   {
+    "name": "_assert",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/exit.c:319"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

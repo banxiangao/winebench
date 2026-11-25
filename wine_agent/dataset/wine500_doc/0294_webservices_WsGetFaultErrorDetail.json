@@ -1,0 +1,159 @@
+{
+ "id": "0294",
+ "function": {
+  "name": "WsGetFaultErrorDetail",
+  "export_name": "WsGetFaultErrorDetail",
+  "module": "webservices",
+  "source_module": "webservices",
+  "exported_by": [
+   "webservices"
+  ],
+  "side": "PE",
+  "file": "dlls/webservices/error.c",
+  "start_line": 559,
+  "end_line": 627,
+  "body_lines": 66,
+  "signature": "HRESULT WINAPI WsGetFaultErrorDetail( WS_ERROR *handle, const WS_FAULT_DETAIL_DESCRIPTION *desc, WS_READ_OPTION option, WS_HEAP *heap, void *value, ULONG size )",
+  "header_comment": "/**************************************************************************\n *          WsGetFaultErrorDetail\t\t[webservices.@]\n */",
+  "code": "HRESULT WINAPI WsGetFaultErrorDetail( WS_ERROR *handle, const WS_FAULT_DETAIL_DESCRIPTION *desc,\n                                      WS_READ_OPTION option, WS_HEAP *heap, void *value, ULONG size )\n{\n    static const WS_XML_STRING detail = {6, (BYTE *)\"detail\"};\n    struct error *error = (struct error *)handle;\n    WS_XML_READER *reader = NULL;\n    const WS_XML_NODE *node;\n    const WS_XML_ELEMENT_NODE *elem;\n    BOOL nil = FALSE;\n    HRESULT hr = S_OK;\n\n    TRACE( \"%p %p %u %p %p %lu\\n\", handle, desc, option, heap, value, size );\n\n    if (!error || !desc || !value) return E_INVALIDARG;\n    if ((option == WS_READ_REQUIRED_POINTER ||\n         option == WS_READ_OPTIONAL_POINTER ||\n         option == WS_READ_NILLABLE_POINTER) && size != sizeof(void *))\n        return E_INVALIDARG;\n\n    EnterCriticalSection( &error->cs );\n\n    if (error->magic != ERROR_MAGIC)\n    {\n        hr = E_INVALIDARG;\n        goto done;\n    }\n\n    if (!error->fault || !error->fault->detail)\n    {\n        nil = TRUE;\n        goto done;\n    }\n    if ((hr = WsCreateReader( NULL, 0, &reader, NULL )) != S_OK) goto done;\n    if ((hr = WsSetInputToBuffer( reader, error->fault->detail, NULL, 0, NULL )) != S_OK) goto done;\n\n    if ((hr = WsReadNode( reader, NULL )) != S_OK) goto done;\n    if ((hr = WsGetReaderNode( reader, &node, NULL )) != S_OK) goto done;\n    elem = (const WS_XML_ELEMENT_NODE *)node;\n    if (!(node->nodeType == WS_XML_NODE_TYPE_ELEMENT &&\n          WsXmlStringEquals( elem->localName, &detail, NULL ) == S_OK))\n    {\n        hr = WS_E_INVALID_FORMAT;\n        goto done;\n    }\n\n    if (desc->action && error->fault_action.length &&\n        WsXmlStringEquals( desc->action, &error->fault_action, NULL ) != S_OK)\n    {\n        nil = TRUE;\n        goto done;\n    }\n\n    if ((hr = WsReadNode( reader, NULL )) != S_OK) goto done;\n    if ((hr = WsReadElement( reader, desc->detailElementDescription,\n                             option, heap, value, size, handle )) != S_OK)\n        goto done;\n\ndone:\n    LeaveCriticalSection( &error->cs );\n    WsFreeReader( reader );\n\n    if ((hr != S_OK || nil) && (option == WS_READ_OPTIONAL_POINTER || option == WS_READ_NILLABLE_POINTER))\n        *(void **)value = NULL;\n    if (nil && !(option == WS_READ_OPTIONAL_POINTER || option == WS_READ_NILLABLE_POINTER))\n        hr = WS_E_INVALID_FORMAT;\n\n    TRACE( \"returning %#lx\\n\", hr );\n    return hr;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"webservices.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"webservices_private.h\""
+  ],
+  "resolution": [
+   "webservices!WsGetFaultErrorDetail [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/webservices/tests/reader.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "webservices",
+   "path": "sdk-api-src/content/webservices/nf-webservices-wsgetfaulterrordetail.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/webservices/nf-webservices-wsgetfaulterrordetail",
+   "documented_name": "wsgetfaulterrordetail",
+   "file": "docs/0294_sdk-api_nf-webservices-wsgetfaulterrordetail.md",
+   "text": "---\nUID: NF:webservices.WsGetFaultErrorDetail\ntitle: WsGetFaultErrorDetail function (webservices.h)\ndescription: Read the fault detail stored in a WS_ERROR object.\nhelpviewer_keywords: [\"WsGetFaultErrorDetail\",\"WsGetFaultErrorDetail function [Web Services for Windows]\",\"webservices/WsGetFaultErrorDetail\",\"wsw.wsgetfaulterrordetail\"]\nold-location: wsw\\wsgetfaulterrordetail.htm\ntech.root: wsw\nms.assetid: 426c292f-64a5-411f-a63e-6be05fe93438\nms.date: 12/05/2018\nms.keywords: WsGetFaultErrorDetail, WsGetFaultErrorDetail function [Web Services for Windows], webservices/WsGetFaultErrorDetail, wsw.wsgetfaulterrordetail\nreq.header: webservices.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 7 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 R2 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: WebServices.lib\nreq.dll: WebServices.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - WsGetFaultErrorDetail\n - webservices/WsGetFaultErrorDetail\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - WebServices.dll\napi_name:\n - WsGetFaultErrorDetail\n---\n\n# WsGetFaultErrorDetail function\n\n\n## -description\n\nRead the fault detail stored in a <a href=\"/windows/desktop/wsw/ws-error\">WS_ERROR</a> object.\n\n## -parameters\n\n### -param error [in]\n\nThe error object that contains the fault information.\n\n### -param faultDetailDescription [in]\n\nA pointer to a description of the fault detail element.\n                \n\nThe action value of the fault detail description is used as a filter\n                    value to match against the action of the fault.  If both action\n                    strings are specified (the action value of the fault detail description \n                    is not <b>NULL</b> and the action value <a href=\"/windows/desktop/api/webservices/ne-webservices-ws_fault_error_property_id\">WS_FAULT_ERROR_PROPERTY_ACTION</a> in the \n                    <a href=\"/windows/desktop/wsw/ws-error\">WS_ERROR</a> has a length greater than zero), then the action \n                    strings are compared to determine a match.  If there is a match, then the \n                    function will then try to deserialize the detail element.\n                \n\nThe element description of the fault detail description is used to\n                    describe the format of the element in the fault detail.\n\n### -param readOption [in]\n\nWhether the element is required, and how to allocate the value.\n                    See <a href=\"/windows/desktop/api/webservices/ne-webservices-ws_read_option\">WS_READ_OPTION</a> for more information.\n\n### -param heap [in, optional]\n\nThe heap to store the deserialized values in.\n\n### -param value\n\nThe interpretation of this parameter depends on the <a href=\"/windows/desktop/api/webservices/ne-webservices-ws_read_option\">WS_READ_OPTION</a>.\n\n### -param valueSize [in]\n\nThe interpretation of this parameter depends on the <a href=\"/windows/desktop/api/webservices/ne-webservices-ws_read_option\">WS_READ_OPTION</a>.\n\n## -returns\n\nThis function can return one of these values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WS_E_INVALID_FORMAT</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe input data was not in the expected format or did not have the expected value.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_OUTOFMEMORY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nRan out of memory.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>WS_E_QUOTA_EXCEEDED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe size quota of the heap was exceeded.\n                \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_INVALIDARG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOne or more arguments are invalid.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThis API deserializes the value from the detail field of\n                the <a href=\"/windows/desktop/api/webservices/ns-webservices-ws_fault\">WS_FAULT</a> stored in the <a href=\"/windows/desktop/wsw/ws-error\">WS_ERROR</a> object.\n            \n\nThis functions supports the following scenarios, based on the contents\n                of the <a href=\"/windows/win32/api/webservices/ns-webservices-ws_fault_detail_description\">WS_ELEMENT_DESCRIPTION</a> in the <a href=\"/windows/desktop/api/webservices/ns-webservices-ws_fault_detail_description\">WS_FAULT_DETAIL_DESCRIPTION</a> supplied:\n            \n\n<ul>\n<li>Reading a single element.  \n                In this case, the elementLocalName and elementNs\n                fields of the <a href=\"/windows/desktop/api/webservices/ns-webservices-ws_element_description\">WS_ELEMENT_DESCRIPTION</a> should be set to the local name\n                and namespace of the element to read, and the type and type description represents\n                the type of the value being deserialized.  \n                \n\nSince different faults with different detail formats may be expected\n                from a service, this function can be called in succession to try to\n                read each type of detail.  In this case, the <a href=\"/windows/desktop/api/webservices/ne-webservices-ws_read_option\">WS_READ_OPTIONAL_POINTER</a> value can be specified, which will return a <b>NULL</b> pointer if the element name\n                in the fault detail does not match the expected value.\n            \n\n</li>\n<li>Reading multiple elements as a single value.  \n                In this case, the elementLocalName and elementNs\n                fields of the <a href=\"/windows/desktop/api/webservices/ns-webservices-ws_element_description\">WS_ELEMENT_DESCRIPTION</a> should be set to <b>NULL</b>, and a <a href=\"/windows/desktop/api/webservices/ne-webservices-ws_type\">WS_STRUCT_TYPE</a> and <a href=\"/windows/desktop/api/webservices/ns-webservices-ws_struct_description\">WS_STRUCT_DESCRIPTION</a> should be specified.  Each field of the\n                structure value being deserialized should correspond to element(s) to read within the body.\n                The readOption parameter must be <a href=\"/windows/desktop/api/webservices/ne-webservices-ws_read_option\">WS_READ_REQUIRED_VALUE</a> or <b>WS_READ_REQUIRED_POINTER</b>. \n                \n\n</li>\n</ul>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "error",
+    "kind": "struct_decl",
+    "start_line": 40,
+    "end_line": 52,
+    "code": "struct error\n{\n    ULONG            magic;\n    CRITICAL_SECTION cs;\n    WS_HEAP         *heap;\n    ULONG            prop_count;\n    struct prop      prop[ARRAY_SIZE( error_props )];\n    ULONG            strs_count;\n    ULONG            strs_size; /* Maximum length of the strs array */\n    WS_STRING       *strs;\n    WS_FAULT        *fault;\n    WS_XML_STRING    fault_action;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 31,
+    "end_line": 31,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(webservices);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "ERROR_MAGIC",
+    "start_line": 54,
+    "end_line": 54,
+    "code": "#define ERROR_MAGIC (('E' << 24) | ('R' << 16) | ('R' << 8) | 'O')"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "WsCreateReader",
+    "impl": [
+     "dlls/webservices/reader.c:556"
+    ]
+   },
+   {
+    "name": "WsFreeReader",
+    "impl": [
+     "dlls/webservices/reader.c:600"
+    ]
+   },
+   {
+    "name": "WsGetReaderNode",
+    "impl": [
+     "dlls/webservices/reader.c:764"
+    ]
+   },
+   {
+    "name": "WsReadElement",
+    "impl": [
+     "dlls/webservices/reader.c:6948"
+    ]
+   },
+   {
+    "name": "WsReadNode",
+    "impl": [
+     "dlls/webservices/reader.c:3177"
+    ]
+   },
+   {
+    "name": "WsSetInputToBuffer",
+    "impl": [
+     "dlls/webservices/reader.c:7262"
+    ]
+   },
+   {
+    "name": "WsXmlStringEquals",
+    "impl": [
+     "dlls/webservices/string.c:822"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

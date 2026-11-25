@@ -1,0 +1,125 @@
+{
+ "id": "0174",
+ "function": {
+  "name": "FoldStringA",
+  "export_name": "FoldStringA",
+  "module": "kernel32",
+  "source_module": "kernel32",
+  "exported_by": [
+   "kernel32"
+  ],
+  "side": "PE",
+  "file": "dlls/kernel32/locale.c",
+  "start_line": 232,
+  "end_line": 279,
+  "body_lines": 45,
+  "signature": "INT WINAPI FoldStringA(DWORD dwFlags, LPCSTR src, INT srclen, LPSTR dst, INT dstlen)",
+  "header_comment": "/*************************************************************************\n *           FoldStringA    (KERNEL32.@)\n *\n * Map characters in a string.\n *\n * PARAMS\n *  dwFlags [I] Flags controlling chars to map (MAP_ constants from \"winnls.h\")\n *  src     [I] String to map\n *  srclen  [I] Length of src, or -1 if src is NUL terminated\n *  dst     [O] Destination for mapped string\n *  dstlen  [I] Length of dst, or 0 to find the required length for the mapped string\n *\n * RETURNS\n *  Success: The length of the string written to dst, including the terminating NUL. If\n *           dstlen is 0, the value returned is the same, but nothing is written to dst,\n *           and dst may be NULL.\n *  Failure: 0. Use GetLastError() to determine the cause.\n */",
+  "code": "INT WINAPI FoldStringA(DWORD dwFlags, LPCSTR src, INT srclen,\n                       LPSTR dst, INT dstlen)\n{\n    INT ret = 0, srclenW = 0;\n    WCHAR *srcW = NULL, *dstW = NULL;\n\n    if (!src || !srclen || dstlen < 0 || (dstlen && !dst) || src == dst)\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return 0;\n    }\n\n    srclenW = MultiByteToWideChar(CP_ACP, 0, src, srclen, NULL, 0);\n    srcW = HeapAlloc(GetProcessHeap(), 0, srclenW * sizeof(WCHAR));\n\n    if (!srcW)\n    {\n        SetLastError(ERROR_NOT_ENOUGH_MEMORY);\n        goto FoldStringA_exit;\n    }\n\n    MultiByteToWideChar(CP_ACP, 0, src, srclen, srcW, srclenW);\n\n    ret = FoldStringW(dwFlags, srcW, srclenW, NULL, 0);\n    if (ret && dstlen)\n    {\n        dstW = HeapAlloc(GetProcessHeap(), 0, ret * sizeof(WCHAR));\n\n        if (!dstW)\n        {\n            SetLastError(ERROR_NOT_ENOUGH_MEMORY);\n            goto FoldStringA_exit;\n        }\n\n        ret = FoldStringW(dwFlags, srcW, srclenW, dstW, ret);\n        if (!WideCharToMultiByte(CP_ACP, 0, dstW, ret, dst, dstlen, NULL, NULL))\n        {\n            ret = 0;\n            SetLastError(ERROR_INSUFFICIENT_BUFFER);\n        }\n    }\n\n    HeapFree(GetProcessHeap(), 0, dstW);\n\nFoldStringA_exit:\n    HeapFree(GetProcessHeap(), 0, srcW);\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <locale.h>",
+   "#include <string.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <ctype.h>",
+   "#include <stdlib.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winver.h\"",
+   "#include \"kernel_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!FoldStringA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/locale.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winnls",
+   "path": "sdk-api-src/content/winnls/nf-winnls-foldstringa.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winnls/nf-winnls-foldstringa",
+   "documented_name": "foldstringa",
+   "file": "docs/0174_sdk-api_nf-winnls-foldstringa.md",
+   "text": "---\nUID: NF:winnls.FoldStringA\ntitle: FoldStringA function (winnls.h)\ndescription: Maps one Unicode string to another, performing the specified transformation. (FoldStringA)\nhelpviewer_keywords: [\"FoldString\",\"FoldString function [Internationalization for Windows Applications]\",\"FoldStringA\",\"FoldStringW\",\"MAP_COMPOSITE\",\"MAP_EXPAND_LIGATURES\",\"MAP_FOLDCZONE\",\"MAP_FOLDDIGITS\",\"MAP_PRECOMPOSED\",\"_win32_FoldString\",\"_win32_FoldString_cpp\",\"intl.foldstring\",\"stringapiset/FoldString\",\"stringapiset/FoldStringA\",\"stringapiset/FoldStringW\",\"winnls/FoldString\",\"winnls/FoldStringA\",\"winnls/FoldStringW\",\"winui._win32_FoldString\"]\nold-location: intl\\foldstring.htm\ntech.root: Intl\nms.assetid: 986b9a72-04c0-49e2-8424-8948dc64de0c\nms.date: 12/05/2018\nms.keywords: FoldString, FoldString function [Internationalization for Windows Applications], FoldStringA, FoldStringW, MAP_COMPOSITE, MAP_EXPAND_LIGATURES, MAP_FOLDCZONE, MAP_FOLDDIGITS, MAP_PRECOMPOSED, _win32_FoldString, _win32_FoldString_cpp, intl.foldstring, stringapiset/FoldString, stringapiset/FoldStringA, stringapiset/FoldStringW, winnls/FoldString, winnls/FoldStringA, winnls/FoldStringW, winui._win32_FoldString\nreq.header: winnls.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: FoldStringW (Unicode) and FoldStringA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - FoldStringA\n - winnls/FoldStringA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Kernel32.dll\n - API-MS-Win-Core-String-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\n - API-MS-Win-Core-Localization-Ansi-L1-1-0.dll\n - Kernel32Legacy.dll\napi_name:\n - FoldString\n - FoldStringA\n - FoldStringW\n---\n\n# FoldStringA function\n\n\n## -description\n\nMaps one Unicode string to another, performing the specified transformation. For an overview of the use of the string functions, see <a href=\"/windows/desktop/menurc/strings\">Strings</a>.\n<div class=\"alert\"><b>Caution</b>  Using <b>FoldString</b> incorrectly can compromise the security of your application. Strings that are not mapped correctly can produce invalid input. Test strings to make sure they are valid before using them and provide error handlers. For more information, see <a href=\"/windows/desktop/Intl/security-considerations--international-features\">Security Considerations: International Features</a>.</div><div> </div>\n\n## -parameters\n\n### -param dwMapFlags [in]\n\nFlags specifying the type of transformation to use during string mapping. This parameter can be a combination of the following values.\n\n<table>\n<tr>\n<th>Flag</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MAP_COMPOSITE\"></a><a id=\"map_composite\"></a><dl>\n<dt><b>MAP_COMPOSITE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nMap accented characters to decomposed characters, that is, characters in which a base character and one or more nonspacing characters each have distinct code point values. For example, Ä is represented by A + ¨: LATIN CAPITAL LETTER A (U+0041) + COMBINING DIAERESIS (U+0308). This flag is equivalent to normalization form D in Windows Vista. Note that this flag cannot be used with MB_PRECOMPOSED.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MAP_EXPAND_LIGATURES\"></a><a id=\"map_expand_ligatures\"></a><dl>\n<dt><b>MAP_EXPAND_LIGATURES</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nExpand all ligature characters so that they are represented by their two-character equivalent. For example, the ligature \"æ\" (U+00e6) expands to the two characters \"a\" (U+0061) + \"e\" (U+0065). This value cannot be combined with MAP_PRECOMPOSED or MAP_COMPOSITE.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MAP_FOLDCZONE\"></a><a id=\"map_foldczone\"></a><dl>\n<dt><b>MAP_FOLDCZONE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nFold compatibility zone characters into standard Unicode equivalents. This flag is equivalent to normalization form KD in Windows Vista, if the MAP_COMPOSITE flag is also set. If the composite flag is not set (default), this flag is equivalent to normalization form KC in Windows Vista.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MAP_FOLDDIGITS\"></a><a id=\"map_folddigits\"></a><dl>\n<dt><b>MAP_FOLDDIGITS</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nMap all digits to Unicode characters 0 through 9. \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MAP_PRECOMPOSED\"></a><a id=\"map_precomposed\"></a><dl>\n<dt><b>MAP_PRECOMPOSED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nMap accented characters to precomposed characters, in which the accent and base character are combined into a single character value. This flag is equivalent to normalization form C in Windows Vista. This value cannot be combined with MAP_COMPOSITE.\n\n</td>\n</tr>\n</table>\n\n### -param lpSrcStr [in]\n\nPointer to a source string that the function maps.\n\n### -param cchSrc [in]\n\nSize, in characters, of the source string indicated by <i>lpSrcStr</i>, excluding the terminating null character. The application can set the parameter to any negative value to specify that the source string is null-terminated. In this case, the function calculates the string length automatically, and null-terminates the mapped string indicated by <i>lpDestStr</i>.\n\n### -param lpDestStr [out, optional]\n\nPointer to a buffer in which this function retrieves the mapped string.\n\n### -param cchDest [in]\n\nSize, in characters, of the destination string indicated by <i>lpDestStr</i>. If space for a terminating null character is included in <i>cchSrc</i>, <i>cchDest</i> must also include space for a terminating null character.\n\nThe application can set <i>cchDest</i> to 0. In this case, the function does not use the <i>lpDestStr</i> parameter and returns the required buffer size for the mapped string. If the MAP_FOLDDIGITS flag is specified, the return value is the maximum size required, even if the actual number of characters needed is smaller than the maximum size. If the maximum size is not passed, the function fails with ERROR_INSUFFICIENT_BUFFER.\n\n## -returns\n\nReturns the number of characters in the translated string, including a terminating null character, if successful. If the function succeeds and the value of <i>cchDest</i> is 0, the return value is the size of the buffer required to hold the translated string, including a terminating null character.\n\nThis function returns 0 if it does not succeed. To get extended error information, the application can call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>, which can return one of the following error codes:\n\n<ul>\n<li>ERROR_INSUFFICIENT_BUFFER. A supplied buffer size was not large enough, or  it was incorrectly set to <b>NULL</b>. </li>\n<li>ERROR_INVALID_DATA. The data was invalid.</li>\n<li>ERROR_INVALID_FLAGS. The values supplied for flags were not valid.</li>\n<li>ERROR_INVALID_PARAMETER. Any of the parameter values was invalid.</li>\n<li>ERROR_MOD_NOT_FOUND. The module was not found. </li>\n<li>ERROR_OUTOFMEMORY. Not enough storage was available to complete this operation. </li>\n<li>ERROR_PROC_NOT_FOUND. The required procedure was not found.</li>\n</ul>\n\n## -remarks\n\nThe values of the <i>lpSrcStr</i> and <i>lpDestStr</i> parameters must not be the same. If they are the same, the function fails with ERROR_INVALID_PARAMETER.\n\nThe compatibility zone in Unicode consists of characters in the range 0xF900 through 0xFFEF that are assigned to characters from other encoding standards for characters but are actually variants of characters already in Unicode. The compatibility zone is used to support round-trip mapping to these standards. Applications can use the MAP_FOLDCZONE flag to avoid supporting the duplication of characters in the compatibility zone.\n\n<b>Starting with Windows Vista:</b> This function supports Unicode normalization. All Unicode compatibility characters are mapped.\n\n<b>Starting with Windows Vista:</b> The transformations indicated by the MAP_FOLDCZONE, MAP_PRECOMPOSED, and MAP_COMPOSITE flags use Unicode normalization forms KC, C, and D (through the <a href=\"/windows/desktop/api/winnls/nf-winnls-normalizestring\">NormalizeString</a> function) to do the mappings.\n\n<b>Starting with Windows 8: </b>The ANSI version of the function is declared in Winnls.h and the Unicode version is declared in Stringapiset.h. Before Windows 8, both versions were declared in Winnls.h.\n\n## -see-also\n\n<a href=\"/windows/desktop/Intl/national-language-support\">National Language Support</a>\n\n\n\n<a href=\"/windows/desktop/Intl/national-language-support-functions\">National Language Support Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/winnls/nf-winnls-normalizestring\">NormalizeString</a>\n\n\n\n<a href=\"/windows/desktop/Intl/security-considerations--international-features\">Security Considerations: International Features</a>\n\n\n\n<a href=\"/windows/desktop/Intl/sorting\">Sorting</a>\n\n\n\n<a href=\"/windows/desktop/Intl/using-unicode-normalization-to-represent-strings\">Using Unicode Normalization to Represent Strings</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "FoldStringW",
+    "impl": [
+     "dlls/kernelbase/locale.c:5331"
+    ]
+   },
+   {
+    "name": "GetProcessHeap",
+    "impl": [
+     "dlls/kernelbase/process.c:910"
+    ]
+   },
+   {
+    "name": "HeapAlloc",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "MultiByteToWideChar",
+    "impl": [
+     "dlls/kernelbase/locale.c:7070"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

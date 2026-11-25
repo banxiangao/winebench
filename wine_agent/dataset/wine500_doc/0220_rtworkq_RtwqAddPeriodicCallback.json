@@ -1,0 +1,729 @@
+{
+ "id": "0220",
+ "function": {
+  "name": "RtwqAddPeriodicCallback",
+  "export_name": "MFAddPeriodicCallback",
+  "module": "rtworkq",
+  "source_module": "rtworkq",
+  "exported_by": [
+   "mfplat"
+  ],
+  "side": "PE",
+  "file": "dlls/rtworkq/queue.c",
+  "start_line": 1462,
+  "end_line": 1492,
+  "body_lines": 28,
+  "signature": "HRESULT WINAPI RtwqAddPeriodicCallback(RTWQPERIODICCALLBACK callback, IUnknown *context, DWORD *key)",
+  "header_comment": null,
+  "code": "HRESULT WINAPI RtwqAddPeriodicCallback(RTWQPERIODICCALLBACK callback, IUnknown *context, DWORD *key)\n{\n    IRtwqAsyncCallback *periodic_callback;\n    RTWQWORKITEM_KEY workitem_key;\n    IRtwqAsyncResult *result;\n    struct queue *queue;\n    HRESULT hr;\n\n    TRACE(\"%p, %p, %p.\\n\", callback, context, key);\n\n    if (FAILED(hr = grab_queue(RTWQ_CALLBACK_QUEUE_TIMER, &queue)))\n        return hr;\n\n    if (FAILED(hr = create_periodic_callback_obj(callback, &periodic_callback)))\n        return hr;\n\n    hr = create_async_result(context, periodic_callback, NULL, &result);\n    IRtwqAsyncCallback_Release(periodic_callback);\n    if (FAILED(hr))\n        return hr;\n\n    /* Same period MFGetTimerPeriodicity() returns. */\n    hr = queue_submit_timer(queue, result, 0, 10, key ? &workitem_key : NULL);\n\n    IRtwqAsyncResult_Release(result);\n\n    if (key)\n        *key = workitem_key;\n\n    return S_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"initguid.h\"",
+   "#include \"rtworkq.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\""
+  ],
+  "resolution": [
+   "mfplat!MFAddPeriodicCallback [stdcall] -> forward rtworkq.RtwqAddPeriodicCallback",
+   "rtworkq!RtwqAddPeriodicCallback [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/mfplat/tests/mfplat.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "mfapi",
+   "path": "sdk-api-src/content/mfapi/nf-mfapi-mfaddperiodiccallback.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/mfapi/nf-mfapi-mfaddperiodiccallback",
+   "documented_name": "mfaddperiodiccallback",
+   "file": "docs/0220_sdk-api_nf-mfapi-mfaddperiodiccallback.md",
+   "text": "---\nUID: NF:mfapi.MFAddPeriodicCallback\ntitle: MFAddPeriodicCallback function (mfapi.h)\ndescription: Sets a callback function to be called at a fixed interval. (MFAddPeriodicCallback)\nhelpviewer_keywords: [\"MFAddPeriodicCallback\",\"MFAddPeriodicCallback function [Media Foundation]\",\"e5898fc8-72e9-45cc-8e85-4410ed7cc512\",\"mf.mfaddperiodiccallback\",\"mfapi/MFAddPeriodicCallback\"]\nold-location: mf\\mfaddperiodiccallback.htm\ntech.root: mf\nms.assetid: e5898fc8-72e9-45cc-8e85-4410ed7cc512\nms.date: 12/05/2018\nms.keywords: MFAddPeriodicCallback, MFAddPeriodicCallback function [Media Foundation], e5898fc8-72e9-45cc-8e85-4410ed7cc512, mf.mfaddperiodiccallback, mfapi/MFAddPeriodicCallback\nreq.header: mfapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps only]\nreq.target-min-winversvr: Windows Server 2008 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Mfplat.lib\nreq.dll: Mfplat.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - MFAddPeriodicCallback\n - mfapi/MFAddPeriodicCallback\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - mfplat.dll\napi_name:\n - MFAddPeriodicCallback\n---\n\n# MFAddPeriodicCallback function\n\n\n## -description\n\nSets a callback function to be called at a fixed interval.\n\n## -parameters\n\n### -param Callback [in]\n\nPointer to the callback function, of type <a href=\"/windows/desktop/api/mfapi/nc-mfapi-mfperiodiccallback\">MFPERIODICCALLBACK</a>.\n\n### -param pContext [in]\n\nPointer to a caller-provided object that implements <b>IUnknown</b>, or <b>NULL</b>. This parameter is passed to the callback function.\n\n### -param pdwKey [out]\n\nReceives a key that can be used to cancel the callback. To cancel the callback, call <a href=\"/windows/desktop/api/mfapi/nf-mfapi-mfremoveperiodiccallback\">MFRemovePeriodicCallback</a> and pass this key as the <i>dwKey</i> parameter.\n\n## -returns\n\nThe function returns an <b>HRESULT</b>. Possible values include, but are not limited to, those in the following table.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>S_OK</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe function succeeded.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nTo get the timer interval for the periodic callback, call <a href=\"/windows/desktop/api/mfapi/nf-mfapi-mfgettimerperiodicity\">MFGetTimerPeriodicity</a>.\n\n## -see-also\n\n<a href=\"/windows/desktop/medfound/media-foundation-functions\">Media Foundation Functions</a>\n\n\n\n<a href=\"/windows/desktop/medfound/work-queues\">Work Queues</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "grab_queue",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 639,
+   "end_line": 685,
+   "static": true,
+   "called_from": [
+    "RtwqAddPeriodicCallback",
+    "queue_put_work_item"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/rtworkq/queue.c:449",
+    "dlls/rtworkq/queue.c:535",
+    "dlls/rtworkq/queue.c:1339",
+    "dlls/rtworkq/queue.c:1352",
+    "dlls/rtworkq/queue.c:1501"
+   ],
+   "signature": "static HRESULT grab_queue(DWORD queue_id, struct queue **ret)",
+   "code": "static HRESULT grab_queue(DWORD queue_id, struct queue **ret)\n{\n    struct queue *queue = get_system_queue(queue_id);\n    RTWQ_WORKQUEUE_TYPE queue_type;\n    struct queue_handle *entry;\n\n    *ret = NULL;\n\n    if (!system_queues[SYS_QUEUE_STANDARD].pool)\n        return RTWQ_E_SHUTDOWN;\n\n    if (queue && queue->pool)\n    {\n        *ret = queue;\n        return S_OK;\n    }\n    else if (queue)\n    {\n        struct queue_desc desc;\n\n        EnterCriticalSection(&queues_section);\n        switch (queue_id)\n        {\n            case RTWQ_CALLBACK_QUEUE_IO:\n            case RTWQ_CALLBACK_QUEUE_MULTITHREADED:\n            case RTWQ_CALLBACK_QUEUE_LONG_FUNCTION:\n                queue_type = RTWQ_MULTITHREADED_WORKQUEUE;\n                break;\n            default:\n                queue_type = RTWQ_STANDARD_WORKQUEUE;\n        }\n\n        desc.queue_type = queue_type;\n        desc.ops = &pool_queue_ops;\n        desc.target_queue = 0;\n        init_work_queue(&desc, queue);\n        LeaveCriticalSection(&queues_section);\n        *ret = queue;\n        return S_OK;\n    }\n\n    /* Handles user queues. */\n    if ((entry = get_queue_obj(queue_id)))\n        *ret = entry->obj;\n\n    return *ret ? S_OK : RTWQ_E_INVALID_WORKQUEUE;\n}"
+  },
+  {
+   "name": "create_periodic_callback_obj",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 1446,
+   "end_line": 1460,
+   "static": true,
+   "called_from": [
+    "RtwqAddPeriodicCallback"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static HRESULT create_periodic_callback_obj(RTWQPERIODICCALLBACK callback, IRtwqAsyncCallback **out)",
+   "code": "static HRESULT create_periodic_callback_obj(RTWQPERIODICCALLBACK callback, IRtwqAsyncCallback **out)\n{\n    struct periodic_callback *object;\n\n    if (!(object = calloc(1, sizeof(*object))))\n        return E_OUTOFMEMORY;\n\n    object->IRtwqAsyncCallback_iface.lpVtbl = &periodic_callback_vtbl;\n    object->refcount = 1;\n    object->callback = callback;\n\n    *out = &object->IRtwqAsyncCallback_iface;\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "create_async_result",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 1207,
+   "end_line": 1238,
+   "static": true,
+   "called_from": [
+    "RtwqAddPeriodicCallback"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/rtworkq/queue.c:1245"
+   ],
+   "signature": "static HRESULT create_async_result(IUnknown *object, IRtwqAsyncCallback *callback, IUnknown *state, IRtwqAsyncResult **out)",
+   "code": "static HRESULT create_async_result(IUnknown *object, IRtwqAsyncCallback *callback, IUnknown *state, IRtwqAsyncResult **out)\n{\n    struct async_result *result;\n\n    if (!out)\n        return E_INVALIDARG;\n\n    if (!(result = async_result_cache_pop()))\n    {\n        if (!(result = calloc(1, sizeof(*result))))\n            return E_OUTOFMEMORY;\n        RtwqLockPlatform();\n    }\n\n    result->result.AsyncResult.lpVtbl = &async_result_vtbl;\n    result->refcount = 1;\n    result->object = object;\n    if (result->object)\n        IUnknown_AddRef(result->object);\n    result->result.pCallback = callback;\n    if (result->result.pCallback)\n        IRtwqAsyncCallback_AddRef(result->result.pCallback);\n    result->state = state;\n    if (result->state)\n        IUnknown_AddRef(result->state);\n\n    *out = &result->result.AsyncResult;\n\n    TRACE(\"Created async result object %p.\\n\", *out);\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "queue_submit_timer",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 865,
+   "end_line": 898,
+   "static": true,
+   "called_from": [
+    "RtwqAddPeriodicCallback"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/rtworkq/queue.c:1357"
+   ],
+   "signature": "static HRESULT queue_submit_timer(struct queue *queue, IRtwqAsyncResult *result, INT64 timeout, DWORD period, RTWQWORKITEM_KEY *key)",
+   "code": "static HRESULT queue_submit_timer(struct queue *queue, IRtwqAsyncResult *result, INT64 timeout, DWORD period,\n        RTWQWORKITEM_KEY *key)\n{\n    PTP_TIMER_CALLBACK callback;\n    struct work_item *item;\n    FILETIME filetime;\n    LARGE_INTEGER t;\n\n    if (!(item = alloc_work_item(queue, 0, result)))\n        return E_OUTOFMEMORY;\n\n    if (key)\n    {\n        queue_mark_item_pending(SCHEDULED_ITEM_KEY_MASK, item, key);\n    }\n\n    if (period)\n        callback = periodic_item_callback;\n    else\n        callback = key ? scheduled_item_cancelable_callback : scheduled_item_callback;\n\n    t.QuadPart = timeout * 1000 * 10;\n    filetime.dwLowDateTime = t.u.LowPart;\n    filetime.dwHighDateTime = t.u.HighPart;\n\n    item->u.timer_object = CreateThreadpoolTimer(callback, item,\n            (TP_CALLBACK_ENVIRON *)&queue->envs[TP_CALLBACK_PRIORITY_NORMAL]);\n    item->type = WORK_ITEM_TIMER;\n    SetThreadpoolTimer(item->u.timer_object, &filetime, period, 0);\n\n    TRACE(\"dispatched %p.\\n\", result);\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "get_system_queue",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 308,
+   "end_line": 327,
+   "static": true,
+   "called_from": [
+    "grab_queue"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static struct queue *get_system_queue(DWORD queue_id)",
+   "code": "static struct queue *get_system_queue(DWORD queue_id)\n{\n    if (RTWQ_CALLBACK_QUEUE_PRIVATE_MASK & queue_id)\n        return NULL;\n\n    switch (queue_id)\n    {\n        default:\n            /* Use standard queue for undefined system queue id's. */\n            queue_id = RTWQ_CALLBACK_QUEUE_STANDARD;\n            /* fall through */\n        case RTWQ_CALLBACK_QUEUE_STANDARD:\n        case RTWQ_CALLBACK_QUEUE_RT:\n        case RTWQ_CALLBACK_QUEUE_IO:\n        case RTWQ_CALLBACK_QUEUE_TIMER:\n        case RTWQ_CALLBACK_QUEUE_MULTITHREADED:\n        case RTWQ_CALLBACK_QUEUE_LONG_FUNCTION:\n            return &system_queues[queue_id - 1];\n    }\n}"
+  },
+  {
+   "name": "init_work_queue",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 627,
+   "end_line": 637,
+   "static": true,
+   "called_from": [
+    "grab_queue"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/rtworkq/queue.c:979",
+    "dlls/rtworkq/queue.c:1283"
+   ],
+   "signature": "static void init_work_queue(const struct queue_desc *desc, struct queue *queue)",
+   "code": "static void init_work_queue(const struct queue_desc *desc, struct queue *queue)\n{\n    assert(desc->ops != NULL);\n\n    queue->ops = desc->ops;\n    if (SUCCEEDED(queue->ops->init(desc, queue)))\n    {\n        list_init(&queue->pending_items);\n        InitializeCriticalSection(&queue->cs);\n    }\n}"
+  },
+  {
+   "name": "get_queue_obj",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 83,
+   "end_line": 94,
+   "static": true,
+   "called_from": [
+    "grab_queue",
+    "lock_user_queue",
+    "unlock_user_queue"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static struct queue_handle *get_queue_obj(DWORD handle)",
+   "code": "static struct queue_handle *get_queue_obj(DWORD handle)\n{\n    unsigned int idx = HIWORD(handle) - FIRST_USER_QUEUE_HANDLE;\n\n    if (idx < MAX_USER_QUEUE_HANDLES && user_queues[idx].refcount)\n    {\n        if (LOWORD(handle) == user_queues[idx].generation)\n            return &user_queues[idx];\n    }\n\n    return NULL;\n}"
+  },
+  {
+   "name": "async_result_cache_pop",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 1048,
+   "end_line": 1067,
+   "static": true,
+   "called_from": [
+    "create_async_result"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static struct async_result *async_result_cache_pop(void)",
+   "code": "static struct async_result *async_result_cache_pop(void)\n{\n    struct async_result *result;\n    struct list *head;\n\n    EnterCriticalSection(&async_result_cache_section);\n\n    if ((head = list_head(&async_result_cache)))\n        list_remove(head);\n\n    LeaveCriticalSection(&async_result_cache_section);\n\n    if (!head)\n        return NULL;\n\n    result = LIST_ENTRY(head, struct async_result, entry);\n    memset(&result->result, 0, sizeof(result->result));\n\n    return result;\n}"
+  },
+  {
+   "name": "alloc_work_item",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 605,
+   "end_line": 625,
+   "static": true,
+   "called_from": [
+    "queue_submit_item",
+    "queue_submit_timer"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/rtworkq/queue.c:844"
+   ],
+   "signature": "static struct work_item * alloc_work_item(struct queue *queue, LONG priority, IRtwqAsyncResult *result)",
+   "code": "static struct work_item * alloc_work_item(struct queue *queue, LONG priority, IRtwqAsyncResult *result)\n{\n    RTWQASYNCRESULT *async_result = (RTWQASYNCRESULT *)result;\n    DWORD flags = 0, queue_id = 0;\n    struct work_item *item;\n\n    item = calloc(1, sizeof(*item));\n\n    item->IUnknown_iface.lpVtbl = &work_item_vtbl;\n    item->result = result;\n    IRtwqAsyncResult_AddRef(item->result);\n    item->refcount = 1;\n    item->queue = queue;\n    list_init(&item->entry);\n    item->priority = priority;\n\n    if (SUCCEEDED(IRtwqAsyncCallback_GetParameters(async_result->pCallback, &flags, &queue_id)))\n        item->flags = flags;\n\n    return item;\n}"
+  },
+  {
+   "name": "queue_mark_item_pending",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 827,
+   "end_line": 836,
+   "static": true,
+   "called_from": [
+    "queue_submit_timer"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/rtworkq/queue.c:849"
+   ],
+   "signature": "static void queue_mark_item_pending(DWORD mask, struct work_item *item, RTWQWORKITEM_KEY *key)",
+   "code": "static void queue_mark_item_pending(DWORD mask, struct work_item *item, RTWQWORKITEM_KEY *key)\n{\n    *key = generate_item_key(mask);\n    item->key = *key;\n\n    EnterCriticalSection(&item->queue->cs);\n    list_add_tail(&item->queue->pending_items, &item->entry);\n    IUnknown_AddRef(&item->IUnknown_iface);\n    LeaveCriticalSection(&item->queue->cs);\n}"
+  },
+  {
+   "name": "periodic_item_callback",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 816,
+   "end_line": 825,
+   "static": true,
+   "called_from": [
+    "queue_submit_timer"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void CALLBACK periodic_item_callback(TP_CALLBACK_INSTANCE *instance, void *context, TP_TIMER *timer)",
+   "code": "static void CALLBACK periodic_item_callback(TP_CALLBACK_INSTANCE *instance, void *context, TP_TIMER *timer)\n{\n    struct work_item *item = context;\n\n    IUnknown_AddRef(&item->IUnknown_iface);\n\n    invoke_async_callback(item->result);\n\n    IUnknown_Release(&item->IUnknown_iface);\n}"
+  },
+  {
+   "name": "scheduled_item_cancelable_callback",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 804,
+   "end_line": 814,
+   "static": true,
+   "called_from": [
+    "queue_submit_timer"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void CALLBACK scheduled_item_cancelable_callback(TP_CALLBACK_INSTANCE *instance, void *context, TP_TIMER *timer)",
+   "code": "static void CALLBACK scheduled_item_cancelable_callback(TP_CALLBACK_INSTANCE *instance, void *context, TP_TIMER *timer)\n{\n    struct work_item *item = context;\n\n    TRACE(\"result object %p.\\n\", item->result);\n\n    if (queue_release_pending_item(item))\n        invoke_async_callback(item->result);\n\n    IUnknown_Release(&item->IUnknown_iface);\n}"
+  },
+  {
+   "name": "scheduled_item_callback",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 793,
+   "end_line": 802,
+   "static": true,
+   "called_from": [
+    "queue_submit_timer"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void CALLBACK scheduled_item_callback(TP_CALLBACK_INSTANCE *instance, void *context, TP_TIMER *timer)",
+   "code": "static void CALLBACK scheduled_item_callback(TP_CALLBACK_INSTANCE *instance, void *context, TP_TIMER *timer)\n{\n    struct work_item *item = context;\n\n    TRACE(\"result object %p.\\n\", item->result);\n\n    invoke_async_callback(item->result);\n\n    IUnknown_Release(&item->IUnknown_iface);\n}"
+  },
+  {
+   "name": "generate_item_key",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 42,
+   "end_line": 45,
+   "static": true,
+   "called_from": [
+    "queue_mark_item_pending"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static RTWQWORKITEM_KEY generate_item_key(DWORD mask)",
+   "code": "static RTWQWORKITEM_KEY generate_item_key(DWORD mask)\n{\n    return get_item_key(mask, InterlockedIncrement(&next_item_key));\n}"
+  },
+  {
+   "name": "invoke_async_callback",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 730,
+   "end_line": 747,
+   "static": true,
+   "called_from": [
+    "periodic_item_callback",
+    "scheduled_item_callback",
+    "scheduled_item_cancelable_callback"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/rtworkq/queue.c:775",
+    "dlls/rtworkq/queue.c:788",
+    "dlls/rtworkq/queue.c:952",
+    "dlls/rtworkq/queue.c:1524"
+   ],
+   "signature": "static HRESULT invoke_async_callback(IRtwqAsyncResult *result)",
+   "code": "static HRESULT invoke_async_callback(IRtwqAsyncResult *result)\n{\n    RTWQASYNCRESULT *result_data = (RTWQASYNCRESULT *)result;\n    DWORD queue = RTWQ_CALLBACK_QUEUE_STANDARD, flags;\n    HRESULT hr;\n\n    if (FAILED(IRtwqAsyncCallback_GetParameters(result_data->pCallback, &flags, &queue)))\n        queue = RTWQ_CALLBACK_QUEUE_STANDARD;\n\n    if (FAILED(lock_user_queue(queue)))\n        queue = RTWQ_CALLBACK_QUEUE_STANDARD;\n\n    hr = queue_put_work_item(queue, 0, result);\n\n    unlock_user_queue(queue);\n\n    return hr;\n}"
+  },
+  {
+   "name": "queue_release_pending_item",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 751,
+   "end_line": 766,
+   "static": true,
+   "called_from": [
+    "scheduled_item_cancelable_callback"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/rtworkq/queue.c:787",
+    "dlls/rtworkq/queue.c:945"
+   ],
+   "signature": "static BOOL queue_release_pending_item(struct work_item *item)",
+   "code": "static BOOL queue_release_pending_item(struct work_item *item)\n{\n    struct queue *queue = item->queue;\n    BOOL ret = FALSE;\n\n    EnterCriticalSection(&queue->cs);\n    if (item->key)\n    {\n        list_remove(&item->entry);\n        ret = TRUE;\n        item->key = 0;\n        IUnknown_Release(&item->IUnknown_iface);\n    }\n    LeaveCriticalSection(&queue->cs);\n    return ret;\n}"
+  },
+  {
+   "name": "get_item_key",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 37,
+   "end_line": 40,
+   "static": true,
+   "called_from": [
+    "generate_item_key"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/rtworkq/queue.c:1504"
+   ],
+   "signature": "static RTWQWORKITEM_KEY get_item_key(DWORD mask, DWORD key)",
+   "code": "static RTWQWORKITEM_KEY get_item_key(DWORD mask, DWORD key)\n{\n    return ((RTWQWORKITEM_KEY)mask << 32) | key;\n}"
+  },
+  {
+   "name": "lock_user_queue",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 205,
+   "end_line": 222,
+   "static": true,
+   "called_from": [
+    "invoke_async_callback"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/rtworkq/queue.c:464",
+    "dlls/rtworkq/queue.c:1550",
+    "dlls/rtworkq/queue.c:1568",
+    "dlls/rtworkq/queue.c:1600"
+   ],
+   "signature": "static HRESULT lock_user_queue(DWORD queue)",
+   "code": "static HRESULT lock_user_queue(DWORD queue)\n{\n    HRESULT hr = RTWQ_E_INVALID_WORKQUEUE;\n    struct queue_handle *entry;\n\n    if (!(queue & RTWQ_CALLBACK_QUEUE_PRIVATE_MASK))\n        return S_OK;\n\n    EnterCriticalSection(&queues_section);\n    entry = get_queue_obj(queue);\n    if (entry && entry->refcount)\n    {\n        entry->refcount++;\n        hr = S_OK;\n    }\n    LeaveCriticalSection(&queues_section);\n    return hr;\n}"
+  },
+  {
+   "name": "queue_put_work_item",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 719,
+   "end_line": 728,
+   "static": true,
+   "called_from": [
+    "invoke_async_callback"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/rtworkq/queue.c:1531"
+   ],
+   "signature": "static HRESULT queue_put_work_item(DWORD queue_id, LONG priority, IRtwqAsyncResult *result)",
+   "code": "static HRESULT queue_put_work_item(DWORD queue_id, LONG priority, IRtwqAsyncResult *result)\n{\n    struct queue *queue;\n    HRESULT hr;\n\n    if (FAILED(hr = grab_queue(queue_id, &queue)))\n        return hr;\n\n    return queue_submit_item(queue, priority, result);\n}"
+  },
+  {
+   "name": "unlock_user_queue",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 224,
+   "end_line": 248,
+   "static": true,
+   "called_from": [
+    "invoke_async_callback"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/rtworkq/queue.c:472",
+    "dlls/rtworkq/queue.c:1557",
+    "dlls/rtworkq/queue.c:1576"
+   ],
+   "signature": "static HRESULT unlock_user_queue(DWORD queue)",
+   "code": "static HRESULT unlock_user_queue(DWORD queue)\n{\n    HRESULT hr = RTWQ_E_INVALID_WORKQUEUE;\n    struct queue_handle *entry;\n\n    if (!(queue & RTWQ_CALLBACK_QUEUE_PRIVATE_MASK))\n        return S_OK;\n\n    EnterCriticalSection(&queues_section);\n    entry = get_queue_obj(queue);\n    if (entry && entry->refcount)\n    {\n        if (--entry->refcount == 0)\n        {\n            if (shared_mt_queue == queue) shared_mt_queue = 0;\n            shutdown_queue((struct queue *)entry->obj);\n            free(entry->obj);\n            entry->obj = next_free_user_queue;\n            next_free_user_queue = entry;\n        }\n        hr = S_OK;\n    }\n    LeaveCriticalSection(&queues_section);\n    return hr;\n}"
+  },
+  {
+   "name": "queue_submit_item",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 707,
+   "end_line": 717,
+   "static": true,
+   "called_from": [
+    "queue_put_work_item"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HRESULT queue_submit_item(struct queue *queue, LONG priority, IRtwqAsyncResult *result)",
+   "code": "static HRESULT queue_submit_item(struct queue *queue, LONG priority, IRtwqAsyncResult *result)\n{\n    struct work_item *item;\n\n    if (!(item = alloc_work_item(queue, priority, result)))\n        return E_OUTOFMEMORY;\n\n    queue->ops->submit(queue, item);\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "shutdown_queue",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 687,
+   "end_line": 705,
+   "static": true,
+   "called_from": [
+    "unlock_user_queue"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/rtworkq/queue.c:1308"
+   ],
+   "signature": "static void shutdown_queue(struct queue *queue)",
+   "code": "static void shutdown_queue(struct queue *queue)\n{\n    struct work_item *item, *item2;\n\n    if (!queue->ops || !queue->ops->shutdown(queue))\n        return;\n\n    EnterCriticalSection(&queue->cs);\n    LIST_FOR_EACH_ENTRY_SAFE(item, item2, &queue->pending_items, struct work_item, entry)\n    {\n        list_remove(&item->entry);\n        IUnknown_Release(&item->IUnknown_iface);\n    }\n    LeaveCriticalSection(&queue->cs);\n\n    DeleteCriticalSection(&queue->cs);\n\n    memset(queue, 0, sizeof(*queue));\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "async_result",
+    "kind": "struct_decl",
+    "start_line": 1008,
+    "end_line": 1015,
+    "code": "struct async_result\n{\n    RTWQASYNCRESULT result;\n    LONG refcount;\n    IUnknown *object;\n    IUnknown *state;\n    struct list entry;\n};"
+   },
+   {
+    "name": "periodic_callback",
+    "kind": "struct_decl",
+    "start_line": 1367,
+    "end_line": 1372,
+    "code": "struct periodic_callback\n{\n    IRtwqAsyncCallback IRtwqAsyncCallback_iface;\n    LONG refcount;\n    RTWQPERIODICCALLBACK callback;\n};"
+   },
+   {
+    "name": "queue",
+    "kind": "struct_decl",
+    "start_line": 189,
+    "end_line": 201,
+    "code": "struct queue\n{\n    IRtwqAsyncCallback IRtwqAsyncCallback_iface;\n    const struct queue_ops *ops;\n    TP_POOL *pool;\n    TP_CALLBACK_ENVIRON_V3 envs[ARRAY_SIZE(priorities)];\n    CRITICAL_SECTION cs;\n    struct list pending_items;\n    DWORD id;\n    /* Data used for serial queues only. */\n    PTP_SIMPLE_CALLBACK finalization_callback;\n    DWORD target_queue;\n};"
+   },
+   {
+    "name": "queue_desc",
+    "kind": "struct_decl",
+    "start_line": 182,
+    "end_line": 187,
+    "code": "struct queue_desc\n{\n    RTWQ_WORKQUEUE_TYPE queue_type;\n    const struct queue_ops *ops;\n    DWORD target_queue;\n};"
+   },
+   {
+    "name": "queue_handle",
+    "kind": "struct_decl",
+    "start_line": 47,
+    "end_line": 52,
+    "code": "struct queue_handle\n{\n    void *obj;\n    LONG refcount;\n    WORD generation;\n};"
+   },
+   {
+    "name": "queue_ops",
+    "kind": "struct_decl",
+    "start_line": 175,
+    "end_line": 180,
+    "code": "struct queue_ops\n{\n    HRESULT (*init)(const struct queue_desc *desc, struct queue *queue);\n    BOOL (*shutdown)(struct queue *queue);\n    void (*submit)(struct queue *queue, struct work_item *item);\n};"
+   },
+   {
+    "name": "rtwq_callback_queue_id",
+    "kind": "enum_decl",
+    "start_line": 97,
+    "end_line": 108,
+    "code": "enum rtwq_callback_queue_id\n{\n    RTWQ_CALLBACK_QUEUE_UNDEFINED     = 0x00000000,\n    RTWQ_CALLBACK_QUEUE_STANDARD      = 0x00000001,\n    RTWQ_CALLBACK_QUEUE_RT            = 0x00000002,\n    RTWQ_CALLBACK_QUEUE_IO            = 0x00000003,\n    RTWQ_CALLBACK_QUEUE_TIMER         = 0x00000004,\n    RTWQ_CALLBACK_QUEUE_MULTITHREADED = 0x00000005,\n    RTWQ_CALLBACK_QUEUE_LONG_FUNCTION = 0x00000007,\n    RTWQ_CALLBACK_QUEUE_PRIVATE_MASK  = 0xffff0000,\n    RTWQ_CALLBACK_QUEUE_ALL           = 0xffffffff,\n};"
+   },
+   {
+    "name": "system_queue_index",
+    "kind": "enum_decl",
+    "start_line": 120,
+    "end_line": 130,
+    "code": "enum system_queue_index\n{\n    SYS_QUEUE_STANDARD = 0,\n    SYS_QUEUE_RT,\n    SYS_QUEUE_IO,\n    SYS_QUEUE_TIMER,\n    SYS_QUEUE_MULTITHREADED,\n    SYS_QUEUE_DO_NOT_USE,\n    SYS_QUEUE_LONG_FUNCTION,\n    SYS_QUEUE_COUNT,\n};"
+   },
+   {
+    "name": "union (unnamed at /Users/xingangao/wine_fuzz/wine_src/wine/dlls/rtworkq/queue.c:152:5)",
+    "kind": "union_decl",
+    "start_line": 152,
+    "end_line": 157,
+    "code": "    union\n    {\n        TP_WORK *work_object;\n        TP_WAIT *wait_object;\n        TP_TIMER *timer_object;\n    } u;"
+   },
+   {
+    "name": "work_item",
+    "kind": "struct_decl",
+    "start_line": 139,
+    "end_line": 158,
+    "code": "struct work_item\n{\n    IUnknown IUnknown_iface;\n    LONG refcount;\n    struct list entry;\n    IRtwqAsyncResult *result;\n    IRtwqAsyncResult *reply_result;\n    struct queue *queue;\n    RTWQWORKITEM_KEY key;\n    LONG priority;\n    DWORD flags;\n    PTP_SIMPLE_CALLBACK finalization_callback;\n    enum work_item_type type;\n    union\n    {\n        TP_WORK *work_object;\n        TP_WAIT *wait_object;\n        TP_TIMER *timer_object;\n    } u;\n};"
+   },
+   {
+    "name": "work_item_type",
+    "kind": "enum_decl",
+    "start_line": 132,
+    "end_line": 137,
+    "code": "enum work_item_type\n{\n    WORK_ITEM_WORK,\n    WORK_ITEM_TIMER,\n    WORK_ITEM_WAIT,\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 27,
+    "end_line": 27,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(mfplat);"
+   },
+   {
+    "name": "async_result_cache",
+    "type": "struct list",
+    "static": false,
+    "start_line": 77,
+    "end_line": 77,
+    "code": "struct list async_result_cache = LIST_INIT(async_result_cache);"
+   },
+   {
+    "name": "async_result_cache_section",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 76,
+    "end_line": 76,
+    "code": "static CRITICAL_SECTION async_result_cache_section = { &async_result_cache_critsect_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "async_result_vtbl",
+    "type": "const IRtwqAsyncResultVtbl",
+    "static": true,
+    "start_line": 1195,
+    "end_line": 1205,
+    "code": "static const IRtwqAsyncResultVtbl async_result_vtbl =\n{\n    async_result_QueryInterface,\n    async_result_AddRef,\n    async_result_Release,\n    async_result_GetState,\n    async_result_GetStatus,\n    async_result_SetStatus,\n    async_result_GetObject,\n    async_result_GetStateNoAddRef,\n};"
+   },
+   {
+    "name": "next_free_user_queue",
+    "type": "struct queue_handle *",
+    "static": true,
+    "start_line": 55,
+    "end_line": 55,
+    "code": "static struct queue_handle *next_free_user_queue;"
+   },
+   {
+    "name": "next_item_key",
+    "type": "LONG",
+    "static": true,
+    "start_line": 35,
+    "end_line": 35,
+    "code": "static LONG next_item_key;"
+   },
+   {
+    "name": "periodic_callback_vtbl",
+    "type": "const IRtwqAsyncCallbackVtbl",
+    "static": true,
+    "start_line": 1437,
+    "end_line": 1444,
+    "code": "static const IRtwqAsyncCallbackVtbl periodic_callback_vtbl =\n{\n    periodic_callback_QueryInterface,\n    periodic_callback_AddRef,\n    periodic_callback_Release,\n    periodic_callback_GetParameters,\n    periodic_callback_Invoke,\n};"
+   },
+   {
+    "name": "pool_queue_ops",
+    "type": "const struct queue_ops",
+    "static": true,
+    "start_line": 421,
+    "end_line": 426,
+    "code": "static const struct queue_ops pool_queue_ops =\n{\n    pool_queue_init,\n    pool_queue_shutdown,\n    pool_queue_submit,\n};"
+   },
+   {
+    "name": "queues_section",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 67,
+    "end_line": 67,
+    "code": "static CRITICAL_SECTION queues_section = { &queues_critsect_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "shared_mt_queue",
+    "type": "DWORD",
+    "static": true,
+    "start_line": 58,
+    "end_line": 58,
+    "code": "static DWORD shared_mt_queue;"
+   },
+   {
+    "name": "system_queues",
+    "type": "struct queue[7]",
+    "static": true,
+    "start_line": 306,
+    "end_line": 306,
+    "code": "static struct queue system_queues[SYS_QUEUE_COUNT];"
+   },
+   {
+    "name": "user_queues",
+    "type": "struct queue_handle[124]",
+    "static": true,
+    "start_line": 54,
+    "end_line": 54,
+    "code": "static struct queue_handle user_queues[MAX_USER_QUEUE_HANDLES];"
+   },
+   {
+    "name": "work_item_vtbl",
+    "type": "const IUnknownVtbl",
+    "static": true,
+    "start_line": 598,
+    "end_line": 603,
+    "code": "static const IUnknownVtbl work_item_vtbl =\n{\n    work_item_QueryInterface,\n    work_item_AddRef,\n    work_item_Release,\n};"
+   }
+  ],
+  "macros": [
+   {
+    "name": "FIRST_USER_QUEUE_HANDLE",
+    "start_line": 29,
+    "end_line": 29,
+    "code": "#define FIRST_USER_QUEUE_HANDLE 5"
+   },
+   {
+    "name": "MAX_USER_QUEUE_HANDLES",
+    "start_line": 30,
+    "end_line": 30,
+    "code": "#define MAX_USER_QUEUE_HANDLES 124"
+   },
+   {
+    "name": "SCHEDULED_ITEM_KEY_MASK",
+    "start_line": 33,
+    "end_line": 33,
+    "code": "#define SCHEDULED_ITEM_KEY_MASK (0x80000000)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "RtwqLockPlatform",
+    "impl": [
+     "dlls/rtworkq/queue.c:1248"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CreateThreadpoolTimer",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/thread.c:1344"
+    ]
+   },
+   {
+    "name": "DeleteCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:271"
+    ]
+   },
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "InitializeCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:200"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "SetThreadpoolTimer",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/threadpool.c:3166"
+    ]
+   },
+   {
+    "name": "_assert",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/exit.c:319"
+    ]
+   },
+   {
+    "name": "calloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "IRtwqAsyncCallback_AddRef",
+   "IRtwqAsyncCallback_GetParameters",
+   "IRtwqAsyncCallback_Release",
+   "IRtwqAsyncResult_AddRef",
+   "IRtwqAsyncResult_Release",
+   "_InterlockedIncrement",
+   "list_add_tail",
+   "list_head",
+   "list_init",
+   "list_remove",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "queue->ops->init",
+    "in_function": "init_work_queue",
+    "at": "dlls/rtworkq/queue.c:632",
+    "candidates": []
+   },
+   {
+    "expr": "queue->ops->submit",
+    "in_function": "queue_submit_item",
+    "at": "dlls/rtworkq/queue.c:714",
+    "candidates": []
+   },
+   {
+    "expr": "queue->ops->shutdown",
+    "in_function": "shutdown_queue",
+    "at": "dlls/rtworkq/queue.c:691",
+    "candidates": []
+   }
+  ]
+ }
+}

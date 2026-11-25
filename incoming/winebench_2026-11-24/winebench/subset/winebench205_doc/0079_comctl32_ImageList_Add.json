@@ -1,0 +1,442 @@
+{
+ "id": "0079",
+ "function": {
+  "name": "ImageList_Add",
+  "export_name": "ImageList_Add",
+  "module": "comctl32",
+  "source_module": "comctl32",
+  "exported_by": [
+   "comctl32",
+   "comctl32_v6"
+  ],
+  "side": "PE",
+  "file": "dlls/comctl32/imagelist.c",
+  "start_line": 406,
+  "end_line": 482,
+  "body_lines": 73,
+  "signature": "INT WINAPI ImageList_Add (HIMAGELIST himl,\tHBITMAP hbmImage, HBITMAP hbmMask)",
+  "header_comment": null,
+  "code": "INT WINAPI\nImageList_Add (HIMAGELIST himl,\tHBITMAP hbmImage, HBITMAP hbmMask)\n{\n    HDC     hdcBitmap, hdcTemp = 0;\n    INT     nFirstIndex, nImageCount, i;\n    BITMAP  bmp;\n    POINT   pt;\n\n    TRACE(\"himl=%p hbmimage=%p hbmmask=%p\\n\", himl, hbmImage, hbmMask);\n    if (!is_valid(himl))\n        return -1;\n\n    if (!GetObjectW(hbmImage, sizeof(BITMAP), &bmp))\n        return -1;\n\n    TRACE(\"himl %p, cCurImage %d, cMaxImage %d, cGrow %d, cx %d, cy %d\\n\",\n          himl, himl->cCurImage, himl->cMaxImage, himl->cGrow, himl->cx, himl->cy);\n\n    nImageCount = bmp.bmWidth / himl->cx;\n\n    TRACE(\"%p has %d images (%d x %d) bpp %d\\n\", hbmImage, nImageCount, bmp.bmWidth, bmp.bmHeight,\n          bmp.bmBitsPixel);\n\n    IMAGELIST_InternalExpandBitmaps(himl, nImageCount);\n\n    hdcBitmap = CreateCompatibleDC(0);\n\n    SelectObject(hdcBitmap, hbmImage);\n\n    if (add_with_alpha( himl, hdcBitmap, himl->cCurImage, nImageCount,\n                        himl->cx, min( himl->cy, bmp.bmHeight), hbmImage, hbmMask ))\n        goto done;\n\n    if (himl->hbmMask)\n    {\n        hdcTemp = CreateCompatibleDC(0);\n        SelectObject(hdcTemp, hbmMask);\n    }\n\n    if (himl->uBitsPixel <= 8 && bmp.bmBitsPixel <= 8 &&\n        !himl->color_table_set && himl->cCurImage == 0)\n    {\n        RGBQUAD colors[256];\n        UINT num = GetDIBColorTable( hdcBitmap, 0, 1 << bmp.bmBitsPixel, colors );\n        if (num) ImageList_SetColorTable( himl, 0, num, colors );\n    }\n\n    for (i=0; i<nImageCount; i++)\n    {\n        imagelist_point_from_index( himl, himl->cCurImage + i, &pt );\n\n        /* Copy result to the imagelist\n        */\n        BitBlt( himl->hdcImage, pt.x, pt.y, himl->cx, bmp.bmHeight,\n                hdcBitmap, i*himl->cx, 0, SRCCOPY );\n\n        if (!himl->hbmMask)\n             continue;\n\n        BitBlt( himl->hdcMask, pt.x, pt.y, himl->cx, bmp.bmHeight,\n                hdcTemp, i*himl->cx, 0, SRCCOPY );\n\n        /* Remove the background from the image\n        */\n        BitBlt( himl->hdcImage, pt.x, pt.y, himl->cx, bmp.bmHeight,\n                himl->hdcMask, pt.x, pt.y, 0x220326 ); /* NOTSRCAND */\n    }\n    if (hdcTemp) DeleteDC(hdcTemp);\n\ndone:\n    DeleteDC(hdcBitmap);\n\n    nFirstIndex = himl->cCurImage;\n    himl->cCurImage += nImageCount;\n\n    return nFirstIndex;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include \"winerror.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"objbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"commctrl.h\"",
+   "#include \"comctl32.h\"",
+   "#include \"commoncontrols.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\""
+  ],
+  "resolution": [
+   "comctl32!ImageList_Add [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/comctl32/tests/button.c",
+   "dlls/comctl32/tests/imagelist.c",
+   "dlls/comctl32/tests/listview.c",
+   "dlls/comctl32/tests/treeview.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 16
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": [],
+  "locate_note": "return type is on its own line: start_line moved from wine_locate's line to 406 so that signature and code include it"
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "commctrl",
+   "path": "sdk-api-src/content/commctrl/nf-commctrl-imagelist_add.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/commctrl/nf-commctrl-imagelist_add",
+   "documented_name": "imagelist_add",
+   "file": "docs/0079_sdk-api_nf-commctrl-imagelist_add.md",
+   "text": "---\nUID: NF:commctrl.ImageList_Add\ntitle: ImageList_Add function (commctrl.h)\ndescription: Adds an image or images to an image list. (ImageList_Add)\nhelpviewer_keywords: [\"ImageList_Add\",\"ImageList_Add function [Windows Controls]\",\"_win32_ImageList_Add\",\"_win32_ImageList_Add_cpp\",\"commctrl/ImageList_Add\",\"controls.ImageList_Add\",\"controls._win32_ImageList_Add\"]\nold-location: controls\\ImageList_Add.htm\ntech.root: Controls\nms.assetid: VS|Controls|~\\controls\\imagelist\\functions\\imagelist_add.htm\nms.date: 12/05/2018\nms.keywords: ImageList_Add, ImageList_Add function [Windows Controls], _win32_ImageList_Add, _win32_ImageList_Add_cpp, commctrl/ImageList_Add, controls.ImageList_Add, controls._win32_ImageList_Add\nreq.header: commctrl.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Comctl32.lib\nreq.dll: Comctl32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ImageList_Add\n - commctrl/ImageList_Add\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Comctl32.dll\napi_name:\n - ImageList_Add\n---\n\n# ImageList_Add function\n\n\n## -description\n\nAdds an image or images to an image list.\n\n## -parameters\n\n### -param himl [in]\n\nType: <b>HIMAGELIST</b>\n\nA handle to the image list.\n\n### -param hbmImage [in]\n\nType: <b><a href=\"/windows/desktop/WinProg/windows-data-types\">HBITMAP</a></b>\n\nA handle to the bitmap that contains the image or images. The number of images is inferred from the width of the bitmap.\n\n### -param hbmMask [in, optional]\n\nType: <b><a href=\"/windows/desktop/WinProg/windows-data-types\">HBITMAP</a></b>\n\nA handle to the bitmap that contains the mask. If no mask is used with the image list, this parameter is ignored. This parameter can be <b>NULL</b>.\n\n## -returns\n\nType: <b>int</b>\n\nReturns the index of the first new image if successful, or -1 otherwise.\n\n## -remarks\n\nThe <b>ImageList_Add</b> function copies the bitmap to an internal data structure. Be sure to use the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-deleteobject\">DeleteObject</a> function to delete \n\t\t\t\t<i>hbmImage</i> and \n\t\t\t\t<i>hbmMask</i> after the function returns.\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "is_valid",
+   "file": "dlls/comctl32/imagelist.c",
+   "start_line": 3803,
+   "end_line": 3816,
+   "static": true,
+   "called_from": [
+    "ImageList_Add"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/comctl32/imagelist.c:532",
+    "dlls/comctl32/imagelist.c:607",
+    "dlls/comctl32/imagelist.c:673",
+    "dlls/comctl32/imagelist.c:800",
+    "dlls/comctl32/imagelist.c:832"
+   ],
+   "signature": "static BOOL is_valid(HIMAGELIST himl)",
+   "code": "static BOOL is_valid(HIMAGELIST himl)\n{\n    BOOL valid;\n    __TRY\n    {\n        valid = himl && himl->magic == IMAGELIST_MAGIC;\n    }\n    __EXCEPT_PAGE_FAULT\n    {\n        valid = FALSE;\n    }\n    __ENDTRY\n    return valid;\n}"
+  },
+  {
+   "name": "IMAGELIST_InternalExpandBitmaps",
+   "file": "dlls/comctl32/imagelist.c",
+   "start_line": 328,
+   "end_line": 388,
+   "static": true,
+   "called_from": [
+    "ImageList_Add"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/comctl32/imagelist.c:2532"
+   ],
+   "signature": "static void IMAGELIST_InternalExpandBitmaps(HIMAGELIST himl, INT nImageCount)",
+   "code": "static void\nIMAGELIST_InternalExpandBitmaps(HIMAGELIST himl, INT nImageCount)\n{\n    HDC     hdcBitmap;\n    HBITMAP hbmNewBitmap, hbmNull;\n    INT     nNewCount;\n    SIZE    sz;\n\n    TRACE(\"%p has allocated %d, max %d, grow %d images\\n\", himl, himl->cCurImage, himl->cMaxImage, himl->cGrow);\n\n    if (himl->cCurImage + nImageCount < himl->cMaxImage)\n        return;\n\n    nNewCount = himl->cMaxImage + max(nImageCount, himl->cGrow) + 1;\n\n    imagelist_get_bitmap_size(himl, nNewCount, &sz);\n\n    TRACE(\"Create expanded bitmaps : himl=%p x=%ld y=%ld count=%d\\n\", himl, sz.cx, sz.cy, nNewCount);\n    hdcBitmap = CreateCompatibleDC (0);\n\n    hbmNewBitmap = ImageList_CreateImage(hdcBitmap, himl, nNewCount);\n\n    if (hbmNewBitmap == 0)\n        ERR(\"creating new image bitmap (x=%ld y=%ld)!\\n\", sz.cx, sz.cy);\n\n    if (himl->cCurImage)\n    {\n        hbmNull = SelectObject (hdcBitmap, hbmNewBitmap);\n        BitBlt (hdcBitmap, 0, 0, sz.cx, sz.cy,\n                himl->hdcImage, 0, 0, SRCCOPY);\n        SelectObject (hdcBitmap, hbmNull);\n    }\n    SelectObject (himl->hdcImage, hbmNewBitmap);\n    DeleteObject (himl->hbmImage);\n    himl->hbmImage = hbmNewBitmap;\n\n    if (himl->flags & ILC_MASK)\n    {\n        hbmNewBitmap = CreateBitmap (sz.cx, sz.cy, 1, 1, NULL);\n\n        if (hbmNewBitmap == 0)\n            ERR(\"creating new mask bitmap!\\n\");\n\n\tif(himl->cCurImage)\n\t{\n\t    hbmNull = SelectObject (hdcBitmap, hbmNewBitmap);\n\t    BitBlt (hdcBitmap, 0, 0, sz.cx, sz.cy,\n\t\t    himl->hdcMask, 0, 0, SRCCOPY);\n\t    SelectObject (hdcBitmap, hbmNull);\n\t}\n        SelectObject (himl->hdcMask, hbmNewBitmap);\n        DeleteObject (himl->hbmMask);\n        himl->hbmMask = hbmNewBitmap;\n    }\n\n    himl->item_flags = HeapReAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, himl->item_flags,\n            nNewCount * sizeof(*himl->item_flags));\n    himl->cMaxImage = nNewCount;\n\n    DeleteDC (hdcBitmap);\n}"
+  },
+  {
+   "name": "add_with_alpha",
+   "file": "dlls/comctl32/imagelist.c",
+   "start_line": 253,
+   "end_line": 308,
+   "static": true,
+   "called_from": [
+    "ImageList_Add"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/comctl32/imagelist.c:2448",
+    "dlls/comctl32/imagelist.c:2551",
+    "dlls/comctl32/imagelist.c:2555"
+   ],
+   "signature": "static BOOL add_with_alpha( HIMAGELIST himl, HDC hdc, int pos, int count, int width, int height, HBITMAP hbmImage, HBITMAP hbmMask )",
+   "code": "static BOOL add_with_alpha( HIMAGELIST himl, HDC hdc, int pos, int count,\n                            int width, int height, HBITMAP hbmImage, HBITMAP hbmMask )\n{\n    BOOL ret = FALSE;\n    BITMAP bm;\n    BITMAPINFO *info, *mask_info = NULL;\n    DWORD *bits = NULL;\n    BYTE *mask_bits = NULL;\n    DWORD mask_width;\n\n    if (!GetObjectW( hbmImage, sizeof(bm), &bm )) return FALSE;\n\n    /* if either the imagelist or the source bitmap don't have an alpha channel, bail out now */\n    if ((himl->flags & 0xfe) != ILC_COLOR32) return FALSE;\n    if (bm.bmBitsPixel != 32) return FALSE;\n\n    SelectObject( hdc, hbmImage );\n    mask_width = (bm.bmWidth + 31) / 32 * 4;\n\n    if (!(info = Alloc( FIELD_OFFSET( BITMAPINFO, bmiColors[256] )))) goto done;\n    info->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);\n    info->bmiHeader.biWidth = bm.bmWidth;\n    info->bmiHeader.biHeight = -height;\n    info->bmiHeader.biPlanes = 1;\n    info->bmiHeader.biBitCount = 32;\n    info->bmiHeader.biCompression = BI_RGB;\n    info->bmiHeader.biSizeImage = bm.bmWidth * height * 4;\n    info->bmiHeader.biXPelsPerMeter = 0;\n    info->bmiHeader.biYPelsPerMeter = 0;\n    info->bmiHeader.biClrUsed = 0;\n    info->bmiHeader.biClrImportant = 0;\n    if (!(bits = Alloc( info->bmiHeader.biSizeImage ))) goto done;\n    if (!GetDIBits( hdc, hbmImage, 0, height, bits, info, DIB_RGB_COLORS )) goto done;\n\n    if (hbmMask)\n    {\n        if (!(mask_info = Alloc( FIELD_OFFSET( BITMAPINFO, bmiColors[2] ))))\n            goto done;\n        mask_info->bmiHeader = info->bmiHeader;\n        mask_info->bmiHeader.biBitCount = 1;\n        mask_info->bmiHeader.biSizeImage = mask_width * height;\n        if (!(mask_bits = Alloc( mask_info->bmiHeader.biSizeImage )))\n            goto done;\n        if (!GetDIBits( hdc, hbmMask, 0, height, mask_bits, mask_info, DIB_RGB_COLORS )) goto done;\n    }\n\n    add_dib_bits( himl, pos, count, width, height, info, mask_info, bits, mask_bits );\n    ret = TRUE;\n\ndone:\n    Free( info );\n    Free( mask_info );\n    Free( bits );\n    Free( mask_bits );\n    return ret;\n}"
+  },
+  {
+   "name": "imagelist_point_from_index",
+   "file": "dlls/comctl32/imagelist.c",
+   "start_line": 156,
+   "end_line": 160,
+   "static": true,
+   "called_from": [
+    "ImageList_Add",
+    "add_dib_bits"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/comctl32/imagelist.c:194",
+    "dlls/comctl32/imagelist.c:195",
+    "dlls/comctl32/imagelist.c:629",
+    "dlls/comctl32/imagelist.c:630",
+    "dlls/comctl32/imagelist.c:680"
+   ],
+   "signature": "static inline void imagelist_point_from_index( HIMAGELIST himl, UINT index, LPPOINT pt )",
+   "code": "static inline void imagelist_point_from_index( HIMAGELIST himl, UINT index, LPPOINT pt )\n{\n    pt->x = (index%TILE_COUNT) * himl->cx;\n    pt->y = (index/TILE_COUNT) * himl->cy;\n}"
+  },
+  {
+   "name": "imagelist_get_bitmap_size",
+   "file": "dlls/comctl32/imagelist.c",
+   "start_line": 162,
+   "end_line": 166,
+   "static": true,
+   "called_from": [
+    "IMAGELIST_InternalExpandBitmaps",
+    "ImageList_CreateImage"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/comctl32/imagelist.c:1550",
+    "dlls/comctl32/imagelist.c:2332",
+    "dlls/comctl32/imagelist.c:2349",
+    "dlls/comctl32/imagelist.c:2781",
+    "dlls/comctl32/imagelist.c:2843"
+   ],
+   "signature": "static inline void imagelist_get_bitmap_size( HIMAGELIST himl, UINT count, SIZE *sz )",
+   "code": "static inline void imagelist_get_bitmap_size( HIMAGELIST himl, UINT count, SIZE *sz )\n{\n    sz->cx = himl->cx * TILE_COUNT;\n    sz->cy = imagelist_height( count ) * himl->cy;\n}"
+  },
+  {
+   "name": "ImageList_CreateImage",
+   "file": "dlls/comctl32/imagelist.c",
+   "start_line": 3046,
+   "end_line": 3101,
+   "static": true,
+   "called_from": [
+    "IMAGELIST_InternalExpandBitmaps"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/comctl32/imagelist.c:2325",
+    "dlls/comctl32/imagelist.c:2347",
+    "dlls/comctl32/imagelist.c:2774",
+    "dlls/comctl32/imagelist.c:2823",
+    "dlls/comctl32/imagelist.c:3708"
+   ],
+   "signature": "static HBITMAP ImageList_CreateImage(HDC hdc, HIMAGELIST himl, UINT count)",
+   "code": "static HBITMAP ImageList_CreateImage(HDC hdc, HIMAGELIST himl, UINT count)\n{\n    HBITMAP hbmNewBitmap;\n    UINT ilc = (himl->flags & 0xFE);\n    SIZE sz;\n\n    imagelist_get_bitmap_size( himl, count, &sz );\n\n    if ((ilc >= ILC_COLOR4 && ilc <= ILC_COLOR32) || ilc == ILC_COLOR)\n    {\n        char buffer[sizeof(BITMAPINFOHEADER) + 256 * sizeof(RGBQUAD)];\n        BITMAPINFO *bmi = (BITMAPINFO *)buffer;\n\n        TRACE(\"Creating DIBSection %ld x %ld, %d Bits per Pixel\\n\",\n              sz.cx, sz.cy, himl->uBitsPixel);\n\n        memset( buffer, 0, sizeof(buffer) );\n\tbmi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);\n\tbmi->bmiHeader.biWidth = sz.cx;\n\tbmi->bmiHeader.biHeight = sz.cy;\n\tbmi->bmiHeader.biPlanes = 1;\n\tbmi->bmiHeader.biBitCount = himl->uBitsPixel;\n\tbmi->bmiHeader.biCompression = BI_RGB;\n\n\tif (himl->uBitsPixel <= ILC_COLOR8)\n\t{\n            if (!himl->color_table_set)\n            {\n                /* retrieve the default color map */\n                HBITMAP tmp = CreateBitmap( 1, 1, 1, 1, NULL );\n                GetDIBits( hdc, tmp, 0, 0, NULL, bmi, DIB_RGB_COLORS );\n                DeleteObject( tmp );\n                if (ilc == ILC_COLOR4)\n                {\n                    RGBQUAD tmp;\n                    tmp = bmi->bmiColors[7];\n                    bmi->bmiColors[7] = bmi->bmiColors[8];\n                    bmi->bmiColors[8] = tmp;\n                }\n            }\n            else\n            {\n                GetDIBColorTable(himl->hdcImage, 0, 1 << himl->uBitsPixel, bmi->bmiColors);\n            }\n        }\n\thbmNewBitmap = CreateDIBSection(hdc, bmi, DIB_RGB_COLORS, NULL, 0, 0);\n    }\n    else /*if (ilc == ILC_COLORDDB)*/\n    {\n        TRACE(\"Creating Bitmap: %d Bits per Pixel\\n\", himl->uBitsPixel);\n\n        hbmNewBitmap = CreateBitmap (sz.cx, sz.cy, 1, himl->uBitsPixel, NULL);\n    }\n    TRACE(\"returning %p\\n\", hbmNewBitmap);\n    return hbmNewBitmap;\n}"
+  },
+  {
+   "name": "add_dib_bits",
+   "file": "dlls/comctl32/imagelist.c",
+   "start_line": 204,
+   "end_line": 250,
+   "static": true,
+   "called_from": [
+    "add_with_alpha"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/comctl32/imagelist.c:2243"
+   ],
+   "signature": "static void add_dib_bits( HIMAGELIST himl, int pos, int count, int width, int height, BITMAPINFO *info, BITMAPINFO *mask_info, DWORD *bits, BYTE *mask_bits )",
+   "code": "static void add_dib_bits( HIMAGELIST himl, int pos, int count, int width, int height,\n                          BITMAPINFO *info, BITMAPINFO *mask_info, DWORD *bits, BYTE *mask_bits )\n{\n    int i, j, n;\n    POINT pt;\n    int stride = info->bmiHeader.biWidth;\n    int mask_stride = (info->bmiHeader.biWidth + 31) / 32 * 4;\n\n    for (n = 0; n < count; n++)\n    {\n        BOOL has_alpha = FALSE;\n\n        imagelist_point_from_index( himl, pos + n, &pt );\n\n        /* check if bitmap has an alpha channel */\n        for (i = 0; i < height && !has_alpha; i++)\n            for (j = n * width; j < (n + 1) * width; j++)\n                if ((has_alpha = ((bits[i * stride + j] & 0xff000000) != 0))) break;\n\n        if (has_alpha)\n        {\n            himl->item_flags[pos + n] = ILIF_ALPHA;\n\n            if (mask_info && himl->hbmMask)  /* generate the mask from the alpha channel */\n            {\n                for (i = 0; i < height; i++)\n                    for (j = n * width; j < (n + 1) * width; j++)\n                        if ((bits[i * stride + j] >> 24) > 25) /* more than 10% alpha */\n                            mask_bits[i * mask_stride + j / 8] &= ~(0x80 >> (j % 8));\n                        else\n                            mask_bits[i * mask_stride + j / 8] |= 0x80 >> (j % 8);\n            }\n        }\n        else if (mask_info)  /* mask out the background */\n        {\n            for (i = 0; i < height; i++)\n                for (j = n * width; j < (n + 1) * width; j++)\n                    if ((mask_bits[i * mask_stride + j / 8] << (j % 8)) & 0x80)\n                        bits[i * stride + j] = 0;\n        }\n        StretchDIBits( himl->hdcImage, pt.x, pt.y, himl->cx, himl->cy,\n                       n * width, 0, width, height, bits, info, DIB_RGB_COLORS, SRCCOPY );\n        if (mask_info)\n            StretchDIBits( himl->hdcMask, pt.x, pt.y, himl->cx, himl->cy,\n                           n * width, 0, width, height, mask_bits, mask_info, DIB_RGB_COLORS, SRCCOPY );\n    }\n}"
+  },
+  {
+   "name": "imagelist_height",
+   "file": "dlls/comctl32/imagelist.c",
+   "start_line": 151,
+   "end_line": 154,
+   "static": true,
+   "called_from": [
+    "imagelist_get_bitmap_size"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/comctl32/imagelist.c:197"
+   ],
+   "signature": "static inline UINT imagelist_height( UINT count )",
+   "code": "static inline UINT imagelist_height( UINT count )\n{\n    return ((count + TILE_COUNT - 1)/TILE_COUNT);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "_IMAGELIST",
+    "kind": "struct_decl",
+    "start_line": 53,
+    "end_line": 83,
+    "code": "struct _IMAGELIST\n{\n    IImageList2 IImageList2_iface;         /* 00: IImageList vtable */\n    INT         cCurImage;                 /* 04: ImageCount */\n    INT         cMaxImage;                 /* 08: maximages */\n    INT         cGrow;                     /* 0C: cGrow */\n    INT         cx;                        /* 10: cx */\n    INT         cy;                        /* 14: cy */\n    DWORD       x4;\n    UINT        flags;                     /* 1C: flags */\n    COLORREF    clrFg;                     /* 20: foreground color */\n    COLORREF    clrBk;                     /* 24: background color */\n\n\n    HBITMAP     hbmImage;                  /* 28: images Bitmap */\n    HBITMAP     hbmMask;                   /* 2C: masks  Bitmap */\n    HDC         hdcImage;                  /* 30: images MemDC  */\n    HDC         hdcMask;                   /* 34: masks  MemDC  */\n    INT         nOvlIdx[MAX_OVERLAYIMAGE]; /* 38: overlay images index */\n\n    /* not yet found out */\n    DWORD   magic;\n    HBRUSH  hbrBlend25;\n    HBRUSH  hbrBlend50;\n    INT     cInitial;\n    UINT    uBitsPixel;\n    DWORD  *item_flags;\n    BOOL    color_table_set;\n\n    LONG        ref;                       /* reference count */\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 49,
+    "end_line": 49,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(imagelist);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "IMAGELIST_MAGIC",
+    "start_line": 85,
+    "end_line": 85,
+    "code": "#define IMAGELIST_MAGIC 0x53414D58"
+   },
+   {
+    "name": "TILE_COUNT",
+    "start_line": 144,
+    "end_line": 144,
+    "code": "#define TILE_COUNT 4"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "Alloc",
+    "impl": [
+     "dlls/comctl32/commctrl.c:1704"
+    ]
+   },
+   {
+    "name": "Free",
+    "impl": [
+     "dlls/comctl32/commctrl.c:1729"
+    ]
+   },
+   {
+    "name": "ImageList_SetColorTable",
+    "impl": [
+     "dlls/comctl32/imagelist.c:3123"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "BitBlt",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:1942"
+    ]
+   },
+   {
+    "name": "CreateBitmap",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:606"
+    ]
+   },
+   {
+    "name": "CreateCompatibleDC",
+    "module": "gdi32",
+    "impl": [
+     "dlls/win32u/dc.c:792"
+    ]
+   },
+   {
+    "name": "CreateDIBSection",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:857"
+    ]
+   },
+   {
+    "name": "DeleteDC",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:532"
+    ]
+   },
+   {
+    "name": "DeleteObject",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:194"
+    ]
+   },
+   {
+    "name": "GetDIBColorTable",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:875"
+    ]
+   },
+   {
+    "name": "GetDIBits",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:866"
+    ]
+   },
+   {
+    "name": "GetObjectW",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:365"
+    ]
+   },
+   {
+    "name": "HeapReAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2229"
+    ]
+   },
+   {
+    "name": "SelectObject",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:324"
+    ]
+   },
+   {
+    "name": "StretchDIBits",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:2095"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "__wine_pop_frame",
+   "__wine_push_frame",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "__wine_exception_handler_page_fault",
+   "__wine_setjmpex"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "comctl32.ImageList_Add",
+  "category": {
+   "l1": "User interface",
+   "l2": "Common controls",
+   "header": "commctrl.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 77,
+   "body": 75,
+   "code": 44
+  },
+  "cyclomatic": 13,
+  "return_type": "INT",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 16,
+   "n_tests": 16,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/comctl32/tests/button.c::test_bcm_get_ideal_size",
+    "dlls/comctl32/tests/button.c::test_get_set_imagelist",
+    "dlls/comctl32/tests/imagelist.c::createImageList",
+    "dlls/comctl32/tests/imagelist.c::image_list_add_bitmap",
+    "dlls/comctl32/tests/imagelist.c::test_DrawIndirect",
+    "dlls/comctl32/tests/imagelist.c::test_ImageList_DrawIndirect",
+    "dlls/comctl32/tests/imagelist.c::test_alpha",
+    "dlls/comctl32/tests/imagelist.c::test_color_table",
+    "dlls/comctl32/tests/imagelist.c::test_create_destroy",
+    "dlls/comctl32/tests/imagelist.c::test_imagelist_storage",
+    "dlls/comctl32/tests/listview.c::test_LVSCW_AUTOSIZE",
+    "dlls/comctl32/tests/listview.c::test_approximate_viewrect",
+    "dlls/comctl32/tests/listview.c::test_getitemrect",
+    "dlls/comctl32/tests/listview.c::test_hittest",
+    "dlls/comctl32/tests/listview.c::test_images",
+    "dlls/comctl32/tests/treeview.c::setup_3state_imagelist"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/commctrl/nf-commctrl-imagelist_add",
+   "source": "win32",
+   "description": "Adds an image or images to an image list. (ImageList_Add)",
+   "min_windows": "Windows Vista [desktop apps only]",
+   "documented_dll": "Comctl32.dll"
+  },
+  "exports": [
+   "comctl32.ImageList_Add",
+   "comctl32_v6.ImageList_Add"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

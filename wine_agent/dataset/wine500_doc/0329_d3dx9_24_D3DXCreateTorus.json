@@ -1,0 +1,188 @@
+{
+ "id": "0329",
+ "function": {
+  "name": "D3DXCreateTorus",
+  "export_name": "D3DXCreateTorus",
+  "module": "d3dx9_24",
+  "source_module": "d3dx9_36",
+  "exported_by": [
+   "d3dx9_24",
+   "d3dx9_25",
+   "d3dx9_26",
+   "d3dx9_27",
+   "d3dx9_28",
+   "d3dx9_29",
+   "d3dx9_30",
+   "d3dx9_31",
+   "d3dx9_32",
+   "d3dx9_33",
+   "d3dx9_34",
+   "d3dx9_35",
+   "d3dx9_36",
+   "d3dx9_37",
+   "d3dx9_38",
+   "d3dx9_39",
+   "d3dx9_40",
+   "d3dx9_41",
+   "d3dx9_42",
+   "d3dx9_43"
+  ],
+  "side": "PE",
+  "file": "dlls/d3dx9_36/mesh.c",
+  "start_line": 5139,
+  "end_line": 5244,
+  "body_lines": 103,
+  "signature": "HRESULT WINAPI D3DXCreateTorus(struct IDirect3DDevice9 *device, float innerradius, float outerradius, UINT sides, UINT rings, struct ID3DXMesh **mesh, ID3DXBuffer **adjacency)",
+  "header_comment": null,
+  "code": "HRESULT WINAPI D3DXCreateTorus(struct IDirect3DDevice9 *device,\n        float innerradius, float outerradius, UINT sides, UINT rings, struct ID3DXMesh **mesh, ID3DXBuffer **adjacency)\n{\n    HRESULT hr;\n    ID3DXMesh *torus;\n    WORD (*faces)[3];\n    struct vertex *vertices;\n    float phi, phi_step, sin_phi, cos_phi;\n    float theta, theta_step, sin_theta, cos_theta;\n    unsigned int i, j, numvert, numfaces;\n\n    TRACE(\"device %p, innerradius %.8e, outerradius %.8e, sides %u, rings %u, mesh %p, adjacency %p.\\n\",\n            device, innerradius, outerradius, sides, rings, mesh, adjacency);\n\n    numvert = sides * rings;\n    numfaces = numvert * 2;\n\n    if (!device || innerradius < 0.0f || outerradius < 0.0f || sides < 3 || rings < 3 || !mesh)\n    {\n        WARN(\"Invalid arguments.\\n\");\n        return D3DERR_INVALIDCALL;\n    }\n\n    if (FAILED(hr = D3DXCreateMeshFVF(numfaces, numvert, D3DXMESH_MANAGED, D3DFVF_XYZ | D3DFVF_NORMAL, device, &torus)))\n        return hr;\n\n    if (FAILED(hr = torus->lpVtbl->LockVertexBuffer(torus, 0, (void **)&vertices)))\n    {\n        torus->lpVtbl->Release(torus);\n        return hr;\n    }\n\n    if (FAILED(hr = torus->lpVtbl->LockIndexBuffer(torus, 0, (void **)&faces)))\n    {\n        torus->lpVtbl->UnlockVertexBuffer(torus);\n        torus->lpVtbl->Release(torus);\n        return hr;\n    }\n\n    phi_step = D3DX_PI / sides * 2.0f;\n    theta_step = D3DX_PI / rings * -2.0f;\n\n    theta = 0.0f;\n\n    for (i = 0; i < rings; ++i)\n    {\n        phi = 0.0f;\n\n        sin_theta = sinf(theta);\n        cos_theta = cosf(theta);\n\n        for (j = 0; j < sides; ++j)\n        {\n            sin_phi = sinf(phi);\n            cos_phi = cosf(phi);\n\n            vertices[i * sides + j].position.x = (innerradius * cos_phi + outerradius) * cos_theta;\n            vertices[i * sides + j].position.y = (innerradius * cos_phi + outerradius) * sin_theta;\n            vertices[i * sides + j].position.z = innerradius * sin_phi;\n            vertices[i * sides + j].normal.x = cos_phi * cos_theta;\n            vertices[i * sides + j].normal.y = cos_phi * sin_theta;\n            vertices[i * sides + j].normal.z = sin_phi;\n\n            phi += phi_step;\n        }\n\n        theta += theta_step;\n    }\n\n    for (i = 0; i < numfaces - sides * 2; ++i)\n    {\n        faces[i][0] = i % 2 ? i / 2 + sides : i / 2;\n        faces[i][1] = (i / 2 + 1) % sides ? i / 2 + 1 : i / 2 + 1 - sides;\n        faces[i][2] = (i + 1) % (sides * 2) ? (i + 1) / 2 + sides : (i + 1) / 2;\n    }\n\n    for (j = 0; i < numfaces; ++i, ++j)\n    {\n        faces[i][0] = i % 2 ? j / 2 : i / 2;\n        faces[i][1] = (i / 2 + 1) % sides ? i / 2 + 1 : i / 2 + 1 - sides;\n        faces[i][2] = i == numfaces - 1 ? 0 : (j + 1) / 2;\n    }\n\n    torus->lpVtbl->UnlockIndexBuffer(torus);\n    torus->lpVtbl->UnlockVertexBuffer(torus);\n\n    if (adjacency)\n    {\n        if (FAILED(hr = D3DXCreateBuffer(numfaces * sizeof(DWORD) * 3, adjacency)))\n        {\n            torus->lpVtbl->Release(torus);\n            return hr;\n        }\n\n        if (FAILED(hr = torus->lpVtbl->GenerateAdjacency(torus, 0.0f, (*adjacency)->lpVtbl->GetBufferPointer(*adjacency))))\n        {\n            (*adjacency)->lpVtbl->Release(*adjacency);\n            torus->lpVtbl->Release(torus);\n            return hr;\n        }\n    }\n\n    *mesh = torus;\n\n    return D3D_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <float.h>",
+   "#include \"d3dx9_private.h\"",
+   "#include \"dxfile.h\"",
+   "#include \"rmxfguid.h\"",
+   "#include \"rmxftmpl.h\"",
+   "#include \"wine/list.h\""
+  ],
+  "resolution": [
+   "d3dx9_24!D3DXCreateTorus [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/d3dx9_36/tests/mesh.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "direct3d9",
+   "path": "desktop-src/direct3d9/d3dxcreatetorus.md",
+   "url": "https://learn.microsoft.com/windows/win32/direct3d9/d3dxcreatetorus",
+   "documented_name": "d3dxcreatetorus",
+   "file": "docs/0329_win32_d3dxcreatetorus.md",
+   "text": "---\ndescription: Uses a left-handed coordinate system to create a mesh containing a torus.\nms.assetid: 68df7650-8a87-4762-8b57-5704c419b0d7\ntitle: D3DXCreateTorus function (D3dx9shape.h)\nms.topic: reference\nms.date: 05/31/2018\ntopic_type:\n- APIRef\n- kbSyntax\napi_name:\n- D3DXCreateTorus\napi_type:\n- LibDef\napi_location:\n- d3dx9.lib\n- d3dx9.dll\n---\n\n# D3DXCreateTorus function\n\nUses a left-handed coordinate system to create a mesh containing a torus.\n\n## Syntax\n\n\n```C++\nHRESULT D3DXCreateTorus(\n  _In_  LPDIRECT3DDEVICE9 pDevice,\n  _In_  FLOAT             InnerRadius,\n  _In_  FLOAT             OuterRadius,\n  _In_  UINT              Sides,\n  _In_  UINT              Rings,\n  _Out_ LPD3DXMESH        *ppMesh,\n  _Out_ LPD3DXBUFFER      *ppAdjacency\n);\n```\n\n\n\n## Parameters\n\n<dl> <dt>\n\n*pDevice* \\[in\\]\n</dt> <dd>\n\nType: **[**LPDIRECT3DDEVICE9**](/windows/win32/api/d3d9helper/nn-d3d9helper-idirect3ddevice9)**\n\nPointer to an [**IDirect3DDevice9**](/windows/win32/api/d3d9helper/nn-d3d9helper-idirect3ddevice9) interface, representing the device associated with the created torus mesh.\n\n</dd> <dt>\n\n*InnerRadius* \\[in\\]\n</dt> <dd>\n\nType: **[**FLOAT**](../winprog/windows-data-types.md)**\n\nInner-radius of the torus. Value should be greater than or equal to 0.0f.\n\n</dd> <dt>\n\n*OuterRadius* \\[in\\]\n</dt> <dd>\n\nType: **[**FLOAT**](../winprog/windows-data-types.md)**\n\nOuter-radius of the torus. Value should be greater than or equal to 0.0f.\n\n</dd> <dt>\n\n*Sides* \\[in\\]\n</dt> <dd>\n\nType: **[**UINT**](../winprog/windows-data-types.md)**\n\nNumber of sides in a cross-section. Value must be greater than or equal to 3.\n\n</dd> <dt>\n\n*Rings* \\[in\\]\n</dt> <dd>\n\nType: **[**UINT**](../winprog/windows-data-types.md)**\n\nNumber of rings making up the torus. Value must be greater than or equal to 3.\n\n</dd> <dt>\n\n*ppMesh* \\[out\\]\n</dt> <dd>\n\nType: **[**LPD3DXMESH**](id3dxmesh.md)\\***\n\nAddress of a pointer to the output shape, an [**ID3DXMesh**](id3dxmesh.md) interface.\n\n</dd> <dt>\n\n*ppAdjacency* \\[out\\]\n</dt> <dd>\n\nType: **[**LPD3DXBUFFER**](id3dxbuffer.md)\\***\n\nAddress of a pointer to an [**ID3DXBuffer**](id3dxbuffer.md) interface. When the method returns, this parameter is filled with an array of three DWORDs per face that specify the three neighbors for each face in the mesh. **NULL** can be specified.\n\n</dd> </dl>\n\n## Return value\n\nType: **[**HRESULT**](https://msdn.microsoft.com/library/Bb401631(v=MSDN.10).aspx)**\n\nIf the function succeeds, the return value is D3D\\_OK. If the function fails, the return value can be one of the following: D3DERR\\_INVALIDCALL, D3DXERR\\_INVALIDDATA, E\\_OUTOFMEMORY.\n\n## Remarks\n\nThe created torus is centered at the origin, and its axis is aligned with the z-axis. The inner radius of the torus is the radius of the cross-section (the minor radius), and the outer radius of the torus is the radius of the central hole.\n\nThis function returns a mesh that can be used later for drawing or manipulation by the application.\n\nThis function creates a mesh with the D3DXMESH\\_MANAGED creation option and [D3DFVF\\_XYZ \\| D3DFVF\\_NORMAL](d3dfvf.md) flexible vertex format (FVF).\n\n## Requirements\n\n\n\n| Requirement | Value |\n|--------------------|-----------------------------------------------------------------------------------------|\n| Header<br/>  | <dl> <dt>D3dx9shape.h</dt> </dl> |\n| Library<br/> | <dl> <dt>D3dx9.lib</dt> </dl>    |\n\n\n\n## See also\n\n<dl> <dt>\n\n[Shape Drawing Functions](dx9-graphics-reference-d3dx-functions-shape.md)\n</dt> </dl>\n\n \n\n \n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "vertex",
+    "kind": "struct_decl",
+    "start_line": 4495,
+    "end_line": 4499,
+    "code": "struct vertex\n{\n    D3DXVECTOR3 position;\n    D3DXVECTOR3 normal;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 38,
+    "end_line": 38,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(d3dx);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "D3DXCreateBuffer",
+    "impl": [
+     "dlls/d3dx9_36/core.c:127"
+    ]
+   },
+   {
+    "name": "D3DXCreateMeshFVF",
+    "impl": [
+     "dlls/d3dx9_36/mesh.c:2401"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "cosf",
+    "module": "msvcr80",
+    "impl": [
+     "dlls/msvcrt/mathf.c:51"
+    ]
+   },
+   {
+    "name": "sinf",
+    "module": "msvcr80",
+    "impl": [
+     "dlls/msvcrt/mathf.c:50"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "torus->lpVtbl->LockVertexBuffer",
+    "in_function": "D3DXCreateTorus",
+    "at": "dlls/d3dx9_36/mesh.c:5165",
+    "candidates": []
+   },
+   {
+    "expr": "torus->lpVtbl->Release",
+    "in_function": "D3DXCreateTorus",
+    "at": "dlls/d3dx9_36/mesh.c:5167",
+    "candidates": []
+   },
+   {
+    "expr": "torus->lpVtbl->LockIndexBuffer",
+    "in_function": "D3DXCreateTorus",
+    "at": "dlls/d3dx9_36/mesh.c:5171",
+    "candidates": []
+   },
+   {
+    "expr": "torus->lpVtbl->UnlockVertexBuffer",
+    "in_function": "D3DXCreateTorus",
+    "at": "dlls/d3dx9_36/mesh.c:5173",
+    "candidates": []
+   },
+   {
+    "expr": "torus->lpVtbl->UnlockIndexBuffer",
+    "in_function": "D3DXCreateTorus",
+    "at": "dlls/d3dx9_36/mesh.c:5222",
+    "candidates": []
+   },
+   {
+    "expr": "torus->lpVtbl->GenerateAdjacency",
+    "in_function": "D3DXCreateTorus",
+    "at": "dlls/d3dx9_36/mesh.c:5233",
+    "candidates": []
+   },
+   {
+    "expr": "(*adjacency)->lpVtbl->GetBufferPointer",
+    "in_function": "D3DXCreateTorus",
+    "at": "dlls/d3dx9_36/mesh.c:5233",
+    "candidates": []
+   },
+   {
+    "expr": "(*adjacency)->lpVtbl->Release",
+    "in_function": "D3DXCreateTorus",
+    "at": "dlls/d3dx9_36/mesh.c:5235",
+    "candidates": []
+   }
+  ]
+ }
+}

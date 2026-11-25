@@ -1,0 +1,301 @@
+{
+ "id": "0113",
+ "function": {
+  "name": "WinHttpQueryHeaders",
+  "export_name": "WinHttpQueryHeaders",
+  "module": "winhttp",
+  "source_module": "winhttp",
+  "exported_by": [
+   "winhttp"
+  ],
+  "side": "PE",
+  "file": "dlls/winhttp/request.c",
+  "start_line": 1256,
+  "end_line": 1288,
+  "body_lines": 30,
+  "signature": "BOOL WINAPI WinHttpQueryHeaders( HINTERNET hrequest, DWORD level, const WCHAR *name, void *buffer, DWORD *buflen, DWORD *index )",
+  "header_comment": "/***********************************************************************\n *          WinHttpQueryHeaders (winhttp.@)\n */",
+  "code": "BOOL WINAPI WinHttpQueryHeaders( HINTERNET hrequest, DWORD level, const WCHAR *name, void *buffer, DWORD *buflen,\n                                 DWORD *index )\n{\n    DWORD ret;\n    struct request *request;\n\n    TRACE( \"%p, %#lx, %s, %p, %p, %p\\n\", hrequest, level, debugstr_w(name), buffer, buflen, index );\n\n    if (!(request = (struct request *)grab_object( hrequest )))\n    {\n        SetLastError( ERROR_INVALID_HANDLE );\n        return FALSE;\n    }\n    if (request->hdr.type != WINHTTP_HANDLE_TYPE_REQUEST)\n    {\n        release_object( &request->hdr );\n        SetLastError( ERROR_WINHTTP_INCORRECT_HANDLE_TYPE );\n        return FALSE;\n    }\n    if (request->state < REQUEST_STATE_RESPONSE_RECEIVED && !(level & WINHTTP_QUERY_FLAG_REQUEST_HEADERS)\n            && ((level & ~QUERY_MODIFIER_MASK) != WINHTTP_QUERY_REQUEST_METHOD))\n    {\n        release_object( &request->hdr );\n        SetLastError( ERROR_WINHTTP_INCORRECT_HANDLE_STATE );\n        return FALSE;\n    }\n\n    ret = query_headers( request, level, name, buffer, buflen, index );\n\n    release_object( &request->hdr );\n    SetLastError( ret );\n    return !ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <wchar.h>",
+   "#include <zlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"ws2tcpip.h\"",
+   "#include \"ole2.h\"",
+   "#include \"initguid.h\"",
+   "#include \"httprequest.h\"",
+   "#include \"httprequestid.h\"",
+   "#include \"schannel.h\"",
+   "#include \"winhttp.h\"",
+   "#include \"ntsecapi.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"winhttp_private.h\""
+  ],
+  "resolution": [
+   "winhttp!WinHttpQueryHeaders [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/winhttp/tests/winhttp.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 22
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winhttp",
+   "path": "sdk-api-src/content/winhttp/nf-winhttp-winhttpqueryheaders.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winhttp/nf-winhttp-winhttpqueryheaders",
+   "documented_name": "winhttpqueryheaders",
+   "file": "docs/0113_sdk-api_nf-winhttp-winhttpqueryheaders.md",
+   "text": "---\nUID: NF:winhttp.WinHttpQueryHeaders\ntitle: WinHttpQueryHeaders function (winhttp.h)\ndescription: The WinHttpQueryHeaders function retrieves header information associated with an HTTP request.\nhelpviewer_keywords: [\"WinHttpQueryHeaders\",\"WinHttpQueryHeaders function [WinHTTP]\",\"http.winhttpqueryheaders\",\"winhttp.winhttpqueryheaders_function\",\"winhttp/WinHttpQueryHeaders\"]\nold-location: http\\winhttpqueryheaders.htm\ntech.root: http\nms.assetid: 9656ebad-78df-4d1c-94e9-6127d6bc4799\nms.date: 12/05/2018\nms.keywords: WinHttpQueryHeaders, WinHttpQueryHeaders function [WinHTTP], http.winhttpqueryheaders, winhttp.winhttpqueryheaders_function, winhttp/WinHttpQueryHeaders\nreq.header: winhttp.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP, Windows 2000 Professional with SP3 [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003, Windows 2000 Server with SP3 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Winhttp.lib\nreq.dll: Winhttp.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: WinHTTP 5.0 and Internet Explorer 5.01 or later on Windows XP and Windows 2000.\nms.custom: 19H1\nf1_keywords:\n - WinHttpQueryHeaders\n - winhttp/WinHttpQueryHeaders\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Winhttp.dll\napi_name:\n - WinHttpQueryHeaders\n---\n\n## -description\n\nThe <b>WinHttpQueryHeaders</b> function retrieves header information associated with an HTTP request.\n\nAlso see [WinHttpQueryHeadersEx](nf-winhttp-winhttpqueryheadersex.md), which offers a way to retrieve parsed header name and value strings.\n\n## -parameters\n\n### -param hRequest [in]\n\n<a href=\"/windows/desktop/WinHttp/hinternet-handles-in-winhttp\">HINTERNET</a> request handle returned by \n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpopenrequest\">WinHttpOpenRequest</a>. \nWinHttpReceiveResponse must have been called for this handle and have completed before <b>WinHttpQueryHeaders</b> is called.\n\n### -param dwInfoLevel [in]\n\nValue of type <b>DWORD</b> that specifies a combination of attribute and modifier flags listed on the \n<a href=\"/windows/desktop/WinHttp/query-info-flags\">Query Info Flags</a> page. These attribute and modifier flags indicate that the information is being requested and how it is to be formatted.\n\n### -param pwszName [in, optional]\n\nPointer to a string that contains the header name. If the flag in \n<i>dwInfoLevel</i> is not \n<b>WINHTTP_QUERY_CUSTOM</b>, set this parameter to WINHTTP_HEADER_NAME_BY_INDEX.\n\n### -param lpBuffer [out]\n\nPointer to the buffer that receives the information. Setting this parameter to WINHTTP_NO_OUTPUT_BUFFER causes this function to return <b>FALSE</b>.  Calling \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> then returns \n<b>ERROR_INSUFFICIENT_BUFFER</b> and \n<i>lpdwBufferLength</i> contains the number of bytes required to hold the requested information.\n\n### -param lpdwBufferLength [in, out]\n\nPointer to a value of type <b>DWORD</b> that specifies the length of the data buffer, in bytes. When the function returns, this parameter contains the pointer to a value that specifies the length of the information written to the buffer. When the function returns strings, the following rules apply. \n\t\t\t\t\t\n\n<ul>\n<li>If the function succeeds, \n<i>lpdwBufferLength</i> specifies the length of the string, in bytes, minus 2 for the terminating null. </li>\n<li>If the function fails and \n<b>ERROR_INSUFFICIENT_BUFFER</b> is returned, \n<i>lpdwBufferLength</i> specifies the number of bytes that the application must allocate to receive the string. </li>\n</ul>\n\n### -param lpdwIndex [in, out]\n\nPointer to a zero-based header index used to enumerate multiple headers with the same name. When calling the function, this parameter is the index of the specified header to return. When the function returns, this parameter is the index of the next header. If the next index cannot be found, \n<b>ERROR_WINHTTP_HEADER_NOT_FOUND</b> is returned. Set this parameter to WINHTTP_NO_HEADER_INDEX to specify that only the first occurrence of a header should be returned.\n\n## -returns\n\nReturns <b>TRUE</b> if successful, or <b>FALSE</b> otherwise. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>. Among the error codes returned are the following.\n\n<table>\n<tr>\n<th>Error Code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_HEADER_NOT_FOUND</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe requested header could not be located.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_INCORRECT_HANDLE_STATE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe requested operation cannot be carried out because the handle supplied is not in the correct state.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_INCORRECT_HANDLE_TYPE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe type of handle supplied is incorrect for this operation.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_INTERNAL_ERROR</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn internal error has occurred.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOT_ENOUGH_MEMORY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nNot enough memory was available to complete the requested operation. (Windows error code)\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nEven when  WinHTTP is used in asynchronous mode (that is, when <b>WINHTTP_FLAG_ASYNC</b> has been set in <a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpopen\">WinHttpOpen</a>), this function operates synchronously. The return value indicates success or failure.  To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\nBy default \n<b>WinHttpQueryHeaders</b> returns a string.  However, you can request data in the form of a \n<a href=\"/windows/desktop/api/minwinbase/ns-minwinbase-systemtime\">SYSTEMTIME</a> structure or <b>DWORD</b> by including the appropriate modifier flag in \n<i>dwInfoLevel</i>.  The following table shows the possible data types that \n<b>WinHttpQueryHeaders</b> can return along with the modifier flag that you use to select that data type.\n\n                \n\n\n<table class=\"clsStd\">\n<tr>\n<th>Data type</th>\n<th>Modifier flag</th>\n</tr>\n<tr>\n<td><b>LPCWSTR</b></td>\n<td>Default.  No modifier flag required.</td>\n</tr>\n<tr>\n<td><b>SYSTEMTIME</b></td>\n<td><b>WINHTTP_QUERY_FLAG_SYSTEMTIME</b></td>\n</tr>\n<tr>\n<td><b>DWORD</b></td>\n<td><b>WINHTTP_QUERY_FLAG_NUMBER</b></td>\n</tr>\n</table>\n \n\n<div class=\"alert\"><b>Note</b>  For Windows XP and Windows 2000, see the <a href=\"/windows/desktop/WinHttp/winhttp-start-page\">Run-Time Requirements</a> section of the WinHttp start page.</div>\n<div> </div>\n\n#### Examples\n\nThe following example shows how to obtain an \n<a href=\"/windows/desktop/WinHttp/hinternet-handles-in-winhttp\">HINTERNET</a> handle, open an HTTP session, create and send a request header, and examine the returned response header.\n\n\n```cpp\n    DWORD dwSize = 0;\n    LPVOID lpOutBuffer = NULL;\n    BOOL  bResults = FALSE;\n    HINTERNET hSession = NULL,\n              hConnect = NULL,\n              hRequest = NULL;\n\n    // Use WinHttpOpen to obtain a session handle.\n    hSession = WinHttpOpen(  L\"A WinHTTP Example Program/1.0\",\n                             WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,\n                             WINHTTP_NO_PROXY_NAME,\n                             WINHTTP_NO_PROXY_BYPASS, 0);\n\n    // Specify an HTTP server.\n    if (hSession)\n        hConnect = WinHttpConnect( hSession, L\"www.microsoft.com\",\n                                   INTERNET_DEFAULT_HTTP_PORT, 0);\n\n    // Create an HTTP request handle.\n    if (hConnect)\n        hRequest = WinHttpOpenRequest( hConnect, L\"GET\", NULL,\n                                       NULL, WINHTTP_NO_REFERER,\n                                       WINHTTP_DEFAULT_ACCEPT_TYPES,\n                                       0);\n\n    // Send a request.\n    if (hRequest)\n        bResults = WinHttpSendRequest( hRequest,\n                                       WINHTTP_NO_ADDITIONAL_HEADERS,\n                                       0, WINHTTP_NO_REQUEST_DATA, 0,\n                                       0, 0);\n\n    // End the request.\n    if (bResults)\n        bResults = WinHttpReceiveResponse( hRequest, NULL);\n\n    // First, use WinHttpQueryHeaders to obtain the size of the buffer.\n    if (bResults)\n    {\n        WinHttpQueryHeaders( hRequest, WINHTTP_QUERY_RAW_HEADERS_CRLF,\n                             WINHTTP_HEADER_NAME_BY_INDEX, NULL,\n                             &dwSize, WINHTTP_NO_HEADER_INDEX);\n\n        // Allocate memory for the buffer.\n        if( GetLastError( ) == ERROR_INSUFFICIENT_BUFFER )\n        {\n            lpOutBuffer = new WCHAR[dwSize/sizeof(WCHAR)];\n\n            // Now, use WinHttpQueryHeaders to retrieve the header.\n            bResults = WinHttpQueryHeaders( hRequest,\n                                       WINHTTP_QUERY_RAW_HEADERS_CRLF,\n                                       WINHTTP_HEADER_NAME_BY_INDEX,\n                                       lpOutBuffer, &dwSize,\n                                       WINHTTP_NO_HEADER_INDEX);\n        }\n    }\n\n    // Print the header contents.\n    if (bResults)\n        printf(\"Header contents: \\n%S\",lpOutBuffer);\n\n    // Free the allocated memory.\n    delete [] lpOutBuffer;\n\n    // Report any errors.\n    if (!bResults)\n        printf(\"Error %d has occurred.\\n\",GetLastError());\n\n    // Close any open handles.\n    if (hRequest) WinHttpCloseHandle(hRequest);\n    if (hConnect) WinHttpCloseHandle(hConnect);\n    if (hSession) WinHttpCloseHandle(hSession);\n\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/WinHttp/about-winhttp\">About Microsoft Windows HTTP Services (WinHTTP)</a>\n\n\n\nMicrosoft Windows HTTP Services (WinHTTP)\n\n\n\n<a href=\"/windows/desktop/WinHttp/winhttp-versions\">WinHTTP Versions</a>\n\n\n\n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpclosehandle\">WinHttpCloseHandle</a>\n\n\n\n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpconnect\">WinHttpConnect</a>\n\n\n\n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpopen\">WinHttpOpen</a>\n\n\n\n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpopenrequest\">WinHttpOpenRequest</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "query_headers",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1049,
+   "end_line": 1251,
+   "static": true,
+   "called_from": [
+    "WinHttpQueryHeaders"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/request.c:1335",
+    "dlls/winhttp/request.c:1343",
+    "dlls/winhttp/request.c:1558",
+    "dlls/winhttp/request.c:2238",
+    "dlls/winhttp/request.c:2239"
+   ],
+   "signature": "static DWORD query_headers( struct request *request, DWORD level, const WCHAR *name, void *buffer, DWORD *buflen, DWORD *index )",
+   "code": "static DWORD query_headers( struct request *request, DWORD level, const WCHAR *name, void *buffer, DWORD *buflen,\n                            DWORD *index )\n{\n    struct header *header = NULL;\n    BOOL request_only;\n    int requested_index, header_index = -1;\n    DWORD attr, len, ret = ERROR_WINHTTP_HEADER_NOT_FOUND;\n\n    request_only = level & WINHTTP_QUERY_FLAG_REQUEST_HEADERS;\n    requested_index = index ? *index : 0;\n\n    attr = level & ~QUERY_MODIFIER_MASK;\n    switch (attr)\n    {\n    case WINHTTP_QUERY_CUSTOM:\n    {\n        header_index = get_header_index( request, name, requested_index, request_only );\n        break;\n    }\n    case WINHTTP_QUERY_RAW_HEADERS:\n    {\n        WCHAR *headers, *p, *q;\n\n        if (request_only)\n            headers = build_request_string( request );\n        else\n            headers = request->raw_headers;\n\n        if (!(p = headers)) return ERROR_OUTOFMEMORY;\n        for (len = 0; *p; p++) if (*p != '\\r') len++;\n\n        if (!buffer || len * sizeof(WCHAR) > *buflen) ret = ERROR_INSUFFICIENT_BUFFER;\n        else\n        {\n            for (p = headers, q = buffer; *p; p++, q++)\n            {\n                if (*p != '\\r') *q = *p;\n                else\n                {\n                    *q = 0;\n                    p++; /* skip '\\n' */\n                }\n            }\n            TRACE(\"returning data: %s\\n\", debugstr_wn(buffer, len));\n            if (len) len--;\n            ret = ERROR_SUCCESS;\n        }\n        *buflen = len * sizeof(WCHAR);\n        if (request_only) free( headers );\n        return ret;\n    }\n    case WINHTTP_QUERY_RAW_HEADERS_CRLF:\n    {\n        WCHAR *headers;\n\n        if (request_only)\n            headers = build_request_string( request );\n        else\n            headers = request->raw_headers;\n\n        if (!headers) return ERROR_OUTOFMEMORY;\n        len = lstrlenW( headers ) * sizeof(WCHAR);\n        if (!buffer || len + sizeof(WCHAR) > *buflen)\n        {\n            len += sizeof(WCHAR);\n            ret = ERROR_INSUFFICIENT_BUFFER;\n        }\n        else\n        {\n            memcpy( buffer, headers, len + sizeof(WCHAR) );\n            TRACE(\"returning data: %s\\n\", debugstr_wn(buffer, len / sizeof(WCHAR)));\n            ret = ERROR_SUCCESS;\n        }\n        *buflen = len;\n        if (request_only) free( headers );\n        return ret;\n    }\n    case WINHTTP_QUERY_VERSION:\n        len = lstrlenW( request->version ) * sizeof(WCHAR);\n        if (!buffer || len + sizeof(WCHAR) > *buflen)\n        {\n            len += sizeof(WCHAR);\n            ret = ERROR_INSUFFICIENT_BUFFER;\n        }\n        else\n        {\n            lstrcpyW( buffer, request->version );\n            TRACE(\"returning string: %s\\n\", debugstr_w(buffer));\n            ret = ERROR_SUCCESS;\n        }\n        *buflen = len;\n        return ret;\n\n    case WINHTTP_QUERY_STATUS_TEXT:\n        len = lstrlenW( request->status_text ) * sizeof(WCHAR);\n        if (!buffer || len + sizeof(WCHAR) > *buflen)\n        {\n            len += sizeof(WCHAR);\n            ret = ERROR_INSUFFICIENT_BUFFER;\n        }\n        else\n        {\n            lstrcpyW( buffer, request->status_text );\n            TRACE(\"returning string: %s\\n\", debugstr_w(buffer));\n            ret = ERROR_SUCCESS;\n        }\n        *buflen = len;\n        return ret;\n\n    case WINHTTP_QUERY_REQUEST_METHOD:\n        len = lstrlenW( request->verb ) * sizeof(WCHAR);\n        if (!buffer || len + sizeof(WCHAR) > *buflen)\n        {\n            len += sizeof(WCHAR);\n            ret = ERROR_INSUFFICIENT_BUFFER;\n        }\n        else\n        {\n            lstrcpyW( buffer, request->verb );\n            TRACE(\"returning string: %s\\n\", debugstr_w(buffer));\n            ret = ERROR_SUCCESS;\n        }\n        *buflen = len;\n        return ret;\n\n    default:\n        if (attr >= ARRAY_SIZE(attribute_table)) return ERROR_INVALID_PARAMETER;\n        if (!attribute_table[attr])\n        {\n            FIXME( \"attribute %lu not implemented\\n\", attr );\n            return ERROR_WINHTTP_HEADER_NOT_FOUND;\n        }\n        TRACE(\"attribute %s\\n\", debugstr_w(attribute_table[attr]));\n        header_index = get_header_index( request, attribute_table[attr], requested_index, request_only );\n        break;\n    }\n\n    if (header_index >= 0)\n    {\n        header = &request->headers[header_index];\n    }\n    if (!header || (request_only && !header->is_request)) return ERROR_WINHTTP_HEADER_NOT_FOUND;\n    if (level & WINHTTP_QUERY_FLAG_NUMBER)\n    {\n        if (!buffer || sizeof(DWORD) > *buflen) ret = ERROR_INSUFFICIENT_BUFFER;\n        else\n        {\n            DWORD *number = buffer;\n            *number = wcstoul( header->value, NULL, 10 );\n            TRACE(\"returning number: %lu\\n\", *number);\n            ret = ERROR_SUCCESS;\n        }\n        *buflen = sizeof(DWORD);\n    }\n    else if (level & WINHTTP_QUERY_FLAG_NUMBER64)\n    {\n        if (attr != WINHTTP_QUERY_CONTENT_LENGTH)\n        {\n            WARN( \"WINHTTP_QUERY_FLAG_NUMBER64 with attr %lu.\\n\", attr );\n            return ERROR_WINHTTP_INVALID_QUERY_REQUEST;\n        }\n        if (!buffer || sizeof(ULONG64) > *buflen) ret = ERROR_INSUFFICIENT_BUFFER;\n        else\n        {\n            ULONG64 *number = buffer;\n            *number = wcstoull( header->value, NULL, 10 );\n            TRACE( \"returning number: %I64u\\n\", *number );\n            ret = ERROR_SUCCESS;\n        }\n        *buflen = sizeof(ULONG64);\n    }\n    else if (level & WINHTTP_QUERY_FLAG_SYSTEMTIME)\n    {\n        SYSTEMTIME *st = buffer;\n        if (!buffer || sizeof(SYSTEMTIME) > *buflen) ret = ERROR_INSUFFICIENT_BUFFER;\n        else if (WinHttpTimeToSystemTime( header->value, st ))\n        {\n            TRACE(\"returning time: %04d/%02d/%02d - %d - %02d:%02d:%02d.%02d\\n\",\n                  st->wYear, st->wMonth, st->wDay, st->wDayOfWeek,\n                  st->wHour, st->wMinute, st->wSecond, st->wMilliseconds);\n            ret = ERROR_SUCCESS;\n        }\n        *buflen = sizeof(SYSTEMTIME);\n    }\n    else if (header->value)\n    {\n        len = lstrlenW( header->value ) * sizeof(WCHAR);\n        if (!buffer || len + sizeof(WCHAR) > *buflen)\n        {\n            len += sizeof(WCHAR);\n            ret = ERROR_INSUFFICIENT_BUFFER;\n        }\n        else\n        {\n            lstrcpyW( buffer, header->value );\n            TRACE(\"returning string: %s\\n\", debugstr_w(buffer));\n            ret = ERROR_SUCCESS;\n        }\n        *buflen = len;\n    }\n    if (!ret && index) *index += 1;\n    return ret;\n}"
+  },
+  {
+   "name": "get_header_index",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 788,
+   "end_line": 806,
+   "static": true,
+   "called_from": [
+    "query_headers"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/request.c:844",
+    "dlls/winhttp/request.c:855"
+   ],
+   "signature": "static int get_header_index( struct request *request, const WCHAR *field, int requested_index, BOOL request_only )",
+   "code": "static int get_header_index( struct request *request, const WCHAR *field, int requested_index, BOOL request_only )\n{\n    int index;\n\n    TRACE(\"%s\\n\", debugstr_w(field));\n\n    for (index = 0; index < request->num_headers; index++)\n    {\n        if (wcsicmp( request->headers[index].field, field )) continue;\n        if (request_only && !request->headers[index].is_request) continue;\n        if (!request_only && request->headers[index].is_request) continue;\n\n        if (!requested_index) break;\n        requested_index--;\n    }\n    if (index >= request->num_headers) index = -1;\n    TRACE(\"returning %d\\n\", index);\n    return index;\n}"
+  },
+  {
+   "name": "build_request_string",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 1002,
+   "end_line": 1044,
+   "static": true,
+   "called_from": [
+    "query_headers"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static WCHAR *build_request_string( struct request *request )",
+   "code": "static WCHAR *build_request_string( struct request *request )\n{\n    WCHAR *path, *ret;\n    unsigned int i, len;\n\n    if (!wcsicmp( request->connect->hostname, request->connect->servername )) path = request->path;\n    else if (!(path = build_absolute_request_path( request, NULL ))) return NULL;\n\n    len = lstrlenW( request->verb ) + 1 /* ' ' */;\n    len += lstrlenW( path ) + 1 /* ' ' */;\n    len += lstrlenW( request->version );\n\n    for (i = 0; i < request->num_headers; i++)\n    {\n        if (request->headers[i].is_request)\n            len += lstrlenW( request->headers[i].field ) + lstrlenW( request->headers[i].value ) + 4; /* '\\r\\n: ' */\n    }\n    len += 4; /* '\\r\\n\\r\\n' */\n\n    if ((ret = malloc( (len + 1) * sizeof(WCHAR) )))\n    {\n        lstrcpyW( ret, request->verb );\n        lstrcatW( ret, L\" \" );\n        lstrcatW( ret, path );\n        lstrcatW( ret, L\" \" );\n        lstrcatW( ret, request->version );\n\n        for (i = 0; i < request->num_headers; i++)\n        {\n            if (request->headers[i].is_request)\n            {\n                lstrcatW( ret, L\"\\r\\n\" );\n                lstrcatW( ret, request->headers[i].field );\n                lstrcatW( ret, L\": \" );\n                lstrcatW( ret, request->headers[i].value );\n            }\n        }\n        lstrcatW( ret, L\"\\r\\n\\r\\n\" );\n    }\n\n    if (path != request->path) free( path );\n    return ret;\n}"
+  },
+  {
+   "name": "build_absolute_request_path",
+   "file": "dlls/winhttp/request.c",
+   "start_line": 976,
+   "end_line": 1000,
+   "static": true,
+   "called_from": [
+    "build_request_string"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/request.c:2348"
+   ],
+   "signature": "static WCHAR *build_absolute_request_path( struct request *request, const WCHAR **path )",
+   "code": "static WCHAR *build_absolute_request_path( struct request *request, const WCHAR **path )\n{\n    const WCHAR *scheme;\n    WCHAR *ret;\n    int len, offset;\n\n    scheme = (request->netconn ? request->netconn->secure : (request->hdr.flags & WINHTTP_FLAG_SECURE)) ? L\"https\" : L\"http\";\n\n    len = lstrlenW( scheme ) + lstrlenW( request->connect->hostname ) + 4; /* '://' + nul */\n    if (request->connect->hostport) len += 6; /* ':' between host and port, up to 5 for port */\n\n    len += lstrlenW( request->path );\n    if ((ret = malloc( len * sizeof(WCHAR) )))\n    {\n        offset = swprintf( ret, len, L\"%s://%s\", scheme, request->connect->hostname );\n        if (request->connect->hostport)\n        {\n            offset += swprintf( ret + offset, len - offset, L\":%u\", request->connect->hostport );\n        }\n        lstrcpyW( ret + offset, request->path );\n        if (path) *path = ret + offset;\n    }\n\n    return ret;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 42,
+    "end_line": 42,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(winhttp);"
+   },
+   {
+    "name": "attribute_table",
+    "type": "const WCHAR *[75]",
+    "static": true,
+    "start_line": 477,
+    "end_line": 554,
+    "code": "static const WCHAR *attribute_table[] =\n{\n    L\"Mime-Version\",                /* WINHTTP_QUERY_MIME_VERSION               = 0  */\n    L\"Content-Type\"  ,              /* WINHTTP_QUERY_CONTENT_TYPE               = 1  */\n    L\"Content-Transfer-Encoding\",   /* WINHTTP_QUERY_CONTENT_TRANSFER_ENCODING  = 2  */\n    L\"Content-ID\",                  /* WINHTTP_QUERY_CONTENT_ID                 = 3  */\n    NULL,                           /* WINHTTP_QUERY_CONTENT_DESCRIPTION        = 4  */\n    L\"Content-Length\",              /* WINHTTP_QUERY_CONTENT_LENGTH             = 5  */\n    L\"Content-Language\",            /* WINHTTP_QUERY_CONTENT_LANGUAGE           = 6  */\n    L\"Allow\",                       /* WINHTTP_QUERY_ALLOW                      = 7  */\n    L\"Public\",                      /* WINHTTP_QUERY_PUBLIC                     = 8  */\n    L\"Date\",                        /* WINHTTP_QUERY_DATE                       = 9  */\n    L\"Expires\",                     /* WINHTTP_QUERY_EXPIRES                    = 10 */\n    L\"Last-Modified\",               /* WINHTTP_QUERY_LAST_MODIFIED              = 11 */\n    NULL,                           /* WINHTTP_QUERY_MESSAGE_ID                 = 12 */\n    L\"URI\",                         /* WINHTTP_QUERY_URI                        = 13 */\n    L\"From\",                        /* WINHTTP_QUERY_DERIVED_FROM               = 14 */\n    NULL,                           /* WINHTTP_QUERY_COST                       = 15 */\n    NULL,                           /* WINHTTP_QUERY_LINK                       = 16 */\n    L\"Pragma\",                      /* WINHTTP_QUERY_PRAGMA                     = 17 */\n    NULL,                           /* WINHTTP_QUERY_VERSION                    = 18 */\n    L\"Status\",                      /* WINHTTP_QUERY_STATUS_CODE                = 19 */\n    NULL,                           /* WINHTTP_QUERY_STATUS_TEXT                = 20 */\n    NULL,                           /* WINHTTP_QUERY_RAW_HEADERS                = 21 */\n    NULL,                           /* WINHTTP_QUERY_RAW_HEADERS_CRLF           = 22 */\n    L\"Connection\",                  /* WINHTTP_QUERY_CONNECTION                 = 23 */\n    L\"Accept\",                      /* WINHTTP_QUERY_ACCEPT                     = 24 */\n    L\"Accept-Charset\",              /* WINHTTP_QUERY_ACCEPT_CHARSET             = 25 */\n    L\"Accept-Encoding\",             /* WINHTTP_QUERY_ACCEPT_ENCODING            = 26 */\n    L\"Accept-Language\",             /* WINHTTP_QUERY_ACCEPT_LANGUAGE            = 27 */\n    L\"Authorization\",               /* WINHTTP_QUERY_AUTHORIZATION              = 28 */\n    L\"Content-Encoding\",            /* WINHTTP_QUERY_CONTENT_ENCODING           = 29 */\n    NULL,                           /* WINHTTP_QUERY_FORWARDED                  = 30 */\n    NULL,                           /* WINHTTP_QUERY_FROM                       = 31 */\n    L\"If-Modified-Since\",           /* WINHTTP_QUERY_IF_MODIFIED_SINCE          = 32 */\n    L\"Location\",                    /* WINHTTP_QUERY_LOCATION                   = 33 */\n    NULL,                           /* WINHTTP_QUERY_ORIG_URI                   = 34 */\n    L\"Referer\",                     /* WINHTTP_QUERY_REFERER                    = 35 */\n    L\"Retry-After\",                 /* WINHTTP_QUERY_RETRY_AFTER                = 36 */\n    L\"Server\",                      /* WINHTTP_QUERY_SERVER                     = 37 */\n    NULL,                           /* WINHTTP_TITLE                            = 38 */\n    L\"User-Agent\",                  /* WINHTTP_QUERY_USER_AGENT                 = 39 */\n    L\"WWW-Authenticate\",            /* WINHTTP_QUERY_WWW_AUTHENTICATE           = 40 */\n    L\"Proxy-Authenticate\",          /* WINHTTP_QUERY_PROXY_AUTHENTICATE         = 41 */\n    L\"Accept-Ranges\",               /* WINHTTP_QUERY_ACCEPT_RANGES              = 42 */\n    L\"Set-Cookie\",                  /* WINHTTP_QUERY_SET_COOKIE                 = 43 */\n    L\"Cookie\",                      /* WINHTTP_QUERY_COOKIE                     = 44 */\n    NULL,                           /* WINHTTP_QUERY_REQUEST_METHOD             = 45 */\n    NULL,                           /* WINHTTP_QUERY_REFRESH                    = 46 */\n    NULL,                           /* WINHTTP_QUERY_CONTENT_DISPOSITION        = 47 */\n    L\"Age\",                         /* WINHTTP_QUERY_AGE                        = 48 */\n    L\"Cache-Control\",               /* WINHTTP_QUERY_CACHE_CONTROL              = 49 */\n    L\"Content-Base\",                /* WINHTTP_QUERY_CONTENT_BASE               = 50 */\n    L\"Content-Location\",            /* WINHTTP_QUERY_CONTENT_LOCATION           = 51 */\n    L\"Content-MD5\",                 /* WINHTTP_QUERY_CONTENT_MD5                = 52 */\n    L\"Content-Range\",               /* WINHTTP_QUERY_CONTENT_RANGE              = 53 */\n    L\"ETag\",                        /* WINHTTP_QUERY_ETAG                       = 54 */\n    L\"Host\",                        /* WINHTTP_QUERY_HOST                       = 55 */\n    L\"If-Match\",                    /* WINHTTP_QUERY_IF_MATCH                   = 56 */\n    L\"If-None-Match\",               /* WINHTTP_QUERY_IF_NONE_MATCH              = 57 */\n    L\"If-Range\",                    /* WINHTTP_QUERY_IF_RANGE                   = 58 */\n    L\"If-Unmodified-Since\",         /* WINHTTP_QUERY_IF_UNMODIFIED_SINCE        = 59 */\n    L\"Max-Forwards\",                /* WINHTTP_QUERY_MAX_FORWARDS               = 60 */\n    L\"Proxy-Authorization\",         /* WINHTTP_QUERY_PROXY_AUTHORIZATION        = 61 */\n    L\"Range\",                       /* WINHTTP_QUERY_RANGE                      = 62 */\n    L\"Transfer-Encoding\",           /* WINHTTP_QUERY_TRANSFER_ENCODING          = 63 */\n    L\"Upgrade\",                     /* WINHTTP_QUERY_UPGRADE                    = 64 */\n    L\"Vary\",                        /* WINHTTP_QUERY_VARY                       = 65 */\n    L\"Via\",                         /* WINHTTP_QUERY_VIA                        = 66 */\n    L\"Warning\",                     /* WINHTTP_QUERY_WARNING                    = 67 */\n    L\"Expect\",                      /* WINHTTP_QUERY_EXPECT                     = 68 */\n    L\"Proxy-Connection\",            /* WINHTTP_QUERY_PROXY_CONNECTION           = 69 */\n    L\"Unless-Modified-Since\",       /* WINHTTP_QUERY_UNLESS_MODIFIED_SINCE      = 70 */\n    NULL,                           /* WINHTTP_QUERY_PROXY_SUPPORT              = 75 */\n    NULL,                           /* WINHTTP_QUERY_AUTHENTICATION_INFO        = 76 */\n    NULL,                           /* WINHTTP_QUERY_PASSPORT_URLS              = 77 */\n    NULL                            /* WINHTTP_QUERY_PASSPORT_CONFIG            = 78 */\n};"
+   }
+  ],
+  "macros": [
+   {
+    "name": "QUERY_MODIFIER_MASK",
+    "start_line": 1046,
+    "end_line": 1047,
+    "code": "#define QUERY_MODIFIER_MASK (WINHTTP_QUERY_FLAG_REQUEST_HEADERS | WINHTTP_QUERY_FLAG_SYSTEMTIME | WINHTTP_QUERY_FLAG_NUMBER \\\n                             | WINHTTP_QUERY_FLAG_NUMBER64)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "grab_object",
+    "file": "dlls/winhttp/handle.c",
+    "start_line": 55
+   },
+   {
+    "name": "release_object",
+    "file": "dlls/winhttp/handle.c",
+    "start_line": 71
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "WinHttpTimeToSystemTime",
+    "impl": [
+     "dlls/winhttp/session.c:2821"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "wcstoul",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:716"
+    ]
+   },
+   {
+    "name": "wcstoull",
+    "module": "ucrtbase",
+    "impl": [
+     "dlls/msvcrt/wcs.c:2873"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "debugstr_w",
+   "debugstr_wn",
+   "lstrcatW",
+   "lstrcpyW",
+   "lstrlenW",
+   "swprintf",
+   "wcsicmp",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "winhttp.WinHttpQueryHeaders",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "WinHTTP",
+   "header": "winhttp.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 33,
+   "body": 31,
+   "code": 19
+  },
+  "cyclomatic": 6,
+  "return_type": "BOOL",
+  "n_params": 6,
+  "tests": {
+   "n_tests_own": 22,
+   "n_tests": 22,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/winhttp/tests/winhttp.c::do_request",
+    "dlls/winhttp/tests/winhttp.c::status_callback",
+    "dlls/winhttp/tests/winhttp.c::test_WinHttpAddHeaders",
+    "dlls/winhttp/tests/winhttp.c::test_WinHttpSendRequest",
+    "dlls/winhttp/tests/winhttp.c::test_bad_header",
+    "dlls/winhttp/tests/winhttp.c::test_basic_authentication",
+    "dlls/winhttp/tests/winhttp.c::test_basic_request",
+    "dlls/winhttp/tests/winhttp.c::test_chunked_read",
+    "dlls/winhttp/tests/winhttp.c::test_connection_cache",
+    "dlls/winhttp/tests/winhttp.c::test_cookies",
+    "dlls/winhttp/tests/winhttp.c::test_decompression",
+    "dlls/winhttp/tests/winhttp.c::test_head_request",
+    "dlls/winhttp/tests/winhttp.c::test_large_data_authentication",
+    "dlls/winhttp/tests/winhttp.c::test_multi_authentication",
+    "dlls/winhttp/tests/winhttp.c::test_no_content",
+    "dlls/winhttp/tests/winhttp.c::test_no_headers",
+    "dlls/winhttp/tests/winhttp.c::test_not_modified",
+    "dlls/winhttp/tests/winhttp.c::test_passport_auth",
+    "dlls/winhttp/tests/winhttp.c::test_redirect",
+    "dlls/winhttp/tests/winhttp.c::test_request_parameter_defaults",
+    "dlls/winhttp/tests/winhttp.c::test_secure_connection",
+    "dlls/winhttp/tests/winhttp.c::test_websocket"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winhttp/nf-winhttp-winhttpqueryheaders",
+   "source": "win32",
+   "description": "The WinHttpQueryHeaders function retrieves header information associated with an HTTP request.",
+   "min_windows": "Windows XP, Windows 2000 Professional with SP3 [desktop apps only]",
+   "documented_dll": "Winhttp.dll"
+  },
+  "exports": [
+   "winhttp.WinHttpQueryHeaders"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

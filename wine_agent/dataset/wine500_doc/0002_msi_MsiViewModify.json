@@ -1,0 +1,157 @@
+{
+ "id": "0002",
+ "function": {
+  "name": "MsiViewModify",
+  "export_name": "MsiViewModify",
+  "module": "msi",
+  "source_module": "msi",
+  "exported_by": [
+   "msi"
+  ],
+  "side": "PE",
+  "file": "dlls/msi/msiquery.c",
+  "start_line": 715,
+  "end_line": 763,
+  "body_lines": 46,
+  "signature": "UINT WINAPI MsiViewModify( MSIHANDLE hView, MSIMODIFY eModifyMode, MSIHANDLE hRecord )",
+  "header_comment": null,
+  "code": "UINT WINAPI MsiViewModify( MSIHANDLE hView, MSIMODIFY eModifyMode, MSIHANDLE hRecord )\n{\n    MSIQUERY *query = NULL;\n    MSIRECORD *rec = NULL;\n    UINT r = ERROR_FUNCTION_FAILED;\n\n    TRACE( \"%lu, %#x, %lu\\n\", hView, eModifyMode, hRecord );\n\n    rec = msihandle2msiinfo( hRecord, MSIHANDLETYPE_RECORD );\n\n    if (!rec)\n        return ERROR_INVALID_HANDLE;\n\n    query = msihandle2msiinfo( hView, MSIHANDLETYPE_VIEW );\n    if (!query)\n    {\n        struct wire_record *wire_refreshed = NULL;\n        MSIHANDLE remote;\n\n        if (!(remote = msi_get_remote(hView)))\n            return ERROR_INVALID_HANDLE;\n\n        __TRY\n        {\n            r = remote_ViewModify(remote, eModifyMode,\n                (struct wire_record *)&rec->count, &wire_refreshed);\n        }\n        __EXCEPT(rpc_filter)\n        {\n            r = GetExceptionCode();\n        }\n        __ENDTRY\n\n        if (!r && (eModifyMode == MSIMODIFY_REFRESH || eModifyMode == MSIMODIFY_SEEK))\n        {\n            r = copy_remote_record(wire_refreshed, hRecord);\n            free_remote_record(wire_refreshed);\n        }\n\n        msiobj_release(&rec->hdr);\n        return r;\n    }\n\n    r = MSI_ViewModify( query, eModifyMode, rec );\n\n    msiobj_release( &query->hdr );\n    msiobj_release(&rec->hdr);\n    return r;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"msi.h\"",
+   "#include \"msiquery.h\"",
+   "#include \"objbase.h\"",
+   "#include \"objidl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"msipriv.h\"",
+   "#include \"query.h\"",
+   "#include \"winemsi.h\"",
+   "#include \"initguid.h\""
+  ],
+  "resolution": [
+   "msi!MsiViewModify [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/msi/tests/custom.c",
+   "dlls/msi/tests/db.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "msiquery",
+   "path": "sdk-api-src/content/msiquery/nf-msiquery-msiviewmodify.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/msiquery/nf-msiquery-msiviewmodify",
+   "documented_name": "msiviewmodify",
+   "file": "docs/0002_sdk-api_nf-msiquery-msiviewmodify.md",
+   "text": "---\nUID: NF:msiquery.MsiViewModify\ntitle: MsiViewModify function (msiquery.h)\ndescription: The MsiViewModify function updates a fetched record.\nhelpviewer_keywords: [\"MSIMODIFY_ASSIGN\",\"MSIMODIFY_DELETE\",\"MSIMODIFY_INSERT\",\"MSIMODIFY_INSERT_TEMPORARY\",\"MSIMODIFY_MERGE\",\"MSIMODIFY_REFRESH\",\"MSIMODIFY_REPLACE\",\"MSIMODIFY_SEEK\",\"MSIMODIFY_UPDATE\",\"MSIMODIFY_VALIDATE\",\"MSIMODIFY_VALIDATE_DELETE\",\"MSIMODIFY_VALIDATE_FIELD\",\"MSIMODIFY_VALIDATE_NEW\",\"MsiViewModify\",\"MsiViewModify function\",\"_msi_msiviewmodify\",\"msiquery/MsiViewModify\",\"setup.msiviewmodify\"]\nold-location: setup\\msiviewmodify.htm\ntech.root: setup\nms.assetid: 312c3e62-4c08-447b-951f-d8d944daff3e\nms.date: 12/05/2018\nms.keywords: MSIMODIFY_ASSIGN, MSIMODIFY_DELETE, MSIMODIFY_INSERT, MSIMODIFY_INSERT_TEMPORARY, MSIMODIFY_MERGE, MSIMODIFY_REFRESH, MSIMODIFY_REPLACE, MSIMODIFY_SEEK, MSIMODIFY_UPDATE, MSIMODIFY_VALIDATE, MSIMODIFY_VALIDATE_DELETE, MSIMODIFY_VALIDATE_FIELD, MSIMODIFY_VALIDATE_NEW, MsiViewModify, MsiViewModify function, _msi_msiviewmodify, msiquery/MsiViewModify, setup.msiviewmodify\nreq.header: msiquery.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Installer 5.0 on Windows Server 2012, Windows 8, Windows Server 2008 R2 or Windows 7. Windows Installer 4.0 or Windows Installer 4.5 on   Windows Server 2008 or Windows Vista. Windows Installer on Windows Server 2003 or Windows XP\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Msi.lib\nreq.dll: Msi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - MsiViewModify\n - msiquery/MsiViewModify\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-msi-misc-l1-1-0.dll\n - Msi.dll\napi_name:\n - MsiViewModify\n---\n\n# MsiViewModify function\n\n\n## -description\n\nThe \n<b>MsiViewModify</b> function updates a fetched record.\n\n## -parameters\n\n### -param hView [in]\n\nHandle to a view.\n\n### -param eModifyMode [in]\n\nSpecifies the modify mode. This parameter can be one of the following values. \n\n\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MSIMODIFY_SEEK\"></a><a id=\"msimodify_seek\"></a><dl>\n<dt><b>MSIMODIFY_SEEK</b></dt>\n<dt>-1</dt>\n</dl>\n</td>\n<td width=\"60%\">\nRefreshes the information in the supplied record without changing the position in the result set and without affecting subsequent fetch operations. The record may then be used for subsequent Update, Delete, and Refresh. All primary key columns of the table must be in the query and the record must have at least as many fields as the query. Seek cannot be used with multi-table queries. This mode cannot be used with a view containing joins. See also the remarks.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MSIMODIFY_REFRESH\"></a><a id=\"msimodify_refresh\"></a><dl>\n<dt><b>MSIMODIFY_REFRESH</b></dt>\n<dt>0</dt>\n</dl>\n</td>\n<td width=\"60%\">\nRefreshes the information in the record. Must first call \n<a href=\"/windows/desktop/api/msiquery/nf-msiquery-msiviewfetch\">MsiViewFetch</a> with the same record. Fails for a deleted row. Works with read-write and read-only records.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MSIMODIFY_INSERT\"></a><a id=\"msimodify_insert\"></a><dl>\n<dt><b>MSIMODIFY_INSERT</b></dt>\n<dt>1</dt>\n</dl>\n</td>\n<td width=\"60%\">\nInserts a record. Fails if a row with the same primary keys exists. Fails with a read-only database. This mode cannot be used with a view containing joins.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MSIMODIFY_UPDATE\"></a><a id=\"msimodify_update\"></a><dl>\n<dt><b>MSIMODIFY_UPDATE</b></dt>\n<dt>2</dt>\n</dl>\n</td>\n<td width=\"60%\">\nUpdates an existing record. Nonprimary keys only. Must first call \n<a href=\"/windows/desktop/api/msiquery/nf-msiquery-msiviewfetch\">MsiViewFetch</a>. Fails with a deleted record. Works only with read-write records.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MSIMODIFY_ASSIGN\"></a><a id=\"msimodify_assign\"></a><dl>\n<dt><b>MSIMODIFY_ASSIGN</b></dt>\n<dt>3</dt>\n</dl>\n</td>\n<td width=\"60%\">\nWrites current data in the cursor to a table row. Updates record if the primary keys match an existing row and inserts if they do not match. Fails with a read-only database. This mode cannot be used with a view containing joins.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MSIMODIFY_REPLACE\"></a><a id=\"msimodify_replace\"></a><dl>\n<dt><b>MSIMODIFY_REPLACE</b></dt>\n<dt>4</dt>\n</dl>\n</td>\n<td width=\"60%\">\nUpdates or deletes and inserts a record into a table. Must first call \n<a href=\"/windows/desktop/api/msiquery/nf-msiquery-msiviewfetch\">MsiViewFetch</a> with the same record. Updates record if the primary keys are unchanged. Deletes old row and inserts new if primary keys have changed. Fails with a read-only database. This mode cannot be used with a view containing joins.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MSIMODIFY_MERGE\"></a><a id=\"msimodify_merge\"></a><dl>\n<dt><b>MSIMODIFY_MERGE</b></dt>\n<dt>5</dt>\n</dl>\n</td>\n<td width=\"60%\">\nInserts or validates a record in a table. Inserts if primary keys do not match any row and validates if there is a match. Fails if the record does not match the data in the table. Fails if there is a record with a duplicate key that is not identical. Works only with read-write records. This mode cannot be used with a view containing joins.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MSIMODIFY_DELETE\"></a><a id=\"msimodify_delete\"></a><dl>\n<dt><b>MSIMODIFY_DELETE</b></dt>\n<dt>6</dt>\n</dl>\n</td>\n<td width=\"60%\">\nRemove a row from the table. You must first call the \n<a href=\"/windows/desktop/api/msiquery/nf-msiquery-msiviewfetch\">MsiViewFetch</a> function with the same record. Fails if the row has been deleted. Works only with read-write records. This mode cannot be used with a view containing joins.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MSIMODIFY_INSERT_TEMPORARY\"></a><a id=\"msimodify_insert_temporary\"></a><dl>\n<dt><b>MSIMODIFY_INSERT_TEMPORARY</b></dt>\n<dt>7</dt>\n</dl>\n</td>\n<td width=\"60%\">\nInserts a temporary record. The information is not persistent. Fails if a row with the same primary key exists. Works only with read-write records. This mode cannot be used with a view containing joins.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MSIMODIFY_VALIDATE\"></a><a id=\"msimodify_validate\"></a><dl>\n<dt><b>MSIMODIFY_VALIDATE</b></dt>\n<dt>8</dt>\n</dl>\n</td>\n<td width=\"60%\">\nValidates a record. Does not validate across joins. You must first call the \n<a href=\"/windows/desktop/api/msiquery/nf-msiquery-msiviewfetch\">MsiViewFetch</a> function with the same record. Obtain validation errors with \n<a href=\"/windows/desktop/api/msiquery/nf-msiquery-msiviewgeterrora\">MsiViewGetError</a>. Works with read-write and read-only records. This mode cannot be used with a view containing joins.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MSIMODIFY_VALIDATE_NEW\"></a><a id=\"msimodify_validate_new\"></a><dl>\n<dt><b>MSIMODIFY_VALIDATE_NEW</b></dt>\n<dt>9</dt>\n</dl>\n</td>\n<td width=\"60%\">\nValidate a new record. Does not validate across joins. Checks for duplicate keys. Obtain validation errors by calling \n<a href=\"/windows/desktop/api/msiquery/nf-msiquery-msiviewgeterrora\">MsiViewGetError</a>. Works with read-write and read-only records. This mode cannot be used with a view containing joins.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MSIMODIFY_VALIDATE_FIELD\"></a><a id=\"msimodify_validate_field\"></a><dl>\n<dt><b>MSIMODIFY_VALIDATE_FIELD</b></dt>\n<dt>10</dt>\n</dl>\n</td>\n<td width=\"60%\">\nValidates fields of a fetched or new record. Can validate one or more fields of an incomplete record. Obtain validation errors by calling \n<a href=\"/windows/desktop/api/msiquery/nf-msiquery-msiviewgeterrora\">MsiViewGetError</a>. Works with read-write and read-only records. This mode cannot be used with a view containing joins.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"MSIMODIFY_VALIDATE_DELETE\"></a><a id=\"msimodify_validate_delete\"></a><dl>\n<dt><b>MSIMODIFY_VALIDATE_DELETE</b></dt>\n<dt>11</dt>\n</dl>\n</td>\n<td width=\"60%\">\nValidates a record that will be deleted later. You must first call \n<a href=\"/windows/desktop/api/msiquery/nf-msiquery-msiviewfetch\">MsiViewFetch</a>. Fails if another row refers to the primary keys of this row. Validation does not check for the existence of the primary keys of this row in properties or strings. Does not check if a column is a foreign key to multiple tables. Obtain validation errors by calling \n<a href=\"/windows/desktop/api/msiquery/nf-msiquery-msiviewgeterrora\">MsiViewGetError</a>. Works with read-write and read-only records. This mode cannot be used with a view that contains joins.\n\n</td>\n</tr>\n</table>\n\n### -param hRecord [in]\n\nHandle to the record to modify.\n\n## -returns\n\nThe \n<b>MsiViewModify</b> function returns the following values:\n\nNote that in low memory situations, this function can raise a STATUS_NO_MEMORY exception.\n\n## -remarks\n\nThe MSIMODIFY_VALIDATE, MSIMODIFY_VALIDATE_NEW, MSIMODIFY_VALIDATE_FIELD, and MSIMODIFY_VALIDATE_DELETE values of the \n<b>MsiViewModify</b> function do not perform actual updates; they ensure that the data in the record is valid. Use of these validation enumerations requires that the database contains the \n<a href=\"/windows/desktop/Msi/-validation-table\">_Validation table</a>.\n\nYou can call MSIMODIFY_UPDATE or MSIMODIFY_DELETE with a record immediately after using MSIMODIFY_INSERT, MSIMODIFY_INSERT_TEMPORARY, or MSIMODIFY_SEEK provided you have NOT modified the 0th field of the inserted or sought record.\n\nTo execute any SQL statement, a view must be created. However, a view that does not create a result set, such as CREATE TABLE, or INSERT INTO, cannot be used with \n<b>MsiViewModify</b> to update tables though the view.\n\nYou cannot fetch a record that contains binary data from one database and then use that record to insert the data into another database. To move binary data from one database to another, you should export the data to a file and then import it into the new database using a query and the \n<a href=\"/windows/desktop/api/msiquery/nf-msiquery-msirecordsetstreama\">MsiRecordSetStream</a>. This ensures that each database has its own copy of the binary data.\n\nNote that custom actions can only add, modify, or remove temporary rows, columns, or tables from a database. Custom actions cannot modify persistent data in a database, such as data that is a part of the database stored on disk. For more information, see \n<a href=\"/windows/desktop/Msi/accessing-the-current-installer-session-from-inside-a-custom-action\">Accessing the Current Installer Session from Inside a Custom Action</a>.\n\nIf the function fails, you can obtain extended error information by using <a href=\"/windows/desktop/api/msiquery/nf-msiquery-msigetlasterrorrecord\">MsiGetLastErrorRecord</a>.\n\n## -see-also\n\n<a href=\"/windows/desktop/Msi/database-functions\">General Database Access Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "MSI_ViewModify",
+   "file": "dlls/msi/msiquery.c",
+   "start_line": 693,
+   "end_line": 713,
+   "static": false,
+   "called_from": [
+    "MsiViewModify"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/msi/database.c:715",
+    "dlls/msi/database.c:727",
+    "dlls/msi/patch.c:529",
+    "dlls/msi/patch.c:797"
+   ],
+   "signature": "UINT MSI_ViewModify( MSIQUERY *query, MSIMODIFY mode, MSIRECORD *rec )",
+   "code": "UINT MSI_ViewModify( MSIQUERY *query, MSIMODIFY mode, MSIRECORD *rec )\n{\n    MSIVIEW *view = NULL;\n    UINT r;\n\n    if ( !query || !rec )\n        return ERROR_INVALID_HANDLE;\n\n    view = query->view;\n    if ( !view  || !view->ops->modify)\n        return ERROR_FUNCTION_FAILED;\n\n    if ( mode == MSIMODIFY_UPDATE && rec->cookie != (UINT64)(ULONG_PTR)query )\n        return ERROR_FUNCTION_FAILED;\n\n    r = view->ops->modify( view, mode, rec, query->row - 1 );\n    if (mode == MSIMODIFY_DELETE && r == ERROR_SUCCESS)\n        query->row--;\n\n    return r;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 42,
+    "end_line": 42,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(msi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "copy_remote_record",
+    "file": "dlls/msi/record.c",
+    "start_line": 1052
+   },
+   {
+    "name": "free_remote_record",
+    "file": "dlls/msi/record.c",
+    "start_line": 1153
+   },
+   {
+    "name": "msi_get_remote",
+    "file": "dlls/msi/handle.c",
+    "start_line": 183
+   },
+   {
+    "name": "msihandle2msiinfo",
+    "file": "dlls/msi/handle.c",
+    "start_line": 158
+   },
+   {
+    "name": "msiobj_release",
+    "file": "dlls/msi/handle.c",
+    "start_line": 241
+   },
+   {
+    "name": "rpc_filter",
+    "file": "dlls/msi/custom.c",
+    "start_line": 77
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [],
+  "header_inline": [
+   "__wine_pop_frame",
+   "__wine_push_frame",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "__wine_exception_handler",
+   "__wine_setjmpex",
+   "remote_ViewModify"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "view->ops->modify",
+    "in_function": "MSI_ViewModify",
+    "at": "dlls/msi/msiquery.c:708",
+    "candidates": []
+   }
+  ]
+ }
+}

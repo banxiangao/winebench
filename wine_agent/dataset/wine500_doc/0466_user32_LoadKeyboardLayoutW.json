@@ -1,0 +1,155 @@
+{
+ "id": "0466",
+ "function": {
+  "name": "LoadKeyboardLayoutW",
+  "export_name": "LoadKeyboardLayoutW",
+  "module": "user32",
+  "source_module": "user32",
+  "exported_by": [
+   "unicows",
+   "user32"
+  ],
+  "side": "PE",
+  "file": "dlls/user32/input.c",
+  "start_line": 379,
+  "end_line": 413,
+  "body_lines": 32,
+  "signature": "HKL WINAPI LoadKeyboardLayoutW( const WCHAR *name, UINT flags )",
+  "header_comment": "/***********************************************************************\n *\t\tLoadKeyboardLayoutW (USER32.@)\n */",
+  "code": "HKL WINAPI LoadKeyboardLayoutW( const WCHAR *name, UINT flags )\n{\n    WCHAR layout_path[MAX_PATH], value[5];\n    LCID locale = GetUserDefaultLCID();\n    DWORD id, value_size, tmp;\n    HKEY hkey;\n    HKL layout;\n\n    FIXME_(keyboard)( \"name %s, flags %x, semi-stub!\\n\", debugstr_w( name ), flags );\n\n    tmp = wcstoul( name, NULL, 16 );\n    if (HIWORD( tmp )) layout = UlongToHandle( tmp );\n    else layout = UlongToHandle( MAKELONG( LOWORD( tmp ), LOWORD( tmp ) ) );\n\n    if (!((UINT_PTR)layout >> 28)) id = LOWORD( tmp );\n    else id = HIWORD( layout ); /* IME or aliased layout */\n\n    wcscpy( layout_path, L\"System\\\\CurrentControlSet\\\\Control\\\\Keyboard Layouts\\\\\" );\n    wcscat( layout_path, name );\n\n    if (!RegOpenKeyW( HKEY_LOCAL_MACHINE, layout_path, &hkey ))\n    {\n        value_size = sizeof(value);\n        if (!RegGetValueW( hkey, NULL, L\"Layout Id\", RRF_RT_REG_SZ, NULL, (void *)&value, &value_size ))\n            id = 0xf000 | (wcstoul( value, NULL, 16 ) & 0xfff);\n\n        RegCloseKey( hkey );\n    }\n\n    layout = UlongToHandle( MAKELONG( locale, id ) );\n    if ((flags & KLF_ACTIVATE) && NtUserActivateKeyboardLayout( layout, 0 )) return layout;\n\n    /* FIXME: semi-stub: returning default layout */\n    return get_locale_kbd_layout();\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include \"user_private.h\"",
+   "#include \"dbt.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/plugplay.h\""
+  ],
+  "resolution": [
+   "user32!LoadKeyboardLayoutW [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/input.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-loadkeyboardlayoutw.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-loadkeyboardlayoutw",
+   "documented_name": "loadkeyboardlayoutw",
+   "file": "docs/0466_sdk-api_nf-winuser-loadkeyboardlayoutw.md",
+   "text": "---\nUID: NF:winuser.LoadKeyboardLayoutW\ntitle: LoadKeyboardLayoutW function (winuser.h)\ndescription: Loads a new input locale identifier (formerly called the keyboard layout) into the system. (Unicode)\nhelpviewer_keywords: [\"KLF_ACTIVATE\", \"KLF_NOTELLSHELL\", \"KLF_REORDER\", \"KLF_REPLACELANG\", \"KLF_SETFORPROCESS\", \"KLF_SUBSTITUTE_OK\", \"KLF_UNLOADPREVIOUS\", \"LoadKeyboardLayout\", \"LoadKeyboardLayout function [Keyboard and Mouse Input]\", \"LoadKeyboardLayoutW\", \"_win32_LoadKeyboardLayout\", \"_win32_loadkeyboardlayout_cpp\", \"inputdev.loadkeyboardlayout\", \"winui._win32_loadkeyboardlayout\", \"winuser/LoadKeyboardLayout\", \"winuser/LoadKeyboardLayoutW\"]\nold-location: inputdev\\loadkeyboardlayout.htm\ntech.root: inputdev\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\userinput\\keyboardinput\\keyboardinputreference\\keyboardinputfunctions\\loadkeyboardlayout.htm\nms.date: 12/05/2018\nms.keywords: KLF_ACTIVATE, KLF_NOTELLSHELL, KLF_REORDER, KLF_REPLACELANG, KLF_SETFORPROCESS, KLF_SUBSTITUTE_OK, KLF_UNLOADPREVIOUS, LoadKeyboardLayout, LoadKeyboardLayout function [Keyboard and Mouse Input], LoadKeyboardLayoutA, LoadKeyboardLayoutW, _win32_LoadKeyboardLayout, _win32_loadkeyboardlayout_cpp, inputdev.loadkeyboardlayout, winui._win32_loadkeyboardlayout, winuser/LoadKeyboardLayout, winuser/LoadKeyboardLayoutA, winuser/LoadKeyboardLayoutW\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: LoadKeyboardLayoutW (Unicode) and LoadKeyboardLayoutA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - LoadKeyboardLayoutW\n - winuser/LoadKeyboardLayoutW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-ntuser-keyboard-l1-3-2.dll\n - ext-ms-win-ntuser-keyboard-l1-3-1.dll\n - ext-ms-win-ntuser-keyboard-l1-3-0.dll\n - User32.dll\napi_name:\n - LoadKeyboardLayout\n - LoadKeyboardLayoutA\n - LoadKeyboardLayoutW\n---\n\n# LoadKeyboardLayoutW function\n\n\n## -description\n\nLoads a new input locale identifier (formerly called the keyboard layout) into the system.\n\n<b>Prior to Windows 8:</b> Several input locale identifiers can be loaded at a time, but only one per process is active at a time. Loading multiple input locale identifiers makes it possible to rapidly switch between them.\n\n<b>Beginning in  Windows 8:</b> The input locale identifier is loaded for the entire system. This function has no effect if the current process does not own the window with keyboard focus.\n\n## -parameters\n\n### -param pwszKLID [in]\n\nType: <b>LPCTSTR</b>\n\nThe name of the input locale identifier to load. This name is a string composed of the hexadecimal value of the <a href=\"/windows/desktop/Intl/language-identifiers\">Language Identifier</a> (low word) and a device identifier (high word). For example, U.S. English has a language identifier of 0x0409, so the primary U.S. English layout is named \"00000409\". Variants of U.S. English layout (such as the Dvorak layout) are named \"00010409\", \"00020409\", and so on. \n\nFor a list of the input layouts that are supplied with Windows, see [Keyboard Identifiers and Input Method Editors for Windows](/windows-hardware/manufacture/desktop/windows-language-pack-default-values).\n\n### -param Flags [in]\n\nType: <b>UINT</b>\n\nSpecifies how the input locale identifier is to be loaded. This parameter can be one of the following values. \n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"KLF_ACTIVATE\"></a><a id=\"klf_activate\"></a><dl>\n<dt><b>KLF_ACTIVATE</b></dt>\n<dt>0x00000001</dt>\n</dl>\n</td>\n<td width=\"60%\">\n<b>Prior to Windows 8:</b> If the specified input locale identifier is not already loaded, the function loads and activates the input locale identifier for the current thread.\n\n<b>Beginning in  Windows 8:</b> If the specified input locale identifier is not already loaded, the function loads and activates the input locale identifier for the system.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"KLF_NOTELLSHELL\"></a><a id=\"klf_notellshell\"></a><dl>\n<dt><b>KLF_NOTELLSHELL</b></dt>\n<dt>0x00000080</dt>\n</dl>\n</td>\n<td width=\"60%\">\n<b>Prior to Windows 8:</b> Prevents a <a href=\"/windows/win32/winmsg/shellproc\">ShellProc</a> hook procedure from receiving an <b>HSHELL_LANGUAGE</b> hook code when the new input locale identifier is loaded. This value is typically used when an application loads multiple input locale identifiers one after another. Applying this value to all but the last input locale identifier delays the shell's processing until all input locale identifiers have been added.\n\n<b>Beginning in  Windows 8:</b> In this scenario, the last input locale identifier is set for the entire system.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"KLF_REORDER\"></a><a id=\"klf_reorder\"></a><dl>\n<dt><b>KLF_REORDER</b></dt>\n<dt>0x00000008</dt>\n</dl>\n</td>\n<td width=\"60%\">\n<b>Prior to Windows 8:</b> Moves the specified input locale identifier to the head of the input locale identifier list, making that locale identifier the active locale identifier for the current thread. This value reorders the input locale identifier list even if <b>KLF_ACTIVATE</b> is not provided.\n\n<b>Beginning in  Windows 8:</b> Moves the specified input locale identifier to the head of the input locale identifier list, making that locale identifier the active locale identifier for the system. This value reorders the input locale identifier list even if <b>KLF_ACTIVATE</b> is not provided.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"KLF_REPLACELANG\"></a><a id=\"klf_replacelang\"></a><dl>\n<dt><b>KLF_REPLACELANG</b></dt>\n<dt>0x00000010</dt>\n</dl>\n</td>\n<td width=\"60%\">\nIf the new input locale identifier has the same language identifier as a current input locale identifier, the new input locale identifier replaces the current one as the input locale identifier for that language. If this value is not provided and the input locale identifiers have the same language identifiers, the current input locale identifier is not replaced and the function returns <b>NULL</b>. \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"KLF_SUBSTITUTE_OK\"></a><a id=\"klf_substitute_ok\"></a><dl>\n<dt><b>KLF_SUBSTITUTE_OK</b></dt>\n<dt>0x00000002</dt>\n</dl>\n</td>\n<td width=\"60%\">\nSubstitutes the specified input locale identifier with another locale preferred by the user. The system starts with this flag set, and it is recommended that your application always use this flag. The substitution occurs only if the registry key <b>HKEY_CURRENT_USER\\Keyboard Layout\\Substitutes</b> explicitly defines a substitution locale. For example, if the key includes the value name \"00000409\" with value \"00010409\", loading the US layout (\"00000409\") causes the United States-Dvorak layout (\"00010409\") to be loaded instead. The system uses <b>KLF_SUBSTITUTE_OK</b> when booting, and it is recommended that all applications use this value when loading input locale identifiers to ensure that the user's preference is selected.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"KLF_SETFORPROCESS\"></a><a id=\"klf_setforprocess\"></a><dl>\n<dt><b>KLF_SETFORPROCESS</b></dt>\n<dt>0x00000100</dt>\n</dl>\n</td>\n<td width=\"60%\">\n<b>Prior to Windows 8:</b> This flag is valid only with <b>KLF_ACTIVATE</b>. Activates the specified input locale identifier for the entire process and sends the <a href=\"/windows/desktop/winmsg/wm-inputlangchange\">WM_INPUTLANGCHANGE</a> message to the current thread's Focus or Active window. Typically, <b>LoadKeyboardLayout</b> activates an input locale identifier only for the current thread.\n\n<b>Beginning in  Windows 8:</b> This flag is not used. <b>LoadKeyboardLayout</b> always activates an input locale identifier for the entire system if the current process owns the window with keyboard focus.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"KLF_UNLOADPREVIOUS\"></a><a id=\"klf_unloadprevious\"></a><dl>\n<dt><b>KLF_UNLOADPREVIOUS</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThis flag is unsupported. Use the <a href=\"/windows/desktop/api/winuser/nf-winuser-unloadkeyboardlayout\">UnloadKeyboardLayout</a> function instead.\n\n</td>\n</tr>\n</table>\n\n## -returns\n\nType: <b>HKL</b>\n\nIf the function succeeds, the return value is the input locale identifier corresponding to the name specified in <i>pwszKLID</i>. If no matching locale is available, the return value is the default language of the system.\n\nIf the function fails, the return value is NULL. This can occur if the layout library is loaded from the application directory.\n\nTo get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThe input locale identifier is a broader concept than a keyboard layout, since it can also encompass a speech-to-text converter, an Input Method Editor (IME), or any other form of input. \n\nAn application can and will typically load the default input locale identifier or IME for a language and can do so by specifying only a string version of the language identifier. If an application wants to load a specific locale or IME, it should read the registry to determine the specific input locale identifier to pass to <b>LoadKeyboardLayout</b>. In this case, a request to activate the default input locale identifier for a locale will activate the first matching one. A specific IME should be activated using an explicit input locale identifier returned from <a href=\"/windows/desktop/api/winuser/nf-winuser-getkeyboardlayout\">GetKeyboardLayout</a> or <b>LoadKeyboardLayout</b>.\n\n<b>Prior to Windows 8:</b> This function only affects the layout for the current process or thread.\n\n<b>Beginning in  Windows 8:</b> This function affects the layout for the entire system.\n\n> [!NOTE]\n> The winuser.h header defines LoadKeyboardLayout as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-activatekeyboardlayout\">ActivateKeyboardLayout</a>\n\n\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-getkeyboardlayoutnamea\">GetKeyboardLayoutName</a>\n\n\n\n<a href=\"/windows/desktop/inputdev/keyboard-input\">Keyboard Input</a>\n\n\n\n<a href=\"/windows/desktop/api/winnt/nf-winnt-makelangid\">MAKELANGID</a>\n\n\n\n<b>Other Resources</b>\n\n\n\n<b>Reference</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-unloadkeyboardlayout\">UnloadKeyboardLayout</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_locale_kbd_layout",
+   "file": "dlls/user32/input.c",
+   "start_line": 38,
+   "end_line": 56,
+   "static": true,
+   "called_from": [
+    "LoadKeyboardLayoutW"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static HKL get_locale_kbd_layout(void)",
+   "code": "static HKL get_locale_kbd_layout(void)\n{\n    ULONG_PTR layout;\n\n    /* FIXME:\n     *\n     * layout = main_key_tab[kbd_layout].lcid;\n     *\n     * Winword uses return value of GetKeyboardLayout as a codepage\n     * to translate ANSI keyboard messages to unicode. But we have\n     * a problem with it: for instance Polish keyboard layout is\n     * identical to the US one, and therefore instead of the Polish\n     * locale id we return the US one.\n     */\n\n    layout = GetUserDefaultLCID();\n    layout = MAKELONG( layout, layout );\n    return (HKL)layout;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch_keyboard",
+    "type": "struct __wine_debug_channel",
+    "static": true,
+    "start_line": 33,
+    "end_line": 33,
+    "code": "WINE_DECLARE_DEBUG_CHANNEL(keyboard);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "GetUserDefaultLCID",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:6461"
+    ]
+   },
+   {
+    "name": "NtUserActivateKeyboardLayout",
+    "module": "win32u",
+    "impl": [
+     "dlls/win32u/input.c:1440"
+    ]
+   },
+   {
+    "name": "RegCloseKey",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1129"
+    ]
+   },
+   {
+    "name": "RegGetValueW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1900"
+    ]
+   },
+   {
+    "name": "RegOpenKeyW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/registry.c:126"
+    ]
+   },
+   {
+    "name": "wcscat",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:226"
+    ]
+   },
+   {
+    "name": "wcscpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:184"
+    ]
+   },
+   {
+    "name": "wcstoul",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:716"
+    ]
+   }
+  ],
+  "header_inline": [
+   "ULongToHandle",
+   "debugstr_w",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

@@ -1,0 +1,323 @@
+{
+ "id": "0026",
+ "function": {
+  "name": "VerQueryValueA",
+  "export_name": "VerQueryValueA",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernelbase",
+   "version"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/version.c",
+  "start_line": 1119,
+  "end_line": 1170,
+  "body_lines": 49,
+  "signature": "BOOL WINAPI VerQueryValueA( LPCVOID pBlock, LPCSTR lpSubBlock, LPVOID *lplpBuffer, PUINT puLen )",
+  "header_comment": "/***********************************************************************\n *           VerQueryValueA              (kernelbase.@)\n */",
+  "code": "BOOL WINAPI VerQueryValueA( LPCVOID pBlock, LPCSTR lpSubBlock,\n                               LPVOID *lplpBuffer, PUINT puLen )\n{\n    static const char rootA[] = \"\\\\\";\n    const VS_VERSION_INFO_STRUCT16 *info = pBlock;\n\n    TRACE(\"(%p,%s,%p,%p)\\n\",\n                pBlock, debugstr_a(lpSubBlock), lplpBuffer, puLen );\n\n     if (!pBlock)\n        return FALSE;\n\n    if (lpSubBlock == NULL || lpSubBlock[0] == '\\0')\n        lpSubBlock = rootA;\n\n    if ( !VersionInfoIs16( info ) )\n    {\n        BOOL ret, isText;\n        INT len;\n        LPWSTR lpSubBlockW;\n        UINT value_len;\n\n        len  = MultiByteToWideChar(CP_ACP, 0, lpSubBlock, -1, NULL, 0);\n        lpSubBlockW = HeapAlloc(GetProcessHeap(), 0, len * sizeof(WCHAR));\n\n        if (!lpSubBlockW)\n            return FALSE;\n\n        MultiByteToWideChar(CP_ACP, 0, lpSubBlock, -1, lpSubBlockW, len);\n\n        ret = VersionInfo32_QueryValue(pBlock, lpSubBlockW, lplpBuffer, &value_len, &isText);\n        if (puLen) *puLen = value_len;\n\n        HeapFree(GetProcessHeap(), 0, lpSubBlockW);\n\n        if (ret && isText)\n        {\n            /* Set lpBuffer so it points to the 'empty' area where we store\n             * the converted strings\n             */\n            LPSTR lpBufferA = (LPSTR)pBlock + info->wLength + 4;\n            DWORD pos = (LPCSTR)*lplpBuffer - (LPCSTR)pBlock;\n            len = WideCharToMultiByte(CP_ACP, 0, *lplpBuffer, value_len,\n                                      lpBufferA + pos, info->wLength - pos, NULL, NULL);\n            *lplpBuffer = lpBufferA + pos;\n            if (puLen) *puLen = len;\n        }\n        return ret;\n    }\n\n    return VersionInfo16_QueryValue(info, lpSubBlock, lplpBuffer, puLen);\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include <stdio.h>",
+   "#include <sys/types.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winver.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winerror.h\"",
+   "#include \"appmodel.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "version!VerQueryValueA [stdcall -import] -> import from kernelbase",
+   "kernelbase!VerQueryValueA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/version/tests/info.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 6
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winver",
+   "path": "sdk-api-src/content/winver/nf-winver-verqueryvaluea.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winver/nf-winver-verqueryvaluea",
+   "documented_name": "verqueryvaluea",
+   "file": "docs/0026_sdk-api_nf-winver-verqueryvaluea.md",
+   "text": "---\nUID: NF:winver.VerQueryValueA\ntitle: VerQueryValueA function (winver.h)\ndescription: Retrieves specified version information from the specified version-information resource. (ANSI)\nhelpviewer_keywords: [\"VerQueryValueA\", \"winver/VerQueryValueA\"]\nold-location: menurc\\verqueryvalue.htm\ntech.root: menurc\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\resources\\versioninformation\\versioninformationreference\\versioninformationfunctions\\verqueryvalue.htm\nms.date: 12/05/2018\nms.keywords: VerQueryValue, VerQueryValue function [Menus and Other Resources], VerQueryValueA, VerQueryValueW, _win32_VerQueryValue, _win32_verqueryvalue_cpp, menurc.verqueryvalue, winui._win32_verqueryvalue, winver/VerQueryValue, winver/VerQueryValueA, winver/VerQueryValueW\nreq.header: winver.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: VerQueryValueW (Unicode) and VerQueryValueA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Version.lib\nreq.dll: Api-ms-win-core-version-l1-1-0.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - VerQueryValueA\n - winver/VerQueryValueA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-version-l1-1-0.dll\n - API-MS-Win-Core-version-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-versionansi-l1-1-0.dll\n - API-MS-Win-DownLevel-version-l1-1-0.dll\n - API-MS-Win-Core-Versionansi-L1-1-1.dll\n - API-MS-Win-Core-Version-L1-1-1.dll\n - version.dll\napi_name:\n - VerQueryValue\n - VerQueryValueA\n - VerQueryValueW\n---\n\n# VerQueryValueA function\n\n\n## -description\n\nRetrieves specified version information from the specified version-information resource. To retrieve the appropriate resource, before you call <b>VerQueryValue</b>, you must first call the <a href=\"/windows/desktop/api/winver/nf-winver-getfileversioninfosizea\">GetFileVersionInfoSize</a> function, and then the <a href=\"/windows/desktop/api/winver/nf-winver-getfileversioninfoa\">GetFileVersionInfo</a> function.\n\n## -parameters\n\n### -param pBlock [in]\n\nType: <b>LPCVOID</b>\n\nThe version-information resource returned by the <a href=\"/windows/desktop/api/winver/nf-winver-getfileversioninfoa\">GetFileVersionInfo</a> function.\n\n### -param lpSubBlock [in]\n\nType: <b>LPCTSTR</b>\n\nThe version-information value to be retrieved. The string must consist of names separated by backslashes (\\\\) and it must have one of the following forms. \n\n\n\n\n\n#### \\\n\nThe root block. The function retrieves a pointer to the <a href=\"/windows/desktop/api/verrsrc/ns-verrsrc-vs_fixedfileinfo\">VS_FIXEDFILEINFO</a> structure for the version-information resource.\n\n\n\n#### \\VarFileInfo\\Translation\n\nThe translation array in a <a href=\"/windows/desktop/menurc/var-str\">Var</a> variable information structure—the <b>Value</b> member of this structure. The function retrieves a pointer to this array of language and code page identifiers. An application can use these identifiers to access a language-specific <a href=\"/windows/desktop/menurc/stringtable\">StringTable</a> structure (using the <b>szKey</b> member) in the version-information resource.\n\n\n\n#### \\StringFileInfo\\lang-codepage\\string-name\n\nA value in a language-specific <a href=\"/windows/desktop/menurc/stringtable\">StringTable</a> structure. The <i>lang-codepage</i> name is a concatenation of a language and code page identifier pair found as a <b>DWORD</b> in the translation array for the resource. Here the <i>lang-codepage</i> name must be specified as a hexadecimal string. The <i>string-name</i> name must be one of the predefined strings described in the following Remarks section. The function retrieves a string value specific to the language and code page indicated.\n\n### -param lplpBuffer [out]\n\nType: <b>LPVOID*</b>\n\nWhen this method returns, contains the address of a pointer to the requested version information in the buffer pointed to by <i>pBlock</i>. The memory pointed to by <i>lplpBuffer</i> is freed when the associated <i>pBlock</i> memory is freed.\n\n### -param puLen [out]\n\nType: <b>PUINT</b>\n\nWhen this method returns, contains a pointer to the size of the requested data pointed to by <i>lplpBuffer</i>: for version information values, the length in characters of the string stored at <i>lplpBuffer</i>; for translation array values, the size in bytes of the array stored at <i>lplpBuffer</i>; and for root block, the size in bytes of the structure.\n\n## -returns\n\nType: <b>BOOL</b>\n\nIf the specified version-information structure exists, and version information is available, the return value is nonzero. If the address of the length buffer is zero, no value is available for the specified version-information name.\n\nIf the specified name does not exist or the specified resource is not valid, the return value is zero.\n\n## -remarks\n\n This function works on 16-, 32-, and 64-bit file images.\n\nThe following are predefined version information Unicode strings.\n\n<table class=\"clsStd\">\n<tr>\n<td>Comments</td>\n<td>InternalName</td>\n<td>ProductName</td>\n</tr>\n<tr>\n<td>CompanyName</td>\n<td>LegalCopyright</td>\n<td>ProductVersion</td>\n</tr>\n<tr>\n<td>FileDescription</td>\n<td>LegalTrademarks</td>\n<td>PrivateBuild</td>\n</tr>\n<tr>\n<td>FileVersion</td>\n<td>OriginalFilename</td>\n<td>SpecialBuild</td>\n</tr>\n</table>\n \n\n\n#### Examples\n\nThe following example shows how to enumerate the available version languages and retrieve the FileDescription string-value for each language.\n\nBe sure to call the <a href=\"/windows/desktop/api/winver/nf-winver-getfileversioninfosizea\">GetFileVersionInfoSize</a> and <a href=\"/windows/desktop/api/winver/nf-winver-getfileversioninfoa\">GetFileVersionInfo</a> functions before calling <b>VerQueryValue</b> to properly initialize the <i>pBlock</i> buffer.\n\n\n```cpp\n// Structure used to store enumerated languages and code pages.\n\nHRESULT hr;\n\nstruct LANGANDCODEPAGE {\n  WORD wLanguage;\n  WORD wCodePage;\n} *lpTranslate;\n\n// Read the list of languages and code pages.\n\nVerQueryValue(pBlock, \n              TEXT(\"\\\\VarFileInfo\\\\Translation\"),\n              (LPVOID*)&lpTranslate,\n              &cbTranslate);\n\n// Read the file description for each language and code page.\n\nfor( i=0; i < (cbTranslate/sizeof(struct LANGANDCODEPAGE)); i++ )\n{\n  hr = StringCchPrintf(SubBlock, 50,\n            TEXT(\"\\\\StringFileInfo\\\\%04x%04x\\\\FileDescription\"),\n            lpTranslate[i].wLanguage,\n            lpTranslate[i].wCodePage);\n\tif (FAILED(hr))\n\t{\n\t// TODO: write error handler.\n\t}\n\n  // Retrieve file description for language and code page \"i\". \n  VerQueryValue(pBlock, \n                SubBlock, \n                &lpBuffer, \n                &dwBytes); \n}\n```\n\n\n\n\n\n\n> [!NOTE]\n> The winver.h header defines VerQueryValue as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/api/winver/nf-winver-getfileversioninfoa\">GetFileVersionInfo</a>\n\n\n\n<a href=\"/windows/desktop/api/winver/nf-winver-getfileversioninfosizea\">GetFileVersionInfoSize</a>\n\n\n\n<b>Reference</b>\n\n\n\n<a href=\"/windows/desktop/menurc/string-str\">String</a>\n\n\n\n<a href=\"/windows/desktop/menurc/stringfileinfo\">StringFileInfo</a>\n\n\n\n<a href=\"/windows/desktop/menurc/stringtable\">StringTable</a>\n\n\n\n<a href=\"/windows/desktop/api/verrsrc/ns-verrsrc-vs_fixedfileinfo\">VS_FIXEDFILEINFO</a>\n\n\n\n<a href=\"/windows/desktop/menurc/vs-versioninfo\">VS_VERSIONINFO</a>\n\n\n\n<a href=\"/windows/desktop/menurc/var-str\">Var</a>\n\n\n\n<a href=\"/windows/desktop/menurc/varfileinfo\">VarFileInfo</a>\n\n\n\n<a href=\"/windows/desktop/menurc/version-information\">Version Information</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "VersionInfo32_QueryValue",
+   "file": "dlls/kernelbase/version.c",
+   "start_line": 1068,
+   "end_line": 1114,
+   "static": true,
+   "called_from": [
+    "VerQueryValueA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/version.c:1224"
+   ],
+   "signature": "static BOOL VersionInfo32_QueryValue( const VS_VERSION_INFO_STRUCT32 *info, LPCWSTR lpSubBlock, LPVOID *lplpBuffer, UINT *puLen, BOOL *pbText )",
+   "code": "static BOOL VersionInfo32_QueryValue( const VS_VERSION_INFO_STRUCT32 *info, LPCWSTR lpSubBlock,\n                                      LPVOID *lplpBuffer, UINT *puLen, BOOL *pbText )\n{\n    PVOID ptr;\n    TRACE(\"lpSubBlock : (%s)\\n\", debugstr_w(lpSubBlock));\n\n    while ( *lpSubBlock )\n    {\n        /* Find next path component */\n        LPCWSTR lpNextSlash;\n        for ( lpNextSlash = lpSubBlock; *lpNextSlash; lpNextSlash++ )\n            if ( *lpNextSlash == '\\\\' )\n                break;\n\n        /* Skip empty components */\n        if ( lpNextSlash == lpSubBlock )\n        {\n            lpSubBlock++;\n            continue;\n        }\n\n        /* We have a non-empty component: search info for key */\n        info = VersionInfo32_FindChild( info, lpSubBlock, lpNextSlash-lpSubBlock );\n        if ( !info )\n        {\n            if (puLen) *puLen = 0 ;\n            SetLastError( ERROR_RESOURCE_TYPE_NOT_FOUND );\n            return FALSE;\n        }\n\n        /* Skip path component */\n        lpSubBlock = lpNextSlash;\n    }\n\n    /* Return value */\n    ptr = VersionInfo32_Value(info);\n    if ((PBYTE)ptr >= ((PBYTE)info + info->wLength))  /* empty value */\n        ptr = (WCHAR*)info->szKey + wcslen(info->szKey);\n\n    *lplpBuffer = ptr;\n    if (puLen)\n        *puLen = info->wValueLength;\n    if (pbText)\n        *pbText = info->wType;\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "VersionInfo16_QueryValue",
+   "file": "dlls/kernelbase/version.c",
+   "start_line": 1024,
+   "end_line": 1061,
+   "static": true,
+   "called_from": [
+    "VerQueryValueA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/version.c:1203"
+   ],
+   "signature": "static BOOL VersionInfo16_QueryValue( const VS_VERSION_INFO_STRUCT16 *info, LPCSTR lpSubBlock, LPVOID *lplpBuffer, UINT *puLen )",
+   "code": "static BOOL VersionInfo16_QueryValue( const VS_VERSION_INFO_STRUCT16 *info, LPCSTR lpSubBlock,\n                               LPVOID *lplpBuffer, UINT *puLen )\n{\n    while ( *lpSubBlock )\n    {\n        /* Find next path component */\n        LPCSTR lpNextSlash;\n        for ( lpNextSlash = lpSubBlock; *lpNextSlash; lpNextSlash++ )\n            if ( *lpNextSlash == '\\\\' )\n                break;\n\n        /* Skip empty components */\n        if ( lpNextSlash == lpSubBlock )\n        {\n            lpSubBlock++;\n            continue;\n        }\n\n        /* We have a non-empty component: search info for key */\n        info = VersionInfo16_FindChild( info, lpSubBlock, lpNextSlash-lpSubBlock );\n        if ( !info )\n        {\n            if (puLen) *puLen = 0 ;\n            SetLastError( ERROR_RESOURCE_TYPE_NOT_FOUND );\n            return FALSE;\n        }\n\n        /* Skip path component */\n        lpSubBlock = lpNextSlash;\n    }\n\n    /* Return value */\n    *lplpBuffer = VersionInfo16_Value( info );\n    if (puLen)\n        *puLen = info->wValueLength;\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "VersionInfo32_FindChild",
+   "file": "dlls/kernelbase/version.c",
+   "start_line": 1002,
+   "end_line": 1017,
+   "static": true,
+   "called_from": [
+    "VersionInfo32_QueryValue"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static const VS_VERSION_INFO_STRUCT32 *VersionInfo32_FindChild( const VS_VERSION_INFO_STRUCT32 *info, LPCWSTR key, UINT len )",
+   "code": "static const VS_VERSION_INFO_STRUCT32 *VersionInfo32_FindChild( const VS_VERSION_INFO_STRUCT32 *info,\n                                                                LPCWSTR key, UINT len )\n{\n    const VS_VERSION_INFO_STRUCT32 *child = VersionInfo32_Children( info );\n\n    while ((char *)child < (char *)info + info->wLength )\n    {\n        if (!wcsnicmp( child->szKey, key, len ) && !child->szKey[len])\n            return child;\n\n        if (!(child->wLength)) return NULL;\n        child = VersionInfo32_Next( child );\n    }\n\n    return NULL;\n}"
+  },
+  {
+   "name": "VersionInfo16_FindChild",
+   "file": "dlls/kernelbase/version.c",
+   "start_line": 982,
+   "end_line": 997,
+   "static": true,
+   "called_from": [
+    "VersionInfo16_QueryValue"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static const VS_VERSION_INFO_STRUCT16 *VersionInfo16_FindChild( const VS_VERSION_INFO_STRUCT16 *info, LPCSTR key, UINT len )",
+   "code": "static const VS_VERSION_INFO_STRUCT16 *VersionInfo16_FindChild( const VS_VERSION_INFO_STRUCT16 *info,\n                                                                LPCSTR key, UINT len )\n{\n    const VS_VERSION_INFO_STRUCT16 *child = VersionInfo16_Children( info );\n\n    while ((char *)child < (char *)info + info->wLength )\n    {\n        if (!strnicmp( child->szKey, key, len ) && !child->szKey[len])\n            return child;\n\n        if (!(child->wLength)) return NULL;\n        child = VersionInfo16_Next( child );\n    }\n\n    return NULL;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "VS_VERSION_INFO_STRUCT16",
+    "kind": "typedef_decl",
+    "start_line": 74,
+    "end_line": 85,
+    "code": "typedef struct\n{\n    WORD  wLength;\n    WORD  wValueLength;\n    CHAR  szKey[1];\n#if 0   /* variable length structure */\n    /* DWORD aligned */\n    BYTE  Value[];\n    /* DWORD aligned */\n    VS_VERSION_INFO_STRUCT16 Children[];\n#endif\n} VS_VERSION_INFO_STRUCT16;"
+   },
+   {
+    "name": "VS_VERSION_INFO_STRUCT32",
+    "kind": "typedef_decl",
+    "start_line": 87,
+    "end_line": 99,
+    "code": "typedef struct\n{\n    WORD  wLength;\n    WORD  wValueLength;\n    WORD  wType; /* 1:Text, 0:Binary */\n    WCHAR szKey[1];\n#if 0   /* variable length structure */\n    /* DWORD aligned */\n    BYTE  Value[];\n    /* DWORD aligned */\n    VS_VERSION_INFO_STRUCT32 Children[];\n#endif\n} VS_VERSION_INFO_STRUCT32;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 44,
+    "end_line": 44,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ver);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "VersionInfo16_Children",
+    "start_line": 112,
+    "end_line": 114,
+    "code": "#define VersionInfo16_Children( ver )  \\\n    (const VS_VERSION_INFO_STRUCT16 *)( VersionInfo16_Value( ver ) + \\\n                           ( ( (ver)->wValueLength + 3 ) & ~3 ) )"
+   },
+   {
+    "name": "VersionInfo16_Next",
+    "start_line": 120,
+    "end_line": 121,
+    "code": "#define VersionInfo16_Next( ver ) \\\n    (VS_VERSION_INFO_STRUCT16 *)( (LPBYTE)ver + (((ver)->wLength + 3) & ~3) )"
+   },
+   {
+    "name": "VersionInfo16_Value",
+    "start_line": 107,
+    "end_line": 108,
+    "code": "#define VersionInfo16_Value( ver )  \\\n    DWORD_ALIGN( (ver), (ver)->szKey + strlen((ver)->szKey) + 1 )"
+   },
+   {
+    "name": "VersionInfo32_Children",
+    "start_line": 115,
+    "end_line": 118,
+    "code": "#define VersionInfo32_Children( ver )  \\\n    (const VS_VERSION_INFO_STRUCT32 *)( VersionInfo32_Value( ver ) + \\\n                           ( ( (ver)->wValueLength * \\\n                               ((ver)->wType? 2 : 1) + 3 ) & ~3 ) )"
+   },
+   {
+    "name": "VersionInfo32_Next",
+    "start_line": 122,
+    "end_line": 123,
+    "code": "#define VersionInfo32_Next( ver ) \\\n    (VS_VERSION_INFO_STRUCT32 *)( (LPBYTE)ver + (((ver)->wLength + 3) & ~3) )"
+   },
+   {
+    "name": "VersionInfo32_Value",
+    "start_line": 109,
+    "end_line": 110,
+    "code": "#define VersionInfo32_Value( ver )  \\\n    DWORD_ALIGN( (ver), (ver)->szKey + lstrlenW((ver)->szKey) + 1 )"
+   },
+   {
+    "name": "VersionInfoIs16",
+    "start_line": 101,
+    "end_line": 102,
+    "code": "#define VersionInfoIs16( ver ) \\\n    ( ((const VS_VERSION_INFO_STRUCT16 *)ver)->szKey[0] >= ' ' )"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetProcessHeap",
+    "impl": [
+     "dlls/kernelbase/process.c:910"
+    ]
+   },
+   {
+    "name": "MultiByteToWideChar",
+    "impl": [
+     "dlls/kernelbase/locale.c:7070"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   },
+   {
+    "name": "lstrlenW",
+    "impl": [
+     "dlls/kernelbase/string.c:166"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "RtlAllocateHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "RtlFreeHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "strlen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:423"
+    ]
+   },
+   {
+    "name": "wcslen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:215"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_a",
+   "debugstr_w",
+   "strnicmp",
+   "wcsnicmp",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "kernelbase.VerQueryValueA",
+  "category": {
+   "l1": "User interface",
+   "l2": "Resources (menus, icons, cursors, strings)",
+   "header": "winver.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 52,
+   "body": 50,
+   "code": 30
+  },
+  "cyclomatic": 10,
+  "return_type": "BOOL",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 6,
+   "n_tests": 8,
+   "n_tests_other": 2,
+   "own_test_functions": [
+    "dlls/version/tests/info.c::test_32bit_win",
+    "dlls/version/tests/info.c::test_GetFileVersionInfoEx",
+    "dlls/version/tests/info.c::test_VerQueryValueA",
+    "dlls/version/tests/info.c::test_extra_block",
+    "dlls/version/tests/info.c::test_info",
+    "dlls/version/tests/info.c::test_wow64_redirection"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winver/nf-winver-verqueryvaluea",
+   "source": "win32",
+   "description": "Retrieves specified version information from the specified version-information resource. (ANSI)",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Api-ms-win-core-version-l1-1-0.dll"
+  },
+  "exports": [
+   "kernelbase.VerQueryValueA",
+   "version.VerQueryValueA"
+  ],
+  "subset": {
+   "selected_by": "extra candidate 2026-11-25: loc.total > 10, 5 < n_tests_own <= 50, category with few samples"
+  }
+ }
+}

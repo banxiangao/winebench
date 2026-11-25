@@ -1,0 +1,446 @@
+{
+ "id": "0468",
+ "function": {
+  "name": "CryptProtectData",
+  "export_name": "CryptProtectData",
+  "module": "crypt32",
+  "source_module": "crypt32",
+  "exported_by": [
+   "crypt32"
+  ],
+  "side": "PE",
+  "file": "dlls/crypt32/protectdata.c",
+  "start_line": 821,
+  "end_line": 958,
+  "body_lines": 135,
+  "signature": "BOOL WINAPI CryptProtectData(DATA_BLOB* pDataIn, LPCWSTR szDataDescr, DATA_BLOB* pOptionalEntropy, PVOID pvReserved, CRYPTPROTECT_PROMPTSTRUCT* pPromptStruct, DWORD dwFlags, DATA_BLOB* pDataOut)",
+  "header_comment": "/***************************************************************************\n * CryptProtectData     [CRYPT32.@]\n *\n * Generate Cipher data from given Plain and Entropy data.\n *\n * PARAMS\n *  pDataIn          [I] Plain data to be enciphered\n *  szDataDescr      [I] Optional Unicode string describing the Plain data\n *  pOptionalEntropy [I] Optional entropy data to adjust cipher, can be NULL\n *  pvReserved       [I] Reserved, must be NULL\n *  pPromptStruct    [I] Structure describing if/how to prompt during ciphering\n *  dwFlags          [I] Flags describing options to the ciphering\n *  pDataOut         [O] Resulting Cipher data, for calls to CryptUnprotectData\n *\n * RETURNS\n *  TRUE  If a Cipher was generated.\n *  FALSE If something failed and no Cipher is available.\n *\n * FIXME\n *  The true Windows encryption and keying mechanisms are unknown.\n *\n *  dwFlags and pPromptStruct are currently ignored.\n *\n * NOTES\n *  Memory allocated in pDataOut must be freed with LocalFree.\n *\n */",
+  "code": "BOOL WINAPI CryptProtectData(DATA_BLOB* pDataIn,\n                             LPCWSTR szDataDescr,\n                             DATA_BLOB* pOptionalEntropy,\n                             PVOID pvReserved,\n                             CRYPTPROTECT_PROMPTSTRUCT* pPromptStruct,\n                             DWORD dwFlags,\n                             DATA_BLOB* pDataOut)\n{\n    BOOL rc = FALSE;\n    HCRYPTPROV hProv;\n    struct protect_data_t protect_data;\n    HCRYPTHASH hHash;\n    HCRYPTKEY hKey;\n    DWORD dwLength;\n\n    TRACE(\"called\\n\");\n\n    SetLastError(ERROR_SUCCESS);\n\n    if (!pDataIn || !pDataOut)\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        goto finished;\n    }\n\n    /* debug: show our arguments */\n    report(pDataIn,pOptionalEntropy,pPromptStruct,dwFlags);\n    TRACE(\"\\tszDataDescr: %p %s\\n\", szDataDescr,\n          szDataDescr ? debugstr_w(szDataDescr) : \"\");\n\n    /* Windows appears to create an empty szDataDescr instead of maintaining\n     * a NULL */\n    if (!szDataDescr)\n        szDataDescr = L\"\";\n\n    /* get crypt context */\n    if (!CryptAcquireContextW(&hProv,NULL,MS_ENHANCED_PROV_W,CRYPT32_PROTECTDATA_PROV,CRYPT_VERIFYCONTEXT))\n    {\n        ERR(\"CryptAcquireContextW failed\\n\");\n        goto finished;\n    }\n\n    /* populate our structure */\n    if (!fill_protect_data(&protect_data,szDataDescr,hProv))\n    {\n        ERR(\"fill_protect_data\\n\");\n        goto free_context;\n    }\n\n    /* load key */\n    if (!load_encryption_key(hProv,protect_data.cipher_key_len,&protect_data.salt,pOptionalEntropy,&hKey))\n    {\n        goto free_protect_data;\n    }\n\n    /* create a hash for the encryption validation */\n    if (!CryptCreateHash(hProv,CRYPT32_PROTECTDATA_HASH_CALG,0,0,&hHash))\n    {\n        ERR(\"CryptCreateHash\\n\");\n        goto free_key;\n    }\n\n    /* calculate storage required */\n    dwLength=pDataIn->cbData;\n    if (CryptEncrypt(hKey, 0, TRUE, 0, pDataIn->pbData, &dwLength, 0) ||\n        GetLastError()!=ERROR_MORE_DATA)\n    {\n        ERR(\"CryptEncrypt\\n\");\n        goto free_hash;\n    }\n    TRACE(\"required encrypted storage: %lu\\n\", dwLength);\n\n    /* copy plain text into cipher area for CryptEncrypt call */\n    protect_data.cipher.cbData=dwLength;\n    if (!(protect_data.cipher.pbData=CryptMemAlloc(\n                                                protect_data.cipher.cbData)))\n    {\n        ERR(\"CryptMemAlloc\\n\");\n        goto free_hash;\n    }\n    memcpy(protect_data.cipher.pbData,pDataIn->pbData,pDataIn->cbData);\n\n    /* encrypt! */\n    dwLength=pDataIn->cbData;\n    if (!CryptEncrypt(hKey, hHash, TRUE, 0, protect_data.cipher.pbData,\n                      &dwLength, protect_data.cipher.cbData))\n    {\n        ERR(\"CryptEncrypt %lu\\n\", GetLastError());\n        goto free_hash;\n    }\n    protect_data.cipher.cbData=dwLength;\n\n    /* debug: show the cipher */\n    TRACE_DATA_BLOB(&protect_data.cipher);\n\n    /* attach our fingerprint */\n    if (!convert_hash_to_blob(hHash, &protect_data.fingerprint))\n    {\n        ERR(\"convert_hash_to_blob\\n\");\n        goto free_hash;\n    }\n\n    /* serialize into an opaque blob */\n    if (!serialize(&protect_data, pDataOut))\n    {\n        ERR(\"serialize\\n\");\n        goto free_hash;\n    }\n\n    /* success! */\n    rc=TRUE;\n\nfree_hash:\n    CryptDestroyHash(hHash);\nfree_key:\n    CryptDestroyKey(hKey);\nfree_protect_data:\n    free_protect_data(&protect_data);\nfree_context:\n    CryptReleaseContext(hProv,0);\nfinished:\n    /* If some error occurred, and no error code was set, force one. */\n    if (!rc && GetLastError()==ERROR_SUCCESS)\n    {\n        SetLastError(ERROR_INVALID_DATA);\n    }\n\n    if (rc)\n    {\n        SetLastError(ERROR_SUCCESS);\n\n        TRACE_DATA_BLOB(pDataOut);\n    }\n\n    TRACE(\"returning %s\\n\", rc ? \"ok\" : \"FAIL\");\n\n    return rc;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <string.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wincrypt.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "crypt32!CryptProtectData [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/crypt32/tests/protectdata.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "dpapi",
+   "path": "sdk-api-src/content/dpapi/nf-dpapi-cryptprotectdata.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/dpapi/nf-dpapi-cryptprotectdata",
+   "documented_name": "cryptprotectdata",
+   "file": "docs/0468_sdk-api_nf-dpapi-cryptprotectdata.md",
+   "text": "---\nUID: NF:dpapi.CryptProtectData\ntitle: CryptProtectData function (dpapi.h)\ndescription: Performs encryption on the data in a DATA_BLOB structure.\nhelpviewer_keywords: [\"CRYPTPROTECT_AUDIT\",\"CRYPTPROTECT_LOCAL_MACHINE\",\"CRYPTPROTECT_UI_FORBIDDEN\",\"CryptProtectData\",\"CryptProtectData function [Security]\",\"_crypto2_cryptprotectdata\",\"dpapi/CryptProtectData\",\"security.cryptprotectdata\",\"wincrypt/CryptProtectData\"]\nold-location: security\\cryptprotectdata.htm\ntech.root: security\nms.assetid: 765a68fd-f105-49fc-a738-4a8129eb0770\nms.date: 11/13/2025\nms.keywords: CRYPTPROTECT_AUDIT, CRYPTPROTECT_LOCAL_MACHINE, CRYPTPROTECT_UI_FORBIDDEN, CryptProtectData, CryptProtectData function [Security], _crypto2_cryptprotectdata, dpapi/CryptProtectData, security.cryptprotectdata, wincrypt/CryptProtectData\nreq.header: dpapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Crypt32.lib\nreq.dll: Crypt32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CryptProtectData\n - dpapi/CryptProtectData\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Crypt32.dll\napi_name:\n - CryptProtectData\n---\n\n# CryptProtectData function\n\n## -description\n\nThe **CryptProtectData** function performs encryption on the data in a [DATA_BLOB](/previous-versions/windows/desktop/legacy/aa381414(v=vs.85)) structure. Typically, only a user with the same logon credential as the user who encrypted the data can decrypt the data. In addition, the encryption and decryption usually must be done on the same computer. For information about exceptions, see [Remarks](#remarks).\n\n## -parameters\n\n### -param pDataIn [in]\n\nA pointer to a [DATA_BLOB](/previous-versions/windows/desktop/legacy/aa381414(v=vs.85)) structure that contains the [plaintext](/windows/win32/SecGloss/p-gly) to be encrypted.\n\n### -param szDataDescr [in, optional]\n\nA string with a readable description of the data to be encrypted. This description string is included with the encrypted data. This parameter is optional and can be set to **NULL**.\n\n### -param pOptionalEntropy [in, optional]\n\nA pointer to a [DATA_BLOB](/previous-versions/windows/desktop/legacy/aa381414(v=vs.85)) structure that contains a password or other additional entropy used to encrypt the data. The **DATA_BLOB** structure used in the encryption phase must also be used in the decryption phase. This parameter can be set to **NULL** for no additional entropy. For information about protecting passwords, see [Handling Passwords](/windows/win32/SecBP/handling-passwords).\n\n### -param pvReserved [in]\n\nReserved for future use and must be set to **NULL**.\n\n### -param pPromptStruct [in, optional]\n\nA pointer to a [CRYPTPROTECT_PROMPTSTRUCT](nf-dpapi-cryptprotect_promptstruct.md) structure that provides information about where and when prompts are to be displayed and what the content of those prompts should be. This parameter can be set to **NULL** in both the encryption and decryption phases.\n\n### -param dwFlags [in]\n\nThis parameter can be one of the following flags. If no flags are required, this parameter can be set to `0`.\n\n| Value | Meaning |\n|-------|---------|\n| **CRYPTPROTECT_LOCAL_MACHINE** | When this flag is set, it associates the data encrypted with the current computer instead of with an individual user. Any user on the computer on which **CryptProtectData** is called can use [CryptUnprotectData](nf-dpapi-cryptunprotectdata.md) to decrypt the data. |\n| **CRYPTPROTECT_UI_FORBIDDEN** | This flag is used for remote situations where presenting a user interface (UI) is not an option. When this flag is set and a UI is specified for either the protect or unprotect operation, the operation fails and [GetLastError](/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror) returns the **ERROR_PASSWORD_RESTRICTION** code. |\n| **CRYPTPROTECT_AUDIT** | This flag generates an audit on protect and unprotect operations. Audit log entries are recorded only if szDataDescr is not **NULL** and not empty. |\n\n### -param pDataOut [out]\n\nA pointer to a [DATA_BLOB](/previous-versions/windows/desktop/legacy/aa381414(v=vs.85)) structure that receives the encrypted data. When you have finished using the **DATA_BLOB** structure, free its **pbData** member by calling the [LocalFree](/windows/win32/api/winbase/nf-winbase-localfree) function.\n\n## -returns\n\nIf the function succeeds, the function returns **TRUE**.\n\t\t\t\t\t\t\n\nIf the function fails, it returns **FALSE**. For extended error information, call [GetLastError](/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror).\n\n## -remarks\n\nTypically, only a user with logon [credentials](/windows/win32/SecGloss/c-gly) that match those of the user who encrypted the data can decrypt the data. In addition, decryption usually can only be done on the computer where the data was encrypted. However, a user with a roaming profile can decrypt the data from another computer on the network.\n\nIf the **CRYPTPROTECT_LOCAL_MACHINE** flag is set when the data is encrypted, any user on the computer where the encryption was done can decrypt the data.\n\nThe function creates a session key to perform the encryption. The session key is derived again when the data is to be decrypted.\n\nThe function also adds a [Message Authentication Code](/windows/win32/SecGloss/m-gly) (MAC) (keyed integrity check) to the encrypted data to guard against data tampering.\n\nTo encrypt memory for temporary use in the same process or across processes, call the [CryptProtectMemory](nf-dpapi-cryptprotectmemory.md) function.\n\n### Examples\n\nThe following example shows encryption of the data in a [DATA_BLOB](/previous-versions/windows/desktop/legacy/aa381414(v=vs.85)) structure. The **CryptProtectData** function does the encryption by using a session key that the function creates by using the user's logon credentials. For another example that uses this function, see [Example C Program: Using CryptProtectData](/windows/win32/SecCrypto/example-c-program-using-cryptprotectdata).\n\n\n```cpp\n// Encrypt data from DATA_BLOB DataIn to DATA_BLOB DataOut.\n\n//--------------------------------------------------------------------\n// Declare and initialize variables.\n\nDATA_BLOB DataIn;\nDATA_BLOB DataOut;\nBYTE *pbDataInput =(BYTE *)\"Hello world of data protection.\";\nDWORD cbDataInput = strlen((char *)pbDataInput)+1;\n\n//--------------------------------------------------------------------\n// Initialize the DataIn structure.\n\nDataIn.pbData = pbDataInput;    \nDataIn.cbData = cbDataInput;\n\n//--------------------------------------------------------------------\n//  Begin protect phase. Note that the encryption key is created\n//  by the function and is not passed.\n\nif(CryptProtectData(\n     &DataIn,\n     L\"This is the description string.\", // A description string\n                                         // to be included with the\n                                         // encrypted data. \n     NULL,                               // Optional entropy not used.\n     NULL,                               // Reserved.\n     NULL,                               // Pass NULL for the \n                                         // prompt structure.\n     0,\n     &DataOut))\n{\n     printf(\"The encryption phase worked.\\n\");\n     LocalFree(DataOut.pbData);\n}\nelse\n{\n    printf(\"Encryption error using CryptProtectData.\\n\");\n    exit(1); \n}\n```\n\n## -see-also\n\n- [CryptProtectMemory](nf-dpapi-cryptprotectmemory.md)\n- [CryptUnprotectData](nf-dpapi-cryptunprotectdata.md)\n- [Data Encryption and Decryption Functions](/windows/win32/SecCrypto/cryptography-functions)\n- [LocalFree](/windows/win32/api/winbase/nf-winbase-localfree)"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "report",
+   "file": "dlls/crypt32/protectdata.c",
+   "start_line": 768,
+   "end_line": 791,
+   "static": true,
+   "called_from": [
+    "CryptProtectData"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/crypt32/protectdata.c:1023"
+   ],
+   "signature": "static void report(const DATA_BLOB* pDataIn, const DATA_BLOB* pOptionalEntropy, CRYPTPROTECT_PROMPTSTRUCT* pPromptStruct, DWORD dwFlags)",
+   "code": "static void\nreport(const DATA_BLOB* pDataIn, const DATA_BLOB* pOptionalEntropy,\n       CRYPTPROTECT_PROMPTSTRUCT* pPromptStruct, DWORD dwFlags)\n{\n    TRACE(\"pPromptStruct: %p\\n\", pPromptStruct);\n    if (pPromptStruct)\n    {\n        TRACE(\"  cbSize: 0x%lx\\n\", pPromptStruct->cbSize);\n        TRACE(\"  dwPromptFlags: 0x%lx\\n\", pPromptStruct->dwPromptFlags);\n        TRACE(\"  hwndApp: %p\\n\", pPromptStruct->hwndApp);\n        TRACE(\"  szPrompt: %p %s\\n\",\n              pPromptStruct->szPrompt,\n              pPromptStruct->szPrompt ? debugstr_w(pPromptStruct->szPrompt)\n              : \"\");\n    }\n    TRACE(\"dwFlags: 0x%04lx\\n\", dwFlags);\n    TRACE_DATA_BLOB(pDataIn);\n    if (pOptionalEntropy)\n    {\n        TRACE_DATA_BLOB(pOptionalEntropy);\n        TRACE(\"  %s\\n\",debugstr_an((LPCSTR)pOptionalEntropy->pbData,pOptionalEntropy->cbData));\n    }\n\n}"
+  },
+  {
+   "name": "fill_protect_data",
+   "file": "dlls/crypt32/protectdata.c",
+   "start_line": 570,
+   "end_line": 642,
+   "static": true,
+   "called_from": [
+    "CryptProtectData"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL fill_protect_data(struct protect_data_t * pInfo, LPCWSTR szDataDescr, HCRYPTPROV hProv)",
+   "code": "static\nBOOL fill_protect_data(struct protect_data_t * pInfo, LPCWSTR szDataDescr,\n                       HCRYPTPROV hProv)\n{\n    DWORD dwStrLen;\n\n    TRACE(\"called\\n\");\n\n    if (!pInfo) return FALSE;\n\n    dwStrLen=lstrlenW(szDataDescr);\n\n    memset(pInfo,0,sizeof(*pInfo));\n\n    pInfo->count0=0x0001;\n\n    convert_str_to_blob(crypt_magic_str, &pInfo->info0);\n\n    pInfo->count1=0x0001;\n\n    convert_str_to_blob(crypt_magic_str, &pInfo->info1);\n\n    pInfo->null0=0x0000;\n\n    if ((pInfo->szDataDescr=CryptMemAlloc((dwStrLen+1)*sizeof(WCHAR))))\n    {\n        memcpy(pInfo->szDataDescr,szDataDescr,(dwStrLen+1)*sizeof(WCHAR));\n    }\n\n    pInfo->cipher_alg=CRYPT32_PROTECTDATA_KEY_CALG;\n    pInfo->cipher_key_len=CRYPT32_PROTECTDATA_KEY_LEN;\n\n    convert_str_to_blob(crypt_magic_str, &pInfo->data0);\n\n    pInfo->null1=0x0000;\n    pInfo->hash_alg=CRYPT32_PROTECTDATA_HASH_CALG;\n    pInfo->hash_len=CRYPT32_PROTECTDATA_HASH_LEN;\n\n    /* allocate memory to hold a salt */\n    if ((pInfo->salt.pbData=CryptMemAlloc(CRYPT32_PROTECTDATA_SALT_LEN)))\n    {\n        /* generate random salt */\n        if (!CryptGenRandom(hProv, CRYPT32_PROTECTDATA_SALT_LEN, pInfo->salt.pbData))\n        {\n            ERR(\"CryptGenRandom\\n\");\n            free_protect_data(pInfo);\n            return FALSE;\n        }\n        pInfo->salt.cbData=CRYPT32_PROTECTDATA_SALT_LEN;\n        /* debug: show our salt */\n        TRACE_DATA_BLOB(&pInfo->salt);\n    }\n    pInfo->cipher.cbData=0;\n    pInfo->cipher.pbData=NULL;\n\n    pInfo->fingerprint.cbData=0;\n    pInfo->fingerprint.pbData=NULL;\n\n    /* check all the allocations at once */\n    if (!pInfo->info0.pbData ||\n        !pInfo->info1.pbData ||\n        !pInfo->szDataDescr  ||\n        !pInfo->data0.pbData ||\n        !pInfo->salt.pbData\n        )\n    {\n        ERR(\"could not allocate protect_data structures\\n\");\n        free_protect_data(pInfo);\n        return FALSE;\n    }\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "load_encryption_key",
+   "file": "dlls/crypt32/protectdata.c",
+   "start_line": 704,
+   "end_line": 765,
+   "static": true,
+   "called_from": [
+    "CryptProtectData"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/crypt32/protectdata.c:1050"
+   ],
+   "signature": "static BOOL load_encryption_key(HCRYPTPROV hProv, DWORD key_len, const DATA_BLOB *salt, const DATA_BLOB *pOptionalEntropy, HCRYPTKEY *phKey)",
+   "code": "static\nBOOL load_encryption_key(HCRYPTPROV hProv, DWORD key_len, const DATA_BLOB *salt,\n                         const DATA_BLOB *pOptionalEntropy, HCRYPTKEY *phKey)\n{\n    BOOL rc = TRUE;\n    HCRYPTHASH hSaltHash;\n    char * szUsername = NULL;\n    DWORD dwUsernameLen;\n    DWORD dwError;\n\n    /* create hash for salt */\n    if (!salt || !phKey ||\n        !CryptCreateHash(hProv,CRYPT32_PROTECTDATA_HASH_CALG,0,0,&hSaltHash))\n    {\n        ERR(\"CryptCreateHash\\n\");\n        return FALSE;\n    }\n\n    /* This should be the \"logon credentials\" instead of username */\n    dwError=GetLastError();\n    dwUsernameLen = 0;\n    if (!GetUserNameA(NULL, &dwUsernameLen) &&\n        GetLastError() == ERROR_INSUFFICIENT_BUFFER && dwUsernameLen &&\n        (szUsername = CryptMemAlloc(dwUsernameLen)))\n    {\n        szUsername[0]='\\0';\n        GetUserNameA( szUsername, &dwUsernameLen );\n    }\n    SetLastError(dwError);\n\n    /* salt the hash with:\n     * - the user id\n     * - an \"internal secret\"\n     * - randomness (from the salt)\n     * - user-supplied entropy\n     */\n    if ((szUsername && !CryptHashData(hSaltHash,(LPBYTE)szUsername,dwUsernameLen,0)) ||\n        !CryptHashData(hSaltHash,crypt32_protectdata_secret,\n                                 sizeof(crypt32_protectdata_secret)-1,0) ||\n        !CryptHashData(hSaltHash,salt->pbData,salt->cbData,0) ||\n        (pOptionalEntropy && !CryptHashData(hSaltHash,\n                                            pOptionalEntropy->pbData,\n                                            pOptionalEntropy->cbData,0)))\n    {\n        ERR(\"CryptHashData\\n\");\n        rc = FALSE;\n    }\n\n    /* produce a symmetric key */\n    if (rc && !CryptDeriveKey(hProv,CRYPT32_PROTECTDATA_KEY_CALG,\n                              hSaltHash,key_len << 16 | CRYPT_EXPORTABLE,phKey))\n    {\n        ERR(\"CryptDeriveKey\\n\");\n        rc = FALSE;\n    }\n\n    /* clean up */\n    CryptDestroyHash(hSaltHash);\n    CryptMemFree(szUsername);\n\n    return rc;\n}"
+  },
+  {
+   "name": "hex_str",
+   "file": "dlls/crypt32/protectdata.c",
+   "start_line": 115,
+   "end_line": 133,
+   "static": true,
+   "called_from": [
+    "CryptProtectData",
+    "fill_protect_data",
+    "report"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/crypt32/protectdata.c:138",
+    "referenced through a macro (conservatively shared)"
+   ],
+   "signature": "static const char * hex_str(const unsigned char *p, int n)",
+   "code": "static const char *\nhex_str(const unsigned char *p, int n)\n{\n    const char * ptr;\n    char report[80];\n    int r=-1;\n    report[0]='\\0';\n    ptr = wine_dbg_sprintf(\"%s\",\"\");\n    while (--n >= 0)\n    {\n        if (r++ % 20 == 19)\n        {\n            ptr = wine_dbg_sprintf(\"%s%s\",ptr,report);\n            report[0]='\\0';\n        }\n        sprintf(report+strlen(report),\"%s%02x\", r ? \",\" : \"\", *p++);\n    }\n    return wine_dbg_sprintf(\"%s%s\",ptr,report);\n}"
+  },
+  {
+   "name": "convert_hash_to_blob",
+   "file": "dlls/crypt32/protectdata.c",
+   "start_line": 644,
+   "end_line": 678,
+   "static": true,
+   "called_from": [
+    "CryptProtectData"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/crypt32/protectdata.c:689"
+   ],
+   "signature": "static BOOL convert_hash_to_blob(HCRYPTHASH hHash, DATA_BLOB * blob)",
+   "code": "static\nBOOL convert_hash_to_blob(HCRYPTHASH hHash, DATA_BLOB * blob)\n{\n    DWORD dwSize;\n\n    TRACE(\"called\\n\");\n\n    if (!blob) return FALSE;\n\n    dwSize=sizeof(DWORD);\n    if (!CryptGetHashParam(hHash, HP_HASHSIZE, (BYTE*)&blob->cbData,\n                           &dwSize, 0))\n    {\n        ERR(\"failed to get hash size\\n\");\n        return FALSE;\n    }\n\n    if (!(blob->pbData=CryptMemAlloc(blob->cbData)))\n    {\n        ERR(\"failed to allocate blob memory\\n\");\n        return FALSE;\n    }\n\n    dwSize=blob->cbData;\n    if (!CryptGetHashParam(hHash, HP_HASHVAL, blob->pbData, &dwSize, 0))\n    {\n        ERR(\"failed to get hash value\\n\");\n        CryptMemFree(blob->pbData);\n        blob->pbData=NULL;\n        blob->cbData=0;\n        return FALSE;\n    }\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "serialize",
+   "file": "dlls/crypt32/protectdata.c",
+   "start_line": 216,
+   "end_line": 341,
+   "static": true,
+   "called_from": [
+    "CryptProtectData"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL serialize(const struct protect_data_t *pInfo, DATA_BLOB *pSerial)",
+   "code": "static\nBOOL serialize(const struct protect_data_t *pInfo, DATA_BLOB *pSerial)\n{\n    BYTE * ptr;\n    DWORD dwStrLen;\n    DWORD dwStruct;\n\n    TRACE(\"called\\n\");\n\n    if (!pInfo || !pInfo->szDataDescr || !pSerial ||\n        !pInfo->info0.pbData || !pInfo->info1.pbData ||\n        !pInfo->data0.pbData || !pInfo->salt.pbData ||\n        !pInfo->cipher.pbData || !pInfo->fingerprint.pbData)\n    {\n        return FALSE;\n    }\n\n    if (pInfo->info0.cbData!=16)\n    {\n        ERR(\"protect_data_t info0 not 16 bytes long\\n\");\n    }\n\n    if (pInfo->info1.cbData!=16)\n    {\n        ERR(\"protect_data_t info1 not 16 bytes long\\n\");\n    }\n\n    dwStrLen=lstrlenW(pInfo->szDataDescr);\n\n    pSerial->cbData=0;\n    pSerial->cbData+=sizeof(DWORD)*8; /* 8 raw DWORDs */\n    pSerial->cbData+=sizeof(DWORD)*4; /* 4 BLOBs with size */\n    pSerial->cbData+=pInfo->info0.cbData;\n    pSerial->cbData+=pInfo->info1.cbData;\n    pSerial->cbData+=(dwStrLen+1)*sizeof(WCHAR) + 4; /* str, null, size */\n    pSerial->cbData+=pInfo->data0.cbData;\n    pSerial->cbData+=pInfo->salt.cbData;\n    pSerial->cbData+=pInfo->cipher.cbData;\n    pSerial->cbData+=pInfo->fingerprint.cbData;\n\n    /* save the actual structure size */\n    dwStruct = pSerial->cbData;\n    /* There may be a 256 byte minimum, but I can't prove it. */\n    /*if (pSerial->cbData<256) pSerial->cbData=256;*/\n\n    pSerial->pbData=LocalAlloc(LPTR,pSerial->cbData);\n    if (!pSerial->pbData) return FALSE;\n\n    ptr=pSerial->pbData;\n\n    /* count0 */\n    serialize_dword(pInfo->count0,&ptr);\n    /*TRACE(\"used %u\\n\",ptr-pSerial->pbData);*/\n    \n    /* info0 */\n    serialize_string(pInfo->info0.pbData,&ptr,\n                     pInfo->info0.cbData,sizeof(BYTE),FALSE);\n    /*TRACE(\"used %u\\n\",ptr-pSerial->pbData);*/\n\n    /* count1 */\n    serialize_dword(pInfo->count1,&ptr);\n    /*TRACE(\"used %u\\n\",ptr-pSerial->pbData);*/\n\n    /* info1 */\n    serialize_string(pInfo->info1.pbData,&ptr,\n                     pInfo->info1.cbData,sizeof(BYTE),FALSE);\n    /*TRACE(\"used %u\\n\",ptr-pSerial->pbData);*/\n\n    /* null0 */\n    serialize_dword(pInfo->null0,&ptr);\n    /*TRACE(\"used %u\\n\",ptr-pSerial->pbData);*/\n    \n    /* szDataDescr */\n    serialize_string((BYTE*)pInfo->szDataDescr,&ptr,\n                     (dwStrLen+1)*sizeof(WCHAR),sizeof(BYTE),TRUE);\n    /*TRACE(\"used %u\\n\",ptr-pSerial->pbData);*/\n\n    /* cipher_alg */\n    serialize_dword(pInfo->cipher_alg,&ptr);\n    /*TRACE(\"used %u\\n\",ptr-pSerial->pbData);*/\n    /* cipher_key_len */\n    serialize_dword(pInfo->cipher_key_len,&ptr);\n    /*TRACE(\"used %u\\n\",ptr-pSerial->pbData);*/\n    \n    /* data0 */\n    serialize_string(pInfo->data0.pbData,&ptr,\n                     pInfo->data0.cbData,sizeof(BYTE),TRUE);\n    /*TRACE(\"used %u\\n\",ptr-pSerial->pbData);*/\n\n    /* null1 */\n    serialize_dword(pInfo->null1,&ptr);\n    /*TRACE(\"used %u\\n\",ptr-pSerial->pbData);*/\n    \n    /* hash_alg */\n    serialize_dword(pInfo->hash_alg,&ptr);\n    /*TRACE(\"used %u\\n\",ptr-pSerial->pbData);*/\n    /* hash_len */\n    serialize_dword(pInfo->hash_len,&ptr);\n    /*TRACE(\"used %u\\n\",ptr-pSerial->pbData);*/\n    \n    /* salt */\n    serialize_string(pInfo->salt.pbData,&ptr,\n                     pInfo->salt.cbData,sizeof(BYTE),TRUE);\n    /*TRACE(\"used %u\\n\",ptr-pSerial->pbData);*/\n\n    /* cipher */\n    serialize_string(pInfo->cipher.pbData,&ptr,\n                     pInfo->cipher.cbData,sizeof(BYTE),TRUE);\n    /*TRACE(\"used %u\\n\",ptr-pSerial->pbData);*/\n\n    /* fingerprint */\n    serialize_string(pInfo->fingerprint.pbData,&ptr,\n                     pInfo->fingerprint.cbData,sizeof(BYTE),TRUE);\n    /*TRACE(\"used %u\\n\",ptr-pSerial->pbData);*/\n\n    if (ptr - pSerial->pbData != dwStruct)\n    {\n        ERR(\"struct size changed!? expected %lu\\n\", dwStruct);\n        LocalFree(pSerial->pbData);\n        pSerial->pbData=NULL;\n        pSerial->cbData=0;\n        return FALSE;\n    }\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "free_protect_data",
+   "file": "dlls/crypt32/protectdata.c",
+   "start_line": 533,
+   "end_line": 547,
+   "static": true,
+   "called_from": [
+    "CryptProtectData",
+    "fill_protect_data"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/crypt32/protectdata.c:1039",
+    "dlls/crypt32/protectdata.c:1046",
+    "dlls/crypt32/protectdata.c:1110",
+    "dlls/crypt32/protectdata.c:1111"
+   ],
+   "signature": "static void free_protect_data(struct protect_data_t * pInfo)",
+   "code": "static\nvoid free_protect_data(struct protect_data_t * pInfo)\n{\n    TRACE(\"called\\n\");\n\n    if (!pInfo) return;\n\n    CryptMemFree(pInfo->info0.pbData);\n    CryptMemFree(pInfo->info1.pbData);\n    CryptMemFree(pInfo->szDataDescr);\n    CryptMemFree(pInfo->data0.pbData);\n    CryptMemFree(pInfo->salt.pbData);\n    CryptMemFree(pInfo->cipher.pbData);\n    CryptMemFree(pInfo->fingerprint.pbData);\n}"
+  },
+  {
+   "name": "convert_str_to_blob",
+   "file": "dlls/crypt32/protectdata.c",
+   "start_line": 550,
+   "end_line": 565,
+   "static": true,
+   "called_from": [
+    "fill_protect_data"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BYTE *convert_str_to_blob(LPCSTR str, DATA_BLOB *blob)",
+   "code": "static\nBYTE *convert_str_to_blob(LPCSTR str, DATA_BLOB *blob)\n{\n    if (!str || !blob) return NULL;\n\n    blob->cbData=strlen(str)+1;\n    if (!(blob->pbData=CryptMemAlloc(blob->cbData)))\n    {\n        blob->cbData=0;\n    }\n    else {\n        strcpy((LPSTR)blob->pbData, str);\n    }\n\n    return blob->pbData;\n}"
+  },
+  {
+   "name": "serialize_dword",
+   "file": "dlls/crypt32/protectdata.c",
+   "start_line": 141,
+   "end_line": 148,
+   "static": true,
+   "called_from": [
+    "serialize",
+    "serialize_string"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void serialize_dword(DWORD value,BYTE ** ptr)",
+   "code": "static\nvoid serialize_dword(DWORD value,BYTE ** ptr)\n{\n    /*TRACE(\"called\\n\");*/\n\n    memcpy(*ptr,&value,sizeof(DWORD));\n    *ptr+=sizeof(DWORD);\n}"
+  },
+  {
+   "name": "serialize_string",
+   "file": "dlls/crypt32/protectdata.c",
+   "start_line": 150,
+   "end_line": 162,
+   "static": true,
+   "called_from": [
+    "serialize"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void serialize_string(const BYTE *str, BYTE **ptr, DWORD len, DWORD width, BOOL prepend_len)",
+   "code": "static\nvoid serialize_string(const BYTE *str, BYTE **ptr, DWORD len, DWORD width,\n                      BOOL prepend_len)\n{\n    /*TRACE(\"called %ux%u\\n\",(unsigned int)len,(unsigned int)width);*/\n\n    if (prepend_len)\n    {\n        serialize_dword(len,ptr);\n    }\n    memcpy(*ptr,str,len*width);\n    *ptr+=len*width;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "protect_data_t",
+    "kind": "struct_decl",
+    "start_line": 92,
+    "end_line": 109,
+    "code": "struct protect_data_t\n{\n    DWORD       count0;\n    DATA_BLOB   info0;        /* using this to hold crypt_magic_str */\n    DWORD       count1;\n    DATA_BLOB   info1;\n    DWORD       null0;\n    WCHAR *     szDataDescr;  /* serialized differently than the DATA_BLOBs */\n    ALG_ID      cipher_alg;\n    DWORD       cipher_key_len;\n    DATA_BLOB   data0;\n    DWORD       null1;\n    ALG_ID      hash_alg;\n    DWORD       hash_len;\n    DATA_BLOB   salt;\n    DATA_BLOB   cipher;\n    DATA_BLOB   fingerprint;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 47,
+    "end_line": 47,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(crypt);"
+   },
+   {
+    "name": "crypt32_protectdata_secret",
+    "type": "const BYTE[20]",
+    "static": true,
+    "start_line": 56,
+    "end_line": 59,
+    "code": "static const BYTE crypt32_protectdata_secret[] = {\n    'I','\\'','m',' ','h','u','n','t','i','n','g',' ',\n    'w','a','b','b','i','t','s',0\n};"
+   },
+   {
+    "name": "crypt_magic_str",
+    "type": "const char[16]",
+    "static": true,
+    "start_line": 112,
+    "end_line": 112,
+    "code": "static const char crypt_magic_str[] = \"Wine Crypt32 ok\";"
+   }
+  ],
+  "macros": [
+   {
+    "name": "CRYPT32_PROTECTDATA_HASH_CALG",
+    "start_line": 50,
+    "end_line": 50,
+    "code": "#define CRYPT32_PROTECTDATA_HASH_CALG CALG_SHA1"
+   },
+   {
+    "name": "CRYPT32_PROTECTDATA_HASH_LEN",
+    "start_line": 51,
+    "end_line": 51,
+    "code": "#define CRYPT32_PROTECTDATA_HASH_LEN  160"
+   },
+   {
+    "name": "CRYPT32_PROTECTDATA_KEY_CALG",
+    "start_line": 52,
+    "end_line": 52,
+    "code": "#define CRYPT32_PROTECTDATA_KEY_CALG  CALG_3DES"
+   },
+   {
+    "name": "CRYPT32_PROTECTDATA_KEY_LEN",
+    "start_line": 53,
+    "end_line": 53,
+    "code": "#define CRYPT32_PROTECTDATA_KEY_LEN   168"
+   },
+   {
+    "name": "CRYPT32_PROTECTDATA_PROV",
+    "start_line": 49,
+    "end_line": 49,
+    "code": "#define CRYPT32_PROTECTDATA_PROV      PROV_RSA_FULL"
+   },
+   {
+    "name": "CRYPT32_PROTECTDATA_SALT_LEN",
+    "start_line": 54,
+    "end_line": 54,
+    "code": "#define CRYPT32_PROTECTDATA_SALT_LEN  16"
+   },
+   {
+    "name": "TRACE_DATA_BLOB",
+    "start_line": 135,
+    "end_line": 139,
+    "code": "#define TRACE_DATA_BLOB(blob) do { \\\n    TRACE(\"%s cbData: %u\\n\", #blob ,(unsigned int)((blob)->cbData)); \\\n    TRACE(\"%s pbData @ %p:%s\\n\", #blob ,(blob)->pbData, \\\n          hex_str((blob)->pbData, (blob)->cbData)); \\\n} while (0)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "CryptMemAlloc",
+    "impl": [
+     "dlls/crypt32/main.c:136"
+    ]
+   },
+   {
+    "name": "CryptMemFree",
+    "impl": [
+     "dlls/crypt32/main.c:146"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CryptAcquireContextW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/crypt.c:345"
+    ]
+   },
+   {
+    "name": "CryptCreateHash",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/crypt.c:698"
+    ]
+   },
+   {
+    "name": "CryptDeriveKey",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/crypt.c:805"
+    ]
+   },
+   {
+    "name": "CryptDestroyHash",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/crypt.c:858"
+    ]
+   },
+   {
+    "name": "CryptDestroyKey",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/crypt.c:894"
+    ]
+   },
+   {
+    "name": "CryptEncrypt",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/crypt.c:1054"
+    ]
+   },
+   {
+    "name": "CryptGenRandom",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/crypt.c:667"
+    ]
+   },
+   {
+    "name": "CryptGetHashParam",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/crypt.c:1567"
+    ]
+   },
+   {
+    "name": "CryptHashData",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/crypt.c:1728"
+    ]
+   },
+   {
+    "name": "CryptReleaseContext",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/crypt.c:624"
+    ]
+   },
+   {
+    "name": "GetUserNameA",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/advapi.c:45"
+    ]
+   },
+   {
+    "name": "LocalAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:1047"
+    ]
+   },
+   {
+    "name": "LocalFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:1107"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   },
+   {
+    "name": "strcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:381"
+    ]
+   },
+   {
+    "name": "strlen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:423"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetLastError",
+   "SetLastError",
+   "debugstr_an",
+   "debugstr_w",
+   "lstrlenW",
+   "sprintf",
+   "wine_dbg_log",
+   "wine_dbg_sprintf"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

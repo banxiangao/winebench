@@ -1,0 +1,184 @@
+{
+ "id": "0133",
+ "function": {
+  "name": "SHQueryValueExA",
+  "export_name": "SHQueryValueExA",
+  "module": "shcore",
+  "source_module": "shcore",
+  "exported_by": [
+   "shcore",
+   "shlwapi"
+  ],
+  "side": "PE",
+  "file": "dlls/shcore/main.c",
+  "start_line": 2183,
+  "end_line": 2226,
+  "body_lines": 41,
+  "signature": "DWORD WINAPI SHQueryValueExA(HKEY hkey, const char *name, DWORD *reserved, DWORD *type, void *buff, DWORD *buff_len)",
+  "header_comment": "/*************************************************************************\n * SHQueryValueExA    [SHCORE.@]\n */",
+  "code": "DWORD WINAPI SHQueryValueExA(HKEY hkey, const char *name, DWORD *reserved, DWORD *type,\n        void *buff, DWORD *buff_len)\n{\n    DWORD ret, value_type, data_len = 0;\n\n    TRACE(\"(%p, %s, %p, %p, %p, %p)\\n\", hkey, debugstr_a(name), reserved, type, buff, buff_len);\n\n    if (buff_len)\n        data_len = *buff_len;\n\n    ret = RegQueryValueExA(hkey, name, reserved, &value_type, buff, &data_len);\n    if (ret != ERROR_SUCCESS && ret != ERROR_MORE_DATA)\n        return ret;\n\n    if (buff_len && value_type == REG_EXPAND_SZ)\n    {\n        DWORD length;\n        char *value;\n\n        if (!buff || ret == ERROR_MORE_DATA)\n        {\n            length = data_len;\n            value = malloc(length);\n            RegQueryValueExA(hkey, name, reserved, NULL, (BYTE *)value, &length);\n            length = ExpandEnvironmentStringsA(value, NULL, 0);\n        }\n        else\n        {\n            length = strlen(buff) + 1;\n            value = malloc(length);\n            memcpy(value, buff, length);\n            length = ExpandEnvironmentStringsA(value, buff, *buff_len);\n            if (length > *buff_len) ret = ERROR_MORE_DATA;\n        }\n        data_len = max(data_len, length);\n        free(value);\n    }\n\n    if (type)\n        *type = value_type == REG_EXPAND_SZ ? REG_SZ : value_type;\n    if (buff_len)\n        *buff_len = data_len;\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winternl.h\"",
+   "#include \"initguid.h\"",
+   "#include \"ocidl.h\"",
+   "#include \"featurestagingapi.h\"",
+   "#include \"shellscalingapi.h\"",
+   "#include \"shcore.h\"",
+   "#include \"appmodel.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "shcore!SHQueryValueExA [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/shcore/tests/shcore.c",
+   "dlls/shlwapi/tests/shreg.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 4
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "shlwapi",
+   "path": "sdk-api-src/content/shlwapi/nf-shlwapi-shqueryvalueexa.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/shlwapi/nf-shlwapi-shqueryvalueexa",
+   "documented_name": "shqueryvalueexa",
+   "file": "docs/0133_sdk-api_nf-shlwapi-shqueryvalueexa.md",
+   "text": "---\nUID: NF:shlwapi.SHQueryValueExA\ntitle: SHQueryValueExA function (shlwapi.h)\ndescription: Opens a registry key and queries it for a specific value. (ANSI)\nhelpviewer_keywords: [\"HKEY_CLASSES_ROOT\", \"HKEY_CURRENT_CONFIG\", \"HKEY_CURRENT_USER\", \"HKEY_LOCAL_MACHINE\", \"HKEY_PERFORMANCE_DATA\", \"HKEY_USERS\", \"SHQueryValueExA\", \"shlwapi/SHQueryValueExA\"]\nold-location: shell\\SHQueryValueEx.htm\ntech.root: shell\nms.assetid: 9969acae-5965-40fe-bde9-6de9ddf26bb8\nms.date: 12/05/2018\nms.keywords: HKEY_CLASSES_ROOT, HKEY_CURRENT_CONFIG, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, HKEY_PERFORMANCE_DATA, HKEY_USERS, SHQueryValueEx, SHQueryValueEx function [Windows Shell], SHQueryValueExA, SHQueryValueExW, _win32_SHQueryValueEx, shell.SHQueryValueEx, shlwapi/SHQueryValueEx, shlwapi/SHQueryValueExA, shlwapi/SHQueryValueExW\nreq.header: shlwapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional, Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: SHQueryValueExW (Unicode) and SHQueryValueExA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Shlwapi.lib\nreq.dll: Shlwapi.dll (version 4.71 or later)\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SHQueryValueExA\n - shlwapi/SHQueryValueExA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Shlwapi.dll\n - API-MS-Win-DownLevel-shlwapi-l2-1-0.dll\n - ShCore.dll\n - API-MS-Win-DownLevel-shlwapi-l2-1-1.dll\n - API-MS-Win-ShCore-Registry-l1-1-0.dll\n - API-MS-Win-ShCore-Registry-l1-1-1.dll\napi_name:\n - SHQueryValueEx\n - SHQueryValueExA\n - SHQueryValueExW\n---\n\n# SHQueryValueExA function\n\n\n## -description\n\nOpens a registry key and queries it for a specific value.\n\n## -parameters\n\n### -param hkey [in]\n\nType: <b>HKEY</b>\n\nA handle to the currently open key, or any of the following predefined values.\n\n\n\n#### HKEY_CLASSES_ROOT\n\n\n\n#### HKEY_CURRENT_CONFIG\n\n\n\n#### HKEY_CURRENT_USER\n\n\n\n#### HKEY_LOCAL_MACHINE\n\n\n\n#### HKEY_PERFORMANCE_DATA\n\n\n\n#### HKEY_USERS\n\n### -param pszValue [in, optional]\n\nType: <b>LPCTSTR</b>\n\nThe address of the <b>null</b>-terminated string that contains the name of the value to be queried.\n\n### -param pdwReserved\n\nType: <b>LPDWORD</b>\n\nReserved. Must be <b>NULL</b>.\n\n### -param pdwType [out, optional]\n\nType: <b>LPDWORD</b>\n\nThe address of the variable that receives the key's value type. For more information, see <a href=\"/windows/desktop/shell/hkey-type\">Registry Data Types</a>.\n\n### -param pvData [out, optional]\n\nType: <b>LPVOID</b>\n\nThe address of the buffer that receives the value's data. This parameter can be <b>NULL</b> if the data is not required.\n\n### -param pcbData [in, out, optional]\n\nType: <b>LPDWORD</b>\n\nThe address of the variable that specifies the size, in bytes, of the buffer pointed to by the <i>pvData</i> parameter. When the function returns, this variable contains the size of the data copied to <i>pvData</i>.\n\n## -returns\n\nType: <b>DWORD</b>\n\nReturns ERROR_SUCCESS if successful, or a nonzero error code defined in Winerror.h otherwise. You can use the <a href=\"/windows/desktop/api/winbase/nf-winbase-formatmessage\">FormatMessage</a> function with the FORMAT_MESSAGE_FROM_SYSTEM flag to retrieve a generic description of the error.\n\n## -remarks\n\n> [!NOTE]\n> The shlwapi.h header defines SHQueryValueEx as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(shcore);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "ExpandEnvironmentStringsA",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:1484"
+    ]
+   },
+   {
+    "name": "RegQueryValueExA",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1730"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "strlen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:423"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_a",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "shcore.SHQueryValueExA",
+  "category": {
+   "l1": "Windows environment (Shell)",
+   "l2": "Windows Shell",
+   "header": "shlwapi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 44,
+   "body": 42,
+   "code": 28
+  },
+  "cyclomatic": 12,
+  "return_type": "DWORD",
+  "n_params": 6,
+  "tests": {
+   "n_tests_own": 4,
+   "n_tests": 4,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/shcore/tests/shcore.c::test_SHCopyKey",
+    "dlls/shcore/tests/shcore.c::test_SHQueryValueEx",
+    "dlls/shlwapi/tests/shreg.c::test_SHCopyKey",
+    "dlls/shlwapi/tests/shreg.c::test_SHQueryValueEx"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/shlwapi/nf-shlwapi-shqueryvalueexa",
+   "source": "win32",
+   "description": "Opens a registry key and queries it for a specific value. (ANSI)",
+   "min_windows": "Windows 2000 Professional, Windows XP [desktop apps only]",
+   "documented_dll": "Shlwapi.dll (version 4.71 or later)"
+  },
+  "exports": [
+   "shcore.SHQueryValueExA",
+   "shlwapi.SHQueryValueExA"
+  ],
+  "subset": {
+   "selected_by": "topup",
+   "lower_bound_used": 1,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

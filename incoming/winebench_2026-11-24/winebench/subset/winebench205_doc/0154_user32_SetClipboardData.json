@@ -1,0 +1,312 @@
+{
+ "id": "0154",
+ "function": {
+  "name": "SetClipboardData",
+  "export_name": "SetClipboardData",
+  "module": "user32",
+  "source_module": "user32",
+  "exported_by": [
+   "user.exe16",
+   "user32"
+  ],
+  "side": "PE",
+  "file": "dlls/user32/clipboard.c",
+  "start_line": 599,
+  "end_line": 623,
+  "body_lines": 22,
+  "signature": "HANDLE WINAPI SetClipboardData( UINT format, HANDLE data )",
+  "header_comment": "/**************************************************************************\n *\t\tSetClipboardData (USER32.@)\n */",
+  "code": "HANDLE WINAPI SetClipboardData( UINT format, HANDLE data )\n{\n    struct set_clipboard_params params = { .size = 0 };\n    HANDLE handle = data;\n    NTSTATUS status;\n\n    TRACE( \"%s %p\\n\", debugstr_format( format ), data );\n\n    if (data)\n    {\n        if (!(handle = marshal_data( format, data, &params.size ))) return 0;\n        if (!(params.data = GlobalLock( handle ))) return 0;\n    }\n\n    status = NtUserSetClipboardData( format, data, &params );\n\n    if (params.data) GlobalUnlock( handle );\n    if (handle != data) GlobalFree( handle );\n    if (status)\n    {\n        SetLastError( RtlNtStatusToDosError( status ));\n        return 0;\n    }\n    return data;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"user_private.h\"",
+   "#include \"winnls.h\"",
+   "#include \"objidl.h\"",
+   "#include \"shlobj.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "user32!SetClipboardData [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/clipboard.c",
+   "dlls/user32/tests/edit.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 15
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "user.exe16",
+   "source_module": "user.exe16",
+   "exported_by": [
+    "user.exe16"
+   ],
+   "file": "dlls/user.exe16/user.c",
+   "start_line": 886,
+   "resolution": [
+    "user.exe16!SetClipboardData [pascal -ret16] -> internal symbol SetClipboardData16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 946,
+   "signature": "HANDLE16 WINAPI SetClipboardData16( UINT16 format, HANDLE16 data16 )",
+   "code": "HANDLE16 WINAPI SetClipboardData16( UINT16 format, HANDLE16 data16 )\n{\n    HANDLE data32 = 0;\n\n    switch (format)\n    {\n    case CF_BITMAP:\n    case CF_PALETTE:\n        data32 = HGDIOBJ_32( data16 );\n        break;\n\n    case CF_METAFILEPICT:\n    {\n        METAHEADER *header;\n        METAFILEPICT *pict32;\n        METAFILEPICT16 *pict16 = GlobalLock16( data16 );\n\n        if (pict16)\n        {\n            if (!(data32 = GlobalAlloc( GMEM_MOVEABLE, sizeof(*pict32) ))) return 0;\n            pict32 = GlobalLock( data32 );\n            pict32->mm = pict16->mm;\n            pict32->xExt = pict16->xExt;\n            pict32->yExt = pict16->yExt;\n            header = GlobalLock16( pict16->hMF );\n            pict32->hMF = SetMetaFileBitsEx( header->mtSize * 2, (BYTE *)header );\n            GlobalUnlock16( pict16->hMF );\n            GlobalUnlock( data32 );\n        }\n        set_clipboard_format( format, data16 );\n        break;\n    }\n\n    case CF_ENHMETAFILE:\n        FIXME( \"enhmetafile not supported in 16-bit\\n\" );\n        return 0;\n\n    default:\n        if (format >= CF_GDIOBJFIRST && format <= CF_GDIOBJLAST)\n            data32 = HGDIOBJ_32( data16 );\n        else if (format >= CF_PRIVATEFIRST && format <= CF_PRIVATELAST)\n            data32 = HANDLE_32( data16 );\n        else\n        {\n            UINT size = GlobalSize16( data16 );\n            void *ptr32, *ptr16 = GlobalLock16( data16 );\n            if (ptr16)\n            {\n                if (!(data32 = GlobalAlloc( GMEM_MOVEABLE, size ))) return 0;\n                ptr32 = GlobalLock( data32 );\n                memcpy( ptr32, ptr16, size );\n                GlobalUnlock( data32 );\n            }\n            set_clipboard_format( format, data16 );\n        }\n        break;\n    }\n\n    if (!SetClipboardData( format, data32 )) return 0;\n    return data16;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-setclipboarddata.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-setclipboarddata",
+   "documented_name": "setclipboarddata",
+   "file": "docs/0154_sdk-api_nf-winuser-setclipboarddata.md",
+   "text": "---\nUID: NF:winuser.SetClipboardData\ntitle: SetClipboardData function (winuser.h)\ndescription: Places data on the clipboard in a specified clipboard format.\nhelpviewer_keywords: [\"SetClipboardData\",\"SetClipboardData function [Data Exchange]\",\"_win32_SetClipboardData\",\"_win32_setclipboarddata_cpp\",\"dataxchg.setclipboarddata\",\"winui._win32_setclipboarddata\",\"winuser/SetClipboardData\"]\nold-location: dataxchg\\setclipboarddata.htm\ntech.root: dataxchg\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\dataexchange\\clipboard\\clipboardreference\\clipboardfunctions\\setclipboarddata.htm\nms.date: 12/05/2018\nms.keywords: SetClipboardData, SetClipboardData function [Data Exchange], _win32_SetClipboardData, _win32_setclipboarddata_cpp, dataxchg.setclipboarddata, winui._win32_setclipboarddata, winuser/SetClipboardData\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SetClipboardData\n - winuser/SetClipboardData\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-rtcore-ntuser-misc-l1-1-0.dll\n - ext-ms-win-ntuser-misc-l1-7-0.dll\n - ext-ms-win-ntuser-misc-l1-6-0.dll\n - User32.dll\n - API-MS-Win-RTCore-NTUser-clipboard-l1-1-0.dll\n - minuser.dll\n - Ext-MS-Win-NTUser-Misc-l1-2-0.dll\n - Ext-MS-Win-NTUser-Misc-l1-3-0.dll\n - api-ms-win-ntuser-ie-clipboard-l1-1-0.dll\n - ie_stubs.dll\n - ext-ms-win-ntuser-misc-l1-3-1.dll\n - Ext-MS-Win-NTUser-Misc-L1-4-0.dll\n - Ext-Ms-Win-NTUser-Misc-L1-5-0.dll\n - Ext-MS-Win-NTUser-Misc-L1-5-1.dll\napi_name:\n - SetClipboardData\nreq.apiset: ext-ms-win-ntuser-misc-l1-2-0 (introduced in Windows 8.1)\n---\n\n# SetClipboardData function\n\n\n## -description\n\nPlaces data on the clipboard in a specified clipboard format. The window must be the current clipboard owner, and the application must have called the [**OpenClipboard**](nf-winuser-openclipboard.md) function. (When responding to the [WM_RENDERFORMAT](/windows/win32/dataxchg/wm-renderformat) message, the clipboard owner must not call **OpenClipboard** before calling **SetClipboardData**.)\n\n## -parameters\n\n### -param uFormat [in]\n\nType: <b>UINT</b>\n\nThe clipboard format. This parameter can be a registered format or any of the standard clipboard formats. For more information, see <a href=\"/windows/desktop/dataxchg/standard-clipboard-formats\">Standard Clipboard Formats</a> and <a href=\"/windows/desktop/dataxchg/clipboard-formats\">Registered Clipboard Formats</a>.\n\n### -param hMem [in, optional]\n\nType: <b>HANDLE</b>\n\nA handle to the data in the specified format. This parameter can be <b>NULL</b>, indicating that the window provides data in the specified clipboard format (renders the format) upon request; this is known as [delayed rendering](/windows/win32/dataxchg/clipboard-operations#delayed-rendering). If a window delays rendering, it must process the [WM_RENDERFORMAT](/windows/win32/dataxchg/wm-renderformat) and [WM_RENDERALLFORMATS](/windows/win32/dataxchg/wm-renderallformats) messages.\n\nIf <b>SetClipboardData</b> succeeds, the system owns the object identified by the <i>hMem</i> parameter. The application may not write to or free the data once ownership has been transferred to the system, but it can lock and read from the data until the <a href=\"/windows/desktop/api/winuser/nf-winuser-closeclipboard\">CloseClipboard</a> function is called. (The memory must be unlocked before the Clipboard is closed.) If the <i>hMem</i> parameter identifies a memory object, the object must have been allocated using the function with the <b>GMEM_MOVEABLE</b> flag.\n\n## -returns\n\nType: <b>HANDLE</b>\n\nIf the function succeeds, the return value is the handle to the data.\n\nIf the function fails, the return value is <b>NULL</b>. To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\n<b>Windows 8:</b> Bitmaps to be shared with Windows Store app apps must be in the <b>CF_BITMAP</b> format (device-dependent bitmap). \n\nIf an application calls <b>SetClipboardData</b> in response to <a href=\"/windows/desktop/dataxchg/wm-renderformat\">WM_RENDERFORMAT</a> or <a href=\"/windows/desktop/dataxchg/wm-renderallformats\">WM_RENDERALLFORMATS</a>, the application should not use the handle after <b>SetClipboardData</b> has been called.\n\nIf an application calls <a href=\"/windows/desktop/api/winuser/nf-winuser-openclipboard\">OpenClipboard</a> with hwnd set to <b>NULL</b>, <a href=\"/windows/desktop/api/winuser/nf-winuser-emptyclipboard\">EmptyClipboard</a> sets the clipboard owner to <b>NULL</b>; this causes <b>SetClipboardData</b> to fail.\n\nThe system performs implicit data format conversions between certain clipboard formats when an application calls the <a href=\"/windows/desktop/api/winuser/nf-winuser-getclipboarddata\">GetClipboardData</a> function. For example, if the <b>CF_OEMTEXT</b> format is on the clipboard, a window can retrieve data in the <b>CF_TEXT</b> format. The format on the clipboard is converted to the requested format on demand. For more information, see <a href=\"/windows/desktop/dataxchg/clipboard-formats\">Synthesized Clipboard Formats</a>.\n\n\n#### Examples\n\nFor an example, see <a href=\"/windows/desktop/dataxchg/using-the-clipboard\">Copying Information to the Clipboard</a>.\n\n<div class=\"code\"></div>\n\n## -see-also\n\n<a href=\"/windows/desktop/dataxchg/clipboard\">Clipboard</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-closeclipboard\">CloseClipboard</a>\n\n\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-getclipboarddata\">GetClipboardData</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-openclipboard\">OpenClipboard</a>\n\n\n\n<b>Reference</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-registerclipboardformata\">RegisterClipboardFormat</a>\n\n\n\n<a href=\"/windows/desktop/dataxchg/wm-renderallformats\">WM_RENDERALLFORMATS</a>\n\n\n\n<a href=\"/windows/desktop/dataxchg/wm-renderformat\">WM_RENDERFORMAT</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "debugstr_format",
+   "file": "dlls/user32/clipboard.c",
+   "start_line": 59,
+   "end_line": 97,
+   "static": true,
+   "called_from": [
+    "SetClipboardData"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/user32/clipboard.c:489",
+    "dlls/user32/clipboard.c:518",
+    "dlls/user32/clipboard.c:884",
+    "dlls/user32/clipboard.c:917",
+    "dlls/user32/clipboard.c:932"
+   ],
+   "signature": "static const char *debugstr_format( UINT id )",
+   "code": "static const char *debugstr_format( UINT id )\n{\n    WCHAR buffer[256];\n    DWORD le = GetLastError();\n    BOOL r = NtUserGetClipboardFormatName( id, buffer, 256 );\n    SetLastError(le);\n\n    if (r)\n        return wine_dbg_sprintf( \"%04x %s\", id, debugstr_w(buffer) );\n\n    switch (id)\n    {\n#define BUILTIN(id) case id: return #id;\n    BUILTIN(CF_TEXT)\n    BUILTIN(CF_BITMAP)\n    BUILTIN(CF_METAFILEPICT)\n    BUILTIN(CF_SYLK)\n    BUILTIN(CF_DIF)\n    BUILTIN(CF_TIFF)\n    BUILTIN(CF_OEMTEXT)\n    BUILTIN(CF_DIB)\n    BUILTIN(CF_PALETTE)\n    BUILTIN(CF_PENDATA)\n    BUILTIN(CF_RIFF)\n    BUILTIN(CF_WAVE)\n    BUILTIN(CF_UNICODETEXT)\n    BUILTIN(CF_ENHMETAFILE)\n    BUILTIN(CF_HDROP)\n    BUILTIN(CF_LOCALE)\n    BUILTIN(CF_DIBV5)\n    BUILTIN(CF_OWNERDISPLAY)\n    BUILTIN(CF_DSPTEXT)\n    BUILTIN(CF_DSPBITMAP)\n    BUILTIN(CF_DSPMETAFILEPICT)\n    BUILTIN(CF_DSPENHMETAFILE)\n#undef BUILTIN\n    default: return wine_dbg_sprintf( \"%04x\", id );\n    }\n}"
+  },
+  {
+   "name": "marshal_data",
+   "file": "dlls/user32/clipboard.c",
+   "start_line": 100,
+   "end_line": 194,
+   "static": true,
+   "called_from": [
+    "SetClipboardData"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static HANDLE marshal_data( UINT format, HANDLE handle, size_t *ret_size )",
+   "code": "static HANDLE marshal_data( UINT format, HANDLE handle, size_t *ret_size )\n{\n    SIZE_T size;\n\n    switch (format)\n    {\n    case CF_BITMAP:\n    case CF_DSPBITMAP:\n        {\n            BITMAP bitmap, *bm;\n            if (!GetObjectW( handle, sizeof(bitmap), &bitmap )) return 0;\n            size = abs( bitmap.bmHeight ) * ((((bitmap.bmWidth * bitmap.bmBitsPixel) + 15) >> 3) & ~1);\n            *ret_size = sizeof(bitmap) + size;\n            if (!(bm = GlobalAlloc( GMEM_FIXED, *ret_size ))) return 0;\n            *bm = bitmap;\n            GetBitmapBits( handle, size, bm + 1 );\n            return bm;\n        }\n    case CF_PALETTE:\n        {\n            LOGPALETTE *pal;\n            if (!(size = GetPaletteEntries( handle, 0, 0, NULL ))) return 0;\n            *ret_size = offsetof( LOGPALETTE, palPalEntry[size] );\n            if (!(pal = GlobalAlloc( GMEM_FIXED, *ret_size ))) return 0;\n            pal->palVersion = 0x300;\n            pal->palNumEntries = size;\n            GetPaletteEntries( handle, 0, size, pal->palPalEntry );\n            return pal;\n        }\n    case CF_ENHMETAFILE:\n    case CF_DSPENHMETAFILE:\n        {\n            BYTE *ret;\n            if (!(size = GetEnhMetaFileBits( handle, 0, NULL ))) return 0;\n            if (!(ret = GlobalAlloc( GMEM_FIXED, size ))) return 0;\n            GetEnhMetaFileBits( handle, size, ret );\n            *ret_size = size;\n            return ret;\n        }\n    case CF_METAFILEPICT:\n    case CF_DSPMETAFILEPICT:\n        {\n            METAFILEPICT *mf;\n            struct metafile_pict *mfbits;\n            if (!(mf = GlobalLock( handle ))) return 0;\n            if (!(size = GetMetaFileBitsEx( mf->hMF, 0, NULL )))\n            {\n                GlobalUnlock( handle );\n                return 0;\n            }\n            *ret_size = offsetof( struct metafile_pict, bits[size] );\n            if (!(mfbits = GlobalAlloc( GMEM_FIXED, *ret_size )))\n            {\n                GlobalUnlock( handle );\n                return 0;\n            }\n            mfbits->mm   = mf->mm;\n            mfbits->xExt = mf->xExt;\n            mfbits->yExt = mf->yExt;\n            GetMetaFileBitsEx( mf->hMF, size, mfbits->bits );\n            GlobalUnlock( handle );\n            return mfbits;\n        }\n    case CF_UNICODETEXT:\n        {\n            char *ptr;\n            if (!(size = GlobalSize( handle ))) return 0;\n            if ((UINT)size != size) return 0;\n            if (size < sizeof(WCHAR)) return 0;\n            if (!(ptr = GlobalLock( handle ))) return 0;\n            /* enforce nul-termination the Windows way: ignoring alignment */\n            *((WCHAR *)(ptr + size) - 1) = 0;\n            GlobalUnlock( handle );\n            *ret_size = size;\n            return handle;\n        }\n    case CF_TEXT:\n    case CF_OEMTEXT:\n        {\n            char *ptr;\n            if (!(size = GlobalSize( handle ))) return 0;\n            if ((UINT)size != size) return 0;\n            if (!(ptr = GlobalLock( handle ))) return 0;\n            ptr[size - 1] = 0;  /* enforce null-termination */\n            GlobalUnlock( handle );\n            *ret_size = size;\n            return handle;\n        }\n    default:\n        if (!(size = GlobalSize( handle ))) return 0;\n        if ((UINT)size != size) return 0;\n        *ret_size = size;\n        return handle;\n    }\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "metafile_pict",
+    "kind": "struct_decl",
+    "start_line": 50,
+    "end_line": 56,
+    "code": "struct metafile_pict\n{\n    LONG       mm;\n    LONG       xExt;\n    LONG       yExt;\n    BYTE       bits[1];\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 34,
+    "end_line": 34,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(clipboard);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "BUILTIN",
+    "start_line": 71,
+    "end_line": 71,
+    "code": "#define BUILTIN(id) case id: return #id;"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "GetBitmapBits",
+    "module": "gdi32",
+    "impl": [
+     "dlls/win32u/bitmap.c:231"
+    ]
+   },
+   {
+    "name": "GetEnhMetaFileBits",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/enhmetafile.c:519"
+    ]
+   },
+   {
+    "name": "GetMetaFileBitsEx",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/metafile.c:1079"
+    ]
+   },
+   {
+    "name": "GetObjectW",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:365"
+    ]
+   },
+   {
+    "name": "GetPaletteEntries",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:757"
+    ]
+   },
+   {
+    "name": "GlobalAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:1018"
+    ]
+   },
+   {
+    "name": "GlobalFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:1038"
+    ]
+   },
+   {
+    "name": "GlobalLock",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernel32/heap.c:145"
+    ]
+   },
+   {
+    "name": "GlobalSize",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernel32/heap.c:220"
+    ]
+   },
+   {
+    "name": "GlobalUnlock",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernel32/heap.c:167"
+    ]
+   },
+   {
+    "name": "NtUserGetClipboardFormatName",
+    "module": "win32u",
+    "impl": [
+     "dlls/win32u/clipboard.c:350"
+    ]
+   },
+   {
+    "name": "NtUserSetClipboardData",
+    "module": "win32u",
+    "impl": [
+     "dlls/win32u/clipboard.c:558"
+    ]
+   },
+   {
+    "name": "RtlNtStatusToDosError",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:77"
+    ]
+   },
+   {
+    "name": "abs",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/math.c:35"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetLastError",
+   "SetLastError",
+   "debugstr_w",
+   "wine_dbg_log",
+   "wine_dbg_sprintf"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "user32.SetClipboardData",
+  "category": {
+   "l1": "Data access and storage",
+   "l2": "Data exchange (DDE, clipboard)",
+   "header": "winuser.h",
+   "textbook": "Communications",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 25,
+   "body": 24,
+   "code": 14
+  },
+  "cyclomatic": 7,
+  "return_type": "HANDLE",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 15,
+   "n_tests": 19,
+   "n_tests_other": 4,
+   "own_test_functions": [
+    "dlls/user32/tests/clipboard.c::clipboard_render_data_thread",
+    "dlls/user32/tests/clipboard.c::clipboard_thread",
+    "dlls/user32/tests/clipboard.c::clipboard_wnd_proc",
+    "dlls/user32/tests/clipboard.c::grab_clipboard_process",
+    "dlls/user32/tests/clipboard.c::set_clipboard_data_process",
+    "dlls/user32/tests/clipboard.c::set_clipboard_data_thread",
+    "dlls/user32/tests/clipboard.c::test_ClipboardOwner",
+    "dlls/user32/tests/clipboard.c::test_GetUpdatedClipboardFormats",
+    "dlls/user32/tests/clipboard.c::test_RegisterClipboardFormatA",
+    "dlls/user32/tests/clipboard.c::test_data_handles",
+    "dlls/user32/tests/clipboard.c::test_handles",
+    "dlls/user32/tests/clipboard.c::test_handles_process_open",
+    "dlls/user32/tests/clipboard.c::test_string_data",
+    "dlls/user32/tests/clipboard.c::test_synthesized",
+    "dlls/user32/tests/edit.c::test_paste"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-setclipboarddata",
+   "source": "win32",
+   "description": "Places data on the clipboard in a specified clipboard format.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "User32.dll"
+  },
+  "exports": [
+   "user32.SetClipboardData"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

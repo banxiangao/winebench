@@ -1,0 +1,192 @@
+{
+ "id": "0098",
+ "function": {
+  "name": "CheckTokenMembership",
+  "export_name": "CheckTokenMembership",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "advapi32",
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/security.c",
+  "start_line": 544,
+  "end_line": 618,
+  "body_lines": 72,
+  "signature": "BOOL WINAPI CheckTokenMembership( HANDLE token, PSID sid_to_check, PBOOL is_member )",
+  "header_comment": "/******************************************************************************\n * CheckTokenMembership    (kernelbase.@)\n */",
+  "code": "BOOL WINAPI CheckTokenMembership( HANDLE token, PSID sid_to_check, PBOOL is_member )\n{\n    PTOKEN_GROUPS token_groups = NULL;\n    HANDLE thread_token = NULL;\n    DWORD size, i;\n    BOOL ret;\n\n    TRACE(\"(%p %s %p)\\n\", token, debugstr_sid(sid_to_check), is_member);\n\n    *is_member = FALSE;\n\n    if (!token)\n    {\n        if (!OpenThreadToken(GetCurrentThread(), TOKEN_QUERY, TRUE, &thread_token))\n        {\n            HANDLE process_token;\n            ret = OpenProcessToken(GetCurrentProcess(), TOKEN_DUPLICATE, &process_token);\n            if (!ret)\n                goto exit;\n            ret = DuplicateTokenEx(process_token, TOKEN_QUERY, NULL, SecurityImpersonation,\n                                   TokenImpersonation, &thread_token);\n            CloseHandle(process_token);\n            if (!ret)\n                goto exit;\n        }\n        token = thread_token;\n    }\n    else\n    {\n        TOKEN_TYPE type;\n\n        ret = GetTokenInformation(token, TokenType, &type, sizeof(TOKEN_TYPE), &size);\n        if (!ret) goto exit;\n\n        if (type == TokenPrimary)\n        {\n            SetLastError(ERROR_NO_IMPERSONATION_TOKEN);\n            return FALSE;\n        }\n    }\n\n    ret = GetTokenInformation(token, TokenGroups, NULL, 0, &size);\n    if (!ret && GetLastError() != ERROR_INSUFFICIENT_BUFFER)\n        goto exit;\n\n    token_groups = HeapAlloc(GetProcessHeap(), 0, size);\n    if (!token_groups)\n    {\n        ret = FALSE;\n        goto exit;\n    }\n\n    ret = GetTokenInformation(token, TokenGroups, token_groups, size, &size);\n    if (!ret)\n        goto exit;\n\n    for (i = 0; i < token_groups->GroupCount; i++)\n    {\n        TRACE(\"Groups[%ld]: {0x%lx, %s}\\n\", i,\n            token_groups->Groups[i].Attributes,\n            debugstr_sid(token_groups->Groups[i].Sid));\n        if ((token_groups->Groups[i].Attributes & SE_GROUP_ENABLED) &&\n            EqualSid(sid_to_check, token_groups->Groups[i].Sid))\n        {\n            *is_member = TRUE;\n            TRACE(\"sid enabled and found in token\\n\");\n            break;\n        }\n    }\n\nexit:\n    HeapFree(GetProcessHeap(), 0, token_groups);\n    if (thread_token != NULL) CloseHandle(thread_token);\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "advapi32!CheckTokenMembership [stdcall -import] -> import from kernelbase",
+   "kernelbase!CheckTokenMembership [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/advapi32/tests/security.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "securitybaseapi",
+   "path": "sdk-api-src/content/securitybaseapi/nf-securitybaseapi-checktokenmembership.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-checktokenmembership",
+   "documented_name": "checktokenmembership",
+   "file": "docs/0098_sdk-api_nf-securitybaseapi-checktokenmembership.md",
+   "text": "---\nUID: NF:securitybaseapi.CheckTokenMembership\ntitle: CheckTokenMembership function (securitybaseapi.h)\ndescription: Determines whether a specified security identifier (SID) is enabled in an access token.\nold-location: security\\checktokenmembership.htm\ntech.root: security\nms.assetid: c254a167-c4e7-4b84-9be3-6862761309f8\nms.date: 12/05/2018\nms.keywords: CheckTokenMembership, CheckTokenMembership function [Security], _win32_checktokenmembership, security.checktokenmembership, securitybaseapi/CheckTokenMembership\nreq.header: securitybaseapi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Advapi32.lib\nreq.dll: Advapi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CheckTokenMembership\n - securitybaseapi/CheckTokenMembership\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-security-base-l1-2-2.dll\n - Advapi32.dll\n - API-MS-Win-DownLevel-AdvApi32-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-DownLevel-AdvApi32-l1-1-1.dll\n - API-MS-Win-Security-base-l1-1-0.dll\n - API-MS-Win-Security-base-l1-2-0.dll\n - MinKernelBase.dll\n - API-MS-Win-Security-Base-L1-2-1.dll\napi_name:\n - CheckTokenMembership\n---\n\n# CheckTokenMembership function\n\n\n## -description\n\nThe <b>CheckTokenMembership</b> function determines whether a specified <a href=\"/windows/desktop/SecGloss/s-gly\">security identifier</a> (SID) is enabled in an <a href=\"/windows/desktop/SecGloss/a-gly\">access token</a>. If you want to determine group membership for app container tokens, you need to use the <a href=\"/windows/desktop/api/securitybaseapi/nf-securitybaseapi-checktokenmembershipex\">CheckTokenMembershipEx</a> function.\n\n## -parameters\n\n### -param TokenHandle [in, optional]\n\nA handle to an access token. The handle must have TOKEN_QUERY access to the token. The token must be an <a href=\"/windows/desktop/SecGloss/i-gly\">impersonation token</a>. \n\n\n\n\nIf <i>TokenHandle</i> is <b>NULL</b>, <b>CheckTokenMembership</b> uses the impersonation token of the calling thread. If the thread is not impersonating, the function duplicates the thread's <a href=\"/windows/desktop/SecGloss/p-gly\">primary token</a> to create an <a href=\"/windows/desktop/SecGloss/i-gly\">impersonation token</a>.\n\n### -param SidToCheck [in]\n\nA pointer to a \n<a href=\"/windows/desktop/api/winnt/ns-winnt-sid\">SID</a> structure. The <b>CheckTokenMembership</b> function checks for the presence of this SID in the user and group SIDs of the access token.\n\n### -param IsMember [out]\n\nA pointer to a variable that receives the results of the check. If the SID is present and has the SE_GROUP_ENABLED attribute, <i>IsMember</i> returns <b>TRUE</b>; otherwise, it returns <b>FALSE</b>.\n\n## -returns\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThe <b>CheckTokenMembership</b> function simplifies the process of determining whether a SID is both present and enabled in an access token.\n\nEven if a SID is present in the token, the system may not use the SID in an access check. The SID may be disabled or have the <b>SE_GROUP_USE_FOR_DENY_ONLY</b> attribute. The system uses only enabled SIDs to grant access when performing an access check. For more information, see \n<a href=\"/windows/desktop/SecAuthZ/sid-attributes-in-an-access-token\">SID Attributes in an Access Token</a>.\n\nIf <i>TokenHandle</i> is a restricted token, or if <i>TokenHandle</i> is <b>NULL</b> and the current effective token of the calling thread is a restricted token, <b>CheckTokenMembership</b> also checks whether the SID is present in the list of restricting SIDs.\n\n\n#### Examples\n\nThe following example shows checking a token for membership in the Administrators local group.\n\n\n```cpp\nBOOL IsUserAdmin(VOID)\n/*++ \nRoutine Description: This routine returns TRUE if the caller's\nprocess is a member of the Administrators local group. Caller is NOT\nexpected to be impersonating anyone and is expected to be able to\nopen its own process and process token. \nArguments: None. \nReturn Value: \n   TRUE - Caller has Administrators local group. \n   FALSE - Caller does not have Administrators local group. --\n*/ \n{\n    BOOL b;\n    SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;\n    PSID AdministratorsGroup;\n    b = AllocateAndInitializeSid(\n        &NtAuthority,\n        2,\n        SECURITY_BUILTIN_DOMAIN_RID,\n        DOMAIN_ALIAS_RID_ADMINS,\n        0, 0, 0, 0, 0, 0,\n        &AdministratorsGroup );\n\n    if(b)\n    {\n        if (!CheckTokenMembership( NULL, AdministratorsGroup, &b))\n        {\n             b = FALSE;\n        }\n        FreeSid(AdministratorsGroup);\n    }\n\n    return(b);\n}\n\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/SecAuthZ/access-control\">Access Control Overview</a>\n\n\n\n<a href=\"/windows/desktop/api/securitybaseapi/nf-securitybaseapi-accesscheck\">AccessCheck</a>\n\n\n\n<a href=\"/windows/desktop/SecAuthZ/authorization-functions\">Basic Access Control Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/securitybaseapi/nf-securitybaseapi-checktokenmembershipex\">CheckTokenMembershipEx</a>\n\n\n\n<a href=\"/windows/desktop/api/securitybaseapi/nf-securitybaseapi-createrestrictedtoken\">CreateRestrictedToken</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "debugstr_sid",
+   "file": "dlls/kernelbase/security.c",
+   "start_line": 157,
+   "end_line": 205,
+   "static": true,
+   "called_from": [
+    "CheckTokenMembership"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/security.c:427",
+    "dlls/kernelbase/security.c:501",
+    "referenced through a macro (conservatively shared)"
+   ],
+   "signature": "static const char *debugstr_sid( PSID sid )",
+   "code": "static const char *debugstr_sid( PSID sid )\n{\n    int auth;\n    SID * psid = sid;\n\n    if (psid == NULL) return \"(null)\";\n\n    auth = psid->IdentifierAuthority.Value[5] +\n        (psid->IdentifierAuthority.Value[4] << 8) +\n        (psid->IdentifierAuthority.Value[3] << 16) +\n        (psid->IdentifierAuthority.Value[2] << 24);\n\n    switch (psid->SubAuthorityCount) {\n    case 0:\n        return wine_dbg_sprintf(\"S-%d-%d\", psid->Revision, auth);\n    case 1:\n        return wine_dbg_sprintf(\"S-%d-%d-%lu\", psid->Revision, auth,\n                                psid->SubAuthority[0]);\n    case 2:\n        return wine_dbg_sprintf(\"S-%d-%d-%lu-%lu\", psid->Revision, auth,\n                                psid->SubAuthority[0], psid->SubAuthority[1]);\n    case 3:\n        return wine_dbg_sprintf(\"S-%d-%d-%lu-%lu-%lu\", psid->Revision, auth,\n                                psid->SubAuthority[0], psid->SubAuthority[1], psid->SubAuthority[2]);\n    case 4:\n        return wine_dbg_sprintf(\"S-%d-%d-%lu-%lu-%lu-%lu\", psid->Revision, auth,\n                                psid->SubAuthority[0], psid->SubAuthority[1], psid->SubAuthority[2],\n                                psid->SubAuthority[3]);\n    case 5:\n        return wine_dbg_sprintf(\"S-%d-%d-%lu-%lu-%lu-%lu-%lu\", psid->Revision, auth,\n                                psid->SubAuthority[0], psid->SubAuthority[1], psid->SubAuthority[2],\n                                psid->SubAuthority[3], psid->SubAuthority[4]);\n    case 6:\n        return wine_dbg_sprintf(\"S-%d-%d-%lu-%lu-%lu-%lu-%lu-%lu\", psid->Revision, auth,\n                                psid->SubAuthority[3], psid->SubAuthority[1], psid->SubAuthority[2],\n                                psid->SubAuthority[0], psid->SubAuthority[4], psid->SubAuthority[5]);\n    case 7:\n        return wine_dbg_sprintf(\"S-%d-%d-%lu-%lu-%lu-%lu-%lu-%lu-%lu\", psid->Revision, auth,\n                                psid->SubAuthority[0], psid->SubAuthority[1], psid->SubAuthority[2],\n                                psid->SubAuthority[3], psid->SubAuthority[4], psid->SubAuthority[5],\n                                psid->SubAuthority[6]);\n    case 8:\n        return wine_dbg_sprintf(\"S-%d-%d-%lu-%lu-%lu-%lu-%lu-%lu-%lu-%lu\", psid->Revision, auth,\n                                psid->SubAuthority[0], psid->SubAuthority[1], psid->SubAuthority[2],\n                                psid->SubAuthority[3], psid->SubAuthority[4], psid->SubAuthority[5],\n                                psid->SubAuthority[6], psid->SubAuthority[7]);\n    }\n    return \"(too-big)\";\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(security);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "CloseHandle",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "DuplicateTokenEx",
+    "impl": [
+     "dlls/kernelbase/security.c:683"
+    ]
+   },
+   {
+    "name": "EqualSid",
+    "impl": [
+     "dlls/kernelbase/security.c:245"
+    ]
+   },
+   {
+    "name": "GetCurrentProcess",
+    "impl": [
+     "dlls/kernelbase/process.c:768"
+    ]
+   },
+   {
+    "name": "GetCurrentThread",
+    "impl": [
+     "dlls/kernelbase/thread.c:200"
+    ]
+   },
+   {
+    "name": "GetLastError",
+    "impl": [
+     "dlls/kernelbase/thread.c:231"
+    ]
+   },
+   {
+    "name": "GetProcessHeap",
+    "impl": [
+     "dlls/kernelbase/process.c:910"
+    ]
+   },
+   {
+    "name": "GetTokenInformation",
+    "impl": [
+     "dlls/kernelbase/security.c:704"
+    ]
+   },
+   {
+    "name": "OpenProcessToken",
+    "impl": [
+     "dlls/kernelbase/security.c:828"
+    ]
+   },
+   {
+    "name": "OpenThreadToken",
+    "impl": [
+     "dlls/kernelbase/security.c:836"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "RtlAllocateHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "RtlFreeHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log",
+   "wine_dbg_sprintf"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

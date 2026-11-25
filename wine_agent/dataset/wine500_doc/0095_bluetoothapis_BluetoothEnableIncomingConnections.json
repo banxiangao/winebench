@@ -1,0 +1,141 @@
+{
+ "id": "0095",
+ "function": {
+  "name": "BluetoothEnableIncomingConnections",
+  "export_name": "BluetoothEnableIncomingConnections",
+  "module": "bluetoothapis",
+  "source_module": "bluetoothapis",
+  "exported_by": [
+   "bluetoothapis",
+   "bthprops.cpl",
+   "irprops.cpl"
+  ],
+  "side": "PE",
+  "file": "dlls/bluetoothapis/main.c",
+  "start_line": 501,
+  "end_line": 544,
+  "body_lines": 41,
+  "signature": "BOOL WINAPI BluetoothEnableIncomingConnections( HANDLE radio, BOOL enable )",
+  "header_comment": "/*********************************************************************\n *  BluetoothEnableIncomingConnections\n */",
+  "code": "BOOL WINAPI BluetoothEnableIncomingConnections( HANDLE radio, BOOL enable )\n{\n    TRACE( \"(%p, %d)\\n\", radio, enable );\n    if (!radio)\n    {\n        BLUETOOTH_FIND_RADIO_PARAMS params = {.dwSize = sizeof( params )};\n        HBLUETOOTH_RADIO_FIND find = BluetoothFindFirstRadio( &params, &radio );\n\n        if (!find)\n            return FALSE;\n        for (;;)\n        {\n            if (BluetoothEnableIncomingConnections( radio, enable ))\n            {\n                CloseHandle( radio );\n                BluetoothFindRadioClose( find );\n                return TRUE;\n            }\n\n            CloseHandle(radio );\n            if (!BluetoothFindNextRadio( find, &radio ))\n            {\n                BluetoothFindRadioClose( find );\n                return FALSE;\n            }\n        }\n    }\n    else if (!enable && !BluetoothIsDiscoverable( radio ))\n        /* The local radio can only be made non-connectable if it is non-discoverable. */\n        return FALSE;\n    else\n    {\n        struct winebth_radio_set_flag_params params = {0};\n        BOOL ret;\n        DWORD bytes;\n\n        params.flag = LOCAL_RADIO_CONNECTABLE;\n        params.enable = !!enable;\n        ret = DeviceIoControl( radio, IOCTL_WINEBTH_RADIO_SET_FLAG, &params, sizeof( params ), NULL, 0, &bytes, NULL );\n        if (!ret)\n            ERR(\"DeviceIoControl failed: %#lx\\n\", GetLastError());\n        return ret;\n    }\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <winternl.h>",
+   "#include <windef.h>",
+   "#include <winbase.h>",
+   "#include <winuser.h>",
+   "#include <winreg.h>",
+   "#include <winnls.h>",
+   "#include \"bthsdpdef.h\"",
+   "#include \"cfgmgr32.h\"",
+   "#include \"setupapi.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"initguid.h\"",
+   "#include \"bluetoothapis.h\"",
+   "#include \"bthledef.h\"",
+   "#include \"bthdef.h\"",
+   "#include \"bthioctl.h\"",
+   "#include \"wine/winebth.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"resource.h\""
+  ],
+  "resolution": [
+   "bluetoothapis!BluetoothEnableIncomingConnections [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/bluetoothapis/tests/device.c",
+   "dlls/bluetoothapis/tests/radio.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "bluetoothapis",
+   "path": "sdk-api-src/content/bluetoothapis/nf-bluetoothapis-bluetoothenableincomingconnections.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothenableincomingconnections",
+   "documented_name": "bluetoothenableincomingconnections",
+   "file": "docs/0095_sdk-api_nf-bluetoothapis-bluetoothenableincomingconnections.md",
+   "text": "---\nUID: NF:bluetoothapis.BluetoothEnableIncomingConnections\ntitle: BluetoothEnableIncomingConnections function (bluetoothapis.h)\ndescription: The BluetoothEnableIncomingConnections function modifies whether a local Bluetooth radio accepts incoming connections.\nhelpviewer_keywords: [\"BluetoothEnableIncomingConnections\",\"BluetoothEnableIncomingConnections function [Bluetooth]\",\"bluetooth.bluetoothenableincomingconnections\",\"bluetoothapis/BluetoothEnableIncomingConnections\"]\nold-location: bluetooth\\bluetoothenableincomingconnections.htm\ntech.root: bluetooth\nms.assetid: 8f9c133e-e647-45c8-b2c6-372b18345637\nms.date: 12/05/2018\nms.keywords: BluetoothEnableIncomingConnections, BluetoothEnableIncomingConnections function [Bluetooth], bluetooth.bluetoothenableincomingconnections, bluetoothapis/BluetoothEnableIncomingConnections\nreq.header: bluetoothapis.h\nreq.include-header: Bthsdpdef.h, BluetoothAPIs.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista, Windows XP with SP2 [desktop apps only]\nreq.target-min-winversvr: None supported\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Bthprops.lib\nreq.dll: bthprops.cpl\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - BluetoothEnableIncomingConnections\n - bluetoothapis/BluetoothEnableIncomingConnections\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - bthprops.cpl\n - BluetoothAPIs.dll\n - Ext-MS-Win-Bluetooth-APIs-l1-1-0.dll\napi_name:\n - BluetoothEnableIncomingConnections\n---\n\n# BluetoothEnableIncomingConnections function\n\n\n## -description\n\nThe <b>BluetoothEnableIncomingConnections</b> function modifies whether a local Bluetooth radio accepts incoming connections.\n\n## -parameters\n\n### -param hRadio\n\nValid local radio handle for which to change whether incoming connections are enabled, or <b>NULL</b>. If <b>NULL</b>, the attempt to modify incoming connection acceptance iterates through all local radios; if any radio is modified by the call, the function call succeeds.\n\n### -param fEnabled\n\nFlag specifying whether incoming connection acceptance is to be enabled or disabled. Set to <b>TRUE</b> to enable incoming connections, set to <b>FALSE</b> to disable incoming connections.\n\n## -returns\n\nReturns <b>TRUE</b> if the incoming connection  state was successfully changed. If <i>hRadio</i> is <b>NULL</b>, a return value of <b>TRUE</b> indicates that at least one local radio state was successfully changed. Returns <b>FALSE</b> if incoming connection  state was not changed; if <i>hRadio</i> was <b>NULL</b>, no radio accepted the state change.\n\n## -remarks\n\n A  radio that is non-connectable is non-discoverable. The radio must be made non-discoverable  prior to making a radio non-connectable. Failure to make a radio non-discoverable prior to making it non-connectable will result in failure of the <b>BluetoothEnableIncomingConnections</b> function call.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothauthenticatedevice\">BluetoothAuthenticateDevice</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothauthenticatemultipledevices\">BluetoothAuthenticateMultipleDevices</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothenablediscovery\">BluetoothEnableDiscovery</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothisconnectable\">BluetoothIsConnectable</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothisdiscoverable\">BluetoothIsDiscoverable</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothregisterforauthentication\">BluetoothRegisterForAuthentication</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothsendauthenticationresponse\">BluetoothSendAuthenticationResponse</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothunregisterauthentication\">BluetoothUnregisterAuthentication</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 48,
+    "end_line": 48,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(bluetoothapis);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "BluetoothFindFirstRadio",
+    "impl": [
+     "dlls/bluetoothapis/main.c:246"
+    ]
+   },
+   {
+    "name": "BluetoothFindNextRadio",
+    "impl": [
+     "dlls/bluetoothapis/main.c:335"
+    ]
+   },
+   {
+    "name": "BluetoothFindRadioClose",
+    "impl": [
+     "dlls/bluetoothapis/main.c:293"
+    ]
+   },
+   {
+    "name": "BluetoothIsDiscoverable",
+    "impl": [
+     "dlls/bluetoothapis/main.c:549"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CloseHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "DeviceIoControl",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:4378"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetLastError",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

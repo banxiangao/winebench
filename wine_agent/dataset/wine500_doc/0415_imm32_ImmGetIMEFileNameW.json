@@ -1,0 +1,127 @@
+{
+ "id": "0415",
+ "function": {
+  "name": "ImmGetIMEFileNameW",
+  "export_name": "ImmGetIMEFileNameW",
+  "module": "imm32",
+  "source_module": "imm32",
+  "exported_by": [
+   "imm32"
+  ],
+  "side": "PE",
+  "file": "dlls/imm32/imm.c",
+  "start_line": 1968,
+  "end_line": 1988,
+  "body_lines": 18,
+  "signature": "UINT WINAPI ImmGetIMEFileNameW( HKL hkl, WCHAR *buffer, UINT length )",
+  "header_comment": "/***********************************************************************\n *\t\tImmGetIMEFileNameW (IMM32.@)\n */",
+  "code": "UINT WINAPI ImmGetIMEFileNameW( HKL hkl, WCHAR *buffer, UINT length )\n{\n    WCHAR path[MAX_PATH];\n    HKEY hkey = 0;\n    DWORD size;\n\n    TRACE( \"hkl %p, buffer %p, length %u\\n\", hkl, buffer, length );\n\n    swprintf( path, ARRAY_SIZE(path), layouts_formatW, (ULONG)(ULONG_PTR)hkl );\n    if (RegOpenKeyW( HKEY_LOCAL_MACHINE, path, &hkey )) return 0;\n\n    size = ARRAY_SIZE(path) * sizeof(WCHAR);\n    if (RegGetValueW( hkey, NULL, L\"Ime File\", RRF_RT_REG_SZ, NULL, path, &size )) *path = 0;\n    RegCloseKey( hkey );\n\n    size = wcslen( path );\n    if (!buffer) return size;\n\n    lstrcpynW( buffer, path, length );\n    return wcslen( buffer );\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"initguid.h\"",
+   "#include \"imm_private.h\""
+  ],
+  "resolution": [
+   "imm32!ImmGetIMEFileNameW [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/imm32/tests/imm32.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "imm",
+   "path": "sdk-api-src/content/imm/nf-imm-immgetimefilenamew.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/imm/nf-imm-immgetimefilenamew",
+   "documented_name": "immgetimefilenamew",
+   "file": "docs/0415_sdk-api_nf-imm-immgetimefilenamew.md",
+   "text": "---\nUID: NF:imm.ImmGetIMEFileNameW\ntitle: ImmGetIMEFileNameW function (imm.h)\ndescription: The ImmGetIMEFileNameW (Unicode) function (imm.h) retrieves the file name of the IME associated with the specified input locale.\nhelpviewer_keywords: [\"ImmGetIMEFileName\", \"ImmGetIMEFileName function [Internationalization for Windows Applications]\", \"ImmGetIMEFileNameW\", \"_win32_ImmGetIMEFileName\", \"imm/ImmGetIMEFileName\", \"imm/ImmGetIMEFileNameW\", \"intl.immgetimefilename\"]\nold-location: intl\\immgetimefilename.htm\ntech.root: Intl\nms.assetid: c2dafd0a-3cb9-4d9b-919b-c7ef86fb1cd4\nms.date: 08/04/2022\nms.keywords: ImmGetIMEFileName, ImmGetIMEFileName function [Internationalization for Windows Applications], ImmGetIMEFileNameA, ImmGetIMEFileNameW, _win32_ImmGetIMEFileName, imm/ImmGetIMEFileName, imm/ImmGetIMEFileNameA, imm/ImmGetIMEFileNameW, intl.immgetimefilename\nreq.header: imm.h\nreq.include-header: Immdev.h, Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only],East Asian language support installed.\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: ImmGetIMEFileNameW (Unicode) and ImmGetIMEFileNameA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Imm32.lib\nreq.dll: Imm32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ImmGetIMEFileNameW\n - imm/ImmGetIMEFileNameW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Imm32.dll\napi_name:\n - ImmGetIMEFileName\n - ImmGetIMEFileNameA\n - ImmGetIMEFileNameW\n---\n\n# ImmGetIMEFileNameW function\n\n\n## -description\n\nRetrieves the file name of the IME associated with the specified input locale.\n\n## -parameters\n\n### -param HKL [in]\n\nInput locale identifier.\n\n### -param lpszFileName [out, optional]\n\nPointer to a buffer in which the function retrieves the file name. This parameter contains <b>NULL</b> when <i>uBufLen</i> is set to <b>NULL</b>.\n\n### -param uBufLen [in]\n\nSize, in bytes, of the output buffer. The application specifies 0 if the function is to return the buffer size needed to receive the file name, not including the terminating null character. For Unicode, <i>uBufLen</i> specifies the size in Unicode characters, not including the terminating null character.\n\n## -returns\n\nReturns the number of bytes in the file name copied to the output buffer. If the application sets <i>uBufLen</i> to 0, the function returns the size of the buffer required for the file name. In either case, the terminating null character is not included.\n\nFor Unicode, the function returns the number of Unicode characters copied into the output buffer, not including the Unicode terminating null character.\n\n## -remarks\n\nIn the registry, the operating system stores the file name as the \"IME name value\" in the registry key HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\Keyboard Layouts\\HKL.\n      \n\n\n\n\n\n> [!NOTE]\n> The imm.h header defines ImmGetIMEFileName as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/Intl/input-method-manager\">Input Method Manager</a>\n\n\n\n<a href=\"/windows/desktop/Intl/input-method-manager-functions\">Input Method Manager Functions</a>\n"
+  },
+  {
+   "repo": "sdk-api",
+   "header": "immdev",
+   "path": "sdk-api-src/content/immdev/nf-immdev-immgetimefilenamew.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/immdev/nf-immdev-immgetimefilenamew",
+   "documented_name": "immgetimefilenamew",
+   "file": "docs/0415_sdk-api_nf-immdev-immgetimefilenamew.md",
+   "text": "---\nUID: NF:immdev.ImmGetIMEFileNameW\ntitle: ImmGetIMEFileNameW function (immdev.h)\ndescription: The ImmGetIMEFileNameW (Unicode) function (immdev.h) retrieves the file name of the IME associated with the specified input locale.\nhelpviewer_keywords: [\"ImmGetIMEFileName\", \"ImmGetIMEFileName function [Internationalization for Windows Applications]\", \"ImmGetIMEFileNameW\", \"_win32_ImmGetIMEFileName\", \"intl.immgetimefilename\"]\nold-location: intl\\immgetimefilename.htm\ntech.root: Intl\nms.assetid: c2dafd0a-3cb9-4d9b-919b-c7ef86fb1cd4\nms.date: 08/04/2022\nms.keywords: ImmGetIMEFileName, ImmGetIMEFileName function [Internationalization for Windows Applications], ImmGetIMEFileNameA, ImmGetIMEFileNameW, _win32_ImmGetIMEFileName, imm/ImmGetIMEFileName, imm/ImmGetIMEFileNameA, imm/ImmGetIMEFileNameW, intl.immgetimefilename\nreq.header: immdev.h\nreq.include-header: Immdev.h, Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only],East Asian language support installed.\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: ImmGetIMEFileNameW (Unicode) and ImmGetIMEFileNameA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Imm32.lib\nreq.dll: Imm32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ImmGetIMEFileNameW\n - immdev/ImmGetIMEFileNameW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Imm32.dll\napi_name:\n - ImmGetIMEFileName\n - ImmGetIMEFileNameA\n - ImmGetIMEFileNameW\n---\n\n# ImmGetIMEFileNameW function\n\n\n## -description\n\nRetrieves the file name of the IME associated with the specified input locale.\n\n## -parameters\n\n### -param HKL [in]\n\nInput locale identifier.\n\n### -param lpszFileName [out, optional]\n\nPointer to a buffer in which the function retrieves the file name. This parameter contains <b>NULL</b> when <i>uBufLen</i> is set to <b>NULL</b>.\n\n### -param uBufLen [in]\n\nSize, in bytes, of the output buffer. The application specifies 0 if the function is to return the buffer size needed to receive the file name, not including the terminating null character. For Unicode, <i>uBufLen</i> specifies the size in Unicode characters, not including the terminating null character.\n\n## -returns\n\nReturns the number of bytes in the file name copied to the output buffer. If the application sets <i>uBufLen</i> to 0, the function returns the size of the buffer required for the file name. In either case, the terminating null character is not included.\n\nFor Unicode, the function returns the number of Unicode characters copied into the output buffer, not including the Unicode terminating null character.\n\n## -remarks\n\nIn the registry, the operating system stores the file name as the \"IME name value\" in the registry key HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\Keyboard Layouts\\HKL.\n      \n\n\n\n\n\n> [!NOTE]\n> The immdev.h header defines ImmGetIMEFileName as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/Intl/input-method-manager\">Input Method Manager</a>\n\n\n\n<a href=\"/windows/desktop/Intl/input-method-manager-functions\">Input Method Manager Functions</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 26,
+    "end_line": 26,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(imm);"
+   },
+   {
+    "name": "layouts_formatW",
+    "type": "const WCHAR[56]",
+    "static": true,
+    "start_line": 120,
+    "end_line": 120,
+    "code": "static const WCHAR layouts_formatW[] = L\"System\\\\CurrentControlSet\\\\Control\\\\Keyboard Layouts\\\\%08lx\";"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "RegCloseKey",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1129"
+    ]
+   },
+   {
+    "name": "RegGetValueW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1900"
+    ]
+   },
+   {
+    "name": "RegOpenKeyW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/registry.c:126"
+    ]
+   },
+   {
+    "name": "wcslen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:215"
+    ]
+   }
+  ],
+  "header_inline": [
+   "lstrcpynW",
+   "swprintf",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

@@ -1,0 +1,402 @@
+{
+ "id": "0123",
+ "function": {
+  "name": "InternetReadFile",
+  "export_name": "InternetReadFile",
+  "module": "wininet",
+  "source_module": "wininet",
+  "exported_by": [
+   "wininet"
+  ],
+  "side": "PE",
+  "file": "dlls/wininet/internet.c",
+  "start_line": 2602,
+  "end_line": 2636,
+  "body_lines": 32,
+  "signature": "BOOL WINAPI InternetReadFile(HINTERNET hFile, LPVOID lpBuffer, DWORD dwNumOfBytesToRead, LPDWORD pdwNumOfBytesRead)",
+  "header_comment": "/***********************************************************************\n *           InternetReadFile (WININET.@)\n *\n * Read data from an open internet file\n *\n * RETURNS\n *    TRUE  on success\n *    FALSE on failure\n *\n */",
+  "code": "BOOL WINAPI InternetReadFile(HINTERNET hFile, LPVOID lpBuffer,\n        DWORD dwNumOfBytesToRead, LPDWORD pdwNumOfBytesRead)\n{\n    object_header_t *hdr;\n    DWORD res = ERROR_INTERNET_INCORRECT_HANDLE_TYPE;\n\n    TRACE(\"%p %p %ld %p\\n\", hFile, lpBuffer, dwNumOfBytesToRead, pdwNumOfBytesRead);\n\n    if (!lpBuffer || !pdwNumOfBytesRead)\n    {\n        INTERNET_SetLastError(ERROR_INVALID_PARAMETER);\n        if (pdwNumOfBytesRead) *pdwNumOfBytesRead = 0;\n        return FALSE;\n    }\n\n    hdr = get_handle_object(hFile);\n    if (!hdr) {\n        INTERNET_SetLastError(ERROR_INVALID_HANDLE);\n        return FALSE;\n    }\n\n    if(hdr->vtbl->ReadFile) {\n        res = hdr->vtbl->ReadFile(hdr, lpBuffer, dwNumOfBytesToRead, pdwNumOfBytesRead, 0, 0);\n        if(res == ERROR_IO_PENDING)\n            *pdwNumOfBytesRead = 0;\n    }\n\n    WININET_Release(hdr);\n\n    TRACE(\"-- %s (%lu) (bytes read: %ld)\\n\", res == ERROR_SUCCESS ? \"TRUE\": \"FALSE\", res,\n          pdwNumOfBytesRead ? *pdwNumOfBytesRead : -1);\n\n    SetLastError(res);\n    return res == ERROR_SUCCESS;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"winsock2.h\"",
+   "#include \"ws2ipdef.h\"",
+   "#include <string.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <stdlib.h>",
+   "#include <ctype.h>",
+   "#include <assert.h>",
+   "#include <wchar.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winuser.h\"",
+   "#include \"wininet.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"winerror.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"ws2tcpip.h\"",
+   "#include \"winternl.h\"",
+   "#include \"iphlpapi.h\"",
+   "#include \"dhcpcsdk.h\"",
+   "#include \"internet.h\"",
+   "#include \"resource.h\""
+  ],
+  "resolution": [
+   "wininet!InternetReadFile [stdcall]"
+  ],
+  "arch": "i686"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/wininet/tests/http.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 18
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wininet",
+   "path": "sdk-api-src/content/wininet/nf-wininet-internetreadfile.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wininet/nf-wininet-internetreadfile",
+   "documented_name": "internetreadfile",
+   "file": "docs/0123_sdk-api_nf-wininet-internetreadfile.md",
+   "text": "---\nUID: NF:wininet.InternetReadFile\ntitle: InternetReadFile function (wininet.h)\ndescription: Reads data from a handle opened by the InternetOpenUrl, FtpOpenFile, or HttpOpenRequest function.\nhelpviewer_keywords: [\"InternetReadFile\",\"InternetReadFile function [WinINet]\",\"_inet_internetreadfile_function\",\"wininet.internetreadfile\",\"wininet/InternetReadFile\"]\nold-location: wininet\\internetreadfile.htm\ntech.root: wininet\nms.assetid: 1ec0fe70-4749-4251-9c58-44efdab74688\nms.date: 12/05/2018\nms.keywords: InternetReadFile, InternetReadFile function [WinINet], _inet_internetreadfile_function, wininet.internetreadfile, wininet/InternetReadFile\nreq.header: wininet.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Wininet.lib\nreq.dll: Wininet.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - InternetReadFile\n - wininet/InternetReadFile\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Wininet.dll\napi_name:\n - InternetReadFile\n---\n\n# InternetReadFile function\n\n\n## -description\n\nReads data from a handle opened by the \n<a href=\"/windows/desktop/api/wininet/nf-wininet-internetopenurla\">InternetOpenUrl</a>, \n<a href=\"/windows/desktop/api/wininet/nf-wininet-ftpopenfilea\">FtpOpenFile</a>, \nor \n<a href=\"/windows/desktop/api/wininet/nf-wininet-httpopenrequesta\">HttpOpenRequest</a> function.\n\n## -parameters\n\n### -param hFile [in]\n\nHandle returned from a previous call to \n<a href=\"/windows/desktop/api/wininet/nf-wininet-internetopenurla\">InternetOpenUrl</a>, \n<a href=\"/windows/desktop/api/wininet/nf-wininet-ftpopenfilea\">FtpOpenFile</a>, \nor \n<a href=\"/windows/desktop/api/wininet/nf-wininet-httpopenrequesta\">HttpOpenRequest</a>.\n\n### -param lpBuffer [out]\n\nPointer to a buffer that receives the data.\n\n### -param dwNumberOfBytesToRead [in]\n\nNumber of bytes to be read.\n\n### -param lpdwNumberOfBytesRead [out]\n\nPointer to a variable that receives the number of bytes read. \n<b>InternetReadFile</b> sets this value to zero before doing any work or error checking.\n\n## -returns\n\nReturns <b>TRUE</b> if successful, or <b>FALSE</b> otherwise. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>. An application can also use \n<a href=\"/windows/desktop/api/wininet/nf-wininet-internetgetlastresponseinfoa\">InternetGetLastResponseInfo</a> when necessary.\n\n## -remarks\n\n<b>InternetReadFile</b> operates much like the base \n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-readfile\">ReadFile</a> function, with a few exceptions. Typically, \n<b>InternetReadFile</b> retrieves data from an \n<a href=\"/windows/desktop/WinInet/appendix-a-hinternet-handles\">HINTERNET</a> handle as a sequential stream of bytes. The amount of data to be read for each call to \n<b>InternetReadFile</b> is specified by the \n<i>dwNumberOfBytesToRead</i> parameter and the data is returned in the \n<i>lpBuffer</i> parameter. A normal read retrieves the specified \n<i>dwNumberOfBytesToRead</i> for each call to \n<b>InternetReadFile</b> until the end of the file is reached. To ensure all data is retrieved, an application must continue to call the \n<b>InternetReadFile</b> function until the function returns <b>TRUE</b> and the \n<i>lpdwNumberOfBytesRead</i> parameter equals zero. This is especially important if the requested data is written to the cache, because otherwise the cache will not be properly updated and the file downloaded will not be committed to the cache. Note that caching happens automatically unless the original request to open the data stream set the <b>INTERNET_FLAG_NO_CACHE_WRITE</b> flag.\n\nWhen an application retrieves a handle using \n<a href=\"/windows/desktop/api/wininet/nf-wininet-internetopenurla\">InternetOpenUrl</a>, WinINet attempts to make all data look like a file download, in an effort to make reading from the Internet easier for the application. For some types of information, such as FTP file directory listings, it converts the data to be returned by  \n<b>InternetReadFile</b> to an HTML stream. It does this on a line-by-line basis. For example, it can convert an FTP directory listing to a line of HTML and return this HTML to the application.\n\nWinINet attempts to write the HTML to the \n<i>lpBuffer</i> buffer a line at a time. If the application's buffer is too small to fit at least one line of generated HTML, the error code \n<b>ERROR_INSUFFICIENT_BUFFER</b> is returned as an indication to the application that it needs a larger buffer. Also, converted lines might not completely fill the buffer, so \n<b>InternetReadFile</b> can return with less data in \n<i>lpBuffer</i> than requested. Subsequent reads will retrieve all the converted HTML. The application must again check that all data is retrieved as described previously.\n\nLike all other aspects of the WinINet API, this function cannot be safely called from within DllMain or the constructors and destructors of global objects.\n\nWhen running asynchronously, if a call to <b>InternetReadFile</b> does not result in a completed transaction, it will return <i>FALSE</i> and a subsequent call to <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> will return <i>ERROR_IO_PENDING</i>. When the transaction is completed the <a href=\"/windows/desktop/api/wininet/nc-wininet-internet_status_callback\">InternetStatusCallback</a> specified in a previous call to   <a href=\"/windows/desktop/api/wininet/nf-wininet-internetsetstatuscallback\">InternetSetStatusCallback</a> will be called with <i>INTERNET_STATUS_REQUEST_COMPLETE</i>.\n\n<div class=\"alert\"><b>Note</b>  WinINet does not support server implementations. In addition, it should not be used from a service.  For server implementations or services use <a href=\"/windows/desktop/WinHttp/winhttp-start-page\">Microsoft Windows HTTP Services (WinHTTP)</a>.</div>\n<div> </div>\n\n## -see-also\n\n<a href=\"/windows/desktop/WinInet/common-functions\">Common Functions</a>\n\n\n\n<a href=\"/windows/desktop/WinInet/wininet-functions\">WinINet Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "INTERNET_SetLastError",
+   "file": "dlls/wininet/internet.c",
+   "start_line": 4503,
+   "end_line": 4513,
+   "static": false,
+   "called_from": [
+    "InternetReadFile"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/ftp.c:206",
+    "dlls/wininet/ftp.c:277",
+    "dlls/wininet/ftp.c:284",
+    "dlls/wininet/ftp.c:290",
+    "dlls/wininet/ftp.c:296"
+   ],
+   "signature": "void INTERNET_SetLastError(DWORD dwError)",
+   "code": "void INTERNET_SetLastError(DWORD dwError)\n{\n    LPWITHREADERROR lpwite = TlsGetValue(g_dwTlsErrIndex);\n\n    if (!lpwite)\n        lpwite = INTERNET_AllocThreadError();\n\n    SetLastError(dwError);\n    if(lpwite)\n        lpwite->dwError = dwError;\n}"
+  },
+  {
+   "name": "get_handle_object",
+   "file": "dlls/wininet/internet.c",
+   "start_line": 205,
+   "end_line": 220,
+   "static": false,
+   "called_from": [
+    "InternetReadFile"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/dialogs.c:500",
+    "dlls/wininet/ftp.c:281",
+    "dlls/wininet/ftp.c:464",
+    "dlls/wininet/ftp.c:601",
+    "dlls/wininet/ftp.c:760"
+   ],
+   "signature": "object_header_t *get_handle_object( HINTERNET hinternet )",
+   "code": "object_header_t *get_handle_object( HINTERNET hinternet )\n{\n    object_header_t *info = NULL;\n    UINT_PTR handle = (UINT_PTR) hinternet;\n\n    EnterCriticalSection( &WININET_cs );\n\n    if(handle > 0 && handle < handle_table_size && handle_table[handle] && handle_table[handle]->valid_handle)\n        info = WININET_AddRef(handle_table[handle]);\n\n    LeaveCriticalSection( &WININET_cs );\n\n    TRACE(\"handle %Id -> %p\\n\", handle, info);\n\n    return info;\n}"
+  },
+  {
+   "name": "WININET_Release",
+   "file": "dlls/wininet/internet.c",
+   "start_line": 240,
+   "end_line": 280,
+   "static": false,
+   "called_from": [
+    "InternetReadFile",
+    "invalidate_handle"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/dialogs.c:609",
+    "dlls/wininet/ftp.c:325",
+    "dlls/wininet/ftp.c:496",
+    "dlls/wininet/ftp.c:641",
+    "dlls/wininet/ftp.c:794"
+   ],
+   "signature": "BOOL WININET_Release( object_header_t *info )",
+   "code": "BOOL WININET_Release( object_header_t *info )\n{\n    ULONG refs = InterlockedDecrement(&info->refs);\n    TRACE( \"object %p refcount = %ld\\n\", info, refs );\n    if( !refs )\n    {\n        invalidate_handle(info);\n        if ( info->vtbl->CloseConnection )\n        {\n            TRACE( \"closing connection %p\\n\", info);\n            info->vtbl->CloseConnection( info );\n        }\n        /* Don't send a callback if this is a session handle created with InternetOpenUrl */\n        if ((info->htype != WH_HHTTPSESSION && info->htype != WH_HFTPSESSION)\n            || !(info->dwInternalFlags & INET_OPENURL))\n        {\n            INTERNET_SendCallback(info, info->dwContext,\n                                  INTERNET_STATUS_HANDLE_CLOSING, &info->hInternet,\n                                  sizeof(HINTERNET));\n        }\n        TRACE( \"destroying object %p\\n\", info);\n        if ( info->htype != WH_HINIT )\n            list_remove( &info->entry );\n        info->vtbl->Destroy( info );\n\n        if(info->hInternet) {\n            UINT_PTR handle = (UINT_PTR)info->hInternet;\n\n            EnterCriticalSection( &WININET_cs );\n\n            handle_table[handle] = NULL;\n            if(next_handle > handle)\n                next_handle = handle;\n\n            LeaveCriticalSection( &WININET_cs );\n        }\n\n        free(info);\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "INTERNET_AllocThreadError",
+   "file": "dlls/wininet/internet.c",
+   "start_line": 4476,
+   "end_line": 4492,
+   "static": true,
+   "called_from": [
+    "INTERNET_SetLastError"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/internet.c:4607"
+   ],
+   "signature": "static LPWITHREADERROR INTERNET_AllocThreadError(void)",
+   "code": "static LPWITHREADERROR INTERNET_AllocThreadError(void)\n{\n    WITHREADERROR *lpwite = malloc(sizeof(*lpwite));\n\n    if (lpwite)\n    {\n        lpwite->dwError = 0;\n        lpwite->response[0] = '\\0';\n    }\n\n    if (!TlsSetValue(g_dwTlsErrIndex, lpwite))\n    {\n        free(lpwite);\n        return NULL;\n    }\n    return lpwite;\n}"
+  },
+  {
+   "name": "WININET_AddRef",
+   "file": "dlls/wininet/internet.c",
+   "start_line": 198,
+   "end_line": 203,
+   "static": false,
+   "called_from": [
+    "get_handle_object"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/ftp.c:1351",
+    "dlls/wininet/ftp.c:2470",
+    "dlls/wininet/ftp.c:3545",
+    "dlls/wininet/internet.c:4568",
+    "dlls/wininet/http.c:3498"
+   ],
+   "signature": "object_header_t *WININET_AddRef( object_header_t *info )",
+   "code": "object_header_t *WININET_AddRef( object_header_t *info )\n{\n    ULONG refs = InterlockedIncrement(&info->refs);\n    TRACE(\"%p -> refcount = %ld\\n\", info, refs );\n    return info;\n}"
+  },
+  {
+   "name": "invalidate_handle",
+   "file": "dlls/wininet/internet.c",
+   "start_line": 222,
+   "end_line": 238,
+   "static": true,
+   "called_from": [
+    "WININET_Release"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wininet/internet.c:1846"
+   ],
+   "signature": "static void invalidate_handle(object_header_t *info)",
+   "code": "static void invalidate_handle(object_header_t *info)\n{\n    object_header_t *child, *next;\n\n    if(!info->valid_handle)\n        return;\n    info->valid_handle = FALSE;\n\n    /* Free all children as native does */\n    LIST_FOR_EACH_ENTRY_SAFE( child, next, &info->children, object_header_t, entry )\n    {\n        TRACE(\"invalidating child handle %p for parent %p\\n\", child->hInternet, info);\n        invalidate_handle( child );\n    }\n\n    WININET_Release(info);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "LPWITHREADERROR",
+    "kind": "typedef_decl",
+    "start_line": 60,
+    "end_line": 64,
+    "code": "typedef struct\n{\n    DWORD  dwError;\n    CHAR   response[MAX_REPLY_LEN];\n} WITHREADERROR, *LPWITHREADERROR;"
+   },
+   {
+    "name": "WITHREADERROR",
+    "kind": "struct_decl",
+    "start_line": 60,
+    "end_line": 64,
+    "code": "typedef struct\n{\n    DWORD  dwError;\n    CHAR   response[MAX_REPLY_LEN];\n} WITHREADERROR, *LPWITHREADERROR;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "WININET_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 76,
+    "end_line": 76,
+    "code": "static CRITICAL_SECTION WININET_cs = { &WININET_cs_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 58,
+    "end_line": 58,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(wininet);"
+   },
+   {
+    "name": "g_dwTlsErrIndex",
+    "type": "DWORD",
+    "static": true,
+    "start_line": 66,
+    "end_line": 66,
+    "code": "static DWORD g_dwTlsErrIndex = TLS_OUT_OF_INDEXES;"
+   },
+   {
+    "name": "handle_table",
+    "type": "object_header_t **",
+    "static": true,
+    "start_line": 78,
+    "end_line": 78,
+    "code": "static object_header_t **handle_table;"
+   },
+   {
+    "name": "handle_table_size",
+    "type": "UINT_PTR",
+    "static": true,
+    "start_line": 80,
+    "end_line": 80,
+    "code": "static UINT_PTR handle_table_size;"
+   },
+   {
+    "name": "next_handle",
+    "type": "UINT_PTR",
+    "static": true,
+    "start_line": 79,
+    "end_line": 79,
+    "code": "static UINT_PTR next_handle;"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "INTERNET_SendCallback",
+    "file": "dlls/wininet/utility.c",
+    "start_line": 240
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "TlsGetValue",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/thread.c:760"
+    ]
+   },
+   {
+    "name": "TlsSetValue",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/thread.c:779"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "_InterlockedDecrement",
+   "_InterlockedIncrement",
+   "list_remove",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "hdr->vtbl->ReadFile",
+    "in_function": "InternetReadFile",
+    "at": "dlls/wininet/internet.c:2624",
+    "candidates": []
+   },
+   {
+    "expr": "info->vtbl->CloseConnection",
+    "in_function": "WININET_Release",
+    "at": "dlls/wininet/internet.c:250",
+    "candidates": []
+   },
+   {
+    "expr": "info->vtbl->Destroy",
+    "in_function": "WININET_Release",
+    "at": "dlls/wininet/internet.c:263",
+    "candidates": []
+   }
+  ]
+ },
+ "winebench": {
+  "id": "wininet.InternetReadFile",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "WinINet",
+   "header": "wininet.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 35,
+   "body": 33,
+   "code": 20
+  },
+  "cyclomatic": 9,
+  "return_type": "BOOL",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 18,
+   "n_tests": 18,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/wininet/tests/http.c::HttpSendRequestEx_test",
+    "dlls/wininet/tests/http.c::InternetOpenUrlA_test",
+    "dlls/wininet/tests/http.c::InternetReadFile_chunked_test",
+    "dlls/wininet/tests/http.c::InternetReadFile_test",
+    "dlls/wininet/tests/http.c::InternetSetFilePointer_test",
+    "dlls/wininet/tests/http.c::_read_expect_sync_data_len",
+    "dlls/wininet/tests/http.c::_receive_simple_request",
+    "dlls/wininet/tests/http.c::read_expect_async",
+    "dlls/wininet/tests/http.c::test_async_read",
+    "dlls/wininet/tests/http.c::test_basic_request",
+    "dlls/wininet/tests/http.c::test_cache_read",
+    "dlls/wininet/tests/http.c::test_cache_read_gzipped",
+    "dlls/wininet/tests/http.c::test_conn_close",
+    "dlls/wininet/tests/http.c::test_head_request",
+    "dlls/wininet/tests/http.c::test_http_cache",
+    "dlls/wininet/tests/http.c::test_no_cache",
+    "dlls/wininet/tests/http.c::test_response_without_headers",
+    "dlls/wininet/tests/http.c::test_security_flags"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/wininet/nf-wininet-internetreadfile",
+   "source": "win32",
+   "description": "Reads data from a handle opened by the InternetOpenUrl, FtpOpenFile, or HttpOpenRequest function.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Wininet.dll"
+  },
+  "exports": [
+   "wininet.InternetReadFile"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

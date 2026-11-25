@@ -1,0 +1,246 @@
+{
+ "id": "0481",
+ "function": {
+  "name": "WsSetOutput",
+  "export_name": "WsSetOutput",
+  "module": "webservices",
+  "source_module": "webservices",
+  "exported_by": [
+   "webservices"
+  ],
+  "side": "PE",
+  "file": "dlls/webservices/writer.c",
+  "start_line": 353,
+  "end_line": 455,
+  "body_lines": 100,
+  "signature": "HRESULT WINAPI WsSetOutput( WS_XML_WRITER *handle, const WS_XML_WRITER_ENCODING *encoding, const WS_XML_WRITER_OUTPUT *output, const WS_XML_WRITER_PROPERTY *properties, ULONG count, WS_ERROR *error )",
+  "header_comment": "/**************************************************************************\n *          WsSetOutput\t\t[webservices.@]\n */",
+  "code": "HRESULT WINAPI WsSetOutput( WS_XML_WRITER *handle, const WS_XML_WRITER_ENCODING *encoding,\n                            const WS_XML_WRITER_OUTPUT *output, const WS_XML_WRITER_PROPERTY *properties,\n                            ULONG count, WS_ERROR *error )\n{\n    struct writer *writer = (struct writer *)handle;\n    struct node *node;\n    HRESULT hr;\n    ULONG i;\n\n    TRACE( \"%p %p %p %p %lu %p\\n\", handle, encoding, output, properties, count, error );\n    if (error) FIXME( \"ignoring error parameter\\n\" );\n\n    if (!writer) return E_INVALIDARG;\n\n    EnterCriticalSection( &writer->cs );\n\n    if (writer->magic != WRITER_MAGIC)\n    {\n        LeaveCriticalSection( &writer->cs );\n        return E_INVALIDARG;\n    }\n\n    for (i = 0; i < count; i++)\n    {\n        hr = prop_set( writer->prop, writer->prop_count, properties[i].id, properties[i].value,\n                       properties[i].valueSize );\n        if (hr != S_OK) goto done;\n    }\n\n    if ((hr = init_writer( writer )) != S_OK) goto done;\n\n    switch (encoding->encodingType)\n    {\n    case WS_XML_WRITER_ENCODING_TYPE_TEXT:\n    {\n        const WS_XML_WRITER_TEXT_ENCODING *text = (const WS_XML_WRITER_TEXT_ENCODING *)encoding;\n        if (text->charSet != WS_CHARSET_UTF8)\n        {\n            FIXME( \"charset %u not supported\\n\", text->charSet );\n            hr = E_NOTIMPL;\n            goto done;\n        }\n        writer->output_enc     = WS_XML_WRITER_ENCODING_TYPE_TEXT;\n        writer->output_charset = WS_CHARSET_UTF8;\n        break;\n    }\n    case WS_XML_WRITER_ENCODING_TYPE_BINARY:\n    {\n        const WS_XML_WRITER_BINARY_ENCODING *bin = (const WS_XML_WRITER_BINARY_ENCODING *)encoding;\n        writer->output_enc     = WS_XML_WRITER_ENCODING_TYPE_BINARY;\n        writer->output_charset = 0;\n        writer->dict           = bin->staticDictionary;\n        writer->dict_cb        = bin->dynamicStringCallback;\n        writer->dict_cb_state  = bin->dynamicStringCallbackState;\n        break;\n    }\n    default:\n        FIXME( \"encoding type %u not supported\\n\", encoding->encodingType );\n        hr = E_NOTIMPL;\n        goto done;\n    }\n\n    switch (output->outputType)\n    {\n    case WS_XML_WRITER_OUTPUT_TYPE_BUFFER:\n    {\n        struct xmlbuf *xmlbuf;\n        if (!(xmlbuf = alloc_xmlbuf( writer->output_heap, 0, writer->output_enc, writer->output_charset,\n                                     writer->dict, NULL )))\n        {\n            hr = WS_E_QUOTA_EXCEEDED;\n            goto done;\n        }\n        set_output_buffer( writer, xmlbuf );\n        writer->output_buf_user = FALSE;\n        break;\n    }\n    case WS_XML_WRITER_OUTPUT_TYPE_STREAM:\n    {\n        const WS_XML_WRITER_STREAM_OUTPUT *stream = (const WS_XML_WRITER_STREAM_OUTPUT *)output;\n        if (!writer->stream_buf && !(writer->stream_buf = malloc( STREAM_BUFSIZE )))\n        {\n            hr = E_OUTOFMEMORY;\n            goto done;\n        }\n        set_output_stream( writer, stream->writeCallback, stream->writeCallbackState );\n        break;\n\n    }\n    default:\n        FIXME( \"output type %u not supported\\n\", output->outputType );\n        hr = E_NOTIMPL;\n        goto done;\n    }\n\n    if (!(node = alloc_node( WS_XML_NODE_TYPE_BOF ))) hr = E_OUTOFMEMORY;\n    else write_insert_bof( writer, node );\n\ndone:\n    LeaveCriticalSection( &writer->cs );\n    TRACE( \"returning %#lx\\n\", hr );\n    return hr;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <stdio.h>",
+   "#include <float.h>",
+   "#include <math.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winuser.h\"",
+   "#include \"webservices.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"webservices_private.h\""
+  ],
+  "resolution": [
+   "webservices!WsSetOutput [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/webservices/tests/msg.c",
+   "dlls/webservices/tests/proxy.c",
+   "dlls/webservices/tests/reader.c",
+   "dlls/webservices/tests/writer.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "webservices",
+   "path": "sdk-api-src/content/webservices/nf-webservices-wssetoutput.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/webservices/nf-webservices-wssetoutput",
+   "documented_name": "wssetoutput",
+   "file": "docs/0481_sdk-api_nf-webservices-wssetoutput.md",
+   "text": "---\nUID: NF:webservices.WsSetOutput\ntitle: WsSetOutput function (webservices.h)\ndescription: Sets the encoding and output callbacks for the writer. The callbacks are used to provides buffers to the writer and to perform asynchronous i/o.\nhelpviewer_keywords: [\"WsSetOutput\",\"WsSetOutput function [Web Services for Windows]\",\"webservices/WsSetOutput\",\"wsw.wssetoutput\"]\nold-location: wsw\\wssetoutput.htm\ntech.root: wsw\nms.assetid: f0b47817-0ad1-408c-a6da-9a7b0fb2e34b\nms.date: 12/05/2018\nms.keywords: WsSetOutput, WsSetOutput function [Web Services for Windows], webservices/WsSetOutput, wsw.wssetoutput\nreq.header: webservices.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 7 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 R2 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: WebServices.lib\nreq.dll: WebServices.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - WsSetOutput\n - webservices/WsSetOutput\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - WebServices.dll\napi_name:\n - WsSetOutput\n---\n\n# WsSetOutput function\n\n\n## -description\n\nSets the encoding and output callbacks for the writer.  The callbacks are used to \n        provides buffers to the writer and to perform asynchronous i/o.\n\n## -parameters\n\n### -param writer [in]\n\nThe writer for which the output will be set.\n\n### -param encoding [in, optional]\n\nThe encoding describes the format of the input bytes.  This should be one of <a href=\"/windows/win32/api/webservices/ns-webservices-ws_xml_writer_text_encoding\">WS_XML_WRITER_TEXT_ENCODING</a>,\n          <a href=\"/windows/win32/api/webservices/ns-webservices-ws_xml_writer_binary_encoding\">WS_XML_WRITER_BINARY_ENCODING</a> or <a href=\"/windows/desktop/api/webservices/ns-webservices-ws_xml_writer_mtom_encoding\">WS_XML_WRITER_MTOM_ENCODING</a>.\n\n### -param output [in, optional]\n\nSpecifies where the writer should place its data.\n\n### -param properties\n\nAn array of optional properties of the writer.  See <a href=\"/windows/desktop/api/webservices/ns-webservices-ws_xml_writer_property\">WS_XML_WRITER_PROPERTY</a>.\n\n### -param propertyCount [in]\n\nThe number of properties.\n\n### -param error [in, optional]\n\nSpecifies where additional error information should be stored if the function fails.\n\n## -returns\n\nThis function can return one of these values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_INVALIDARG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOne or more arguments are invalid.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nWhen <b>WsSetOutput</b> is used on the writer, the writer will function in a forward only manner and\n        the functions <a href=\"/windows/desktop/api/webservices/nf-webservices-wsgetwriterposition\">WsGetWriterPosition</a>, <a href=\"/windows/desktop/api/webservices/nf-webservices-wssetwriterposition\">WsSetWriterPosition</a> and <a href=\"/windows/desktop/api/webservices/nf-webservices-wsmovewriter\">WsMoveWriter</a> cannot be used.\n      \n\nIf <a href=\"/windows/desktop/api/webservices/ns-webservices-ws_xml_writer_encoding\">encoding</a> is <b>NULL</b>, then <a href=\"/windows/desktop/api/webservices/ns-webservices-ws_xml_writer_output\">WS_XML_WRITER_OUTPUT</a> is ignored and the writer is set up so that any attempt to write to it will fail.\n      \n\nIf <a href=\"/windows/desktop/api/webservices/ns-webservices-ws_xml_writer_encoding\">encoding</a> is not <b>NULL</b>, then <a href=\"/windows/desktop/api/webservices/ns-webservices-ws_xml_writer_output\">WS_XML_WRITER_OUTPUT</a> must be non-<b>NULL</b> as well.\n      \n\nIf <a href=\"/windows/win32/api/webservices/ns-webservices-ws_xml_writer_buffer_output\">WS_XML_WRITER_OUTPUT</a> is <a href=\"/windows/desktop/api/webservices/ns-webservices-ws_xml_writer_buffer_output\">WS_XML_WRITER_BUFFER_OUTPUT</a> then the writer will buffer the generated\n        bytes of the document.  Use <a href=\"/windows/desktop/api/webservices/nf-webservices-wsgetwriterproperty\">WsGetWriterProperty</a> with <a href=\"/windows/desktop/api/webservices/ne-webservices-ws_xml_writer_property_id\">WS_XML_WRITER_PROPERTY_BUFFERS</a> or\n        <b>WS_XML_WRITER_PROPERTY_BYTES</b> to obtain these bytes.  In this mode <a href=\"/windows/desktop/api/webservices/nf-webservices-wsflushwriter\">WsFlushWriter</a> has no effect.\n      \n\nIf <a href=\"/windows/win32/api/webservices/ns-webservices-ws_xml_writer_stream_output\">WS_XML_WRITER_OUTPUT</a> is <a href=\"/windows/desktop/api/webservices/ns-webservices-ws_xml_writer_stream_output\">WS_XML_WRITER_STREAM_OUTPUT</a> then the writer will pass the generated\n        bytes of the document to the specified <a href=\"/windows/desktop/api/webservices/nc-webservices-ws_write_callback\">WS_WRITE_CALLBACK</a> during calls to <a href=\"/windows/desktop/api/webservices/nf-webservices-wsflushwriter\">WsFlushWriter</a>.\n      \n\nThe writer will be initialized to use the properties specified in <a href=\"/windows/desktop/api/webservices/nf-webservices-wscreatewriter\">WsCreateWriter</a>.  Any properties\n        specified to <b>WsSetOutput</b> will override those properties.\n      \n\nSee <a href=\"/windows/desktop/api/webservices/nf-webservices-wscreatewriter\">WsCreateWriter</a> for the default values of the properties of the writer."
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "init_writer",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 164,
+   "end_line": 185,
+   "static": true,
+   "called_from": [
+    "WsSetOutput"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:230",
+    "dlls/webservices/writer.c:490"
+   ],
+   "signature": "static HRESULT init_writer( struct writer *writer )",
+   "code": "static HRESULT init_writer( struct writer *writer )\n{\n    struct node *node;\n\n    writer->write_pos      = 0;\n    writer->write_bufptr   = NULL;\n    destroy_nodes( writer->root );\n    writer->root           = writer->current = NULL;\n    free_xml_string( writer->current_ns );\n    writer->current_ns     = NULL;\n\n    if (!(node = alloc_node( WS_XML_NODE_TYPE_EOF ))) return E_OUTOFMEMORY;\n    write_insert_eof( writer, node );\n    writer->state          = WRITER_STATE_INITIAL;\n    writer->output_enc     = WS_XML_WRITER_ENCODING_TYPE_TEXT;\n    writer->output_charset = WS_CHARSET_UTF8;\n    writer->dict           = NULL;\n    writer->dict_do_lookup = FALSE;\n    writer->dict_cb        = NULL;\n    writer->dict_cb_state  = NULL;\n    return S_OK;\n}"
+  },
+  {
+   "name": "set_output_buffer",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 328,
+   "end_line": 339,
+   "static": true,
+   "called_from": [
+    "WsSetOutput"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:493"
+   ],
+   "signature": "static void set_output_buffer( struct writer *writer, struct xmlbuf *xmlbuf )",
+   "code": "static void set_output_buffer( struct writer *writer, struct xmlbuf *xmlbuf )\n{\n    /* free current buffer if it's ours */\n    if (writer->output_buf && !writer->output_buf_user)\n    {\n        free_xmlbuf( writer->output_buf );\n    }\n    writer->output_buf   = xmlbuf;\n    writer->output_type  = WS_XML_WRITER_OUTPUT_TYPE_BUFFER;\n    writer->write_bufptr = xmlbuf->bytes.bytes;\n    writer->write_pos    = 0;\n}"
+  },
+  {
+   "name": "set_output_stream",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 341,
+   "end_line": 348,
+   "static": true,
+   "called_from": [
+    "WsSetOutput"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void set_output_stream( struct writer *writer, WS_WRITE_CALLBACK callback, void *state )",
+   "code": "static void set_output_stream( struct writer *writer, WS_WRITE_CALLBACK callback, void *state )\n{\n    writer->output_type     = WS_XML_WRITER_OUTPUT_TYPE_STREAM;\n    writer->output_cb       = callback;\n    writer->output_cb_state = state;\n    writer->write_bufptr    = writer->stream_buf;\n    writer->write_pos       = 0;\n}"
+  },
+  {
+   "name": "write_insert_bof",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 143,
+   "end_line": 148,
+   "static": true,
+   "called_from": [
+    "WsSetOutput"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/writer.c:497"
+   ],
+   "signature": "static void write_insert_bof( struct writer *writer, struct node *bof )",
+   "code": "static void write_insert_bof( struct writer *writer, struct node *bof )\n{\n    writer->root->parent = bof;\n    list_add_tail( &bof->children, &writer->root->entry );\n    writer->current = writer->root = bof;\n}"
+  },
+  {
+   "name": "write_insert_eof",
+   "file": "dlls/webservices/writer.c",
+   "start_line": 132,
+   "end_line": 141,
+   "static": true,
+   "called_from": [
+    "init_writer"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void write_insert_eof( struct writer *writer, struct node *eof )",
+   "code": "static void write_insert_eof( struct writer *writer, struct node *eof )\n{\n    if (!writer->root) writer->root = eof;\n    else\n    {\n        eof->parent = writer->root;\n        list_add_tail( &writer->root->children, &eof->entry );\n    }\n    writer->current = eof;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "writer",
+    "kind": "struct_decl",
+    "start_line": 74,
+    "end_line": 99,
+    "code": "struct writer\n{\n    ULONG                        magic;\n    CRITICAL_SECTION             cs;\n    ULONG                        write_pos;\n    unsigned char               *write_bufptr;\n    enum writer_state            state;\n    struct node                 *root;\n    struct node                 *current;\n    WS_XML_STRING               *current_ns;\n    WS_XML_WRITER_ENCODING_TYPE  output_enc;\n    WS_CHARSET                   output_charset;\n    WS_XML_WRITER_OUTPUT_TYPE    output_type;\n    WS_WRITE_CALLBACK            output_cb;\n    void                        *output_cb_state;\n    struct xmlbuf               *output_buf;\n    BOOL                         output_buf_user;\n    WS_HEAP                     *output_heap;\n    unsigned char               *stream_buf;\n    const WS_XML_DICTIONARY     *dict;\n    BOOL                         dict_do_lookup;\n    WS_DYNAMIC_STRING_CALLBACK   dict_cb;\n    void                        *dict_cb_state;\n    ULONG                        prop_count;\n    struct prop                  prop[ARRAY_SIZE( writer_props )];\n};"
+   },
+   {
+    "name": "writer_state",
+    "kind": "enum_decl",
+    "start_line": 61,
+    "end_line": 72,
+    "code": "enum writer_state\n{\n    WRITER_STATE_INITIAL,\n    WRITER_STATE_STARTELEMENT,\n    WRITER_STATE_STARTATTRIBUTE,\n    WRITER_STATE_STARTCDATA,\n    WRITER_STATE_ENDSTARTELEMENT,\n    WRITER_STATE_TEXT,\n    WRITER_STATE_COMMENT,\n    WRITER_STATE_ENDELEMENT,\n    WRITER_STATE_ENDCDATA\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(webservices);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "WRITER_MAGIC",
+    "start_line": 101,
+    "end_line": 101,
+    "code": "#define WRITER_MAGIC (('W' << 24) | ('R' << 16) | ('I' << 8) | 'T')"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "alloc_node",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 71
+   },
+   {
+    "name": "alloc_xmlbuf",
+    "file": "dlls/webservices/heap.c",
+    "start_line": 323
+   },
+   {
+    "name": "destroy_nodes",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 135
+   },
+   {
+    "name": "free_xml_string",
+    "file": "dlls/webservices/string.c",
+    "start_line": 214
+   },
+   {
+    "name": "free_xmlbuf",
+    "file": "dlls/webservices/heap.c",
+    "start_line": 345
+   },
+   {
+    "name": "prop_set",
+    "file": "dlls/webservices/reader.c",
+    "start_line": 57
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrtd",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   }
+  ],
+  "header_inline": [
+   "list_add_tail",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

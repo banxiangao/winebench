@@ -1,0 +1,107 @@
+{
+ "id": "0298",
+ "function": {
+  "name": "IoCancelIrp",
+  "export_name": "IoCancelIrp",
+  "module": "ntoskrnl.exe",
+  "source_module": "ntoskrnl.exe",
+  "exported_by": [
+   "ntoskrnl.exe"
+  ],
+  "side": "PE",
+  "file": "dlls/ntoskrnl.exe/ntoskrnl.c",
+  "start_line": 2148,
+  "end_line": 2167,
+  "body_lines": 17,
+  "signature": "BOOLEAN WINAPI IoCancelIrp( IRP *irp )",
+  "header_comment": "/***********************************************************************\n *           IoCancelIrp   (NTOSKRNL.EXE.@)\n */",
+  "code": "BOOLEAN WINAPI IoCancelIrp( IRP *irp )\n{\n    PDRIVER_CANCEL cancel_routine;\n    KIRQL irql;\n\n    TRACE( \"(%p)\\n\", irp );\n\n    IoAcquireCancelSpinLock( &irql );\n    irp->Cancel = TRUE;\n    if (!(cancel_routine = IoSetCancelRoutine( irp, NULL )))\n    {\n        IoReleaseCancelSpinLock( irql );\n        return FALSE;\n    }\n\n    /* CancelRoutine is responsible for calling IoReleaseCancelSpinLock */\n    irp->CancelIrql = irql;\n    cancel_routine( IoGetCurrentIrpStackLocation(irp)->DeviceObject, irp );\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"ntoskrnl_private.h\"",
+   "#include \"excpt.h\"",
+   "#include \"winreg.h\"",
+   "#include \"ntsecapi.h\"",
+   "#include \"evntprov.h\"",
+   "#include \"ddk/csq.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/svcctl.h\""
+  ],
+  "resolution": [
+   "ntoskrnl.exe!IoCancelIrp [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntoskrnl.exe/tests/driver.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "wdm",
+   "path": "wdk-ddi-src/content/wdm/nf-wdm-iocancelirp.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-iocancelirp",
+   "documented_name": "iocancelirp",
+   "file": "docs/0298_windows-driver-docs-ddi_nf-wdm-iocancelirp.md",
+   "text": "---\nUID: NF:wdm.IoCancelIrp\ntitle: IoCancelIrp function (wdm.h)\ndescription: The IoCancelIrp routine sets the cancel bit in a given IRP and calls the cancel routine for the IRP if there is one.\nold-location: kernel\\iocancelirp.htm\ntech.root: kernel\nms.date: 04/30/2018\nkeywords: [\"IoCancelIrp function\"]\nms.keywords: IoCancelIrp, IoCancelIrp routine [Kernel-Mode Driver Architecture], k104_b43eae94-7d4e-4649-b56c-498285b5033f.xml, kernel.iocancelirp, wdm/IoCancelIrp\nreq.header: wdm.h\nreq.include-header: Wdm.h, Ntddk.h, Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt: Available starting with Windows 2000.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: HwStorPortProhibitedDDIs\nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: <= DISPATCH_LEVEL\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - IoCancelIrp\n - wdm/IoCancelIrp\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - IoCancelIrp\n---\n\n# IoCancelIrp function\n\n\n## -description\n\nThe <b>IoCancelIrp</b> routine sets the cancel bit in a given IRP and calls the cancel routine for the IRP if there is one.\n\n## -parameters\n\n### -param Irp [in]\n\n\nA pointer to the IRP to be canceled.\n\n## -returns\n\n<b>IoCancelIrp</b> returns <b>TRUE</b> if the IRP had a cancel routine and this routine was called. Otherwise, it returns <b>FALSE</b>. In either case, the IRP's cancel bit is set to <b>TRUE</b>. For more information, see Remarks.\n\n## -remarks\n\nIf the IRP has a cancel routine, <b>IoCancelIrp</b> sets the cancel bit and calls the cancel routine.\n\nIf <i>Irp</i>-><b>CancelRoutine</b> is <b>NULL</b>, and therefore the IRP is not cancelable, <b>IoCancelIrp</b> sets the IRP's cancel bit and returns <b>FALSE</b>. The IRP should be canceled at a later time when it becomes cancelable.\n\nIf a driver that does not own the IRP calls <b>IoCancelIrp</b>, the results are unpredictable. The IRP might be completed with a successful status even though its cancel bit was set.\n\nAn intermediate driver should not arbitrarily call <b>IoCancelIrp</b> unless that driver created the IRP passed in the call. Otherwise, the intermediate driver might cancel an IRP that some higher-level driver is tracking for purposes of its own.\n\n## -see-also\n\n<a href=\"/windows-hardware/drivers/ddi/wdm/nf-wdm-iosetcancelroutine\">IoSetCancelRoutine</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 35,
+    "end_line": 35,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ntoskrnl);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "IoAcquireCancelSpinLock",
+    "impl": [
+     "dlls/ntoskrnl.exe/sync.c:778"
+    ]
+   },
+   {
+    "name": "IoReleaseCancelSpinLock",
+    "impl": [
+     "dlls/ntoskrnl.exe/sync.c:787"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "_InterlockedExchangePointer",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "cancel_routine",
+    "in_function": "IoCancelIrp",
+    "at": "dlls/ntoskrnl.exe/ntoskrnl.c:2165",
+    "candidates": []
+   }
+  ]
+ }
+}

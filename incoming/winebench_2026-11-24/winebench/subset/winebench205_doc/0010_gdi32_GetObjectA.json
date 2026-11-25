@@ -1,0 +1,224 @@
+{
+ "id": "0010",
+ "function": {
+  "name": "GetObjectA",
+  "export_name": "GetObjectA",
+  "module": "gdi32",
+  "source_module": "gdi32",
+  "exported_by": [
+   "gdi32"
+  ],
+  "side": "PE",
+  "file": "dlls/gdi32/objects.c",
+  "start_line": 447,
+  "end_line": 470,
+  "body_lines": 21,
+  "signature": "INT WINAPI GetObjectA( HGDIOBJ handle, INT count, void *buffer )",
+  "header_comment": "/***********************************************************************\n *           GetObjectA    (GDI32.@)\n */",
+  "code": "INT WINAPI GetObjectA( HGDIOBJ handle, INT count, void *buffer )\n{\n    TRACE(\"%p %d %p\\n\", handle, count, buffer );\n\n    if (get_object_type( handle ) == NTGDI_OBJ_FONT)\n    {\n        LOGFONTA *lfA = buffer;\n        LOGFONTW lf;\n\n        if (!buffer) return sizeof(*lfA);\n        if (!GetObjectW( handle, sizeof(lf), &lf )) return 0;\n        if (count > sizeof(*lfA)) count = sizeof(*lfA);\n        memcpy( lfA, &lf, min( count, FIELD_OFFSET(LOGFONTA, lfFaceName) ));\n        if (count > FIELD_OFFSET(LOGFONTA, lfFaceName))\n        {\n            WideCharToMultiByte( CP_ACP, 0, lf.lfFaceName, -1, lfA->lfFaceName,\n                                 count - FIELD_OFFSET(LOGFONTA, lfFaceName), NULL, NULL );\n            if (count == sizeof(*lfA)) lfA->lfFaceName[LF_FACESIZE - 1] = 0;\n        }\n        return count;\n    }\n\n    return GetObjectW( handle, count, buffer );\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdlib.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"gdi_private.h\"",
+   "#include \"ntuser.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winnls.h\"",
+   "#include \"initguid.h\"",
+   "#include \"devguid.h\"",
+   "#include \"setupapi.h\"",
+   "#include \"wine/rbtree.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "gdi32!GetObjectA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdi32/tests/bitmap.c",
+   "dlls/gdi32/tests/font.c",
+   "dlls/gdi32/tests/gdiobj.c",
+   "dlls/gdi32/tests/metafile.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 13
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-getobjecta.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-getobjecta",
+   "documented_name": "getobjecta",
+   "file": "docs/0010_sdk-api_nf-wingdi-getobjecta.md",
+   "text": "---\nUID: NF:wingdi.GetObjectA\ntitle: GetObjectA function (wingdi.h)\ndescription: The GetObject function retrieves information for the specified graphics object. (GetObjectA)\nhelpviewer_keywords: [\"GetObjectA\", \"HBITMAP\", \"HBITMAP returned from a call to CreateDIBSection\", \"HBRUSH\", \"HFONT\", \"HPALETTE\", \"HPEN\", \"HPEN returned from a call to ExtCreatePen\", \"wingdi/GetObjectA\"]\nold-location: gdi\\getobject.htm\ntech.root: gdi\nms.assetid: 555ab876-d990-426d-915c-f98df82a10aa\nms.date: 12/05/2018\nms.keywords: GetObject, GetObject function [Windows GDI], GetObjectA, GetObjectW, HBITMAP, HBITMAP returned from a call to CreateDIBSection, HBRUSH, HFONT, HPALETTE, HPEN, HPEN returned from a call to ExtCreatePen, _win32_GetObject, gdi.getobject, wingdi/GetObject, wingdi/GetObjectA, wingdi/GetObjectW\nreq.header: wingdi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: GetObjectW (Unicode) and GetObjectA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetObjectA\n - wingdi/GetObjectA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - gdi32.dll\n - Ext-MS-Win-GDI-DC-l1-2-0.dll\n - ext-ms-win-gdi-dc-l1-1-0.dll\n - ext-ms-win-gdi-dc-l1-2-1.dll\n - GDI32Full.dll\napi_name:\n - GetObject\n - GetObjectA\n - GetObjectW\n---\n\n# GetObjectA function\n\n\n## -description\n\nThe <b>GetObject</b> function retrieves information for the specified graphics object.\n\n## -parameters\n\n### -param hgdiobj [in]\n\nA handle to the graphics object of interest. This can be a handle to one of the following: a logical bitmap, a brush, a font, a palette, a pen, or a device independent bitmap created by calling the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-createdibsection\">CreateDIBSection</a> function.\n\n### -param cbBuffer [in]\n\nThe number of bytes of information to be written to the buffer.\n\n### -param lpvObject [out]\n\nA pointer to a buffer that receives the information about the specified graphics object.\n\nThe following table shows the type of information the buffer receives for each type of graphics object you can specify with <i>hgdiobj</i>.\n\n<table>\n<tr>\n<th>Object type</th>\n<th>Data written to buffer</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"HBITMAP\"></a><a id=\"hbitmap\"></a><dl>\n<dt><b>HBITMAP</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-bitmap\">BITMAP</a>\n\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"HBITMAP_returned_from_a_call_to_CreateDIBSection\"></a><a id=\"hbitmap_returned_from_a_call_to_createdibsection\"></a><a id=\"HBITMAP_RETURNED_FROM_A_CALL_TO_CREATEDIBSECTION\"></a><dl>\n<dt><b>HBITMAP returned from a call to <a href=\"/windows/desktop/api/wingdi/nf-wingdi-createdibsection\">CreateDIBSection</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-dibsection\">DIBSECTION</a>, if <i>cbBuffer</i> is set to<code> sizeof (DIBSECTION)</code>, or <a href=\"/windows/desktop/api/wingdi/ns-wingdi-bitmap\">BITMAP</a>, if <i>cbBuffer</i> is set to <code>sizeof (BITMAP)</code>.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"HPALETTE\"></a><a id=\"hpalette\"></a><dl>\n<dt><b>HPALETTE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA <b>WORD</b> count of the number of entries in the logical palette\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"HPEN_returned_from_a_call_to_ExtCreatePen\"></a><a id=\"hpen_returned_from_a_call_to_extcreatepen\"></a><a id=\"HPEN_RETURNED_FROM_A_CALL_TO_EXTCREATEPEN\"></a><dl>\n<dt><b>HPEN returned from a call to <a href=\"/windows/desktop/api/wingdi/nf-wingdi-extcreatepen\">ExtCreatePen</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-extlogpen\">EXTLOGPEN</a>\n\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"HPEN\"></a><a id=\"hpen\"></a><dl>\n<dt><b>HPEN</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-logpen\">LOGPEN</a>\n\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"HBRUSH\"></a><a id=\"hbrush\"></a><dl>\n<dt><b>HBRUSH</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-logbrush\">LOGBRUSH</a>\n\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"HFONT\"></a><a id=\"hfont\"></a><dl>\n<dt><b>HFONT</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-logfonta\">LOGFONT</a>\n\n\n</td>\n</tr>\n</table>\n \n\nIf the <i>lpvObject</i> parameter is <b>NULL</b>, the function return value is the number of bytes required to store the information it writes to the buffer for the specified graphics object.\n\nThe address of <i>lpvObject</i> must be on a 4-byte boundary; otherwise, <b>GetObject</b> fails.\n\n## -returns\n\nIf the function succeeds, and <i>lpvObject</i> is a valid pointer, the return value is the number of bytes stored into the buffer.\n\nIf the function succeeds, and <i>lpvObject</i> is <b>NULL</b>, the return value is the number of bytes required to hold the information the function would store into the buffer.\n\nIf the function fails, the return value is zero.\n\n## -remarks\n\nThe buffer pointed to by the <i>lpvObject</i> parameter must be sufficiently large to receive the information about the graphics object. Depending on the graphics object, the function uses a <a href=\"/windows/desktop/api/wingdi/ns-wingdi-bitmap\">BITMAP</a>, <a href=\"/windows/desktop/api/wingdi/ns-wingdi-dibsection\">DIBSECTION</a>, <a href=\"/windows/desktop/api/wingdi/ns-wingdi-extlogpen\">EXTLOGPEN</a>, <a href=\"/windows/desktop/api/wingdi/ns-wingdi-logbrush\">LOGBRUSH</a>, <a href=\"/windows/desktop/api/wingdi/ns-wingdi-logfonta\">LOGFONT</a>, or <a href=\"/windows/desktop/api/wingdi/ns-wingdi-logpen\">LOGPEN</a> structure, or a count of table entries (for a logical palette).\n\nIf <i>hgdiobj</i> is a handle to a bitmap created by calling <a href=\"/windows/desktop/api/wingdi/nf-wingdi-createdibsection\">CreateDIBSection</a>, and the specified buffer is large enough, the <b>GetObject</b> function returns a <a href=\"/windows/desktop/api/wingdi/ns-wingdi-dibsection\">DIBSECTION</a> structure. In addition, the <b>bmBits</b> member of the <a href=\"/windows/desktop/api/wingdi/ns-wingdi-bitmap\">BITMAP</a> structure contained within the <b>DIBSECTION</b> will contain a pointer to the bitmap's bit values.\n\nIf <i>hgdiobj</i> is a handle to a bitmap created by any other means, <b>GetObject</b> returns only the width, height, and color format information of the bitmap. You can obtain the bitmap's bit values by calling the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-getdibits\">GetDIBits</a> or <a href=\"/windows/desktop/api/wingdi/nf-wingdi-getbitmapbits\">GetBitmapBits</a> function.\n\nIf <i>hgdiobj</i> is a handle to a logical palette, <b>GetObject</b> retrieves a 2-byte integer that specifies the number of entries in the palette. The function does not retrieve the <a href=\"/windows/desktop/api/wingdi/ns-wingdi-logpalette\">LOGPALETTE</a> structure defining the palette. To retrieve information about palette entries, an application can call the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-getpaletteentries\">GetPaletteEntries</a> function.\n\nIf <i>hgdiobj</i> is a handle to a font, the <a href=\"/windows/desktop/api/wingdi/ns-wingdi-logfonta\">LOGFONT</a> that is returned is the <b>LOGFONT</b> used to create the font. If Windows had to make some interpolation of the font because the precise <b>LOGFONT</b> could not be represented, the interpolation will not be reflected in the <b>LOGFONT</b>. For example, if you ask for a vertical version of a font that doesn't support vertical painting, the <b>LOGFONT</b> indicates the font is vertical, but Windows will paint it horizontally.\n\n\n#### Examples\n\nFor an example, see <a href=\"/windows/desktop/gdi/storing-an-image\">Storing an Image</a>.\n\n<div class=\"code\"></div>\n\n\n\n\n> [!NOTE]\n> The wingdi.h header defines GetObject as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-bitmap\">BITMAP</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-createdibsection\">CreateDIBSection</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-dibsection\">DIBSECTION</a>\n\n\n\n<a href=\"/windows/desktop/gdi/device-context-functions\">Device Context Functions</a>\n\n\n\n<a href=\"/windows/desktop/gdi/device-contexts\">Device Contexts Overview</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-extlogpen\">EXTLOGPEN</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-getbitmapbits\">GetBitmapBits</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-getdibits\">GetDIBits</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-getpaletteentries\">GetPaletteEntries</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-getregiondata\">GetRegionData</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-logbrush\">LOGBRUSH</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-logfonta\">LOGFONT</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-logpalette\">LOGPALETTE</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-logpen\">LOGPEN</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_object_type",
+   "file": "dlls/gdi32/objects.c",
+   "start_line": 107,
+   "end_line": 111,
+   "static": true,
+   "called_from": [
+    "GetObjectA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/objects.c:152",
+    "dlls/gdi32/objects.c:336",
+    "dlls/gdi32/objects.c:374"
+   ],
+   "signature": "static DWORD get_object_type( HGDIOBJ obj )",
+   "code": "static DWORD get_object_type( HGDIOBJ obj )\n{\n    GDI_HANDLE_ENTRY *entry = handle_entry( obj );\n    return entry ? entry->ExtType << NTGDI_HANDLE_TYPE_SHIFT : 0;\n}"
+  },
+  {
+   "name": "handle_entry",
+   "file": "dlls/gdi32/objects.c",
+   "start_line": 87,
+   "end_line": 99,
+   "static": true,
+   "called_from": [
+    "get_object_type"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/objects.c:115",
+    "dlls/gdi32/objects.c:121",
+    "dlls/gdi32/objects.c:129",
+    "dlls/gdi32/objects.c:248",
+    "dlls/gdi32/objects.c:441"
+   ],
+   "signature": "static inline GDI_HANDLE_ENTRY *handle_entry( HGDIOBJ handle )",
+   "code": "static inline GDI_HANDLE_ENTRY *handle_entry( HGDIOBJ handle )\n{\n    GDI_SHARED_MEMORY *gdi_shared = get_gdi_shared();\n    unsigned int idx = LOWORD(handle);\n\n    if (idx < GDI_MAX_HANDLE_COUNT && gdi_shared->Handles[idx].Type)\n    {\n        if (!HIWORD( handle ) || HIWORD( handle ) == gdi_shared->Handles[idx].Unique)\n            return &gdi_shared->Handles[idx];\n    }\n    if (handle) WARN( \"invalid handle %p\\n\", handle );\n    return NULL;\n}"
+  },
+  {
+   "name": "get_gdi_shared",
+   "file": "dlls/gdi32/objects.c",
+   "start_line": 68,
+   "end_line": 79,
+   "static": true,
+   "called_from": [
+    "handle_entry"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/objects.c:103"
+   ],
+   "signature": "static GDI_SHARED_MEMORY *get_gdi_shared(void)",
+   "code": "static GDI_SHARED_MEMORY *get_gdi_shared(void)\n{\n#ifndef _WIN64\n    if (NtCurrentTeb()->GdiBatchCount)\n    {\n        TEB64 *teb64 = (TEB64 *)(UINT_PTR)NtCurrentTeb()->GdiBatchCount;\n        PEB64 *peb64 = (PEB64 *)(UINT_PTR)teb64->Peb;\n        return (GDI_SHARED_MEMORY *)(UINT_PTR)peb64->GdiSharedHandleTable;\n    }\n#endif\n    return (GDI_SHARED_MEMORY *)NtCurrentTeb()->Peb->GdiSharedHandleTable;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(gdi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetObjectW",
+    "impl": [
+     "dlls/gdi32/objects.c:365"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "NtCurrentTeb",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "gdi32.GetObjectA",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI",
+   "header": "wingdi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 24,
+   "body": 23,
+   "code": 14
+  },
+  "cyclomatic": 7,
+  "return_type": "INT",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 13,
+   "n_tests": 35,
+   "n_tests_other": 22,
+   "own_test_functions": [
+    "dlls/gdi32/tests/bitmap.c::test_D3DKMTCreateDCFromMemory",
+    "dlls/gdi32/tests/font.c::check_font",
+    "dlls/gdi32/tests/font.c::test_CreateFontIndirect",
+    "dlls/gdi32/tests/font.c::test_GetGlyphOutline",
+    "dlls/gdi32/tests/font.c::test_bitmap_font_glyph_index",
+    "dlls/gdi32/tests/font.c::test_font_metrics",
+    "dlls/gdi32/tests/font.c::test_oemcharset",
+    "dlls/gdi32/tests/font.c::test_stock_fonts",
+    "dlls/gdi32/tests/gdiobj.c::test_GetCurrentObject",
+    "dlls/gdi32/tests/gdiobj.c::test_gdi_objects",
+    "dlls/gdi32/tests/gdiobj.c::test_thread_objects",
+    "dlls/gdi32/tests/gdiobj.c::thread_proc",
+    "dlls/gdi32/tests/metafile.c::eto_emf_enum_proc"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-getobjecta",
+   "source": "win32",
+   "description": "The GetObject function retrieves information for the specified graphics object. (GetObjectA)",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Gdi32.dll"
+  },
+  "exports": [
+   "gdi32.GetObjectA"
+  ],
+  "subset": {
+   "selected_by": "base",
+   "lower_bound_used": 10,
+   "tests_field": "n_tests_own"
+  }
+ }
+}

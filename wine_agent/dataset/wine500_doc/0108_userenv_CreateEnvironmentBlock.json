@@ -1,0 +1,306 @@
+{
+ "id": "0108",
+ "function": {
+  "name": "CreateEnvironmentBlock",
+  "export_name": "CreateEnvironmentBlock",
+  "module": "userenv",
+  "source_module": "userenv",
+  "exported_by": [
+   "userenv"
+  ],
+  "side": "PE",
+  "file": "dlls/userenv/userenv_main.c",
+  "start_line": 171,
+  "end_line": 333,
+  "body_lines": 160,
+  "signature": "BOOL WINAPI CreateEnvironmentBlock( LPVOID* lpEnvironment, HANDLE hToken, BOOL bInherit )",
+  "header_comment": null,
+  "code": "BOOL WINAPI CreateEnvironmentBlock( LPVOID* lpEnvironment,\n                     HANDLE hToken, BOOL bInherit )\n{\n    static const WCHAR env_keyW[] = L\"System\\\\CurrentControlSet\\\\Control\\\\Session Manager\\\\Environment\";\n    static const WCHAR profile_keyW[] = L\"Software\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\ProfileList\";\n\n    WCHAR *env, buf[UNICODE_STRING_MAX_CHARS], profiles_dir[MAX_PATH];\n    DWORD len;\n    HKEY hkey, hsubkey;\n\n    TRACE(\"%p %p %d\\n\", lpEnvironment, hToken, bInherit );\n\n    if (!lpEnvironment)\n        return FALSE;\n\n    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, env_keyW, 0, KEY_READ, &hkey) != ERROR_SUCCESS)\n        return FALSE;\n\n    if (RtlCreateEnvironment(bInherit, &env) != STATUS_SUCCESS)\n    {\n        RegCloseKey(hkey);\n        return FALSE;\n    }\n\n    if (!GetEnvironmentVariableW(L\"SystemRoot\", buf, UNICODE_STRING_MAX_CHARS))\n    {\n        if (!get_reg_value(env, hkey, L\"SystemRoot\", buf, UNICODE_STRING_MAX_CHARS))\n        {\n            buf[0] = 0;\n            WARN(\"SystemRoot variable not set\\n\");\n        }\n    }\n    set_env_var(&env, L\"SystemRoot\", buf);\n\n    if (!GetEnvironmentVariableW(L\"SystemDrive\", buf, UNICODE_STRING_MAX_CHARS))\n    {\n        if (!get_reg_value(env, hkey, L\"SystemDrive\", buf, UNICODE_STRING_MAX_CHARS))\n        {\n            buf[0] = 0;\n            WARN(\"SystemDrive variable not set\\n\");\n        }\n    }\n    set_env_var(&env, L\"SystemDrive\", buf);\n\n    set_registry_variables(&env, hkey, REG_SZ, !bInherit);\n    set_registry_variables(&env, hkey, REG_EXPAND_SZ, !bInherit);\n\n    if (RegOpenKeyExW(hkey, L\"Environment\", 0, KEY_READ, &hsubkey) == ERROR_SUCCESS)\n    {\n        set_registry_variables(&env, hsubkey, REG_SZ, !bInherit);\n        set_registry_variables(&env, hsubkey, REG_EXPAND_SZ, !bInherit);\n        RegCloseKey(hsubkey);\n    }\n\n    if (RegOpenKeyExW(hkey, L\"Volatile Environment\", 0, KEY_READ, &hsubkey) == ERROR_SUCCESS)\n    {\n        set_registry_variables(&env, hsubkey, REG_SZ, !bInherit);\n        set_registry_variables(&env, hsubkey, REG_EXPAND_SZ, !bInherit);\n        RegCloseKey(hsubkey);\n    }\n    RegCloseKey(hkey);\n\n    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, profile_keyW, 0, KEY_READ, &hkey) == ERROR_SUCCESS)\n    {\n        if (get_reg_value(env, hkey, L\"ProfilesDirectory\", profiles_dir, MAX_PATH - sizeof(WCHAR)))\n        {\n            len = lstrlenW(profiles_dir);\n            if (profiles_dir[len-1] != '\\\\')\n            {\n                profiles_dir[len++] = '\\\\';\n                profiles_dir[len] = '\\0';\n            }\n\n            if (get_reg_value(env, hkey, L\"ProgramData\", buf, UNICODE_STRING_MAX_CHARS))\n            {\n                set_env_var(&env, L\"ALLUSERSPROFILE\", buf);\n                set_env_var(&env, L\"ProgramData\", buf);\n            }\n        }\n        else\n        {\n            profiles_dir[0] = 0;\n        }\n\n        RegCloseKey(hkey);\n    }\n\n    len = ARRAY_SIZE(buf);\n    if (GetComputerNameW(buf, &len))\n        set_env_var(&env, L\"COMPUTERNAME\", buf);\n\n    set_wow64_environment(&env);\n\n    if (!hToken)\n    {\n        if (profiles_dir[0])\n        {\n            len = lstrlenW(profiles_dir);\n            if (len * sizeof(WCHAR) + sizeof(L\"Default\") < sizeof(buf))\n            {\n                wcscpy(buf, profiles_dir);\n                wcscat(buf, L\"Default\");\n                set_env_var(&env, L\"USERPROFILE\", buf);\n            }\n        }\n\n        wcscpy(buf, L\".Default\");\n    }\n    else\n    {\n        TOKEN_USER *token_user = NULL;\n        SID_NAME_USE use;\n        WCHAR *sidW;\n        DWORD size, tmp=0;\n\n        if (GetTokenInformation(hToken, TokenUser, NULL, 0, &len) ||\n                GetLastError()!=ERROR_INSUFFICIENT_BUFFER ||\n                !(token_user = HeapAlloc(GetProcessHeap(), 0, len)) ||\n                !GetTokenInformation(hToken, TokenUser, token_user, len, &len) ||\n                !ConvertSidToStringSidW(token_user->User.Sid, &sidW))\n        {\n            HeapFree(GetProcessHeap(), 0, token_user);\n            RtlDestroyEnvironment(env);\n            return FALSE;\n        }\n\n        len = lstrlenW(profiles_dir);\n        memcpy(buf, profiles_dir, len*sizeof(WCHAR));\n\n        size = UNICODE_STRING_MAX_CHARS-len;\n        if (LookupAccountSidW(NULL, token_user->User.Sid,\n                    buf+len, &size, NULL, &tmp, &use))\n        {\n            set_env_var(&env, L\"USERNAME\", buf+len);\n            if (len) set_env_var(&env, L\"USERPROFILE\", buf);\n        }\n\n        HeapFree(GetProcessHeap(), 0, token_user);\n        lstrcpyW(buf, sidW);\n        LocalFree(sidW);\n    }\n\n    if (RegOpenKeyExW(HKEY_USERS, buf, 0, KEY_READ, &hkey) == ERROR_SUCCESS)\n    {\n        if (RegOpenKeyExW(hkey, L\"Environment\", 0, KEY_READ, &hsubkey) == ERROR_SUCCESS)\n        {\n            set_registry_variables(&env, hsubkey, REG_SZ, !bInherit);\n            set_registry_variables(&env, hsubkey, REG_EXPAND_SZ, !bInherit);\n            RegCloseKey(hsubkey);\n        }\n\n        if (RegOpenKeyExW(hkey, L\"Volatile Environment\", 0, KEY_READ, &hsubkey) == ERROR_SUCCESS)\n        {\n            set_registry_variables(&env, hsubkey, REG_SZ, !bInherit);\n            set_registry_variables(&env, hsubkey, REG_EXPAND_SZ, !bInherit);\n            RegCloseKey(hsubkey);\n        }\n        RegCloseKey(hkey);\n    }\n\n    *lpEnvironment = env;\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"sddl.h\"",
+   "#include \"objbase.h\"",
+   "#include \"userenv.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "userenv!CreateEnvironmentBlock [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/userenv/tests/userenv.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "userenv",
+   "path": "sdk-api-src/content/userenv/nf-userenv-createenvironmentblock.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/userenv/nf-userenv-createenvironmentblock",
+   "documented_name": "createenvironmentblock",
+   "file": "docs/0108_sdk-api_nf-userenv-createenvironmentblock.md",
+   "text": "---\nUID: NF:userenv.CreateEnvironmentBlock\ntitle: CreateEnvironmentBlock function (userenv.h)\ndescription: Retrieves the environment variables for the specified user. This block can then be passed to the CreateProcessAsUser function.\nhelpviewer_keywords: [\"CreateEnvironmentBlock\",\"CreateEnvironmentBlock function [Windows Shell]\",\"_shell_CreateEnvironmentBlock\",\"shell.CreateEnvironmentBlock\",\"userenv/CreateEnvironmentBlock\"]\nold-location: shell\\CreateEnvironmentBlock.htm\ntech.root: shell\nms.assetid: bda8879d-d33a-48f4-8b08-e3a279126a07\nms.date: 12/05/2018\nms.keywords: CreateEnvironmentBlock, CreateEnvironmentBlock function [Windows Shell], _shell_CreateEnvironmentBlock, shell.CreateEnvironmentBlock, userenv/CreateEnvironmentBlock\nreq.header: userenv.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Userenv.lib\nreq.dll: Userenv.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CreateEnvironmentBlock\n - userenv/CreateEnvironmentBlock\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Userenv.dll\napi_name:\n - CreateEnvironmentBlock\n---\n\n# CreateEnvironmentBlock function\n\n\n## -description\n\nRetrieves the environment variables for the specified user. This block can then be passed to the <a href=\"/windows/desktop/api/processthreadsapi/nf-processthreadsapi-createprocessasusera\">CreateProcessAsUser</a> function.\n\n## -parameters\n\n### -param lpEnvironment [out]\n\nType: <b>LPVOID*</b>\n\nWhen this function returns, receives a pointer to the new environment block. The environment block is an array of null-terminated Unicode strings. The list ends with two nulls (\\0\\0).\n\n### -param hToken [in, optional]\n\nType: <b>HANDLE</b>\n\nToken for the user, returned from the \n<a href=\"/windows/desktop/api/winbase/nf-winbase-logonusera\">LogonUser</a> function. If this is a primary token, the token must have <b>TOKEN_QUERY</b> and <b>TOKEN_DUPLICATE</b> access. If the token is an impersonation token, it must have <b>TOKEN_QUERY</b> access. For more information, see \n<a href=\"/windows/desktop/SecAuthZ/access-rights-for-access-token-objects\">Access Rights for Access-Token Objects</a>. \n\n                    \n\nIf this parameter is <b>NULL</b>, the returned environment block contains system variables only.\n\n### -param bInherit [in]\n\nType: <b>BOOL</b>\n\nSpecifies whether to inherit from the current process' environment. If this value is <b>TRUE</b>, the process inherits the current process' environment. If this value is <b>FALSE</b>, the process does not inherit the current process' environment.\n\n## -returns\n\nType: <b>BOOL</b>\n\n<b>TRUE</b> if successful; otherwise, <b>FALSE</b>. To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nTo free the buffer when you have finished with the environment block, call the \n<a href=\"/windows/desktop/api/userenv/nf-userenv-destroyenvironmentblock\">DestroyEnvironmentBlock</a> function.\n\nIf the environment block is passed to \n<a href=\"/windows/desktop/api/processthreadsapi/nf-processthreadsapi-createprocessasusera\">CreateProcessAsUser</a>, you must also specify the <b>CREATE_UNICODE_ENVIRONMENT</b> flag. After <b>CreateProcessAsUser</b> has returned, the new process has a copy of the environment block, and <a href=\"/windows/desktop/api/userenv/nf-userenv-destroyenvironmentblock\">DestroyEnvironmentBlock</a> can be safely called.\n\nUser-specific environment variables such as %USERPROFILE% are set only when the user's profile is loaded. To load a user's profile, call the \n<a href=\"/windows/desktop/api/userenv/nf-userenv-loaduserprofilea\">LoadUserProfile</a> function.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/processthreadsapi/nf-processthreadsapi-createprocessasusera\">CreateProcessAsUser</a>\n\n\n\n<a href=\"/windows/desktop/api/userenv/nf-userenv-destroyenvironmentblock\">DestroyEnvironmentBlock</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-logonusera\">LogonUser</a>\n\n\n\n<a href=\"/previous-versions/windows/desktop/legacy/bb776900(v=vs.85)\">User Profiles Overview</a>\n\n\n\n<a href=\"/previous-versions/windows/desktop/legacy/bb776901(v=vs.85)\">User Profiles Reference</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_reg_value",
+   "file": "dlls/userenv/userenv_main.c",
+   "start_line": 37,
+   "end_line": 78,
+   "static": true,
+   "called_from": [
+    "CreateEnvironmentBlock",
+    "set_registry_variables",
+    "set_wow64_environment"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL get_reg_value(WCHAR *env, HKEY hkey, const WCHAR *name, WCHAR *val, DWORD size)",
+   "code": "static BOOL get_reg_value(WCHAR *env, HKEY hkey, const WCHAR *name, WCHAR *val, DWORD size)\n{\n    DWORD type, res_size=0;\n\n    if (RegQueryValueExW(hkey, name, 0, &type, NULL, &res_size) != ERROR_SUCCESS)\n        return FALSE;\n\n    if (type == REG_SZ)\n    {\n        if (res_size > size)\n            return FALSE;\n\n        return RegQueryValueExW(hkey, name, 0, NULL, (BYTE*)val, &size) == ERROR_SUCCESS;\n    }\n    else if (type == REG_EXPAND_SZ)\n    {\n        UNICODE_STRING us_buf, us_expanded;\n        WCHAR *buf = HeapAlloc(GetProcessHeap(), 0, res_size);\n        if (!buf)\n            return FALSE;\n\n        if (RegQueryValueExW(hkey, name, 0, NULL, (BYTE*)buf, &res_size) != ERROR_SUCCESS)\n        {\n            HeapFree(GetProcessHeap(), 0, buf);\n            return FALSE;\n        }\n\n        RtlInitUnicodeString(&us_buf, buf);\n        us_expanded.Buffer = val;\n        us_expanded.MaximumLength = size;\n        if (RtlExpandEnvironmentStrings_U(env, &us_buf, &us_expanded, &size) != STATUS_SUCCESS)\n        {\n            HeapFree(GetProcessHeap(), 0, buf);\n            return FALSE;\n        }\n\n        HeapFree(GetProcessHeap(), 0, buf);\n        return TRUE;\n    }\n\n    return FALSE;\n}"
+  },
+  {
+   "name": "set_env_var",
+   "file": "dlls/userenv/userenv_main.c",
+   "start_line": 80,
+   "end_line": 87,
+   "static": true,
+   "called_from": [
+    "CreateEnvironmentBlock",
+    "set_registry_variables",
+    "set_wow64_environment"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void set_env_var( WCHAR **env, const WCHAR *name, const WCHAR *val )",
+   "code": "static void set_env_var( WCHAR **env, const WCHAR *name, const WCHAR *val )\n{\n    UNICODE_STRING nameW, valW;\n\n    RtlInitUnicodeString( &nameW, name );\n    RtlInitUnicodeString( &valW, val );\n    RtlSetEnvironmentVariable( env, &nameW, &valW );\n}"
+  },
+  {
+   "name": "set_registry_variables",
+   "file": "dlls/userenv/userenv_main.c",
+   "start_line": 89,
+   "end_line": 127,
+   "static": true,
+   "called_from": [
+    "CreateEnvironmentBlock"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void set_registry_variables(WCHAR **env, HKEY hkey, DWORD type, BOOL set_path)",
+   "code": "static void set_registry_variables(WCHAR **env, HKEY hkey, DWORD type, BOOL set_path)\n{\n    UNICODE_STRING us_name, us_value;\n    WCHAR name[1024], value[1024];\n    DWORD ret, index, size;\n\n    for (index = 0; ; index++)\n    {\n        size = ARRAY_SIZE(name);\n        ret = RegEnumValueW(hkey, index, name, &size, NULL, NULL, NULL, NULL);\n        if (ret != ERROR_SUCCESS)\n            break;\n\n        if (!wcsicmp(name, L\"SystemRoot\")) continue;\n        if (!wcsicmp(name, L\"SystemDrive\")) continue;\n\n        RtlInitUnicodeString(&us_name, name);\n        us_value.Buffer = value;\n        us_value.MaximumLength = sizeof(value);\n        if (!wcsicmp(name, L\"PATH\") &&\n                !RtlQueryEnvironmentVariable_U(*env, &us_name, &us_value))\n        {\n            if (!set_path)\n                continue;\n\n            size = lstrlenW(value)+1;\n            if (!get_reg_value(*env, hkey, name, value+size,\n                        sizeof(value)-size*sizeof(WCHAR)))\n                continue;\n\n            value[size] = ';';\n            set_env_var(env, name, value);\n            continue;\n        }\n\n        if (get_reg_value(*env, hkey, name, value, sizeof(value)) && value[0])\n            set_env_var(env, name, value);\n    }\n}"
+  },
+  {
+   "name": "set_wow64_environment",
+   "file": "dlls/userenv/userenv_main.c",
+   "start_line": 129,
+   "end_line": 169,
+   "static": true,
+   "called_from": [
+    "CreateEnvironmentBlock"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void set_wow64_environment(WCHAR **env)",
+   "code": "static void set_wow64_environment(WCHAR **env)\n{\n    WCHAR buf[64];\n    HKEY hkey;\n    BOOL is_win64 = (sizeof(void *) > sizeof(int));\n    BOOL is_wow64;\n\n    IsWow64Process( GetCurrentProcess(), &is_wow64 );\n\n    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L\"Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\",\n            0, KEY_READ|KEY_WOW64_64KEY, &hkey))\n        return;\n\n    /* set the ProgramFiles variables */\n\n    if (get_reg_value(*env, hkey, L\"ProgramFilesDir\", buf, sizeof(buf)))\n    {\n        if (is_win64 || is_wow64) set_env_var(env, L\"ProgramW6432\", buf);\n        if (is_win64 || !is_wow64) set_env_var(env, L\"ProgramFiles\", buf);\n    }\n    if (get_reg_value(*env, hkey, L\"ProgramFilesDir (x86)\", buf, sizeof(buf)))\n    {\n        if (is_win64 || is_wow64) set_env_var(env, L\"ProgramFiles(x86)\", buf);\n        if (is_wow64) set_env_var(env, L\"ProgramFiles\", buf);\n    }\n\n    /* set the CommonProgramFiles variables */\n\n    if (get_reg_value(*env, hkey, L\"CommonFilesDir\", buf, sizeof(buf)))\n    {\n        if (is_win64 || is_wow64) set_env_var(env, L\"CommonProgramW6432\", buf);\n        if (is_win64 || !is_wow64) set_env_var(env, L\"CommonProgramFiles\", buf);\n    }\n    if (get_reg_value(*env, hkey, L\"CommonFilesDir (x86)\", buf, sizeof(buf)))\n    {\n        if (is_win64 || is_wow64) set_env_var(env, L\"CommonProgramFiles(x86)\", buf);\n        if (is_wow64) set_env_var(env, L\"CommonProgramFiles\", buf);\n    }\n\n    RegCloseKey(hkey);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 35,
+    "end_line": 35,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL( userenv );"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "ConvertSidToStringSidW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/sechost/security.c:227"
+    ]
+   },
+   {
+    "name": "GetComputerNameW",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernel32/computername.c:41"
+    ]
+   },
+   {
+    "name": "GetEnvironmentVariableW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:1693"
+    ]
+   },
+   {
+    "name": "GetTokenInformation",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/security.c:704"
+    ]
+   },
+   {
+    "name": "HeapAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "IsWow64Process",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:1064"
+    ]
+   },
+   {
+    "name": "LocalFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:1107"
+    ]
+   },
+   {
+    "name": "LookupAccountSidW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/security.c:821"
+    ]
+   },
+   {
+    "name": "RegCloseKey",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1129"
+    ]
+   },
+   {
+    "name": "RegEnumValueW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:2144"
+    ]
+   },
+   {
+    "name": "RegOpenKeyExW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:644"
+    ]
+   },
+   {
+    "name": "RegQueryValueExW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1636"
+    ]
+   },
+   {
+    "name": "RtlCreateEnvironment",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/env.c:127"
+    ]
+   },
+   {
+    "name": "RtlDestroyEnvironment",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/env.c:149"
+    ]
+   },
+   {
+    "name": "RtlExpandEnvironmentStrings_U",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/env.c:461"
+    ]
+   },
+   {
+    "name": "RtlInitUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:173"
+    ]
+   },
+   {
+    "name": "RtlQueryEnvironmentVariable_U",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/env.c:183"
+    ]
+   },
+   {
+    "name": "RtlSetEnvironmentVariable",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/env.c:292"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "wcscat",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:226"
+    ]
+   },
+   {
+    "name": "wcscpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:184"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetCurrentProcess",
+   "GetLastError",
+   "GetProcessHeap",
+   "lstrcpyW",
+   "lstrlenW",
+   "wcsicmp",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}

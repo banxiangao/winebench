@@ -1,0 +1,155 @@
+{
+ "id": "0263",
+ "function": {
+  "name": "PropVariantCopy",
+  "export_name": "PropVariantCopy",
+  "module": "combase",
+  "source_module": "combase",
+  "exported_by": [
+   "combase",
+   "iprop",
+   "ole32"
+  ],
+  "side": "PE",
+  "file": "dlls/combase/combase.c",
+  "start_line": 779,
+  "end_line": 954,
+  "body_lines": 173,
+  "signature": "HRESULT WINAPI PropVariantCopy(PROPVARIANT *pvarDest, const PROPVARIANT *pvarSrc)",
+  "header_comment": "/***********************************************************************\n *           PropVariantCopy        (combase.@)\n */",
+  "code": "HRESULT WINAPI PropVariantCopy(PROPVARIANT *pvarDest, const PROPVARIANT *pvarSrc)\n{\n    ULONG len;\n    HRESULT hr;\n\n    TRACE(\"%p, %p vt %04x.\\n\", pvarDest, pvarSrc, pvarSrc->vt);\n\n    hr = propvar_validatetype(pvarSrc->vt);\n    if (FAILED(hr))\n        return DISP_E_BADVARTYPE;\n\n    /* this will deal with most cases */\n    *pvarDest = *pvarSrc;\n\n    switch (pvarSrc->vt)\n    {\n    case VT_EMPTY:\n    case VT_NULL:\n    case VT_I1:\n    case VT_UI1:\n    case VT_I2:\n    case VT_UI2:\n    case VT_BOOL:\n    case VT_DECIMAL:\n    case VT_I4:\n    case VT_UI4:\n    case VT_R4:\n    case VT_ERROR:\n    case VT_I8:\n    case VT_UI8:\n    case VT_INT:\n    case VT_UINT:\n    case VT_R8:\n    case VT_CY:\n    case VT_DATE:\n    case VT_FILETIME:\n        break;\n    case VT_DISPATCH:\n    case VT_UNKNOWN:\n    case VT_STREAM:\n    case VT_STREAMED_OBJECT:\n    case VT_STORAGE:\n    case VT_STORED_OBJECT:\n        if (pvarDest->pStream)\n            IStream_AddRef(pvarDest->pStream);\n        break;\n    case VT_CLSID:\n        pvarDest->puuid = CoTaskMemAlloc(sizeof(CLSID));\n        *pvarDest->puuid = *pvarSrc->puuid;\n        break;\n    case VT_LPSTR:\n        if (pvarSrc->pszVal)\n        {\n            len = strlen(pvarSrc->pszVal);\n            pvarDest->pszVal = CoTaskMemAlloc((len+1)*sizeof(CHAR));\n            CopyMemory(pvarDest->pszVal, pvarSrc->pszVal, (len+1)*sizeof(CHAR));\n        }\n        break;\n    case VT_LPWSTR:\n        if (pvarSrc->pwszVal)\n        {\n            len = lstrlenW(pvarSrc->pwszVal);\n            pvarDest->pwszVal = CoTaskMemAlloc((len+1)*sizeof(WCHAR));\n            CopyMemory(pvarDest->pwszVal, pvarSrc->pwszVal, (len+1)*sizeof(WCHAR));\n        }\n        break;\n    case VT_BLOB:\n    case VT_BLOB_OBJECT:\n        if (pvarSrc->blob.pBlobData)\n        {\n            len = pvarSrc->blob.cbSize;\n            pvarDest->blob.pBlobData = CoTaskMemAlloc(len);\n            CopyMemory(pvarDest->blob.pBlobData, pvarSrc->blob.pBlobData, len);\n        }\n        break;\n    case VT_BSTR:\n        pvarDest->bstrVal = SysAllocString(pvarSrc->bstrVal);\n        break;\n    case VT_CF:\n        if (pvarSrc->pclipdata)\n        {\n            len = pvarSrc->pclipdata->cbSize - sizeof(pvarSrc->pclipdata->ulClipFmt);\n            pvarDest->pclipdata = CoTaskMemAlloc(sizeof (CLIPDATA));\n            pvarDest->pclipdata->cbSize = pvarSrc->pclipdata->cbSize;\n            pvarDest->pclipdata->ulClipFmt = pvarSrc->pclipdata->ulClipFmt;\n            pvarDest->pclipdata->pClipData = CoTaskMemAlloc(len);\n            CopyMemory(pvarDest->pclipdata->pClipData, pvarSrc->pclipdata->pClipData, len);\n        }\n        break;\n    default:\n        if (pvarSrc->vt & VT_VECTOR)\n        {\n            int elemSize;\n            ULONG i;\n\n            switch (pvarSrc->vt & ~VT_VECTOR)\n            {\n            case VT_I1:       elemSize = sizeof(pvarSrc->cVal); break;\n            case VT_UI1:      elemSize = sizeof(pvarSrc->bVal); break;\n            case VT_I2:       elemSize = sizeof(pvarSrc->iVal); break;\n            case VT_UI2:      elemSize = sizeof(pvarSrc->uiVal); break;\n            case VT_BOOL:     elemSize = sizeof(pvarSrc->boolVal); break;\n            case VT_I4:       elemSize = sizeof(pvarSrc->lVal); break;\n            case VT_UI4:      elemSize = sizeof(pvarSrc->ulVal); break;\n            case VT_R4:       elemSize = sizeof(pvarSrc->fltVal); break;\n            case VT_R8:       elemSize = sizeof(pvarSrc->dblVal); break;\n            case VT_ERROR:    elemSize = sizeof(pvarSrc->scode); break;\n            case VT_I8:       elemSize = sizeof(pvarSrc->hVal); break;\n            case VT_UI8:      elemSize = sizeof(pvarSrc->uhVal); break;\n            case VT_CY:       elemSize = sizeof(pvarSrc->cyVal); break;\n            case VT_DATE:     elemSize = sizeof(pvarSrc->date); break;\n            case VT_FILETIME: elemSize = sizeof(pvarSrc->filetime); break;\n            case VT_CLSID:    elemSize = sizeof(*pvarSrc->puuid); break;\n            case VT_CF:       elemSize = sizeof(*pvarSrc->pclipdata); break;\n            case VT_BSTR:     elemSize = sizeof(pvarSrc->bstrVal); break;\n            case VT_LPSTR:    elemSize = sizeof(pvarSrc->pszVal); break;\n            case VT_LPWSTR:   elemSize = sizeof(pvarSrc->pwszVal); break;\n            case VT_VARIANT:  elemSize = sizeof(*pvarSrc->pvarVal); break;\n\n            default:\n                FIXME(\"Invalid element type: %ul\\n\", pvarSrc->vt & ~VT_VECTOR);\n                return E_INVALIDARG;\n            }\n            len = pvarSrc->capropvar.cElems;\n            pvarDest->capropvar.pElems = len ? CoTaskMemAlloc(len * elemSize) : NULL;\n            if (pvarSrc->vt == (VT_VECTOR | VT_VARIANT))\n            {\n                for (i = 0; i < len; i++)\n                    PropVariantCopy(&pvarDest->capropvar.pElems[i], &pvarSrc->capropvar.pElems[i]);\n            }\n            else if (pvarSrc->vt == (VT_VECTOR | VT_CF))\n            {\n                FIXME(\"Copy clipformats\\n\");\n            }\n            else if (pvarSrc->vt == (VT_VECTOR | VT_BSTR))\n            {\n                for (i = 0; i < len; i++)\n                    pvarDest->cabstr.pElems[i] = SysAllocString(pvarSrc->cabstr.pElems[i]);\n            }\n            else if (pvarSrc->vt == (VT_VECTOR | VT_LPSTR))\n            {\n                size_t strLen;\n                for (i = 0; i < len; i++)\n                {\n                    strLen = lstrlenA(pvarSrc->calpstr.pElems[i]) + 1;\n                    pvarDest->calpstr.pElems[i] = CoTaskMemAlloc(strLen);\n                    memcpy(pvarDest->calpstr.pElems[i],\n                     pvarSrc->calpstr.pElems[i], strLen);\n                }\n            }\n            else if (pvarSrc->vt == (VT_VECTOR | VT_LPWSTR))\n            {\n                size_t strLen;\n                for (i = 0; i < len; i++)\n                {\n                    strLen = (lstrlenW(pvarSrc->calpwstr.pElems[i]) + 1) *\n                     sizeof(WCHAR);\n                    pvarDest->calpstr.pElems[i] = CoTaskMemAlloc(strLen);\n                    memcpy(pvarDest->calpstr.pElems[i],\n                     pvarSrc->calpstr.pElems[i], strLen);\n                }\n            }\n            else\n                CopyMemory(pvarDest->capropvar.pElems, pvarSrc->capropvar.pElems, len * elemSize);\n        }\n        else if (pvarSrc->vt & VT_ARRAY)\n        {\n            pvarDest->uhVal.QuadPart = 0;\n            return SafeArrayCopy(pvarSrc->parray, &pvarDest->parray);\n        }\n        else\n            WARN(\"Invalid/unsupported type %d\\n\", pvarSrc->vt);\n    }\n\n    return S_OK;\n}",
+  "has_fixme": true,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"objbase.h\"",
+   "#include \"comsvcs.h\"",
+   "#include \"ctxtcall.h\"",
+   "#include \"oleauto.h\"",
+   "#include \"dde.h\"",
+   "#include \"winternl.h\"",
+   "#include \"dcom.h\"",
+   "#include \"combase_private.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\""
+  ],
+  "resolution": [
+   "combase!PropVariantCopy [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ole32/tests/propvariant.c"
+  ]
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "combaseapi",
+   "path": "sdk-api-src/content/combaseapi/nf-combaseapi-propvariantcopy.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/combaseapi/nf-combaseapi-propvariantcopy",
+   "documented_name": "propvariantcopy",
+   "file": "docs/0263_sdk-api_nf-combaseapi-propvariantcopy.md",
+   "text": "---\nUID: NF:combaseapi.PropVariantCopy\ntitle: PropVariantCopy function (combaseapi.h)\ndescription: The PropVariantCopy function copies the contents of one PROPVARIANT structure to another.\nhelpviewer_keywords: [\"PropVariantCopy\",\"PropVariantCopy function [Structured Storage]\",\"_stg_propvariantcopy\",\"combaseapi/PropVariantCopy\",\"stg.propvariantcopy\"]\nold-location: stg\\propvariantcopy.htm\ntech.root: Stg\nms.assetid: ee97d3b2-4dec-43c3-b38d-29edc775b82a\nms.date: 12/05/2018\nms.keywords: PropVariantCopy, PropVariantCopy function [Structured Storage], _stg_propvariantcopy, combaseapi/PropVariantCopy, stg.propvariantcopy\nreq.header: combaseapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ole32.lib\nreq.dll: Ole32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - PropVariantCopy\n - combaseapi/PropVariantCopy\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-com-l1-1-3.dll\n - api-ms-win-core-com-l1-1-2.dll\n - Ole32.dll\n - API-MS-Win-Core-Com-l1-1-0.dll\n - ComBase.dll\n - API-MS-Win-Core-Com-l1-1-1.dll\n - API-MS-Win-DownLevel-Ole32-l1-1-0.dll\n - API-MS-Win-DownLevel-Ole32-l1-1-1.dll\napi_name:\n - PropVariantCopy\n---\n\n# PropVariantCopy function\n\n\n## -description\n\nThe \n<b>PropVariantCopy</b> function\n\t\t\tcopies the contents of one \n<a href=\"/windows/desktop/api/propidl/ns-propidl-propvariant\">PROPVARIANT</a> structure to another.\n\n## -parameters\n\n### -param pvarDest [in, out]\n\nPointer to an uninitialized \n<a href=\"/windows/desktop/api/propidl/ns-propidl-propvariant\">PROPVARIANT</a> structure that receives the copy.\n\n### -param pvarSrc [in]\n\nPointer to the \n<a href=\"/windows/desktop/api/propidl/ns-propidl-propvariant\">PROPVARIANT</a> structure to be copied.\n\n## -returns\n\nThis function returns HRESULT.\n\n## -remarks\n\nCopies a \n<a href=\"/windows/desktop/api/propidl/ns-propidl-propvariant\">PROPVARIANT</a> structure by value so the original <i>pvarSrc</i> and new <i>pvarDest</i> parameters may be freed independently with calls to \n<a href=\"/windows/desktop/api/propidl/nf-propidl-propvariantclear\">PropVariantClear</a>. \n<b>PropVariantCopy</b> does not free the destination as the <a href=\"/windows/win32/api/oleauto/nf-oleauto-variantcopy\">VariantCopy</a> function does. For nonsimple \n<b>PROPVARIANT</b> types such as VT_STREAM, VT_STORAGE, and so forth, which require a subobject, the copy is made by reference. The pointer is copied, and [IUnknown::AddRef](../unknwn/nf-unknwn-iunknown-addref.md) is called on it. It is illegal to pass <b>NULL</b> for either <i>pvarDest</i> or <i>pvarSrc</i>.\n\n## -see-also\n\n[PROPVARIANT](/windows/desktop/api/propidl/ns-propidl-propvariant), [PropVariantClear](/windows/desktop/api/propidl/nf-propidl-propvariantclear)"
+  },
+  {
+   "repo": "sdk-api",
+   "header": "propidl",
+   "path": "sdk-api-src/content/propidl/nf-propidl-propvariantcopy.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/propidl/nf-propidl-propvariantcopy",
+   "documented_name": "propvariantcopy",
+   "file": "docs/0263_sdk-api_nf-propidl-propvariantcopy.md",
+   "text": "---\nUID: NF:propidl.PropVariantCopy\ntitle: PropVariantCopy function (propidl.h)\ndescription: Creates a copy of a PROPVARIANT structure.\nhelpviewer_keywords: [\"PropVariantCopy\",\"PropVariantCopy function [Windows Properties]\",\"_shell_PropVariantCopy\",\"properties.PropVariantCopy\",\"propidl/PropVariantCopy\",\"shell.PropVariantCopy\"]\nold-location: properties\\PropVariantCopy.htm\ntech.root: properties\nms.assetid: f17f1722-f041-414c-b838-f1f83427ff0c\nms.date: 12/05/2018\nms.keywords: PropVariantCopy, PropVariantCopy function [Windows Properties], _shell_PropVariantCopy, properties.PropVariantCopy, propidl/PropVariantCopy, shell.PropVariantCopy\nreq.header: propidl.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP with SP2, Windows Vista [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 with SP1 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ole32.lib\nreq.dll: Ole32.dll (version 6.0 or later)\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: Windows Desktop Search (WDS) 3.0\nms.custom: 19H1\nf1_keywords:\n - PropVariantCopy\n - propidl/PropVariantCopy\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-com-l1-1-3.dll\n - api-ms-win-core-com-l1-1-2.dll\n - Ole32.dll\n - API-MS-Win-Core-Com-l1-1-0.dll\n - ComBase.dll\n - API-MS-Win-Core-Com-l1-1-1.dll\n - API-MS-Win-DownLevel-Ole32-l1-1-0.dll\n - API-MS-Win-DownLevel-Ole32-l1-1-1.dll\napi_name:\n - PropVariantCopy\n---\n\n# PropVariantCopy function\n\n\n## -description\n\nCreates a copy of a <a href=\"/windows/desktop/api/propidl/ns-propidl-propvariant\">PROPVARIANT</a> structure.\n\n## -parameters\n\n### -param pvarDest [out]\n\nType: <b><a href=\"/windows/desktop/api/propidl/ns-propidl-propvariant\">PROPVARIANT</a>*</b>\n\nPointer to the destination <a href=\"/windows/desktop/api/propidl/ns-propidl-propvariant\">PROPVARIANT</a> structure that receives the copy.\n\n### -param pvarSrc [in]\n\nType: <b>const <a href=\"/windows/desktop/api/propidl/ns-propidl-propvariant\">PROPVARIANT</a>*</b>\n\nPointer to the source <a href=\"/windows/desktop/api/propidl/ns-propidl-propvariant\">PROPVARIANT</a> structure.\n\n## -returns\n\nType: <b>HRESULT</b>\n\nIf this function succeeds, it returns <b>S_OK</b>. Otherwise, it returns an <b>HRESULT</b> error code."
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "propvar_validatetype",
+   "file": "dlls/combase/combase.c",
+   "start_line": 568,
+   "end_line": 649,
+   "static": true,
+   "called_from": [
+    "PropVariantCopy"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/combase.c:670"
+   ],
+   "signature": "static HRESULT propvar_validatetype(VARTYPE vt)",
+   "code": "static HRESULT propvar_validatetype(VARTYPE vt)\n{\n    switch (vt)\n    {\n    case VT_EMPTY:\n    case VT_NULL:\n    case VT_I1:\n    case VT_I2:\n    case VT_I4:\n    case VT_I8:\n    case VT_R4:\n    case VT_R8:\n    case VT_CY:\n    case VT_DATE:\n    case VT_BSTR:\n    case VT_ERROR:\n    case VT_BOOL:\n    case VT_DECIMAL:\n    case VT_UI1:\n    case VT_UI2:\n    case VT_UI4:\n    case VT_UI8:\n    case VT_INT:\n    case VT_UINT:\n    case VT_LPSTR:\n    case VT_LPWSTR:\n    case VT_FILETIME:\n    case VT_BLOB:\n    case VT_DISPATCH:\n    case VT_UNKNOWN:\n    case VT_STREAM:\n    case VT_STORAGE:\n    case VT_STREAMED_OBJECT:\n    case VT_STORED_OBJECT:\n    case VT_BLOB_OBJECT:\n    case VT_CF:\n    case VT_CLSID:\n    case VT_I1|VT_VECTOR:\n    case VT_I2|VT_VECTOR:\n    case VT_I4|VT_VECTOR:\n    case VT_I8|VT_VECTOR:\n    case VT_R4|VT_VECTOR:\n    case VT_R8|VT_VECTOR:\n    case VT_CY|VT_VECTOR:\n    case VT_DATE|VT_VECTOR:\n    case VT_BSTR|VT_VECTOR:\n    case VT_ERROR|VT_VECTOR:\n    case VT_BOOL|VT_VECTOR:\n    case VT_VARIANT|VT_VECTOR:\n    case VT_UI1|VT_VECTOR:\n    case VT_UI2|VT_VECTOR:\n    case VT_UI4|VT_VECTOR:\n    case VT_UI8|VT_VECTOR:\n    case VT_LPSTR|VT_VECTOR:\n    case VT_LPWSTR|VT_VECTOR:\n    case VT_FILETIME|VT_VECTOR:\n    case VT_CF|VT_VECTOR:\n    case VT_CLSID|VT_VECTOR:\n    case VT_ARRAY|VT_I1:\n    case VT_ARRAY|VT_UI1:\n    case VT_ARRAY|VT_I2:\n    case VT_ARRAY|VT_UI2:\n    case VT_ARRAY|VT_I4:\n    case VT_ARRAY|VT_UI4:\n    case VT_ARRAY|VT_INT:\n    case VT_ARRAY|VT_UINT:\n    case VT_ARRAY|VT_R4:\n    case VT_ARRAY|VT_R8:\n    case VT_ARRAY|VT_CY:\n    case VT_ARRAY|VT_DATE:\n    case VT_ARRAY|VT_BSTR:\n    case VT_ARRAY|VT_BOOL:\n    case VT_ARRAY|VT_DECIMAL:\n    case VT_ARRAY|VT_DISPATCH:\n    case VT_ARRAY|VT_UNKNOWN:\n    case VT_ARRAY|VT_ERROR:\n    case VT_ARRAY|VT_VARIANT:\n        return S_OK;\n    }\n    WARN(\"Bad type %d\\n\", vt);\n    return STG_E_INVALIDPARAMETER;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ole);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "CoTaskMemAlloc",
+    "impl": [
+     "dlls/combase/malloc.c:381"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "SafeArrayCopy",
+    "module": "oleaut32",
+    "impl": [
+     "dlls/oleaut32/safearray.c:1379"
+    ]
+   },
+   {
+    "name": "SysAllocString",
+    "module": "ole2disp.dll16",
+    "impl": [
+     "dlls/ole2disp.dll16/ole2disp.c:333"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "strlen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:423"
+    ]
+   }
+  ],
+  "header_inline": [
+   "IStream_AddRef",
+   "lstrlenA",
+   "lstrlenW",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ }
+}
