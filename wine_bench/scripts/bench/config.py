@@ -26,7 +26,8 @@ class Scenario:
         p = self.cfg.get('paths', {})
         self.dataset = self._rel(p.get('dataset', '../../dataset/wine500'))
         self._out = self._rel(p.get('out', f'../../runs/{self.name}'))
-        self.secrets_file = self._rel(p.get('secrets', '../../secrets.toml'))
+        # WB_SECRETS: a key file kept outside the project tree (vulcan/run_api.sbatch binds ~/.config/winebench/secrets.toml there)
+        self.secrets_file = os.environ.get('WB_SECRETS') or self._rel(p.get('secrets', '../../secrets.toml'))
         if 'models' in self.cfg: self.models = self.cfg['models']
         else: self.models = tomllib.load(open(self._rel(p.get('models', '../models.toml')), 'rb')).get('models', [])
         self.run = self.cfg.get('run', {})

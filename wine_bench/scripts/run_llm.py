@@ -33,6 +33,25 @@ def query(m, run, p, out_file, fmt):
         open(out_file[:-5] + '.c', 'w').write(rec['parsed']['code'] + '\n')
     return rec
 
+def gen_failed(rec):
+    """no reply was obtained: the request failed (network, timeout, HTTP error) or the reply is empty.
+    A reply that is there but truncated or without usable code is the model's answer, not a failed generation."""
+    return bool(rec.get('error')) or not (rec.get('response') or '').strip()
+
+def query_capped(m, run, p, out_file, fmt, gen_attempts):
+    """--gen-attempts N: at most N requests per task in total.  Each attempt is ONE request (no hidden retries inside);
+    a failed attempt (gen_failed) is kept as <id>.attemptK.json and followed by the next one; when the last one fails too
+    the task is stored with generation_failed = true and is not queried again by later runs."""
+    run1 = dict(run, max_retries=1); log = []
+    for k in range(1, gen_attempts + 1):
+        rec = query(m, run1, p, out_file, fmt)
+        log.append(dict(attempt=rec['attempts'], failed=gen_failed(rec), error=rec.get('error'), seconds=rec['seconds']))
+        if not gen_failed(rec) or k == gen_attempts: break
+        time.sleep(30 if '429' in (rec.get('error') or '') else 5)          # rate limit: give it time before the second request
+    rec['generation_failed'] = gen_failed(rec); rec['attempt_log'] = log
+    json.dump(rec, open(out_file, 'w'), indent=1, ensure_ascii=False)
+    return rec
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     add_scenario_args(ap)
@@ -41,6 +60,8 @@ def main():
     ap.add_argument('--workers', type=int, default=0, help='parallel requests per model (default: [run].workers)')
     ap.add_argument('--recheck', action='store_true', help='no model calls: re-run the format check on the stored replies (after a checker change)')
     ap.add_argument('--probe', action='store_true', help='send one tiny request per enabled model and print the model id the API actually serves')
+    ap.add_argument('--gen-attempts', type=int, default=0, help='N > 0: at most N requests per task; a second one only when the first got no reply '
+                                                                '(error or empty); still none -> generation_failed.  Default 0: [run].max_retries as before')
     a = ap.parse_args()
     if not a.scenario: ap.error('--scenario is required')
     scn = load_scenario(a.scenario); st = scn.stage(a.stage)
@@ -93,10 +114,12 @@ def main():
         todo = [p for p in prompts if not done(p)]
         print(f'[{m["name"]}] {len(todo)} to query ({len(prompts) - len(todo)} already done)', flush=True)
         with ThreadPoolExecutor(max_workers=a.workers or run.get('workers', 4)) as ex:
-            futs = [ex.submit(query, m, run, p, os.path.join(d, p['id'] + '.json'), fmt) for p in todo]
+            if a.gen_attempts > 0: futs = [ex.submit(query_capped, m, run, p, os.path.join(d, p['id'] + '.json'), fmt, a.gen_attempts) for p in todo]
+            else: futs = [ex.submit(query, m, run, p, os.path.join(d, p['id'] + '.json'), fmt) for p in todo]
             for i, fu in enumerate(as_completed(futs), 1):
                 r = fu.result()
-                print(f'[{m["name"]}] {i}/{len(todo)} {r["id"]} {r["dll"]}!{r["function"]}: {report.status_line(r)}', flush=True)
+                print(f'[{m["name"]}] {i}/{len(todo)} {r["id"]} {r["dll"]}!{r["function"]}: {report.status_line(r)}'
+                      + (f'  [attempt {r["attempts"]}{", GENERATION FAILED" if r.get("generation_failed") else ""}]' if r.get('attempts', 1) > 1 or r.get('generation_failed') else ''), flush=True)
         print(f'[{m["name"]}] summary: {report.summarize(d)}')
 
 if __name__ == '__main__':

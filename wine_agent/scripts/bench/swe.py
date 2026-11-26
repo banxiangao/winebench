@@ -327,6 +327,44 @@ def key_env(m, secrets):
     if key: os.environ[name] = key; os.environ[m['api_key_env']] = key
     return key
 
+# ---------------------------------------------------------------- API runs: one retry per task, no network for the agent
+CONTEXT_RE = re.compile(r'context.?window|context.?length|maximum context|too many tokens|prompt is too long|input length', re.I)
+
+def gen_failed(r):
+    """--gen-attempts: did this agent run fail for a reason outside the model's work (network, API error, runner crash)?
+    True  = the run was cut short by an exception / a conversation error -> the task may be run once more.
+    False = the agent ended by itself or by one of the bench's limits (Submitted, LimitsExceeded, CompileLimit, TimeExceeded,
+            Stuck, format errors), or the conversation outgrew the model's context window: that is the result of the task."""
+    if r.get('exit_status') == 'DatasetMismatch': return False
+    err = r.get('error') or ''; detail = r.get('error_detail') or ''             # error_detail: what ended an OpenHands conversation in state "error"
+    if CONTEXT_RE.search(err + ' ' + detail) or 'ContextWindow' in (r.get('exit_status') or ''): return False
+    return bool(err) or r.get('exit_status') in ('ModelError', 'RunnerError')
+
+def run_capped(work, i, gen_attempts, out_dir, stub):
+    """run task i at most gen_attempts times: again only if gen_failed(); write_result() keeps the earlier run as
+    <id>.attemptK.json.  The final result gets generation_failed (true = every attempt failed).  stub(i, error) -> a
+    minimal result for a task whose runner crashed before anything was stored, so that the task counts as done."""
+    r = None
+    for k in range(1, gen_attempts + 1):
+        try: r = work(i)
+        except BaseException as e: r = stub(i, f'{type(e).__name__}: {e}'[:300])
+        if not gen_failed(r): break
+        if k < gen_attempts: time.sleep(10)
+    f = os.path.join(out_dir, i + '.json')
+    if r.get('exit_status') == 'RunnerError':                         # nothing was stored for the last attempt
+        write_result(out_dir, i, r, dict(id=i, error=r.get('error')), '')
+    if os.path.exists(f):
+        s = json.load(open(f)); s['generation_failed'] = gen_failed(s); s['gen_attempts_made'] = k
+        r['generation_failed'] = s['generation_failed']; r['gen_attempts_made'] = k
+        json.dump(s, open(f + '.tmp', 'w'), indent=1, ensure_ascii=False); os.replace(f + '.tmp', f)
+    return r
+
+PROXY_VARS = ('http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'all_proxy', 'ALL_PROXY')
+def offline_env():
+    """the job's proxy is for the model calls of this process only: the agent's shell commands get it blanked (as in the
+    local-model runs, where the compute node has no route out at all)"""
+    return {v: '' for v in PROXY_VARS} if any(os.environ.get(v) for v in PROXY_VARS) else {}
+
 # ---------------------------------------------------------------- results
 def write_result(out_dir, i, out, traj, patch):
     """<id>.json (same fields as run_agent.py), <id>.traj.json, <id>.patch (only when there is a submission)"""
@@ -345,7 +383,8 @@ def status_line(name, k, n, r):
     return (f'[{name}] {k}/{n} {r["id"]} {r["dll"]}!{r["function"]}: {"ok" if r["format_ok"] else "no-code"} exit={r["exit_status"]} '
             f'steps={r["steps"]} cmds={tc.get("commands", 0)} compiles={len(r["compiles"])}{"(ok)" if r["compiled_ok_last"] else ""} '
             f'files={len(r.get("files", []))} viol={len(r.get("violations", []))} tokens={r["usage"]["prompt_tokens"]}+{r["usage"]["completion_tokens"]} '
-            f'${r.get("cost", 0):.3f} {r["seconds"]}s' + (f'  ERR {r["error"][:80]}' if r.get('error') else ''))
+            f'${r.get("cost", 0):.3f} {r["seconds"]}s' + (f'  ERR {r["error"][:80]}' if r.get('error') else '')
+            + (f'  [attempt {r["gen_attempts_made"]}{", GENERATION FAILED" if r.get("generation_failed") else ""}]' if r.get('gen_attempts_made', 1) > 1 or r.get('generation_failed') else ''))
 
 COMPILE_CMD_RE = re.compile(r'(^|[\s;&|])\./compile\b|\bmake\b')
 

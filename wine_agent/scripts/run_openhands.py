@@ -31,6 +31,8 @@ def main():
     ap.add_argument('--jobs', type=int, default=0, help='make -j per ./compile (default: CPUs / workers)')
     ap.add_argument('--redo-bad', action='store_true', help='re-run records that errored or submitted nothing')
     ap.add_argument('--sample', type=int, default=0); ap.add_argument('--seed', type=int, default=20261102)
+    ap.add_argument('--gen-attempts', type=int, default=0, help='N > 0 (API models): a task whose run was cut short by an API / network / runner error '
+                                                                'is run once more, at most N runs in total; still failing -> generation_failed (bench/swe.py: gen_failed)')
     a = ap.parse_args()
     if not a.scenario: ap.error('--scenario is required')
     if a.stage == 'architect': a.stage = 'openhands'
@@ -105,7 +107,9 @@ def main():
                                seconds=round(time.time() - t0, 1), error=str(e))
                     swe.write_result(out_dir, i, out, dict(id=i, model=name, error=str(e)), ''); return out
                 llm = LLM(**{k: v for k, v in llm_fields.items() if k != 'litellm_extra_body' or v})
-                agent = Agent(llm=llm, tools=[Tool(name=TerminalTool.name, params={'no_change_timeout_seconds': cfg.get('command_timeout', 900)}),
+                tparams = {'no_change_timeout_seconds': cfg.get('command_timeout', 900)}
+                if swe.offline_env(): tparams['env'] = swe.offline_env()       # API runs: the job's proxy is not for the agent's terminal
+                agent = Agent(llm=llm, tools=[Tool(name=TerminalTool.name, params=tparams),
                                               Tool(name=FileEditorTool.name)],
                               system_prompt_kwargs={'cli_mode': True})
                 error = None; status = ''; swe.tool_fixes_take(); swe.tool_arg_fixes_take()
@@ -187,6 +191,9 @@ def main():
                            files=tree.files_in(patch), hidden=info, violations=tree.violations(commands + edits), usage=usage,
                            cost=round(metrics.accumulated_cost or 0.0, 4), seconds=round(time.time() - t0, 1), error=error)
                 out['compiled_ok_last'] = bool(out['compiles']) and out['compiles'][-1]['ok']
+                if status == 'error':                                 # what ended the conversation (used by swe.gen_failed)
+                    out['error_detail'] = next((f'{getattr(e, "code", "")}: {getattr(e, "detail", "")}'[:500] for e in reversed(events)
+                                                if getattr(e, 'code', None) and hasattr(e, 'detail')), None)
                 out['tool_name_fixes'] = swe.tool_fixes_take(); out['tool_arg_fixes'] = swe.tool_arg_fixes_take()
                 out['job'] = os.environ.get('WB_JOB_ID') or os.environ.get('SLURM_JOB_ID')   # which job produced this result (vulcan/run_setting.sbatch)
                 return out
@@ -197,8 +204,15 @@ def main():
                 p = prompts[i]
                 return dict(id=i, dll=p['dll'], function=p['function'], format_ok=False, exit_status='RunnerError', steps=0, tool_counts={}, compiles=[],
                             compiled_ok_last=False, usage=dict(prompt_tokens=0, completion_tokens=0), seconds=0, error=f'{type(e).__name__}: {e}'[:300])
+        def stub(i, error):                                           # --gen-attempts: a task whose runner crashed is stored like this
+            p = prompts[i]
+            return dict(id=i, dll=p['dll'], function=p['function'], stage=a.stage, from_model=None, model=name, model_id=lname, served_model=None,
+                        provider='litellm', agent=AGENT_NAME, tool_mode=tmode, response='', parsed=None, format_ok=False, code_leak=None, truncated=False,
+                        exit_status='RunnerError', steps=0, tool_counts={}, compiles=[], compiled_ok_last=False, files=[], hidden=None, violations=[],
+                        usage=dict(prompt_tokens=0, completion_tokens=0), cost=0.0, seconds=0, error=error)
         with ThreadPoolExecutor(max_workers=a.workers) as ex:
-            futs = [ex.submit(safe_work, i) for i in todo]
+            if a.gen_attempts > 0: futs = [ex.submit(swe.run_capped, work, i, a.gen_attempts, out_dir, stub) for i in todo]
+            else: futs = [ex.submit(safe_work, i) for i in todo]
             for k, fut in enumerate(as_completed(futs), 1): print(swe.status_line(name, k, len(todo), fut.result()), flush=True)
         if swe.TOOL_NAME_FIXES[0]: print(f'[{name}] tool-call names repaired so far (the server glued "json" to them): {swe.TOOL_NAME_FIXES[0]}', flush=True)
         print(f'[{name}] summary: {report.summarize(out_dir)}', flush=True)

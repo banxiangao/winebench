@@ -53,3 +53,34 @@ N=12 CHAIN=0 bash vulcan/submit.sh glm-4.7-flash 3.2 mini_swe --time=0:30:00   #
 - 数据集：`wine_agent/dataset/wine500_doc`，464 条（`wine_bench/dataset` 是指向它的链接）。移出的 36 条没有编译目标的记录
   在 `wine500_doc_excluded/`，清单 `excluded_no_build_target.tsv`。
 - 旧架构下的全部结果在 `archive/2026-11-20_before-restructure/`。旧脚本在各包的 `vulcan/legacy/`，不要再用。
+
+## 商业模型（通过厂商接口，不占 GPU）
+
+入口是 `vulcan/submit_api.sh`，作业脚本是 `vulcan/run_api.sbatch`，数据集、提示词、评测都和本地模型相同。
+
+```bash
+bash vulcan/submit_api.sh probe                               # 密钥是否有效、接口实际提供的模型编号
+bash vulcan/submit_api.sh claude-haiku-5-5 1.4                # 单次生成（1.3 | 1.4），每个任务一个回复
+bash vulcan/submit_api.sh openai-gpt-6-luna 3.2 mini_swe      # agent（mini_swe | openhands）
+N=5 CHAIN=0 bash vulcan/submit_api.sh claude-haiku-5-5 3.2 openhands --time=0:40:00    # 试跑前 5 个任务
+bash vulcan/submit_api.sh list                                # 各设置的进度、重试数、生成失败数
+```
+
+- 模型：`scenarios/models.toml` 里的 `claude-haiku-5-5`、`openai-gpt-6-luna`、`deepseek-v4-flash`（都关闭了思考）。
+- 密钥：`~/.config/winebench/secrets.toml`（权限 600，格式同 `wine_bench/secrets.toml.example`），不放在项目目录里，
+  因为项目目录全组可读。
+- 网络：计算节点只能经集群代理出网，代理是白名单：`api.openai.com`、`api.anthropic.com` 可达，
+  `api.deepseek.com` 被拒绝（403，2026-11-25 测）。代理只给调用模型的进程；agent 自己的命令行里代理是清空的。
+- 每个任务最多生成两次（`GEN_ATTEMPTS=2`）：第一次因接口、网络或运行器出错而没有拿到结果时才有第二次；
+  第二次仍失败则记 `generation_failed = true`，以后不再重试。回复里没有可用代码、回复被截断、agent 撞到步数/
+  时间/编译次数上限、对话超出模型上下文，都算任务的结果而不是生成失败。第一次的结果保留为 `<id>.attempt1.json`。
+- 结果：单次生成在 `wine_bench/runs/scenario<S>/programmer/responses/<模型>/`，agent 在
+  `wine_agent/runs/scenario<S>/<框架>/responses/<模型>/`；`results/metrics_tasks.csv` 里单次生成的框架名是 `oneshot1`，
+  另有 `attempts`、`generation_failed` 两列。
+
+## 评测的内存上限
+
+`evaluate.py`（两个包各一份）会监视它启动的每个编译和测试：进程合计常驻内存超过 4096 MB（`--mem-limit-mb`，或环境变量
+`WB_MEM_LIMIT_MB`，0 为关闭）就整组杀掉，测试记为 `crash`（测试结果里带 `mem_killed`），编译记为失败；作业内存
+（匿名加共享）超过上限的 90% 时杀掉占用最大的那个命令。日志里以 `[mem]` 开头的行记录每次处理。加它的原因：生成的
+代码偶尔会无限吃内存，整个评测进程会被系统杀掉（2026-11-25，gpt-oss 1.3 的一个分片连续三次）。

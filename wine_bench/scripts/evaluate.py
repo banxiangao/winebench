@@ -40,16 +40,109 @@ try: from bench.hide import hide; from bench.agent import stub_record       # ag
 except ImportError: hide = stub_record = None
 
 # ---------------------------------------------------------------- processes
+# Memory watch.  Generated code can make a compiler or a Wine test eat memory without end; on a cluster node that gets the
+# whole evaluation killed by the kernel (the job's cgroup limit) and nothing of the tasks in flight is kept.  So every
+# command started by sh() is watched: when the processes of its session together hold more than MEM['limit_mb'] of
+# resident memory they are killed and the command's output ends with MEM_MARK; a test killed that way counts as a crash,
+# a compile as a failed compile.  Two more rules for what a session sum cannot see:
+#   - a single process outside any watched session (a Wine service or wineserver of a prefix) above the limit is killed;
+#   - when the job's cgroup is nearly full (anonymous + shared memory > 90 % of its limit) the largest watched session goes.
+# mem_watch(0) switches it off; nothing happens where /proc is not Linux's.
+MEM = dict(limit_mb=0, sessions={}, killed={}, lock=threading.Lock(), thread=None)
+MEM_MARK = '[killed: memory limit'
+
+def _proc_table():
+    """{pid: (session id, resident MB, command name)} of this user's processes"""
+    t = {}; page = os.sysconf('SC_PAGE_SIZE'); uid = os.getuid()
+    for d in os.listdir('/proc'):
+        if not d.isdigit(): continue
+        try:
+            if os.stat('/proc/' + d).st_uid != uid: continue
+            s = open(f'/proc/{d}/stat').read(); k = s.rindex(')')
+            t[int(d)] = (int(s[k + 2:].split()[3]), (int(open(f'/proc/{d}/statm').read().split()[1]) * page) >> 20, s[s.index('(') + 1:k])
+        except (OSError, ValueError, IndexError): continue
+    return t
+
+def _cgroup_dir():
+    """(directory, limit MB) of the nearest cgroup (v2) with a memory limit above this process, or None"""
+    try:
+        rel = [l.split('::', 1)[1].strip() for l in open('/proc/self/cgroup') if l.startswith('0::')][0]
+        d = os.path.normpath('/sys/fs/cgroup/' + rel)
+        while d.startswith('/sys/fs/cgroup'):
+            f = os.path.join(d, 'memory.max')
+            if os.path.exists(f):
+                v = open(f).read().strip()
+                if v != 'max': return d, int(v) >> 20
+            if d == '/sys/fs/cgroup': break
+            d = os.path.dirname(d)
+    except (OSError, ValueError, IndexError): pass
+    return None
+
+def _cgroup_used(d):
+    """anonymous + shared memory of the cgroup in MB (the page cache is left out: the kernel gives it back)"""
+    u = 0
+    for l in open(os.path.join(d, 'memory.stat')):
+        k, v = l.split()
+        if k in ('anon', 'shmem'): u += int(v)
+    return u >> 20
+
+def _mem_loop(cg):
+    me = os.getpid(); warned = 0
+    def kill(t, sid, used, why):
+        for pid, (s, _, _) in t.items():
+            if s == sid:
+                try: os.kill(pid, signal.SIGKILL)
+                except OSError: pass
+        with MEM['lock']: what = MEM['sessions'].get(sid, '?'); MEM['killed'][sid] = used
+        print(f'    [mem] killed ({why}): {used} MB held by: {what}', flush=True)
+    while True:
+        time.sleep(2); lim = MEM['limit_mb']
+        if not lim: continue
+        try:
+            t = _proc_table(); by = {}
+            for pid, (sid, rss, _) in t.items(): by[sid] = by.get(sid, 0) + rss
+            with MEM['lock']: watched = [s for s in MEM['sessions'] if s not in MEM['killed']]
+            for sid in watched:
+                if by.get(sid, 0) > lim: kill(t, sid, by[sid], f'limit {lim} MB'); watched = [s for s in watched if s != sid]
+            for pid, (sid, rss, comm) in t.items():
+                if rss > lim and pid != me and sid not in MEM['sessions']:
+                    try: os.kill(pid, signal.SIGKILL)
+                    except OSError: pass
+                    print(f'    [mem] killed process {pid} ({comm}): {rss} MB, limit {lim} MB', flush=True)
+            if cg:
+                used = _cgroup_used(cg[0])
+                if used > 0.9 * cg[1]:
+                    big = max(watched, key=lambda s: by.get(s, 0), default=None)
+                    if big is not None and by.get(big, 0) > 256: kill(t, big, by[big], f'job memory {used} of {cg[1]} MB')
+                    elif time.time() - warned > 60:
+                        warned = time.time(); top = sorted(t.items(), key=lambda x: -x[1][1])[:5]
+                        print(f'    [mem] job memory {used} of {cg[1]} MB and no command to blame; largest processes: '
+                              + ', '.join(f'{c}({p}) {r} MB' for p, (_, r, c) in top), flush=True)
+        except Exception as e:
+            if time.time() - warned > 300: warned = time.time(); print(f'    [mem] watch error: {type(e).__name__}: {e}', flush=True)
+
+def mem_watch(limit_mb):
+    """start (once) the watch described above; WB_MEM_LIMIT_MB overrides the limit, 0 = off"""
+    limit_mb = int(os.environ.get('WB_MEM_LIMIT_MB', limit_mb)); MEM['limit_mb'] = limit_mb
+    if not limit_mb or MEM['thread'] or not os.path.exists('/proc/self/statm'): return
+    cg = _cgroup_dir()
+    MEM['thread'] = threading.Thread(target=_mem_loop, args=(cg,), daemon=True); MEM['thread'].start()
+    print(f'memory watch: {limit_mb} MB per command (compile or test run)' + (f'; job limit {cg[1]} MB' if cg else '; no cgroup limit visible'), flush=True)
+
 def sh(cmd, cwd, timeout, env=None):
     """run a command; returns (rc, output, seconds, timed_out).  On timeout the whole process group is killed.
-    Output goes through a temporary file, not a pipe: Wine's service processes outlive the test and would keep a pipe open."""
+    Output goes through a temporary file, not a pipe: Wine's service processes outlive the test and would keep a pipe open.
+    A command killed by the memory watch returns like a crashed one (rc -9) with MEM_MARK at the end of its output."""
     t0 = time.time()
     with tempfile.TemporaryFile(mode='w+', encoding='utf-8', errors='replace') as f:
         p = subprocess.Popen(cmd, cwd=cwd, stdout=f, stderr=subprocess.STDOUT, env=env, start_new_session=True)
+        with MEM['lock']: MEM['sessions'][p.pid] = ' '.join(str(c) for c in cmd)[-90:]
         try: rc = p.wait(timeout=timeout); to = False
         except subprocess.TimeoutExpired:
             os.killpg(p.pid, signal.SIGKILL); p.wait(); rc = -1; to = True
+        with MEM['lock']: MEM['sessions'].pop(p.pid, None); used = MEM['killed'].pop(p.pid, None)
         f.seek(0); out = f.read()
+    if used: out += f'\n{MEM_MARK} {MEM["limit_mb"]} MB, the command held {used} MB]'
     return rc, out + ('\n[killed after timeout]' if to else ''), round(time.time() - t0, 1), to
 
 ERR_RE = re.compile(r'^(?:\S+:\d+(?::\d+)?: (?:fatal )?error: .*|.*undefined reference to .*|.*error: .*unresolved.*|winebuild: .*error.*|.*: error: .*)$', re.M)
@@ -195,6 +288,7 @@ class Wine:
             return dict(ok=False, seconds=0, errors=[f'dlls/{module} is not built in this tree (missing dependency at configure time?)'], output_tail='')
         ok, out, secs = self.make(self.module_targets(module))
         errors = [re.sub(r'^\S*?(?=dlls/|include/|libs/|programs/)', '', l.strip()) for l in ERR_RE.findall(out)]   # drop the ../src/ or absolute prefix
+        if MEM_MARK in out: errors.insert(0, 'the build was killed: it used more memory than the limit of the evaluation')
         return dict(ok=ok, seconds=secs, errors=errors[:30], output_tail=out[-3000:] if not ok else '')
 
     def run_test(self, test_file, rerun=False):
@@ -211,13 +305,14 @@ class Wine:
         # RUNTESTFLAGS without -q: quiet mode sets WINETEST_DEBUG=0, which also silences the summary line
         rc, out, secs, to = sh(['make', '-s', target, 'RUNTESTFLAGS=-P wine'], self.build, self.test_timeout, self.env)
         if os.path.exists(ok_file): os.remove(ok_file)
-        if to: sh([os.path.join(self.build, 'server', 'wineserver'), '-k'], self.build, 60, self.env)   # kill what the test left behind
+        mem = MEM_MARK in out                                        # the memory watch killed the test: a crash
+        if to or mem: sh([os.path.join(self.build, 'server', 'wineserver'), '-k'], self.build, 60, self.env)   # kill what the test left behind
         failed = sorted({f'{f}:{l}' for f, l, k in FAIL_RE.findall(out) if k == 'failed'})
         todo_ok = sorted({f'{f}:{l}' for f, l, k in FAIL_RE.findall(out) if k != 'failed'})
         sums = SUM_RE.findall(out)                                   # child processes print their own summary: take this test's
         s = ([m for m in sums if m[0] == name] or sums or [None])[-1]
-        status = 'timeout' if to else 'ok' if s else 'crash'
-        return dict(status=status, executed=int(s[1]) if s else 0, failures=int(s[4]) if s else None,
+        status = 'timeout' if to else 'ok' if s and not mem else 'crash'
+        return dict(status=status, executed=int(s[1]) if s else 0, failures=int(s[4]) if s else None, **({'mem_killed': True} if mem else {}),
                     failed=failed, todo_ok=todo_ok, seconds=secs, output_tail=out[-2500:] if status != 'ok' or failed else '')
 
 # ---------------------------------------------------------------- baseline
@@ -406,6 +501,7 @@ def table(runs, csv):
 # ---------------------------------------------------------------- main
 def make_trees(a):
     """one Wine per worker: worker 0 = --src/--build/--prefix, worker i = <src>-w<i>, <build>-w<i>, <prefix>-w<i>"""
+    mem_watch(getattr(a, 'mem_limit_mb', 4096))
     jobs = a.jobs or max(2, (os.cpu_count() or 2) // a.workers)
     trees = []
     for i in range(a.workers):
@@ -463,6 +559,7 @@ def main():
     ap.add_argument('--jobs', type=int, default=0, help='make -j per worker (default: CPUs / workers, at least 2)')
     ap.add_argument('--timeout', type=int, default=300, help='seconds per test run (default 300; the clean-tree runs of the benchmark tests take < 1 min)')
     ap.add_argument('--compile-timeout', type=int, default=1800)
+    ap.add_argument('--mem-limit-mb', type=int, default=4096, help='a compile or test run whose processes hold more resident memory than this is killed (crash / failed compile); 0 = no limit')
     ap.add_argument('--prefix', default='~/.wine-bench', help='WINEPREFIX for the test runs')
     ap.add_argument('--own-xvfb', action='store_true', help='start a private Xvfb even with one worker (default with --workers > 1)')
     ap.add_argument('--rebuild-restore', action='store_true', help='restore the tree by rebuilding instead of putting back saved outputs')

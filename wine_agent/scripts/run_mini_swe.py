@@ -30,6 +30,8 @@ def main():
     ap.add_argument('--jobs', type=int, default=0, help='make -j per ./compile (default: CPUs / workers)')
     ap.add_argument('--redo-bad', action='store_true', help='re-run records that errored or submitted nothing')
     ap.add_argument('--sample', type=int, default=0); ap.add_argument('--seed', type=int, default=20261102)
+    ap.add_argument('--gen-attempts', type=int, default=0, help='N > 0 (API models): a task whose run was cut short by an API / network / runner error '
+                                                                'is run once more, at most N runs in total; still failing -> generation_failed (bench/swe.py: gen_failed)')
     a = ap.parse_args()
     if not a.scenario: ap.error('--scenario is required')
     if a.stage == 'architect': a.stage = 'mini_swe'
@@ -101,7 +103,7 @@ def main():
                 if mode == 'text': mcfg['model_class'] = 'litellm_textbased'     # the command is a ```mswea_bash_command block in the reply
                 model = get_model(lname, mcfg)
                 env = LocalEnvironment(cwd=tree.src, timeout=cfg.get('command_timeout', 900),
-                                       env={'PAGER': 'cat', 'MANPAGER': 'cat', 'LESS': '-R', 'GIT_PAGER': 'cat'})
+                                       env={'PAGER': 'cat', 'MANPAGER': 'cat', 'LESS': '-R', 'GIT_PAGER': 'cat', **swe.offline_env()})
                 agent = CompileLimitAgent(model, env, system_template=p['system'], instance_template=INSTANCE_TEMPLATE + (TEXT_FORMAT if mode == 'text' else ''),
                                      max_compile_failures=cfg.get('max_compile_failures', 5),
                                      step_limit=cfg.get('max_steps', 40), cost_limit=cfg.get('cost_limit', 0.0),
@@ -158,8 +160,15 @@ def main():
                 p = prompts[i]
                 return dict(id=i, dll=p['dll'], function=p['function'], format_ok=False, exit_status='RunnerError', steps=0, tool_counts={}, compiles=[],
                             compiled_ok_last=False, usage=dict(prompt_tokens=0, completion_tokens=0), seconds=0, error=f'{type(e).__name__}: {e}'[:300])
+        def stub(i, error):                                           # --gen-attempts: a task whose runner crashed is stored like this
+            p = prompts[i]
+            return dict(id=i, dll=p['dll'], function=p['function'], stage=a.stage, from_model=None, model=name, model_id=lname, served_model=None,
+                        provider='litellm', agent=AGENT_NAME, tool_mode=tmode, response='', parsed=None, format_ok=False, code_leak=None, truncated=False,
+                        exit_status='RunnerError', steps=0, tool_counts={}, compiles=[], compiled_ok_last=False, files=[], hidden=None, violations=[],
+                        usage=dict(prompt_tokens=0, completion_tokens=0), cost=0.0, seconds=0, error=error)
         with ThreadPoolExecutor(max_workers=a.workers) as ex:
-            futs = [ex.submit(safe_work, i) for i in todo]
+            if a.gen_attempts > 0: futs = [ex.submit(swe.run_capped, work, i, a.gen_attempts, out_dir, stub) for i in todo]
+            else: futs = [ex.submit(safe_work, i) for i in todo]
             for k, fut in enumerate(as_completed(futs), 1): print(swe.status_line(name, k, len(todo), fut.result()), flush=True)
         if swe.TOOL_NAME_FIXES[0]: print(f'[{name}] tool-call names repaired so far (the server glued "json" to them): {swe.TOOL_NAME_FIXES[0]}', flush=True)
         print(f'[{name}] summary: {report.summarize(out_dir)}', flush=True)

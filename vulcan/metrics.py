@@ -6,6 +6,8 @@
 Reads (nothing is recomputed, these fields are written by the generation and evaluation jobs):
   wine_agent/runs/scenario<S>/<harness>/responses/<model>/<id>.json   seconds, usage, steps, exit_status, tool_counts, ...
   wine_agent/runs/scenario<S>/<harness>/eval/<model>/<id>.json        status
+  wine_bench/runs/scenario<S>/programmer/responses/<model>/<id>.json  one reply per task (API models; harness "oneshot1")
+  wine_bench/runs/scenario<S>/programmer/eval/<model>/<id>.json       its status
   wine_bench/runs/scenario<S>/programmer/samples/<model>-n<N>/<id>.json        n replies of one task: usage, seconds
   wine_bench/runs/scenario<S>/programmer/samples_eval/<model>-n<N>/<id>.json   passed, compiled of the n replies
 Writes
@@ -41,7 +43,7 @@ def dataset_info(root):
 
 COLS = ['scenario', 'harness', 'model', 'id', 'module', 'function', 'category', 'loc', 'cyclomatic', 'test_files', 'doc_chars',
         'seconds', 'prompt_tokens', 'completion_tokens', 'steps', 'commands', 'edits', 'compiles', 'exit_status', 'tool_mode',
-        'tool_name_fixes', 'tool_arg_fixes', 'status', 'identical',
+        'tool_name_fixes', 'tool_arg_fixes', 'status', 'identical', 'attempts', 'generation_failed',
         'n', 'requests', 'with_code', 'truncated', 'completion_tokens_per_reply', 'passed', 'compiled', 'eval_seconds']
 
 def main():
@@ -60,7 +62,20 @@ def main():
                              prompt_tokens=u.get('prompt_tokens'), completion_tokens=u.get('completion_tokens'), steps=r.get('steps'),
                              commands=tc.get('commands', ''), edits=tc.get('edits', ''), compiles=len(r.get('compiles') or []),
                              exit_status=r.get('exit_status'), tool_mode=r.get('tool_mode'), tool_name_fixes=r.get('tool_name_fixes', ''),
-                             tool_arg_fixes=r.get('tool_arg_fixes', ''), status=e.get('status', ''), identical=e.get('identical', '')))
+                             tool_arg_fixes=r.get('tool_arg_fixes', ''), status=e.get('status', ''), identical=e.get('identical', ''),
+                             attempts=r.get('gen_attempts_made', ''), generation_failed=r.get('generation_failed', '')))
+    # one reply per task (the API models, vulcan/run_api.sbatch): harness "oneshot1"
+    for d in sorted(glob.glob(os.path.join(root, 'wine_bench', 'runs', 'scenario*', 'programmer', 'responses', '*'))):
+        p = d.split(os.sep); scen, model = p[-4][8:], p[-1]
+        for f in sorted(glob.glob(os.path.join(d, '[0-9][0-9][0-9][0-9].json'))):
+            r = jload(f)
+            if not r: continue
+            e = jload(os.path.join(os.path.dirname(os.path.dirname(d)), 'eval', model, r['id'] + '.json')) or {}
+            u = r.get('usage') or {}
+            rows.append(dict(info.get(r['id'], {}), scenario=scen, harness='oneshot1', model=model, id=r['id'], seconds=r.get('seconds'),
+                             prompt_tokens=u.get('prompt_tokens'), completion_tokens=u.get('completion_tokens'), status=e.get('status', ''),
+                             identical=e.get('identical', ''), attempts=r.get('attempts', 1), generation_failed=r.get('generation_failed', ''),
+                             n=1, requests=r.get('attempts', 1), with_code=int(bool(r.get('format_ok'))), truncated=int(bool(r.get('truncated')))))
     for d in sorted(glob.glob(os.path.join(root, 'wine_bench', 'runs', 'scenario*', 'programmer', 'samples', '*'))):
         p = d.split(os.sep); scen, model = p[-4][8:], p[-1]
         for f in sorted(glob.glob(os.path.join(d, '[0-9][0-9][0-9][0-9].json'))):
@@ -92,9 +107,12 @@ def main():
         else:
             ev = [r for r in g if r['status']]
             s.update(evaluated_tasks=len(ev), passed=sum(1 for r in ev if r['status'] == 'pass'),
-                     submitted=sum(1 for r in g if r['exit_status'] == 'Submitted'),
-                     steps_mean=mean(r['steps'] for r in g), steps_median=med(r['steps'] for r in g), steps_max=max(num(r['steps'] for r in g) or [''])),
+                     submitted=sum(1 for r in g if r.get('exit_status') == 'Submitted') if harness != 'oneshot1' else '',
+                     steps_mean=mean(r.get('steps') for r in g), steps_median=med(r.get('steps') for r in g), steps_max=max(num(r.get('steps') for r in g) or [''])),
         s = s[0] if isinstance(s, tuple) else s
+        if any(r.get('generation_failed') not in ('', None) for r in g):          # settings run with the two-attempt rule (API models)
+            s.update(second_attempts=sum(1 for r in g if isinstance(r.get('attempts'), int) and r['attempts'] > 1),
+                     generation_failed=sum(1 for r in g if r.get('generation_failed') is True))
         s.update(seconds_total=tot(r['seconds'] for r in g), seconds_mean=mean(r['seconds'] for r in g), seconds_median=med(r['seconds'] for r in g),
                  prompt_tokens_total=tot(r['prompt_tokens'] for r in g), prompt_tokens_mean=mean(r['prompt_tokens'] for r in g),
                  completion_tokens_total=tot(r['completion_tokens'] for r in g), completion_tokens_mean=mean(r['completion_tokens'] for r in g))
