@@ -20,3 +20,7 @@ sbatch figures/make_figures.sbatch        # 或者本地：python3 figures/make_
 - **单次生成里本地模型的"每次回复耗时"** 是一个任务 100 次采样的总耗时除以 100，是吞吐量意义上的平均，不是单个请求的延迟。
 - **agent 的输入 token** 是每一步重发历史累加的结果，所以远大于单次生成。
 - deepseek-v4-flash 只有单次生成，没有 agent 的数据。
+
+字体：脚本优先用 Times New Roman；机器上没有时依次退到 Liberation Serif（与 Times New Roman 字宽完全一致的自由字体）、
+Nimbus Roman。Vulcan 上没有 Times New Roman，仓库里的图是用 Liberation Serif 生成的。要严格使用 Times New Roman，
+在装有该字体的机器上运行 `python3 figures/make_figures.py` 即可，脚本会自动选用（运行时会打印实际用的字体）。
