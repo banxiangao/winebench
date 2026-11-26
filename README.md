@@ -116,6 +116,7 @@ deepseek-v4-flash 的回复不是在集群上生成的（见"已知情况"），
 - `wine_bench/results/pass_at_k.txt`、`table.txt`：单次生成
 - `results/metrics_tasks.csv`：逐任务的时间、token、步数、结果；`metrics_settings.txt`：按设置汇总
 - `results/jobs_usage.txt`：每个集群作业申请和使用的资源
+- `figures/`：时间和 token 开销的两张图（`cost_agent`、`cost_oneshot`），说明见其中的 README
 
 ## 评测方法
 
