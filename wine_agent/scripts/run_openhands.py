@@ -196,6 +196,7 @@ def main():
                                                 if getattr(e, 'code', None) and hasattr(e, 'detail')), None)
                 out['tool_name_fixes'] = swe.tool_fixes_take(); out['tool_arg_fixes'] = swe.tool_arg_fixes_take()
                 out['job'] = os.environ.get('WB_JOB_ID') or os.environ.get('SLURM_JOB_ID')   # which job produced this result (vulcan/run_setting.sbatch)
+                out['agent_network'] = swe.agent_network()                              # what the agent's shell could reach (bench/swe.py)
                 return out
 
         def safe_work(i):

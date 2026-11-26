@@ -151,6 +151,7 @@ def main():
                            cost=round(agent.cost, 4), seconds=round(time.time() - t0, 1), error=error)
                 out['tool_name_fixes'] = swe.tool_fixes_take(); out['tool_arg_fixes'] = swe.tool_arg_fixes_take()
                 out['job'] = os.environ.get('WB_JOB_ID') or os.environ.get('SLURM_JOB_ID')   # which job produced this result (vulcan/run_setting.sbatch)
+                out['agent_network'] = swe.agent_network()                              # what the agent's shell could reach (bench/swe.py)
                 swe.write_result(out_dir, i, out, traj, patch if has_code else '')
                 return out
 

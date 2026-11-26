@@ -71,6 +71,11 @@ bash vulcan/submit_api.sh list                                # 各设置的进�
   因为项目目录全组可读。
 - 网络：计算节点只能经集群代理出网，代理是白名单：`api.openai.com`、`api.anthropic.com` 可达，
   `api.deepseek.com` 被拒绝（403，2026-11-25 测）。代理只给调用模型的进程；agent 自己的命令行里代理是清空的。
+- 在集群以外、能直接联网的机器上跑 agent（例如 DeepSeek）：设 `WB_AGENT_OFFLINE=1`，agent 命令行里的代理会被指向
+  一个不存在的地址（`127.0.0.1:9`），`curl`、`wget`、`pip`、`git`、Python 的网络请求都出不去，调用模型的进程不受影响。
+  用 `apptainer exec --containall` 时变量要传进容器：运行前 `export APPTAINERENV_WB_AGENT_OFFLINE=1`。这不是防火墙，
+  不理会代理变量的程序拦不住。每个任务的结果里 `agent_network` 记下了当时的方式
+  （`dead_proxy` / `proxy_blanked` / `unchanged`）。
 - 每个任务最多生成两次（`GEN_ATTEMPTS=2`）：第一次因接口、网络或运行器出错而没有拿到结果时才有第二次；
   第二次仍失败则记 `generation_failed = true`，以后不再重试。回复里没有可用代码、回复被截断、agent 撞到步数/
   时间/编译次数上限、对话超出模型上下文，都算任务的结果而不是生成失败。第一次的结果保留为 `<id>.attempt1.json`。

@@ -360,10 +360,23 @@ def run_capped(work, i, gen_attempts, out_dir, stub):
     return r
 
 PROXY_VARS = ('http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'all_proxy', 'ALL_PROXY')
+DEAD_PROXY = 'http://127.0.0.1:9'                                      # the discard port: nothing listens there
+def agent_network():
+    """what the agent's shell commands can reach:
+    'dead_proxy'    WB_AGENT_OFFLINE=1 - for a machine with direct internet access (not the cluster): the shell gets a proxy
+                    that does not exist, so curl, wget, pip, git and everything else that honours the proxy variables fails.
+                    Not a firewall: a program that ignores those variables still gets out.
+    'proxy_blanked' the process has a proxy (a cluster job: the proxy is the only way out and is for the model calls of
+                    this process only) - the shell gets the variables blanked, so it has no way out
+    'unchanged'     neither: the shell has what the machine has (on a compute node without a proxy: nothing)"""
+    if os.environ.get('WB_AGENT_OFFLINE', '').lower() in ('1', 'true', 'yes'): return 'dead_proxy'
+    return 'proxy_blanked' if any(os.environ.get(v) for v in PROXY_VARS) else 'unchanged'
+
 def offline_env():
-    """the job's proxy is for the model calls of this process only: the agent's shell commands get it blanked (as in the
-    local-model runs, where the compute node has no route out at all)"""
-    return {v: '' for v in PROXY_VARS} if any(os.environ.get(v) for v in PROXY_VARS) else {}
+    """environment overrides for the agent's shell commands, see agent_network()"""
+    mode = agent_network()
+    if mode == 'dead_proxy': return {**{v: DEAD_PROXY for v in PROXY_VARS}, 'no_proxy': '', 'NO_PROXY': ''}
+    return {v: '' for v in PROXY_VARS} if mode == 'proxy_blanked' else {}
 
 # ---------------------------------------------------------------- results
 def write_result(out_dir, i, out, traj, patch):
