@@ -51,6 +51,18 @@ and the limits are the same, 6 tasks in parallel (the first 3 tasks of the mini_
   variables, it is not a firewall; commands that name curl / wget / pip / git clone / apt are in `violations`.
 
 `agent_3.2_mini_swe_responses_deepseek-v4-flash` (2026-11-27): 205 tasks, none failed to generate, 188 with a patch
-that changes the target file; in 2 tasks the agent typed a network command.  NOT evaluated yet: it has to be evaluated
-on the cluster like every other setting and is then to be replaced by `agent_3.2_mini_swe_deepseek-v4-flash` (with
-`eval/`).  The openhands setting is still to come.
+that changes the target file.  `agent_3.2_openhands_responses_deepseek-v4-flash` (2026-11-27): 205 tasks, none failed
+to generate, 201 with such a patch.  Both are NOT evaluated yet: they have to be evaluated on the cluster like every
+other setting and are then to be replaced by `agent_3.2_<harness>_deepseek-v4-flash` (with `eval/`).
+
+Checked in the mini_swe archive after the run (the openhands archive has not been checked this way yet):
+
+- no network use: the two `network` violations (tasks 0040, 0043) are the pattern matching the variable name `apt` in C
+  code the agent typed, not a command; no key in any file (the key file shows up only as a name in `ls /` listings);
+- TO BE DEALT WITH BEFORE THE NUMBERS ARE USED: in 34 of the 205 tasks the agent left its own tree (this model often
+  starts with `cd /` or `cd /root`, then looks for the file with `find /`) and read or edited the tree of ANOTHER worker,
+  where the target function is not replaced by the stub - the original implementation is readable there - and where its
+  edits may have disturbed that worker's task.  20 of these tasks have a patch, 14 have none (the work went into the
+  wrong tree).  In the cluster runs of the other models this happened in 12 of 3,280 tasks.  The task numbers:
+  0002 0004 0005 0006 0022 0023 0036 0045 0047 0055 0061 0073 0122 0125 0127 0134 0136 0137 0140 0142 0151 0156 0170
+  0171 0181 0184 0189 0197 0198 0201 0203 0209 0215 0217.
