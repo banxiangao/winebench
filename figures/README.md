@@ -9,6 +9,8 @@ Two cost figures and the figure of the leakage experiment. The cost figures take
 | `cost_agent` | cost per task of the agent settings: wall time, input tokens, output tokens, steps. Top: scenario 2.2 (six models); bottom: scenario 2.1 (the three local models). The two harnesses side by side. |
 | `cost_oneshot` | cost of the one-shot settings: time per reply, prompt tokens, output tokens per reply. Six models, scenarios 1.1 and 1.2 side by side. |
 | `leakage` | leakage experiment (`leakage/README.md`): gpt-oss-20b on 252 functions written after its training cutoff (NEW) and their 252 matched partners untouched since (OLD). Left: the rate of each group (one-shot: pass@1, pass@10, pass@100; agent: tasks passed). Right: the difference OLD − NEW in percentage points with its 95 % interval; black where the interval excludes 0. Drawn by `make_leakage_figure.py`. |
+| `venn_oneshot` | which tasks the models pass in common, scenarios 1.1 and 1.2: one Venn diagram for the three local models (a task counts when at least one of its 100 samples passes) and one for the three API models (the single reply passes). Numbers are tasks; the circles are not to scale. Drawn by `make_venn_figures.py`, counts in `results/pass_overlap.csv`. |
+| `venn_agent` | the same for the agent settings: scenario 2.1 (local models) and scenario 2.2 (local models, API models), top row mini-SWE-agent, bottom row OpenHands. |
 
 To draw them again (needs matplotlib; on Vulcan the cluster's own is used):
 
