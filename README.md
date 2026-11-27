@@ -131,6 +131,9 @@ vendor's API. The deepseek-v4-flash times were measured on a different machine.
 
 Where the complete numbers are:
 
+- `results/WineBench_results.xlsx`: everything in one Excel workbook, with a sheet for the agent settings, one for the
+  one-shot settings, one for the cost, and the outcome of every task in every setting (written by
+  `results/make_workbook.py`)
 - `wine_agent/results/table.txt`: one line per agent setting
 - `wine_bench/results/pass_at_k.txt` and `table.txt`: the one-shot settings
 - `results/metrics_tasks.csv`: time, tokens, steps and outcome of every task; `metrics_settings.txt`: the same per setting
