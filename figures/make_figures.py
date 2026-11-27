@@ -70,7 +70,7 @@ def save(fig, name):
     plt.close(fig); print('wrote', name)
 
 # ---------------------------------------------------------------- agent settings
-HARNESS = [('mini_swe', 'mini-swe-agent', '#4C72B0'), ('openhands', 'OpenHands', '#C44E52')]
+HARNESS = [('mini_swe', 'mini-SWE-agent', '#4C72B0'), ('openhands', 'OpenHands', '#C44E52')]
 METRICS = [('seconds_mean', 1, 'Wall time (s)'), ('prompt_tokens_mean', 1e-3, 'Input tokens (k)'),
            ('completion_tokens_mean', 1e-3, 'Output tokens (k)'), ('steps_mean', 1, 'Agent steps (max. 40)')]          # all per task
 SCEN = [('2.2', 'Scenario 2.2\nname + docs', ['claude-haiku-5-5', 'openai-gpt-6-luna', 'deepseek-v4-flash', 'qwen3.8-27b', 'gpt-oss-20b', 'glm-4.7-flash']),

@@ -32,8 +32,8 @@ plt.rcParams.update({'font.family': 'serif', 'font.serif': SERIF, 'mathtext.font
 R = {(r['scenario'], r['harness'], r['metric']): r for r in csv.DictReader(open(os.path.join(ROOT, 'leakage', 'results.csv'), encoding='utf-8')) if r['subset'] == 'all pairs'}
 ROWS = [('1.1', 'one-shot', 'pass@1', 'pass@1'), ('1.1', 'one-shot', 'pass@10', 'pass@10'), ('1.1', 'one-shot', 'pass@100', 'pass@100'), None,
         ('1.2', 'one-shot', 'pass@1', 'pass@1'), ('1.2', 'one-shot', 'pass@10', 'pass@10'), ('1.2', 'one-shot', 'pass@100', 'pass@100'), None,
-        ('2.1', 'mini_swe', 'pass', 'mini_swe'), ('2.1', 'openhands', 'pass', 'OpenHands'), None,
-        ('2.2', 'mini_swe', 'pass', 'mini_swe'), ('2.2', 'openhands', 'pass', 'OpenHands')]
+        ('2.1', 'mini_swe', 'pass', 'mini-SWE-agent'), ('2.1', 'openhands', 'pass', 'OpenHands'), None,
+        ('2.2', 'mini_swe', 'pass', 'mini-SWE-agent'), ('2.2', 'openhands', 'pass', 'OpenHands')]
 GROUPS = {0: 'Scenario 1.1 (one-shot)', 4: 'Scenario 1.2 (one-shot)', 8: 'Scenario 2.1 (agent)', 11: 'Scenario 2.2 (agent)'}
 
 fig, (a, b) = plt.subplots(1, 2, figsize=(7.0, 3.9), sharey=True, gridspec_kw={'width_ratios': [1.0, 1.0], 'wspace': 0.06})
