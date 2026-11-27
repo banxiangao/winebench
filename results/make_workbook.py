@@ -26,7 +26,7 @@ AGENT = rows('wine_agent/results/table.csv'); ONE = rows('wine_bench/results/tab
 SET = rows('results/metrics_settings.csv'); TASKS = rows('results/metrics_tasks.csv')
 MAIN = ('1.1', '1.2', '2.1', '2.2')                # the main benchmark; the settings of the leakage experiment (2.1-new, ...) have their own sheets
 AGENT = [a for a in AGENT if a['scenario'] in MAIN]; ONE = [a for a in ONE if a['scenario'] in MAIN]; PASSK = [a for a in PASSK if a['scenario'] in MAIN]
-LRES = rows('leakage/results.csv'); LT = rows('leakage/results_tasks.csv')
+LRES = rows('leakage/results.csv'); LT = rows('leakage/results_tasks.csv'); LNEW = rows('leakage/results_by_newness.csv')
 tree = {}
 with open(os.path.join(ROOT, 'results/tree_access_settings.txt'), encoding='utf-8') as f:
     head = f.readline().split()
@@ -321,8 +321,22 @@ for s in ('1.1', '1.2'):
         ws.write_formula(r, 5, f'=COUNTIF({R},0)', f_i, sum(1 for x in v if x == 0)); ws.write_formula(r, 6, f'=COUNTIFS({R},">=1",{R},"<=9")', f_i, sum(1 for x in v if 1 <= x <= 9))
         ws.write_formula(r, 7, f'=COUNTIFS({R},">=10",{R},"<=49")', f_i, sum(1 for x in v if 10 <= x <= 49)); ws.write_formula(r, 8, f'=COUNTIF({R},">=50")', f_i, sum(1 for x in v if x >= 50))
         ws.write_formula(r, 9, f'=SUM({xl_range(r, 5, r, 8)})', f_i, len(v))
-r += 2; lsec(r, 'E. The headline number (pass@100, tasks passed) on subsets of the pairs'); r += 1; lhead(r, HL)
-for a in [a for a in LRES if a['metric'] in ('pass@100', 'pass')]: r += 1; lrow(r, a)
+r += 2; lsec(r, 'E. Subsets of the pairs: same or other DLL; NEW function entirely or only partly written after the cutoff'); r += 1; lhead(r, HL)
+for a in sorted([a for a in LRES if a['metric'] in ('pass@1', 'pass@10', 'pass@100', 'pass')], key=lambda a: (a['scenario'], a['harness'], ['pass@1', 'pass@10', 'pass@100', 'pass'].index(a['metric']))): r += 1; lrow(r, a)
+r += 2; lsec(r, 'F. Pass and compile rates by how new the NEW function is: each group of NEW functions next to its own OLD partners'); r += 1
+for c_, l in enumerate(['Scenario', 'Mode', 'Metric', '', 'Entirely new: pairs', 'Entirely new: NEW', 'Entirely new: its OLD partners', 'Partly new: pairs', 'Partly new: NEW', 'Partly new: its OLD partners']): ws.write(r, c_, l, f_hl if c_ < 4 else f_h)
+ws.set_row(r, 44)
+seen = []
+for a in LNEW:
+    k = (a['scenario'], a['harness'], a['metric'])
+    if k not in seen: seen.append(k)
+for (s, h, m) in seen:
+    r += 1; ws.write(r, 0, s, f_tc); ws.write(r, 1, h, f_t); ws.write(r, 2, m, f_t); ws.write(r, 3, '', f_t)
+    for j, sub in enumerate(('NEW entirely new', 'NEW partly new')):
+        a = next(a for a in LNEW if (a['scenario'], a['harness'], a['metric'], a['subset']) == (s, h, m, sub))
+        ws.write(r, 4 + 3 * j, int(a['pairs']), f_i); ws.write(r, 5 + 3 * j, float(a['new']) / 100, f_p); ws.write(r, 6 + 3 * j, float(a['old']) / 100, f_p)
+r += 1; ws.merge_range(r, 0, r, 12, 'Entirely new: every code line of the NEW function was committed after the cutoff. Partly new: between half and all of them. The two groups hold different functions (and different OLD partners), '
+                                    'so compare NEW with OLD inside a group, not one group with the other. Values from leakage/results_by_newness.csv.', f_note); ws.set_row(r, 30)
 r += 2; lsec(r, 'Reading'); r += 1
 for t in ['No sign that the original code is recited: the code handed in is as close to Wine\'s implementation for the NEW functions as for the OLD ones (rows identical, near copy, similarity, max similarity).',
           'With an agent, OLD and NEW functions are passed equally often: none of the four differences is significant.',
@@ -398,7 +412,7 @@ block('Leakage experiment (sheets Leakage, Leakage per pair)', [
     ('not comparable with the main tables', 'These functions are shorter than those of the 205-task benchmark (no lower bound of 15 lines), so the pass rates are higher.'),
     ('isolation', 'The agent settings of this experiment ran with one source tree per container and without the project directory: no task named another tree, the project or the scratch space. The 205-task settings ran before that change.'),
     ('limits', 'One model and no control model with a later cutoff; the pairs are matched on size and tests, not on difficulty; a NEW function may replace an older implementation the model has seen.')])
-block('Sources', [('files', 'wine_agent/results/table.csv, wine_bench/results/table.csv, wine_bench/results/pass_at_k.csv, results/metrics_settings.csv, results/metrics_tasks.csv, results/tree_access_settings.txt, leakage/results.csv, leakage/results_tasks.csv'),
+block('Sources', [('files', 'wine_agent/results/table.csv, wine_bench/results/table.csv, wine_bench/results/pass_at_k.csv, results/metrics_settings.csv, results/metrics_tasks.csv, results/tree_access_settings.txt, leakage/results.csv, leakage/results_tasks.csv, leakage/results_by_newness.csv'),
                   ('more', 'README.md at the root of the repository; raw outputs in runs_archive/')])
 wb.close()
 print('wrote', OUT)

@@ -14,7 +14,8 @@ groups evaluated, on the pairs evaluated in both:
   the difference OLD - NEW with a 95 % interval from a paired bootstrap (10,000 resamples of the pairs)
   the headline number (pass@n, pass) again for subsets of the pairs: both functions in the same DLL; NEW function
       entirely / only partly written after the cutoff
-Writes leakage/results.txt, leakage/results.csv and leakage/results_tasks.csv (one line per pair: the outcome in every setting).
+Writes leakage/results.txt, leakage/results.csv, leakage/results_tasks.csv (one line per pair: the outcome in every setting)
+and leakage/results_by_newness.csv (pass and compile rates of the pairs whose NEW function is entirely / partly new).
 """
 import os, csv, json, glob, math, random, argparse
 
@@ -58,6 +59,7 @@ def main():
     SUB = [('all pairs', lambda p: True), ('same DLL', lambda p: p['new'].split('!')[0] == p['old'].split('!')[0]), ('other DLL', lambda p: p['new'].split('!')[0] != p['old'].split('!')[0]),
            ('NEW entirely new', lambda p: float(p['share_after_cutoff_new']) >= 0.999), ('NEW partly new', lambda p: float(p['share_after_cutoff_new']) < 0.999)]
     per = {i: {} for i in pairs}                                         # per pair: the outcome in every setting -> results_tasks.csv
+    head2 = []                                                           # further metrics for the subset table; after the headline ones so that their intervals stay as they were
     head = []                                                            # (setting, ids, new values, old values) of the headline metric
     def line(scen, h, name, ids, n_, o_, extra='', more=None):
         m, lo, hi = boot(o_, n_, rng)
@@ -80,6 +82,7 @@ def main():
         for name, fn in mets:
             n_ = [fn(d['new'][i]) for i in ids]; o_ = [fn(d['old'][i]) for i in ids]; line(scen, 'one-shot', name, ids, n_, o_)
             if name == f'pass@{N}': head.append((f'{scen} one-shot pass@{N}', ids, n_, o_))
+            elif name in ('pass@1', 'pass@10'): head2.append((f'{scen} one-shot {name}', ids, n_, o_))
         for g in ('new', 'old'):
             for i in ids: per[i][f'{scen}_{g}_passed'] = d[g][i]['passed']; per[i][f'{scen}_{g}_compiled'] = d[g][i]['compiled']
         bins = [('0', 0, 0), ('1-9', 1, 9), ('10-49', 10, 49), ('50+', 50, 10 ** 9)]
@@ -108,7 +111,7 @@ def main():
             P()
     P('== the headline number on subsets of the pairs (OLD - NEW, percentage points)')
     P(f'{"setting":24} ' + ' '.join(f'{s[0]:>26}' for s in SUB))
-    for name, ids, n_, o_ in head:
+    for name, ids, n_, o_ in head + head2:
         cells = []
         for sname, keep in SUB:
             k = [j for j, i in enumerate(ids) if i in pairs and keep(pairs[i])]
@@ -120,6 +123,28 @@ def main():
                 rows.append(dict(scenario=sc, harness=hh, subset=sname, metric=name.split()[-1], pairs=len(k), new=round(100 * sum(nn) / len(k), 4), old=round(100 * sum(oo) / len(k), 4),
                                  old_minus_new=round(100 * m, 2), ci_low=round(100 * lo, 2), ci_high=round(100 * hi, 2)))
         P(f'{name:24} ' + ' '.join(cells))
+    P(); P('== rates by how new the NEW function is (percent): each group of NEW functions next to its own OLD partners')
+    P(f'{"scenario":9} {"":10} {"metric":12} ' + ' '.join(f'{x:>20}' for x in ('entirely new: NEW', 'its OLD partners', 'partly new: NEW', 'its OLD partners')))
+    nrows = []
+    def by_newness(sc, h, name, val):
+        """val(i, g) -> the value of pair i in group g, or None if it was not evaluated"""
+        out = []
+        for sname, keep in SUB[3:]:
+            k = [i for i in sorted(pairs) if keep(pairs[i]) and val(i, 'new') is not None and val(i, 'old') is not None]
+            if not k: out += [float('nan')] * 2; continue
+            a_ = 100 * sum(val(i, 'new') for i in k) / len(k); b_ = 100 * sum(val(i, 'old') for i in k) / len(k); out += [a_, b_]
+            nrows.append(dict(scenario=sc, harness=h, metric=name, subset=sname, pairs=len(k), new=round(a_, 4), old=round(b_, 4)))
+        P(f'{sc:9} {h:10} {name:12} ' + ' '.join(f'{x:20.1f}' for x in out))
+    for scen in ('1.1', '1.2'):
+        for kind, label in (('passed', 'pass'), ('compiled', 'compile')):
+            for k_ in (1, 10, int(N)):
+                by_newness(scen, 'one-shot', f'{label}@{k_}', lambda i, g, scen=scen, kind=kind, k_=k_: (lambda c: None if c is None else pass_at_k(int(N), int(c), k_))(per[i].get(f'{scen}_{g}_{kind}')))
+    for scen in ('2.1', '2.2'):
+        for h in ('mini_swe', 'openhands'):
+            by_newness(scen, h, 'pass', lambda i, g, scen=scen, h=h: (lambda s: None if s is None else float(s == 'pass'))(per[i].get(f'{scen}_{h}_{g}')))
+            by_newness(scen, h, 'compiled', lambda i, g, scen=scen, h=h: (lambda s: None if s is None else float(s in COMPILED))(per[i].get(f'{scen}_{h}_{g}')))
+    with open(os.path.join(ROOT, 'leakage', 'results_by_newness.csv'), 'w', newline='', encoding='utf-8') as f:
+        w = csv.DictWriter(f, ['scenario', 'harness', 'metric', 'subset', 'pairs', 'new', 'old']); w.writeheader(); w.writerows(nrows)
     open(os.path.join(ROOT, 'leakage', 'results.txt'), 'w', encoding='utf-8').write('\n'.join(L) + '\n')
     cols = ['scenario', 'harness', 'subset', 'metric', 'pairs', 'new', 'old', 'old_minus_new', 'ci_low', 'ci_high', 'only_old', 'only_new', 'mcnemar_p']
     with open(os.path.join(ROOT, 'leakage', 'results.csv'), 'w', newline='', encoding='utf-8') as f:

@@ -49,6 +49,52 @@ that memory fits more often. That is familiarity with the old code base, not rec
 remaining difference in difficulty between the groups cannot be ruled out for the one-shot settings; a model with a
 later cutoff run on the same pairs would be the control, and none was run.
 
+## Entirely new and partly new functions
+
+The 252 pairs split by how new the NEW function is: **entirely new** (every code line committed after the cutoff,
+112 pairs) and **partly new** (between half and all of them, 140 pairs). Each group of NEW functions is shown next to
+its own OLD partners; all values in percent (`results_by_newness.csv`).
+
+One-shot, 100 samples per task:
+
+| Scenario | Metric | Entirely new: NEW | its OLD partners | Partly new: NEW | its OLD partners |
+|---|---|---|---|---|---|
+| 1.1 | pass@1 | 7.6 | 9.0 | 15.1 | 12.0 |
+| 1.1 | pass@10 | 23.0 | 31.6 | 31.8 | 32.4 |
+| 1.1 | pass@100 | 33.0 | 51.8 | 41.4 | 50.7 |
+| 1.1 | compile@1 | 31.5 | 33.1 | 41.4 | 39.4 |
+| 1.1 | compile@10 | 75.7 | 85.9 | 87.5 | 90.2 |
+| 1.1 | compile@100 | 95.5 | 99.1 | 97.9 | 98.6 |
+| 1.2 | pass@1 | 8.2 | 11.5 | 16.4 | 14.9 |
+| 1.2 | pass@10 | 24.6 | 35.7 | 33.3 | 37.9 |
+| 1.2 | pass@100 | 33.0 | 55.4 | 43.6 | 52.9 |
+| 1.2 | compile@1 | 29.7 | 34.8 | 40.3 | 40.5 |
+| 1.2 | compile@10 | 75.2 | 85.1 | 85.0 | 90.7 |
+| 1.2 | compile@100 | 92.9 | 100.0 | 96.4 | 99.3 |
+
+Agent, one run per task (compile rate = the code handed in compiles):
+
+| Scenario | Harness | Metric | Entirely new: NEW | its OLD partners | Partly new: NEW | its OLD partners |
+|---|---|---|---|---|---|---|
+| 2.1 | mini_swe | pass rate | 21.4 | 19.6 | 17.1 | 12.1 |
+| 2.1 | mini_swe | compile rate | 32.1 | 33.9 | 33.6 | 23.6 |
+| 2.1 | OpenHands | pass rate | 48.2 | 45.5 | 35.7 | 35.7 |
+| 2.1 | OpenHands | compile rate | 85.7 | 78.6 | 74.3 | 72.9 |
+| 2.2 | mini_swe | pass rate | 20.5 | 19.6 | 14.3 | 16.4 |
+| 2.2 | mini_swe | compile rate | 32.1 | 26.8 | 22.1 | 20.0 |
+| 2.2 | OpenHands | pass rate | 50.0 | 50.9 | 34.3 | 46.4 |
+| 2.2 | OpenHands | compile rate | 83.0 | 84.8 | 77.1 | 78.6 |
+
+- One-shot, the entirely new functions are solved and compiled less often than their OLD partners at every k
+  (pass@100: 33.0 against 51.8 and 33.0 against 55.4; compile@10: 75.7 against 85.9 and 75.2 against 85.1). For the
+  partly new functions the gap is small, and their pass@1 is even a little higher than that of their partners.
+- With an agent, the entirely new functions are passed as often as their OLD partners (OpenHands: 48.2 against 45.5,
+  50.0 against 50.9). They are not harder once the source tree can be read.
+- One cell does not fit: scenario 2.2 with OpenHands, partly new functions, 34.3 against 46.4, while the same pairs
+  give 35.7 against 35.7 in scenario 2.1. No explanation was found.
+- The two groups hold different functions and different OLD partners. Compare NEW with OLD inside a group, not one
+  group with the other.
+
 ## Which functions are new, which are old
 
 Every code line of every function of the benchmark was dated with `git blame -w -M -C` on Wine 11.19
@@ -107,4 +153,4 @@ count as they ended (the same happens in the main benchmark: 14 and 19 of 205).
 | `check_candidates.py` | which candidates can be used |
 | `assemble.py`, `pairs.csv` | the two datasets and the list of pairs |
 | `build_prompts.sbatch` | prompts of the eight scenario folders |
-| `analyze.py`, `analyze.sbatch` | the comparison → `results.txt`, `results.csv`, `results_tasks.csv` (one line per pair: the outcome in every setting) |
+| `analyze.py`, `analyze.sbatch` | the comparison → `results.txt`, `results.csv`, `results_tasks.csv` (one line per pair: the outcome in every setting), `results_by_newness.csv` (entirely new / partly new) |
