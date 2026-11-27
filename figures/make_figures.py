@@ -73,19 +73,19 @@ def save(fig, name):
 HARNESS = [('mini_swe', 'mini-swe-agent', '#4C72B0'), ('openhands', 'OpenHands', '#C44E52')]
 METRICS = [('seconds_mean', 1, 'Wall time (s)'), ('prompt_tokens_mean', 1e-3, 'Input tokens (k)'),
            ('completion_tokens_mean', 1e-3, 'Output tokens (k)'), ('steps_mean', 1, 'Agent steps (max. 40)')]          # all per task
-SCEN = [('3.2', 'Scenario 3.2\nname + docs', ['claude-haiku-5-5', 'openai-gpt-6-luna', 'qwen3.8-27b', 'gpt-oss-20b', 'glm-4.7-flash']),
+SCEN = [('3.2', 'Scenario 3.2\nname + docs', ['claude-haiku-5-5', 'openai-gpt-6-luna', 'deepseek-v4-flash', 'qwen3.8-27b', 'gpt-oss-20b', 'glm-4.7-flash']),
         ('3.1', 'Scenario 3.1\nname only', ['qwen3.8-27b', 'gpt-oss-20b', 'glm-4.7-flash'])]
 def agent_value(scen, h, m, key, scale):
     r = get(scen, h, m)
     return num(r, key) * scale if r and num(r, key) is not None else None
-fig, axes = plt.subplots(2, 4, figsize=(7.4, 3.9), sharex='col', gridspec_kw=dict(height_ratios=[5, 3], hspace=0.14, wspace=0.10))
+fig, axes = plt.subplots(2, 4, figsize=(7.4, 4.3), sharex='col', gridspec_kw=dict(height_ratios=[6, 3], hspace=0.13, wspace=0.10))
 for c, (key, scale, title) in enumerate(METRICS):
     top = max(v for scen, _, models in SCEN for h, *_ in HARNESS for m in models for v in [agent_value(scen, h, m, key, scale)] if v is not None)
     for r, (scen, label, models) in enumerate(SCEN):                     # one x scale per column, for both scenarios
         panel(axes[r][c], models, [[agent_value(scen, h, m, key, scale) for m in models] for h, *_ in HARNESS], [h[2] for h in HARNESS], c == 0, top)
     axes[0][c].set_title(title, color=INK, pad=7)
 for r, (scen, label, models) in enumerate(SCEN):
-    axes[r][0].annotate(label, xy=(0, 0.5), xycoords='axes fraction', xytext=(-84, 0), textcoords='offset points', ha='center', va='center',
+    axes[r][0].annotate(label, xy=(0, 0.5), xycoords='axes fraction', xytext=(-104, 0), textcoords='offset points', ha='center', va='center',
                         fontsize=8.5, color=INK2, rotation=90, linespacing=1.3)
 legend(fig, [(h[1], h[2]) for h in HARNESS], 1.03)
 save(fig, 'cost_agent')

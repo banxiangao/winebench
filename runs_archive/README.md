@@ -1,7 +1,7 @@
 # Raw run outputs (2026-11-26)
 
 Everything the experiments wrote under `wine_bench/runs/` and `wine_agent/runs/`: prompts, model replies, patches,
-agent trajectories, per-task evaluation results and the job records.  21,388 files, 1.6 GB unpacked, packed per setting.
+agent trajectories, per-task evaluation results and the job records.  23,013 files, 1.7 GB unpacked, packed per setting.
 Wine 11.19, dataset `wine_agent/dataset/winebench205_doc` (205 tasks).
 
 Unpack in the repository root; the files land where the scripts expect them:
@@ -16,11 +16,10 @@ Unpack in the repository root; the files land where the scripts expect them:
 | `oneshot_<S>_single_<model>` | API models: one reply per task (`responses/`), its evaluation (`eval/`), job record |
 | `agent_<S>_<harness>_prompts` | the task text given to the agent, scenario 3.1 / 3.2, mini_swe / openhands |
 | `agent_<S>_<harness>_<model>` | per task: result `<id>.json`, patch, trajectory `<id>.traj.json` (`responses/`), evaluation (`eval/`), job record |
-| `agent_<S>_<harness>_responses_deepseek-v4-flash` | DeepSeek: the same without `eval/` - run outside the cluster, NOT evaluated yet (see the end) |
 | `baseline_wine11.19` | the dataset's tests on the untouched Wine tree: what a generated function is compared with |
 
 Models: qwen3.8-27b, gpt-oss-20b, glm-4.7-flash (local, vLLM); claude-haiku-5-5, openai-gpt-6-luna, deepseek-v4-flash
-(API; deepseek-v4-flash: one-shot evaluated, agent runs not evaluated yet, see the end).
+(API; deepseek-v4-flash was run outside the cluster, see the end).
 The numbers computed from these files are in `results/`, `wine_bench/results/` and `wine_agent/results/`.
 
 Two things were changed after the runs:
@@ -50,19 +49,20 @@ and the limits are the same, 6 tasks in parallel (the first 3 tasks of the mini_
   `agent_network = dead_proxy` in every result) instead of having no route out.  That stops what honours the proxy
   variables, it is not a firewall; commands that name curl / wget / pip / git clone / apt are in `violations`.
 
-`agent_3.2_mini_swe_responses_deepseek-v4-flash` (2026-11-27): 205 tasks, none failed to generate, 188 with a patch
-that changes the target file.  `agent_3.2_openhands_responses_deepseek-v4-flash` (2026-11-27): 205 tasks, none failed
-to generate, 201 with such a patch.  Both are NOT evaluated yet: they have to be evaluated on the cluster like every
-other setting and are then to be replaced by `agent_3.2_<harness>_deepseek-v4-flash` (with `eval/`).
+`agent_3.2_mini_swe_deepseek-v4-flash` and `agent_3.2_openhands_deepseek-v4-flash` (generated 2026-11-27): 205 tasks
+each, none failed to generate; 188 and 201 with a patch that changes the target file.  Both were then evaluated on the
+cluster like every other setting; the archives hold the results, the trajectories and the evaluation.
+Passed: 82 of 205 with mini_swe, 82 of 205 with OpenHands.
 
-Checked in the mini_swe archive after the run (the openhands archive has not been checked this way yet):
+Checked after the runs:
 
-- no network use: the two `network` violations (tasks 0040, 0043) are the pattern matching the variable name `apt` in C
-  code the agent typed, not a command; no key in any file (the key file shows up only as a name in `ls /` listings);
-- TO BE DEALT WITH BEFORE THE NUMBERS ARE USED: in 34 of the 205 tasks the agent left its own tree (this model often
-  starts with `cd /` or `cd /root`, then looks for the file with `find /`) and read or edited the tree of ANOTHER worker,
-  where the target function is not replaced by the stub - the original implementation is readable there - and where its
-  edits may have disturbed that worker's task.  20 of these tasks have a patch, 14 have none (the work went into the
-  wrong tree).  In the cluster runs of the other models this happened in 12 of 3,280 tasks.  The task numbers:
-  0002 0004 0005 0006 0022 0023 0036 0045 0047 0055 0061 0073 0122 0125 0127 0134 0136 0137 0140 0142 0151 0156 0170
-  0171 0181 0184 0189 0197 0198 0201 0203 0209 0215 0217.
+- no network use: the `network` violations are the pattern matching words in code the agent typed, not commands; no key
+  in any file (the key file shows up only as a name in `ls /` listings);
+- THE mini_swe RUN LEFT ITS TREES.  All trees of a job sit side by side and each hides only the function of its own
+  task, so the original implementation of a task's function is readable in the sibling trees (this is true of every
+  agent run of the benchmark, see "已知情况" in the main README and `results/tree_access_*`).  This model often starts
+  with `cd /` or `cd /root` and looks for the file with `find /`: in 40 of the 205 mini_swe tasks a command names a
+  tree other than the task's own, in 36 it names the target file there, in 31 it writes there (which may also have
+  disturbed that worker's task); 8 of the 36 passed.  (A first count on the workstation, with a narrower criterion,
+  gave 34 tasks.)  So the 82 may be too high or too low: use it with care, or run the setting again with one tree
+  per container.  In the OpenHands run no command names another tree.
