@@ -1,0 +1,384 @@
+{
+ "id": "0168",
+ "function": {
+  "name": "wglGetProcAddress",
+  "export_name": "wglGetProcAddress",
+  "module": "opengl32",
+  "source_module": "opengl32",
+  "exported_by": [
+   "opengl32"
+  ],
+  "side": "PE",
+  "file": "dlls/opengl32/wgl.c",
+  "start_line": 2335,
+  "end_line": 2364,
+  "body_lines": 27,
+  "signature": "PROC WINAPI wglGetProcAddress( LPCSTR name )",
+  "header_comment": "/***********************************************************************\n *\t\twglGetProcAddress (OPENGL32.@)\n */",
+  "code": "PROC WINAPI wglGetProcAddress( LPCSTR name )\n{\n    const struct registry_entry *func;\n    const enum opengl_extension *ext;\n    struct context *ctx;\n\n    if (!(ctx = get_current_context())) return NULL;\n\n    if (!(func = get_function_entry( name )))\n    {\n        WARN( \"Function %s unknown\\n\", name );\n        return NULL;\n    }\n\n    if (!strncmp( name, \"wglGetExtensionsString\", 22 ))\n    {\n        EnterCriticalSection( &wgl_cs );\n        if (!wgl_extensions) init_wgl_extensions( ctx->base.extensions );\n        LeaveCriticalSection( &wgl_cs );\n    }\n\n    if (func->major && ctx->base.attrs.major > func->major) return func->func;\n    if (func->major && ctx->base.attrs.major == func->major && ctx->base.attrs.minor >= func->minor) return func->func;\n\n    for (ext = func->extensions; *ext != GL_EXTENSION_COUNT; ext++)\n        if (ctx->base.extensions[*ext]) return func->func;\n\n    WARN( \"Extensions required for %s not supported\\n\", name );\n    return NULL;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <math.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"ntuser.h\"",
+   "#include \"ntgdi.h\"",
+   "#include \"malloc.h\"",
+   "#include \"unixlib.h\"",
+   "#include \"private.h\"",
+   "#include \"wine/glu.h\"",
+   "#include \"wine/rbtree.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "opengl32!wglGetProcAddress [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/opengl32/tests/opengl.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 2
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-wglgetprocaddress.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-wglgetprocaddress",
+   "documented_name": "wglgetprocaddress",
+   "file": "docs/0168_sdk-api_nf-wingdi-wglgetprocaddress.md",
+   "text": "---\nUID: NF:wingdi.wglGetProcAddress\ntitle: wglGetProcAddress function (wingdi.h)\ndescription: The wglGetProcAddress function returns the address of an OpenGL extension function for use with the current OpenGL rendering context.\nhelpviewer_keywords: [\"_ogl_wglGetProcAddress\",\"opengl.wglgetprocaddress\",\"wglGetProcAddress\",\"wglGetProcAddress function [OpenGL]\",\"wingdi/wglGetProcAddress\"]\nold-location: opengl\\wglgetprocaddress.htm\ntech.root: OpenGL\nms.assetid: 7c419b64-1bc6-492e-9853-98b08f38a5ba\nms.date: 12/05/2018\nms.keywords: _ogl_wglGetProcAddress, opengl.wglgetprocaddress, wglGetProcAddress, wglGetProcAddress function [OpenGL], wingdi/wglGetProcAddress\nreq.header: wingdi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Opengl32.lib\nreq.dll: Opengl32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - wglGetProcAddress\n - wingdi/wglGetProcAddress\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - opengl32.dll\napi_name:\n - wglGetProcAddress\n---\n\n# wglGetProcAddress function\n\n\n## -description\n\nThe <b>wglGetProcAddress</b> function returns the address of an OpenGL extension function for use with the current OpenGL rendering context.\n\n## -parameters\n\n### -param unnamedParam1\n\nPoints to a <b>null</b>-terminated string that is the name of the extension function. The name of the extension function must be identical to a corresponding function implemented by OpenGL.\n\n## -returns\n\nWhen the function succeeds, the return value is the address of the extension function.\n\nWhen no current rendering context exists or the function fails, the return value is <b>NULL</b>. To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThe OpenGL library supports multiple implementations of its functions. Extension functions supported in one rendering context are not necessarily available in a separate rendering context. Thus, for a given rendering context in an application, use the function addresses returned by the <b>wglGetProcAddress</b> function only.\n\nThe spelling and the case of the extension function pointed to by <i>lpszProc</i> must be identical to that of a function supported and implemented by OpenGL. Because extension functions are not exported by OpenGL, you must use <b>wglGetProcAddress</b> to get the addresses of vendor-specific extension functions.\n\nThe extension function addresses are unique for each pixel format. All rendering contexts of a given pixel format share the same extension function addresses.\n\n## -see-also\n\n<a href=\"/windows/desktop/OpenGL/opengl-on-windows-nt--windows-2000--and-windows-95-98\">OpenGL on Windows</a>\n\n\n\n<a href=\"/windows/desktop/OpenGL/wgl-functions\">WGL Functions</a>\n\n\n\n<a href=\"/windows/desktop/OpenGL/glgetstring\">glGetString</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-wglmakecurrent\">wglMakeCurrent</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_current_context",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 699,
+   "end_line": 703,
+   "static": true,
+   "called_from": [
+    "wglGetProcAddress"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:767",
+    "dlls/opengl32/wgl.c:781",
+    "dlls/opengl32/wgl.c:824",
+    "dlls/opengl32/wgl.c:870",
+    "dlls/opengl32/wgl.c:885"
+   ],
+   "signature": "static struct context *get_current_context(void)",
+   "code": "static struct context *get_current_context(void)\n{\n    HGLRC current = NtCurrentTeb()->glCurrentRC;\n    return current ? context_from_handle( current ) : NULL;\n}"
+  },
+  {
+   "name": "init_wgl_extensions",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 136,
+   "end_line": 151,
+   "static": true,
+   "called_from": [
+    "wglGetProcAddress"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void init_wgl_extensions( const BOOLEAN extensions[GL_EXTENSION_COUNT] )",
+   "code": "static void init_wgl_extensions( const BOOLEAN extensions[GL_EXTENSION_COUNT] )\n{\n    UINT pos = 0, len = 0, ext;\n    char *str;\n\n    for (ext = MIN_WGL_EXTENSION; ext <= MAX_WGL_EXTENSION; ext++)\n        if (extensions[ext]) len += all_extensions[ext].len + 1;\n\n    if (!(str = malloc( len + 1 ))) return;\n\n    for (ext = MIN_WGL_EXTENSION; ext <= MAX_WGL_EXTENSION; ext++)\n        if (extensions[ext]) pos += sprintf( str + pos, \"%s \", all_extensions[ext].name );\n    str[pos - 1] = 0;\n\n    wgl_extensions = str;\n}"
+  },
+  {
+   "name": "context_from_handle",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 655,
+   "end_line": 658,
+   "static": true,
+   "called_from": [
+    "get_current_context"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:662",
+    "dlls/opengl32/wgl.c:1085",
+    "dlls/opengl32/wgl.c:1182",
+    "dlls/opengl32/wgl.c:1183",
+    "dlls/opengl32/wgl.c:1286"
+   ],
+   "signature": "static struct context *context_from_handle( HGLRC handle )",
+   "code": "static struct context *context_from_handle( HGLRC handle )\n{\n    return context_from_opengl_client_context( opengl_client_context_from_handle( handle ) );\n}"
+  },
+  {
+   "name": "context_from_opengl_client_context",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 643,
+   "end_line": 646,
+   "static": true,
+   "called_from": [
+    "context_from_handle"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:686"
+   ],
+   "signature": "static struct context *context_from_opengl_client_context( struct opengl_client_context *base )",
+   "code": "static struct context *context_from_opengl_client_context( struct opengl_client_context *base )\n{\n    return CONTAINING_RECORD( base, struct context, base );\n}"
+  },
+  {
+   "name": "opengl_client_context_from_handle",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 648,
+   "end_line": 653,
+   "static": true,
+   "called_from": [
+    "context_from_handle"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:752",
+    "dlls/opengl32/wgl.c:1148",
+    "dlls/opengl32/wgl.c:1154"
+   ],
+   "signature": "static struct opengl_client_context *opengl_client_context_from_handle( HGLRC handle )",
+   "code": "static struct opengl_client_context *opengl_client_context_from_handle( HGLRC handle )\n{\n    struct handle_entry *ptr;\n    if (!(ptr = get_handle_ptr( &contexts, handle ))) return NULL;\n    return ptr->context;\n}"
+  },
+  {
+   "name": "get_handle_ptr",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 207,
+   "end_line": 224,
+   "static": true,
+   "called_from": [
+    "opengl_client_context_from_handle"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:230",
+    "dlls/opengl32/wgl.c:284",
+    "dlls/opengl32/wgl.c:1112",
+    "dlls/opengl32/wgl.c:2967",
+    "dlls/opengl32/wgl.c:3029"
+   ],
+   "signature": "static struct handle_entry *get_handle_ptr( struct handle_table *table, HANDLE handle )",
+   "code": "static struct handle_entry *get_handle_ptr( struct handle_table *table, HANDLE handle )\n{\n    UINT index = ((UINT_PTR)handle & 0xffff) - 1;\n    struct handle_entry *ptr;\n\n    if (index >= ARRAY_SIZE(table->handles)) return NULL;\n    ptr = table->handles + index;\n\n    AcquireSRWLockShared( &table->lock );\n    if (index >= table->count || ULongToHandle( ptr->handle ) != handle)\n    {\n        RtlSetLastWin32Error( ERROR_INVALID_HANDLE );\n        ptr = NULL;\n    }\n    ReleaseSRWLockShared( &table->lock );\n\n    return ptr;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "context",
+    "kind": "struct_decl",
+    "start_line": 626,
+    "end_line": 641,
+    "code": "struct context\n{\n    struct opengl_client_context base;\n    struct display_lists *lists;\n    GLubyte *extensions; /* compat extension string */\n    struct rb_tree wow64_strings;\n\n    /* semi-stub state tracker for wglCopyContext */\n    GLbitfield used;                            /* context state used bits */\n    struct lighting_state lighting;             /* GL_LIGHTING_BIT */\n    struct depth_buffer_state depth_buffer;     /* GL_DEPTH_BUFFER_BIT */\n    struct viewport_state viewport;             /* GL_VIEWPORT_BIT */\n    struct enable_state enable;                 /* GL_ENABLE_BIT */\n    struct color_buffer_state color_buffer;     /* GL_COLOR_BUFFER_BIT */\n    struct hint_state hint;                     /* GL_HINT_BIT */\n};"
+   },
+   {
+    "name": "extension_entry",
+    "kind": "struct_decl",
+    "start_line": 61,
+    "end_line": 65,
+    "code": "struct extension_entry\n{\n    const char *name;\n    size_t len;\n};"
+   },
+   {
+    "name": "handle_entry",
+    "kind": "struct_decl",
+    "start_line": 153,
+    "end_line": 163,
+    "code": "struct handle_entry\n{\n    UINT handle;\n    union\n    {\n        struct opengl_client_context *context;\n        struct opengl_client_pbuffer *pbuffer;\n        struct handle_entry *next_free;\n        void *user_data;\n    };\n};"
+   },
+   {
+    "name": "handle_table",
+    "kind": "struct_decl",
+    "start_line": 165,
+    "end_line": 171,
+    "code": "struct handle_table\n{\n    SRWLOCK              lock;\n    struct handle_entry  handles[1024];\n    struct handle_entry *next_free;\n    UINT                 count;\n};"
+   },
+   {
+    "name": "union (anonymous at /w/wine/dlls/opengl32/wgl.c:156:5)",
+    "kind": "union_decl",
+    "start_line": 156,
+    "end_line": 162,
+    "code": "    union\n    {\n        struct opengl_client_context *context;\n        struct opengl_client_pbuffer *pbuffer;\n        struct handle_entry *next_free;\n        void *user_data;\n    };"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 41,
+    "end_line": 41,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(opengl);"
+   },
+   {
+    "name": "all_extensions",
+    "type": "const struct extension_entry[1115]",
+    "static": true,
+    "start_line": 68,
+    "end_line": 68,
+    "code": "static const struct extension_entry all_extensions[] = { ALL_EGL_EXTS ALL_GL_EXTS ALL_WGL_EXTS };"
+   },
+   {
+    "name": "contexts",
+    "type": "struct handle_table",
+    "static": true,
+    "start_line": 174,
+    "end_line": 174,
+    "code": "static struct handle_table contexts;"
+   },
+   {
+    "name": "wgl_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 58,
+    "end_line": 58,
+    "code": "static CRITICAL_SECTION wgl_cs = { &wgl_cs_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "wgl_extensions",
+    "type": "char *",
+    "static": true,
+    "start_line": 59,
+    "end_line": 59,
+    "code": "static char *wgl_extensions;"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "get_function_entry",
+    "file": "dlls/opengl32/thunks.c",
+    "start_line": 34157
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "AcquireSRWLockShared",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:556"
+    ]
+   },
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "ReleaseSRWLockShared",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:616"
+    ]
+   },
+   {
+    "name": "RtlSetLastWin32Error",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "strncmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:488"
+    ]
+   }
+  ],
+  "header_inline": [
+   "NtCurrentTeb",
+   "ULongToHandle",
+   "sprintf",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "opengl32.wglGetProcAddress",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "OpenGL",
+   "header": "wingdi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 30,
+   "body": 29,
+   "code": 17
+  },
+  "cyclomatic": 12,
+  "return_type": "PROC",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 2,
+   "n_tests": 6,
+   "n_tests_other": 4,
+   "own_test_functions": [
+    "dlls/opengl32/tests/opengl.c::init_functions",
+    "dlls/opengl32/tests/opengl.c::test_getprocaddress"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-wglgetprocaddress",
+   "source": "win32",
+   "description": "The wglGetProcAddress function returns the address of an OpenGL extension function for use with the current OpenGL rendering context.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Opengl32.dll"
+  },
+  "exports": [
+   "opengl32.wglGetProcAddress"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.944,
+   "first_date": "2012-11-08",
+   "median_date": "2026-04-15",
+   "last_date": "2026-09-23",
+   "code_lines": 18
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "gdiplus.GdipSetClipHrgn",
+  "share_after_cutoff": 0.944,
+  "last_date": "2026-09-23"
+ }
+}

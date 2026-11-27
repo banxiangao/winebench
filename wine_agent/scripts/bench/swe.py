@@ -375,8 +375,9 @@ def agent_network():
 def offline_env():
     """environment overrides for the agent's shell commands, see agent_network()"""
     mode = agent_network()
-    if mode == 'dead_proxy': return {**{v: DEAD_PROXY for v in PROXY_VARS}, 'no_proxy': '', 'NO_PROXY': ''}
-    return {v: '' for v in PROXY_VARS} if mode == 'proxy_blanked' else {}
+    keys = {v: '' for v in os.environ if v.endswith('_API_KEY') or v == 'WB_SECRETS'}        # the model keys of this process are not for the agent's shell
+    if mode == 'dead_proxy': return {**{v: DEAD_PROXY for v in PROXY_VARS}, 'no_proxy': '', 'NO_PROXY': '', **keys}
+    return {**({v: '' for v in PROXY_VARS} if mode == 'proxy_blanked' else {}), **keys}
 
 # ---------------------------------------------------------------- results
 def write_result(out_dir, i, out, traj, patch):

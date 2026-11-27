@@ -1,0 +1,507 @@
+{
+ "id": "0083",
+ "function": {
+  "name": "EnumEnhMetaFile",
+  "export_name": "EnumEnhMetaFile",
+  "module": "gdi32",
+  "source_module": "gdi32",
+  "exported_by": [
+   "gdi32"
+  ],
+  "side": "PE",
+  "file": "dlls/gdi32/enhmetafile.c",
+  "start_line": 2386,
+  "end_line": 2599,
+  "body_lines": 211,
+  "signature": "BOOL WINAPI EnumEnhMetaFile( HDC hdc,                /* [in] device context to pass to _EnhMetaFunc_ */ HENHMETAFILE hmf,       /* [in] EMF to walk */ ENHMFENUMPROC callback, /* [in] callback function */ LPVOID data,            /* [in] optional data for callback function */ const RECT *lpRect      /* [in] bounding rectangle for rendered metafile */ )",
+  "header_comment": "/*****************************************************************************\n *\n *        EnumEnhMetaFile  (GDI32.@)\n *\n *  Walk an enhanced metafile, calling a user-specified function _EnhMetaFunc_\n *  for each\n *  record. Returns when either every record has been used or\n *  when _EnhMetaFunc_ returns FALSE.\n *\n *\n * RETURNS\n *  TRUE if every record is used, FALSE if any invocation of _EnhMetaFunc_\n *  returns FALSE.\n *\n * BUGS\n *   Ignores rect.\n *\n * NOTES\n *   This function behaves differently in Win9x and WinNT.\n *\n *   In WinNT, the DC's world transform is updated as the EMF changes\n *    the Window/Viewport Extent and Origin or its world transform.\n *    The actual Window/Viewport Extent and Origin are left untouched.\n *\n *   In Win9x, the DC is left untouched, and PlayEnhMetaFileRecord\n *    updates the scaling itself but only just before a record that\n *    writes anything to the DC.\n *\n *   I'm not sure where the data (enum_emh_data) is stored in either\n *    version. For this implementation, it is stored before the handle\n *    table, but it could be stored in the DC, in the EMF handle or in\n *    TLS.\n *             MJM  5 Oct 2002\n */",
+  "code": "BOOL WINAPI EnumEnhMetaFile(\n     HDC hdc,                /* [in] device context to pass to _EnhMetaFunc_ */\n     HENHMETAFILE hmf,       /* [in] EMF to walk */\n     ENHMFENUMPROC callback, /* [in] callback function */\n     LPVOID data,            /* [in] optional data for callback function */\n     const RECT *lpRect      /* [in] bounding rectangle for rendered metafile */\n    )\n{\n    BOOL ret;\n    ENHMETAHEADER *emh;\n    ENHMETARECORD *emr;\n    DWORD offset;\n    UINT i;\n    HANDLETABLE *ht;\n    INT savedMode = 0;\n    XFORM savedXform;\n    HPEN hPen = NULL;\n    HBRUSH hBrush = NULL;\n    HFONT hFont = NULL;\n    HRGN hRgn = NULL;\n    enum_emh_data *info;\n    SIZE vp_size, win_size;\n    POINT vp_org, win_org;\n    INT mapMode = MM_TEXT, old_align = 0, old_rop2 = 0, old_arcdir = 0, old_polyfill = 0, old_stretchblt = 0;\n    COLORREF old_text_color = 0, old_bk_color = 0;\n\n    if(!lpRect && hdc)\n    {\n\tSetLastError(ERROR_INVALID_PARAMETER);\n\treturn FALSE;\n    }\n\n    emh = EMF_GetEnhMetaHeader(hmf);\n    if(!emh) {\n        SetLastError(ERROR_INVALID_HANDLE);\n        return FALSE;\n    }\n\n    info = HeapAlloc( GetProcessHeap(), 0,\n\t\t    sizeof (enum_emh_data) + sizeof(HANDLETABLE) * emh->nHandles );\n    if(!info)\n    {\n\tSetLastError(ERROR_NOT_ENOUGH_MEMORY);\n\treturn FALSE;\n    }\n    info->state.mode = MM_TEXT;\n    info->state.wndOrgX = 0;\n    info->state.wndOrgY = 0;\n    info->state.wndExtX = 1;\n    info->state.wndExtY = 1;\n    info->state.vportOrgX = 0;\n    info->state.vportOrgY = 0;\n    info->state.vportExtX = 1;\n    info->state.vportExtY = 1;\n    info->state.world_transform.eM11 = info->state.world_transform.eM22 = 1;\n    info->state.world_transform.eM12 = info->state.world_transform.eM21 = 0;\n    info->state.world_transform.eDx  = info->state.world_transform.eDy =  0;\n\n    info->state.next = NULL;\n    info->save_level = 0;\n    info->saved_state = NULL;\n    info->init_transform = info->state.world_transform;\n\n    ht = (HANDLETABLE*) &info[1];\n    ht->objectHandle[0] = hmf;\n    for(i = 1; i < emh->nHandles; i++)\n        ht->objectHandle[i] = NULL;\n\n    if (hdc && !is_meta_dc( hdc ))\n    {\n        savedMode = SetGraphicsMode(hdc, GM_ADVANCED);\n        GetWorldTransform(hdc, &savedXform);\n        GetViewportExtEx(hdc, &vp_size);\n        GetWindowExtEx(hdc, &win_size);\n        GetViewportOrgEx(hdc, &vp_org);\n        GetWindowOrgEx(hdc, &win_org);\n        mapMode = GetMapMode(hdc);\n\n        /* save DC */\n        hPen = GetCurrentObject(hdc, OBJ_PEN);\n        hBrush = GetCurrentObject(hdc, OBJ_BRUSH);\n        hFont = GetCurrentObject(hdc, OBJ_FONT);\n\n        hRgn = NtGdiCreateRectRgn(0, 0, 0, 0);\n        if (!GetClipRgn(hdc, hRgn))\n        {\n            DeleteObject(hRgn);\n            hRgn = 0;\n        }\n\n        old_text_color = SetTextColor(hdc, RGB(0,0,0));\n        old_bk_color = SetBkColor(hdc, RGB(0xff, 0xff, 0xff));\n        old_align = SetTextAlign(hdc, 0);\n        old_rop2 = SetROP2(hdc, R2_COPYPEN);\n        old_arcdir = SetArcDirection(hdc, AD_COUNTERCLOCKWISE);\n        old_polyfill = SetPolyFillMode(hdc, ALTERNATE);\n        old_stretchblt = SetStretchBltMode(hdc, BLACKONWHITE);\n\n        if (!IS_WIN9X())\n        {\n            /* WinNT combines the vp/win ext/org info into a transform */\n            double xscale, yscale;\n            xscale = (double)vp_size.cx / (double)win_size.cx;\n            yscale = (double)vp_size.cy / (double)win_size.cy;\n            info->init_transform.eM11 = xscale;\n            info->init_transform.eM12 = 0.0;\n            info->init_transform.eM21 = 0.0;\n            info->init_transform.eM22 = yscale;\n            info->init_transform.eDx  = (double)vp_org.x - xscale * (double)win_org.x;\n            info->init_transform.eDy  = (double)vp_org.y - yscale * (double)win_org.y;\n\n            CombineTransform(&info->init_transform, &savedXform, &info->init_transform);\n        }\n\n        if ( lpRect && WIDTH(emh->rclFrame) && HEIGHT(emh->rclFrame) )\n        {\n            double xSrcPixSize, ySrcPixSize, xscale, yscale;\n            XFORM xform;\n\n            TRACE(\"rect: %s. rclFrame: (%ld,%ld)-(%ld,%ld)\\n\", wine_dbgstr_rect(lpRect),\n               emh->rclFrame.left, emh->rclFrame.top, emh->rclFrame.right,\n               emh->rclFrame.bottom);\n\n            xSrcPixSize = (double) emh->szlMillimeters.cx / emh->szlDevice.cx;\n            ySrcPixSize = (double) emh->szlMillimeters.cy / emh->szlDevice.cy;\n            xscale = (double) WIDTH(*lpRect) * 100.0 /\n                     WIDTH(emh->rclFrame) * xSrcPixSize;\n            yscale = (double) HEIGHT(*lpRect) * 100.0 /\n                     HEIGHT(emh->rclFrame) * ySrcPixSize;\n            TRACE(\"xscale = %f, yscale = %f\\n\", xscale, yscale);\n\n            xform.eM11 = xscale;\n            xform.eM12 = 0;\n            xform.eM21 = 0;\n            xform.eM22 = yscale;\n            xform.eDx = (double) lpRect->left - (double) WIDTH(*lpRect) / WIDTH(emh->rclFrame) * emh->rclFrame.left;\n            xform.eDy = (double) lpRect->top - (double) HEIGHT(*lpRect) / HEIGHT(emh->rclFrame) * emh->rclFrame.top;\n\n            CombineTransform(&info->init_transform, &xform, &info->init_transform);\n        }\n\n        /* WinNT resets the current vp/win org/ext */\n        if (!IS_WIN9X())\n        {\n            SetMapMode(hdc, MM_TEXT);\n            SetWindowOrgEx(hdc, 0, 0, NULL);\n            SetViewportOrgEx(hdc, 0, 0, NULL);\n            EMF_Update_MF_Xform(hdc, info);\n        }\n    }\n\n    ret = TRUE;\n    offset = 0;\n    while(ret && offset < emh->nBytes)\n    {\n\temr = (ENHMETARECORD *)((char *)emh + offset);\n\n        if (offset + 8 > emh->nBytes ||\n            offset > offset + emr->nSize ||\n            offset + emr->nSize > emh->nBytes)\n        {\n            WARN(\"record truncated\\n\");\n            break;\n        }\n\n        /* In Win9x mode we update the xform if the record will produce output */\n        if (hdc && IS_WIN9X() && emr_produces_output(emr->iType))\n            EMF_Update_MF_Xform(hdc, info);\n\n\tTRACE(\"Calling EnumFunc with record %s, size %ld\\n\", get_emr_name(emr->iType), emr->nSize);\n\tret = (*callback)(hdc, ht, emr, emh->nHandles, (LPARAM)data);\n\toffset += emr->nSize;\n    }\n\n    if (hdc && !is_meta_dc( hdc ))\n    {\n        SetStretchBltMode(hdc, old_stretchblt);\n        SetPolyFillMode(hdc, old_polyfill);\n        SetArcDirection(hdc, old_arcdir);\n        SetROP2(hdc, old_rop2);\n        SetTextAlign(hdc, old_align);\n        SetBkColor(hdc, old_bk_color);\n        SetTextColor(hdc, old_text_color);\n\n\t/* restore DC */\n\tSelectObject(hdc, hBrush);\n\tSelectObject(hdc, hPen);\n\tSelectObject(hdc, hFont);\n        ExtSelectClipRgn(hdc, hRgn, RGN_COPY);\n        DeleteObject(hRgn);\n\n        SetWorldTransform(hdc, &savedXform);\n        if (savedMode)\n            SetGraphicsMode(hdc, savedMode);\n        SetMapMode(hdc, mapMode);\n        SetWindowOrgEx(hdc, win_org.x, win_org.y, NULL);\n        SetWindowExtEx(hdc, win_size.cx, win_size.cy, NULL);\n        SetViewportOrgEx(hdc, vp_org.x, vp_org.y, NULL);\n        SetViewportExtEx(hdc, vp_size.cx, vp_size.cy, NULL);\n    }\n\n    for(i = 1; i < emh->nHandles; i++) /* Don't delete element 0 (hmf) */\n        if( (ht->objectHandle)[i] )\n\t    DeleteObject( (ht->objectHandle)[i] );\n\n    while (info->saved_state)\n    {\n        EMF_dc_state *state = info->saved_state;\n        info->saved_state = info->saved_state->next;\n        HeapFree( GetProcessHeap(), 0, state );\n    }\n    HeapFree( GetProcessHeap(), 0, info );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include <assert.h>",
+   "#include <math.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winerror.h\"",
+   "#include \"gdi_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "gdi32!EnumEnhMetaFile [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdi32/tests/metafile.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 7
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-enumenhmetafile.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-enumenhmetafile",
+   "documented_name": "enumenhmetafile",
+   "file": "docs/0083_sdk-api_nf-wingdi-enumenhmetafile.md",
+   "text": "---\nUID: NF:wingdi.EnumEnhMetaFile\ntitle: EnumEnhMetaFile function (wingdi.h)\ndescription: The EnumEnhMetaFile function enumerates the records within an enhanced-format metafile by retrieving each record and passing it to the specified callback function.\nhelpviewer_keywords: [\"EnumEnhMetaFile\",\"EnumEnhMetaFile function [Windows GDI]\",\"_win32_EnumEnhMetaFile\",\"gdi.enumenhmetafile\",\"wingdi/EnumEnhMetaFile\"]\nold-location: gdi\\enumenhmetafile.htm\ntech.root: gdi\nms.assetid: bef5f43e-219a-4f8a-986d-290e29e17c4e\nms.date: 12/05/2018\nms.keywords: EnumEnhMetaFile, EnumEnhMetaFile function [Windows GDI], _win32_EnumEnhMetaFile, gdi.enumenhmetafile, wingdi/EnumEnhMetaFile\nreq.header: wingdi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - EnumEnhMetaFile\n - wingdi/EnumEnhMetaFile\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - gdi32.dll\n - Ext-MS-Win-GDI-Internal-Desktop-L1-1-0.dll\n - GDI32Full.dll\napi_name:\n - EnumEnhMetaFile\n---\n\n# EnumEnhMetaFile function\n\n\n## -description\n\nThe <b>EnumEnhMetaFile</b> function enumerates the records within an enhanced-format metafile by retrieving each record and passing it to the specified callback function. The application-supplied callback function processes each record as required. The enumeration continues until the last record is processed or when the callback function returns zero.\n\n## -parameters\n\n### -param hdc [in]\n\nA handle to a device context. This handle is passed to the callback function.\n\n### -param hmf [in]\n\nA handle to an enhanced metafile.\n\n### -param proc [in]\n\nA pointer to the application-supplied callback function. For more information, see the <a href=\"/previous-versions/dd162606(v=vs.85)\">EnhMetaFileProc</a> function.\n\n### -param param [in]\n\nA pointer to optional callback-function data.\n\n### -param lpRect [in]\n\nA pointer to a <a href=\"/windows/desktop/api/windef/ns-windef-rect\">RECT</a> structure that specifies the coordinates, in logical units, of the picture's upper-left and lower-right corners.\n\n## -returns\n\nIf the callback function successfully enumerates all the records in the enhanced metafile, the return value is nonzero.\n\nIf the callback function does not successfully enumerate all the records in the enhanced metafile, the return value is zero.\n\n## -remarks\n\nPoints along the edge of the rectangle pointed to by the <i>lpRect</i> parameter are included in the picture. If the <i>hdc</i> parameter is <b>NULL</b>, the system ignores <i>lpRect</i>.\n\nIf the callback function calls the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-playenhmetafilerecord\">PlayEnhMetaFileRecord</a> function, <i>hdc</i> must identify a valid device context. The system uses the device context's transformation and mapping mode to transform the picture displayed by the <b>PlayEnhMetaFileRecord</b> function.\n\nYou can use the <b>EnumEnhMetaFile</b> function to embed one enhanced-metafile within another.\n\n## -see-also\n\n<a href=\"/previous-versions/dd162606(v=vs.85)\">EnhMetaFileProc</a>\n\n\n\n<a href=\"/windows/desktop/gdi/metafile-functions\">Metafile Functions</a>\n\n\n\n<a href=\"/windows/desktop/gdi/metafiles\">Metafiles Overview</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-playenhmetafile\">PlayEnhMetaFile</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-playenhmetafilerecord\">PlayEnhMetaFileRecord</a>\n\n\n\n<a href=\"/windows/desktop/api/windef/ns-windef-rect\">RECT</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "EMF_GetEnhMetaHeader",
+   "file": "dlls/gdi32/enhmetafile.c",
+   "start_line": 329,
+   "end_line": 343,
+   "static": true,
+   "called_from": [
+    "EnumEnhMetaFile"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/enhmetafile.c:434",
+    "dlls/gdi32/enhmetafile.c:455",
+    "dlls/gdi32/enhmetafile.c:487",
+    "dlls/gdi32/enhmetafile.c:525",
+    "dlls/gdi32/enhmetafile.c:2649"
+   ],
+   "signature": "static ENHMETAHEADER *EMF_GetEnhMetaHeader( HENHMETAFILE hmf )",
+   "code": "static ENHMETAHEADER *EMF_GetEnhMetaHeader( HENHMETAFILE hmf )\n{\n    ENHMETAHEADER *ret = NULL;\n    ENHMETAFILEOBJ *metafile;\n\n    EnterCriticalSection( &enhmetafile_cs );\n    if ((metafile = get_gdi_client_ptr( hmf, NTGDI_OBJ_ENHMETAFILE )))\n    {\n        TRACE( \"hmf %p -> enhmetafile %p\\n\", hmf, metafile );\n        ret = metafile->emh;\n    }\n    else SetLastError( ERROR_INVALID_HANDLE );\n    LeaveCriticalSection( &enhmetafile_cs );\n    return ret;\n}"
+  },
+  {
+   "name": "EMF_Update_MF_Xform",
+   "file": "dlls/gdi32/enhmetafile.c",
+   "start_line": 569,
+   "end_line": 590,
+   "static": true,
+   "called_from": [
+    "EnumEnhMetaFile"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/enhmetafile.c:837",
+    "dlls/gdi32/enhmetafile.c:931",
+    "dlls/gdi32/enhmetafile.c:949",
+    "dlls/gdi32/enhmetafile.c:962",
+    "dlls/gdi32/enhmetafile.c:979"
+   ],
+   "signature": "static void EMF_Update_MF_Xform(HDC hdc, const enum_emh_data *info)",
+   "code": "static void EMF_Update_MF_Xform(HDC hdc, const enum_emh_data *info)\n{\n    XFORM mapping_mode_trans, final_trans;\n    double scaleX, scaleY;\n\n    scaleX = (double)info->state.vportExtX / (double)info->state.wndExtX;\n    scaleY = (double)info->state.vportExtY / (double)info->state.wndExtY;\n    mapping_mode_trans.eM11 = scaleX;\n    mapping_mode_trans.eM12 = 0.0;\n    mapping_mode_trans.eM21 = 0.0;\n    mapping_mode_trans.eM22 = scaleY;\n    mapping_mode_trans.eDx  = (double)info->state.vportOrgX - scaleX * (double)info->state.wndOrgX;\n    mapping_mode_trans.eDy  = (double)info->state.vportOrgY - scaleY * (double)info->state.wndOrgY;\n\n    CombineTransform(&final_trans, &info->state.world_transform, &mapping_mode_trans);\n    CombineTransform(&final_trans, &final_trans, &info->init_transform);\n \n    if (!SetWorldTransform(hdc, &final_trans))\n    {\n        ERR(\"World transform failed!\\n\");\n    }\n}"
+  },
+  {
+   "name": "emr_produces_output",
+   "file": "dlls/gdi32/enhmetafile.c",
+   "start_line": 713,
+   "end_line": 769,
+   "static": true,
+   "called_from": [
+    "EnumEnhMetaFile"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL emr_produces_output(int type)",
+   "code": "static BOOL emr_produces_output(int type)\n{\n    switch(type) {\n    case EMR_POLYBEZIER:\n    case EMR_POLYGON:\n    case EMR_POLYLINE:\n    case EMR_POLYBEZIERTO:\n    case EMR_POLYLINETO:\n    case EMR_POLYPOLYLINE:\n    case EMR_POLYPOLYGON:\n    case EMR_SETPIXELV:\n    case EMR_MOVETOEX:\n    case EMR_EXCLUDECLIPRECT:\n    case EMR_INTERSECTCLIPRECT:\n    case EMR_SELECTOBJECT:\n    case EMR_ANGLEARC:\n    case EMR_ELLIPSE:\n    case EMR_RECTANGLE:\n    case EMR_ROUNDRECT:\n    case EMR_ARC:\n    case EMR_CHORD:\n    case EMR_PIE:\n    case EMR_EXTFLOODFILL:\n    case EMR_LINETO:\n    case EMR_ARCTO:\n    case EMR_POLYDRAW:\n    case EMR_GDICOMMENT:\n    case EMR_FILLRGN:\n    case EMR_FRAMERGN:\n    case EMR_INVERTRGN:\n    case EMR_PAINTRGN:\n    case EMR_BITBLT:\n    case EMR_STRETCHBLT:\n    case EMR_MASKBLT:\n    case EMR_PLGBLT:\n    case EMR_SETDIBITSTODEVICE:\n    case EMR_STRETCHDIBITS:\n    case EMR_EXTTEXTOUTA:\n    case EMR_EXTTEXTOUTW:\n    case EMR_POLYBEZIER16:\n    case EMR_POLYGON16:\n    case EMR_POLYLINE16:\n    case EMR_POLYBEZIERTO16:\n    case EMR_POLYLINETO16:\n    case EMR_POLYPOLYLINE16:\n    case EMR_POLYPOLYGON16:\n    case EMR_POLYDRAW16:\n    case EMR_POLYTEXTOUTA:\n    case EMR_POLYTEXTOUTW:\n    case EMR_SMALLTEXTOUT:\n    case EMR_ALPHABLEND:\n    case EMR_TRANSPARENTBLT:\n        return TRUE;\n    default:\n        return FALSE;\n    }\n}"
+  },
+  {
+   "name": "get_emr_name",
+   "file": "dlls/gdi32/enhmetafile.c",
+   "start_line": 199,
+   "end_line": 206,
+   "static": true,
+   "called_from": [
+    "EnumEnhMetaFile"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdi32/enhmetafile.c:812"
+   ],
+   "signature": "static const char *get_emr_name(DWORD type)",
+   "code": "static const char *get_emr_name(DWORD type)\n{\n    unsigned int i;\n    for(i = 0; i < ARRAY_SIZE(emr_names); i++)\n        if(type == emr_names[i].type) return emr_names[i].name;\n    TRACE(\"Unknown record type %ld\\n\", type);\n   return NULL;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "EMF_dc_state",
+    "kind": "struct_decl",
+    "start_line": 538,
+    "end_line": 551,
+    "code": "typedef struct EMF_dc_state\n{\n    INT   mode;\n    XFORM world_transform;\n    INT   wndOrgX;\n    INT   wndOrgY;\n    INT   wndExtX;\n    INT   wndExtY;\n    INT   vportOrgX;\n    INT   vportOrgY;\n    INT   vportExtX;\n    INT   vportExtY;\n    struct EMF_dc_state *next;\n} EMF_dc_state;"
+   },
+   {
+    "name": "ENHMETAFILEOBJ",
+    "kind": "typedef_decl",
+    "start_line": 61,
+    "end_line": 65,
+    "code": "typedef struct\n{\n    ENHMETAHEADER        *emh;\n    BOOL                  on_disk;   /* true if metafile is on disk */\n} ENHMETAFILEOBJ;"
+   },
+   {
+    "name": "emr_name",
+    "kind": "struct_decl",
+    "start_line": 67,
+    "end_line": 194,
+    "code": "static const struct emr_name {\n    DWORD type;\n    const char *name;\n} emr_names[] = {\n#define X(p) {p, #p}\nX(EMR_HEADER),\nX(EMR_POLYBEZIER),\nX(EMR_POLYGON),\nX(EMR_POLYLINE),\nX(EMR_POLYBEZIERTO),\nX(EMR_POLYLINETO),\nX(EMR_POLYPOLYLINE),\nX(EMR_POLYPOLYGON),\nX(EMR_SETWINDOWEXTEX),\nX(EMR_SETWINDOWORGEX),\nX(EMR_SETVIEWPORTEXTEX),\nX(EMR_SETVIEWPORTORGEX),\nX(EMR_SETBRUSHORGEX),\nX(EMR_EOF),\nX(EMR_SETPIXELV),\nX(EMR_SETMAPPERFLAGS),\nX(EMR_SETMAPMODE),\nX(EMR_SETBKMODE),\nX(EMR_SETPOLYFILLMODE),\nX(EMR_SETROP2),\nX(EMR_SETSTRETCHBLTMODE),\nX(EMR_SETTEXTALIGN),\nX(EMR_SETCOLORADJUSTMENT),\nX(EMR_SETTEXTCOLOR),\nX(EMR_SETBKCOLOR),\nX(EMR_OFFSETCLIPRGN),\nX(EMR_MOVETOEX),\nX(EMR_SETMETARGN),\nX(EMR_EXCLUDECLIPRECT),\nX(EMR_INTERSECTCLIPRECT),\nX(EMR_SCALEVIEWPORTEXTEX),\nX(EMR_SCALEWINDOWEXTEX),\nX(EMR_SAVEDC),\nX(EMR_RESTOREDC),\nX(EMR_SETWORLDTRANSFORM),\nX(EMR_MODIFYWORLDTRANSFORM),\nX(EMR_SELECTOBJECT),\nX(EMR_CREATEPEN),\nX(EMR_CREATEBRUSHINDIRECT),\nX(EMR_DELETEOBJECT),\nX(EMR_ANGLEARC),\nX(EMR_ELLIPSE),\nX(EMR_RECTANGLE),\nX(EMR_ROUNDRECT),\nX(EMR_ARC),\nX(EMR_CHORD),\nX(EMR_PIE),\nX(EMR_SELECTPALETTE),\nX(EMR_CREATEPALETTE),\nX(EMR_SETPALETTEENTRIES),\nX(EMR_RESIZEPALETTE),\nX(EMR_REALIZEPALETTE),\nX(EMR_EXTFLOODFILL),\nX(EMR_LINETO),\nX(EMR_ARCTO),\nX(EMR_POLYDRAW),\nX(EMR_SETARCDIRECTION),\nX(EMR_SETMITERLIMIT),\nX(EMR_BEGINPATH),\nX(EMR_ENDPATH),\nX(EMR_CLOSEFIGURE),\nX(EMR_FILLPATH),\nX(EMR_STROKEANDFILLPATH),\nX(EMR_STROKEPATH),\nX(EMR_FLATTENPATH),\nX(EMR_WIDENPATH),\nX(EMR_SELECTCLIPPATH),\nX(EMR_ABORTPATH),\nX(EMR_GDICOMMENT),\nX(EMR_FILLRGN),\nX(EMR_FRAMERGN),\nX(EMR_INVERTRGN),\nX(EMR_PAINTRGN),\nX(EMR_EXTSELECTCLIPRGN),\nX(EMR_BITBLT),\nX(EMR_STRETCHBLT),\nX(EMR_MASKBLT),\nX(EMR_PLGBLT),\nX(EMR_SETDIBITSTODEVICE),\nX(EMR_STRETCHDIBITS),\nX(EMR_EXTCREATEFONTINDIRECTW),\nX(EMR_EXTTEXTOUTA),\nX(EMR_EXTTEXTOUTW),\nX(EMR_POLYBEZIER16),\nX(EMR_POLYGON16),\nX(EMR_POLYLINE16),\nX(EMR_POLYBEZIERTO16),\nX(EMR_POLYLINETO16),\nX(EMR_POLYPOLYLINE16),\nX(EMR_POLYPOLYGON16),\nX(EMR_POLYDRAW16),\nX(EMR_CREATEMONOBRUSH),\nX(EMR_CREATEDIBPATTERNBRUSHPT),\nX(EMR_EXTCREATEPEN),\nX(EMR_POLYTEXTOUTA),\nX(EMR_POLYTEXTOUTW),\nX(EMR_SETICMMODE),\nX(EMR_CREATECOLORSPACE),\nX(EMR_SETCOLORSPACE),\nX(EMR_DELETECOLORSPACE),\nX(EMR_GLSRECORD),\nX(EMR_GLSBOUNDEDRECORD),\nX(EMR_PIXELFORMAT),\nX(EMR_DRAWESCAPE),\nX(EMR_EXTESCAPE),\nX(EMR_STARTDOC),\nX(EMR_SMALLTEXTOUT),\nX(EMR_FORCEUFIMAPPING),\nX(EMR_NAMEDESCAPE),\nX(EMR_COLORCORRECTPALETTE),\nX(EMR_SETICMPROFILEA),\nX(EMR_SETICMPROFILEW),\nX(EMR_ALPHABLEND),\nX(EMR_SETLAYOUT),\nX(EMR_TRANSPARENTBLT),\nX(EMR_RESERVED_117),\nX(EMR_GRADIENTFILL),\nX(EMR_SETLINKEDUFI),\nX(EMR_SETTEXTJUSTIFICATION),\nX(EMR_COLORMATCHTOTARGETW),\nX(EMR_CREATECOLORSPACEW)\n#undef X\n};"
+   },
+   {
+    "name": "enum_emh_data",
+    "kind": "typedef_decl",
+    "start_line": 553,
+    "end_line": 559,
+    "code": "typedef struct enum_emh_data\n{\n    XFORM init_transform;\n    EMF_dc_state state;\n    INT save_level;\n    EMF_dc_state *saved_state;\n} enum_emh_data;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 49,
+    "end_line": 49,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(enhmetafile);"
+   },
+   {
+    "name": "emr_names",
+    "type": "const struct emr_name[121]",
+    "static": true,
+    "start_line": 70,
+    "end_line": 70,
+    "code": "} emr_names[] = {"
+   },
+   {
+    "name": "enhmetafile_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 59,
+    "end_line": 59,
+    "code": "static CRITICAL_SECTION enhmetafile_cs = { &critsect_debug, -1, 0, 0, 0, 0 };"
+   }
+  ],
+  "macros": [
+   {
+    "name": "HEIGHT",
+    "start_line": 565,
+    "end_line": 565,
+    "code": "#define HEIGHT(rect) ( (rect).bottom - (rect).top )"
+   },
+   {
+    "name": "IS_WIN9X",
+    "start_line": 567,
+    "end_line": 567,
+    "code": "#define IS_WIN9X() (GetVersion()&0x80000000)"
+   },
+   {
+    "name": "WIDTH",
+    "start_line": 564,
+    "end_line": 564,
+    "code": "#define WIDTH(rect) ( (rect).right - (rect).left )"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "get_gdi_client_ptr",
+    "file": "dlls/gdi32/objects.c",
+    "start_line": 119
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "CombineTransform",
+    "impl": [
+     "dlls/gdi32/objects.c:1010"
+    ]
+   },
+   {
+    "name": "DeleteObject",
+    "impl": [
+     "dlls/gdi32/objects.c:194"
+    ]
+   },
+   {
+    "name": "ExtSelectClipRgn",
+    "impl": [
+     "dlls/gdi32/dc.c:2301"
+    ]
+   },
+   {
+    "name": "GetClipRgn",
+    "impl": [
+     "dlls/gdi32/dc.c:2242"
+    ]
+   },
+   {
+    "name": "GetCurrentObject",
+    "impl": [
+     "dlls/gdi32/objects.c:394"
+    ]
+   },
+   {
+    "name": "GetMapMode",
+    "impl": [
+     "dlls/gdi32/dc.c:1012"
+    ]
+   },
+   {
+    "name": "GetViewportExtEx",
+    "impl": [
+     "dlls/gdi32/dc.c:1239"
+    ]
+   },
+   {
+    "name": "GetViewportOrgEx",
+    "impl": [
+     "dlls/gdi32/dc.c:1269"
+    ]
+   },
+   {
+    "name": "GetWindowExtEx",
+    "impl": [
+     "dlls/gdi32/dc.c:1164"
+    ]
+   },
+   {
+    "name": "GetWindowOrgEx",
+    "impl": [
+     "dlls/gdi32/dc.c:1194"
+    ]
+   },
+   {
+    "name": "GetWorldTransform",
+    "impl": [
+     "dlls/gdi32/dc.c:1314"
+    ]
+   },
+   {
+    "name": "SelectObject",
+    "impl": [
+     "dlls/gdi32/objects.c:324"
+    ]
+   },
+   {
+    "name": "SetArcDirection",
+    "impl": [
+     "dlls/gdi32/dc.c:966"
+    ]
+   },
+   {
+    "name": "SetBkColor",
+    "impl": [
+     "dlls/gdi32/dc.c:823"
+    ]
+   },
+   {
+    "name": "SetGraphicsMode",
+    "impl": [
+     "dlls/gdi32/dc.c:945"
+    ]
+   },
+   {
+    "name": "SetMapMode",
+    "impl": [
+     "dlls/gdi32/dc.c:1021"
+    ]
+   },
+   {
+    "name": "SetPolyFillMode",
+    "impl": [
+     "dlls/gdi32/dc.c:1086"
+    ]
+   },
+   {
+    "name": "SetROP2",
+    "impl": [
+     "dlls/gdi32/dc.c:1423"
+    ]
+   },
+   {
+    "name": "SetStretchBltMode",
+    "impl": [
+     "dlls/gdi32/dc.c:1350"
+    ]
+   },
+   {
+    "name": "SetTextAlign",
+    "impl": [
+     "dlls/gdi32/dc.c:795"
+    ]
+   },
+   {
+    "name": "SetTextColor",
+    "impl": [
+     "dlls/gdi32/dc.c:890"
+    ]
+   },
+   {
+    "name": "SetViewportExtEx",
+    "impl": [
+     "dlls/gdi32/dc.c:1250"
+    ]
+   },
+   {
+    "name": "SetViewportOrgEx",
+    "impl": [
+     "dlls/gdi32/dc.c:1280"
+    ]
+   },
+   {
+    "name": "SetWindowExtEx",
+    "impl": [
+     "dlls/gdi32/dc.c:1175"
+    ]
+   },
+   {
+    "name": "SetWindowOrgEx",
+    "impl": [
+     "dlls/gdi32/dc.c:1205"
+    ]
+   },
+   {
+    "name": "SetWorldTransform",
+    "impl": [
+     "dlls/gdi32/dc.c:1336"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "GetVersion",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/version.c:1462"
+    ]
+   },
+   {
+    "name": "HeapAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "NtGdiCreateRectRgn",
+    "module": "win32u",
+    "impl": [
+     "dlls/win32u/region.c:606"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "SetLastError",
+   "wine_dbg_log",
+   "wine_dbgstr_rect"
+  ],
+  "system": [],
+  "unresolved": [
+   "is_meta_dc"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "(*callback)",
+    "in_function": "EnumEnhMetaFile",
+    "at": "dlls/gdi32/enhmetafile.c:2556",
+    "candidates": []
+   }
+  ]
+ },
+ "winebench": {
+  "id": "gdi32.EnumEnhMetaFile",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI",
+   "header": "wingdi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 214,
+   "body": 207,
+   "code": 151
+  },
+  "cyclomatic": 28,
+  "return_type": "BOOL",
+  "n_params": 5,
+  "tests": {
+   "n_tests_own": 7,
+   "n_tests": 9,
+   "n_tests_other": 2,
+   "own_test_functions": [
+    "dlls/gdi32/tests/metafile.c::test_ExtTextOut",
+    "dlls/gdi32/tests/metafile.c::test_ExtTextOutScale",
+    "dlls/gdi32/tests/metafile.c::test_SaveDC",
+    "dlls/gdi32/tests/metafile.c::test_emf_WorldTransform",
+    "dlls/gdi32/tests/metafile.c::test_emf_clipping",
+    "dlls/gdi32/tests/metafile.c::test_emf_pattern_brush",
+    "dlls/gdi32/tests/metafile.c::test_mf_conversions"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-enumenhmetafile",
+   "source": "win32",
+   "description": "The EnumEnhMetaFile function enumerates the records within an enhanced-format metafile by retrieving each record and passing it to the specified callback function.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Gdi32.dll"
+  },
+  "exports": [
+   "gdi32.EnumEnhMetaFile"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "1998-03-15",
+   "median_date": "2003-02-14",
+   "last_date": "2022-02-10",
+   "code_lines": 152,
+   "pair": "gdiplus.GdipMeasureString",
+   "rank": 1,
+   "distance": 0.915
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "gdiplus.GdipMeasureString",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-02-10",
+  "partner_rank": 1,
+  "distance": 0.915
+ }
+}

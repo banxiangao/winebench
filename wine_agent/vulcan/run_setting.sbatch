@@ -22,6 +22,15 @@
 # the node's local disk, one pair per worker, and throws them away at the end.  No job inherits a tree from another one,
 # and compiling / searching does not touch the shared filesystem.
 #
+# Isolation (since 2026-11-27): every worker is its own container that sees ONE tree (its /t) and nothing of the other
+# workers - before, all trees of a job sat side by side in one container and an agent could read the original of its
+# function in a sibling tree.  Of the project directory a worker's container holds only scripts, scenarios and prompts
+# (read-only) and the result folder of this model; the dataset (which holds the original implementations) is a
+# throw-away copy that the runner deletes as soon as it has loaded it.  The apptainer module of the cluster binds all of
+# /project and /scratch into every container (APPTAINER_BIND); that is switched off for the workers, or the clean Wine
+# tree and the datasets would be readable after all.  Tasks are dealt to the workers by position
+# (--shard i/n), so a slow task no longer shares its worker with the others' queue.
+#
 # Recovery: a task's result is written only when the task has ended, so a job that stops for any reason (time limit,
 # crash, scancel, node failure) loses only the tasks that were running.  Submitting the same setting again continues with
 # the tasks that have no result; nothing is done twice.  This job does that itself: it stops 10 minutes before its time
@@ -94,9 +103,18 @@ VLOG="vulcan/logs/vllm-$NAME-$SLURM_JOB_ID.log"
     --dtype bfloat16 --max-model-len "$MAX_MODEL_LEN" --gpu-memory-utilization 0.92 --trust-remote-code $TOOLFLAGS > "$VLOG" 2>&1 &
 VPID=$!
 T_LOAD=$SECONDS
-echo "== unpacking $AGENT_WORKERS fresh tree pairs ($(date '+%T'))"
-apptainer exec --containall --pwd "$WA" --bind "$WA" --bind "$PACK":/pack/swe-pair.tar:ro --bind "$LOCAL":/t --env "TMPDIR=/t/tmp" \
-    "$SIF" bash scripts/unpack_swe_trees.sh /pack/swe-pair.tar "$AGENT_WORKERS" || { jobline end "\"result\": \"trees could not be unpacked\""; exit 1; }
+echo "== unpacking $AGENT_WORKERS fresh tree pairs, one per worker container ($(date '+%T'))"
+upids=()
+for i in $(seq 0 $((AGENT_WORKERS - 1))); do
+    mkdir -p "$LOCAL/w$i/tmp"
+    env -u APPTAINER_BIND apptainer exec --containall --pwd "$WA" --bind "$WA/scripts":"$WA/scripts":ro --bind "$PACK":/pack/swe-pair.tar:ro --bind "$LOCAL/w$i":/t --env "TMPDIR=/t/tmp" \
+        "$SIF" bash scripts/unpack_swe_trees.sh /pack/swe-pair.tar 1 > "$LOCAL/unpack$i.log" 2>&1 &
+    upids+=($!)
+done
+for p in "${upids[@]}"; do wait "$p" || true; done                    # not a bare `wait`: the model server is a background job too
+for i in $(seq 0 $((AGENT_WORKERS - 1))); do
+    grep -q "^unpacked 1 tree pairs" "$LOCAL/unpack$i.log" || { echo "worker $i: trees could not be unpacked:"; tail -5 "$LOCAL/unpack$i.log"; jobline end "\"result\": \"trees could not be unpacked\""; exit 1; }
+done
 echo "   trees ready after $((SECONDS - T_LOAD)) s"
 for i in $(seq 1 120); do
     curl -sf "http://127.0.0.1:$PORT/health" >/dev/null && break
@@ -109,9 +127,20 @@ LEFT=$((BUDGET - SECONDS)); echo "model ready after $((SECONDS - T_LOAD)) s; $LE
 RC=0
 if [ "$LEFT" -gt 120 ]; then
     echo "===== $A, scenario $S, model $NAME ($(date '+%F %T'))"
-    timeout "${LEFT}s" apptainer exec --containall --pwd "$WA" --bind "$WA" --bind "$LOCAL":/t --env "$CENV,WB_LOCAL_PORT=$PORT,SWE_LOCAL_TOOL_MODE=$MODE" "$SIF" \
-        python "scripts/run_$A.py" --scenario "$S" --limit "$N" --models "$NAME" --workers "$AGENT_WORKERS" --jobs "$JOBS" \
-        --src /t/wine-swe --build /t/wine-build-swe ${REDO:+--redo-bad} || { RC=$?; echo "run_$A.py stopped (status $RC: 124 = this job's time budget is used up)"; }
+    DS=$(realpath -m "scenarios/scenario$S/$(sed -n 's/^dataset *= *"\(.*\)".*/\1/p' "scenarios/scenario$S/config.toml" | head -1)"); mkdir -p "$WA/$OUT"
+    [ -d "$DS" ] || { echo "$DS: no dataset"; jobline end "\"result\": \"no dataset\""; exit 1; }
+    worker() {      # one container per worker: its own tree as /t, a throw-away copy of the dataset, nothing of the other workers
+        local i=$1; rm -rf "$LOCAL/w$i/ds"; mkdir -p "$LOCAL/w$i/ds"; cp -r "$DS/." "$LOCAL/w$i/ds/"
+        timeout "${LEFT}s" env -u APPTAINER_BIND apptainer exec --containall --pwd "$WA" --bind "$WA/scripts":"$WA/scripts":ro --bind "$WA/scenarios":"$WA/scenarios":ro \
+            --bind "$WA/$STAGE/prompts":"$WA/$STAGE/prompts":ro --bind "$WA/$OUT":"$WA/$OUT" --bind "$LOCAL/w$i/ds":"$DS" --bind "$LOCAL/w$i":/t \
+            --env "$CENV,WB_LOCAL_PORT=$PORT,SWE_LOCAL_TOOL_MODE=$MODE,WB_DATASET_IS_COPY=1,PYTHONDONTWRITEBYTECODE=1" "$SIF" \
+            python "scripts/run_$A.py" --scenario "$S" --limit "$N" --models "$NAME" --workers 1 --jobs "$JOBS" --shard "$i/$AGENT_WORKERS" --consume-dataset \
+            --src /t/wine-swe --build /t/wine-build-swe ${REDO:+--redo-bad} 2>&1 | sed -u "s/^/[w$i] /"
+        return ${PIPESTATUS[0]}
+    }
+    pids=(); for i in $(seq 0 $((AGENT_WORKERS - 1))); do worker "$i" & pids+=($!); done
+    for p in "${pids[@]}"; do wait "$p" || { r=$?; [ "$r" -gt "$RC" ] && RC=$r; }; done
+    [ "$RC" = 0 ] || echo "run_$A.py stopped in at least one worker (status $RC: 124 = this job's time budget is used up)"
 fi
 run python scripts/summary_table.py | grep -E "^scenario |$NAME" | grep -E "^scenario |$A" || true
 read DONE1 TOTAL < <(count_done)

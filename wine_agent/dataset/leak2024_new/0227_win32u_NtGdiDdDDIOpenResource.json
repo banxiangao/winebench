@@ -1,0 +1,419 @@
+{
+ "id": "0227",
+ "function": {
+  "name": "NtGdiDdDDIOpenResource",
+  "export_name": "D3DKMTOpenResource",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "gdi32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/d3dkmt.c",
+  "start_line": 1118,
+  "end_line": 1156,
+  "body_lines": 36,
+  "signature": "NTSTATUS WINAPI NtGdiDdDDIOpenResource( D3DKMT_OPENRESOURCE *params )",
+  "header_comment": "/******************************************************************************\n *           NtGdiDdDDIOpenResource    (win32u.@)\n */",
+  "code": "NTSTATUS WINAPI NtGdiDdDDIOpenResource( D3DKMT_OPENRESOURCE *params )\n{\n    struct d3dkmt_object *device, *allocation;\n    D3DDDI_OPENALLOCATIONINFO *alloc_info;\n    struct d3dkmt_resource *resource;\n    UINT runtime_size;\n    NTSTATUS status;\n\n    TRACE( \"params %p\\n\", params );\n\n    if (!params) return STATUS_INVALID_PARAMETER;\n    if (!(device = get_d3dkmt_object( params->hDevice, D3DKMT_DEVICE ))) return STATUS_INVALID_PARAMETER;\n    if (!is_d3dkmt_global( params->hGlobalShare )) return STATUS_INVALID_PARAMETER;\n    if (params->ResourcePrivateDriverDataSize) return STATUS_INVALID_PARAMETER;\n\n    if (!params->NumAllocations) return STATUS_INVALID_PARAMETER;\n    if (!(alloc_info = params->pOpenAllocationInfo)) return STATUS_INVALID_PARAMETER;\n\n    if ((status = d3dkmt_object_alloc( sizeof(*resource), D3DKMT_RESOURCE, (void **)&resource ))) return status;\n    if ((status = d3dkmt_object_alloc( sizeof(*allocation), D3DKMT_ALLOCATION, (void **)&allocation ))) goto failed;\n\n    runtime_size = params->PrivateRuntimeDataSize;\n    if ((status = d3dkmt_object_open( &resource->obj, params->hGlobalShare, NULL, params->pPrivateRuntimeData, &runtime_size ))) goto failed;\n\n    if ((status = alloc_object_handle( allocation ))) goto failed;\n    resource->allocation = allocation->local;\n    alloc_info->hAllocation = allocation->local;\n    alloc_info->PrivateDriverDataSize = 0;\n\n    params->hResource = resource->obj.local;\n    params->PrivateRuntimeDataSize = runtime_size;\n    params->TotalPrivateDriverDataBufferSize = 0;\n    params->ResourcePrivateDriverDataSize = 0;\n    return STATUS_SUCCESS;\n\nfailed:\n    d3dkmt_object_free( &resource->obj );\n    return status;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"config.h\"",
+   "#include <assert.h>",
+   "#include <pthread.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"ntgdi_private.h\"",
+   "#include \"win32u_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include <d3d9types.h>",
+   "#include <dxgi.h>",
+   "#include <d3d10.h>",
+   "#include <d3d11.h>",
+   "#include <d3d12.h>"
+  ],
+  "resolution": [
+   "gdi32!D3DKMTOpenResource [stdcall] -> forward win32u.NtGdiDdDDIOpenResource",
+   "win32u!NtGdiDdDDIOpenResource [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/win32u/tests/d3dkmt.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "d3dkmthk",
+   "path": "wdk-ddi-src/content/d3dkmthk/nf-d3dkmthk-d3dkmtopenresource.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/d3dkmthk/nf-d3dkmthk-d3dkmtopenresource",
+   "documented_name": "d3dkmtopenresource",
+   "file": "docs/0227_windows-driver-docs-ddi_nf-d3dkmthk-d3dkmtopenresource.md",
+   "text": "---\nUID: NF:d3dkmthk.D3DKMTOpenResource\ntitle: D3DKMTOpenResource function (d3dkmthk.h)\ndescription: The D3DKMTOpenResource function opens a shared resource.\nold-location: display\\d3dkmtopenresource.htm\nms.date: 05/10/2018\nkeywords: [\"D3DKMTOpenResource function\"]\nms.keywords: D3DKMTOpenResource, D3DKMTOpenResource function [Display Devices], OpenGL_Functions_ba035fe1-7970-45fc-a1c3-adddf285abd1.xml, d3dkmthk/D3DKMTOpenResource, display.d3dkmtopenresource\nreq.header: d3dkmthk.h\nreq.include-header: D3dkmthk.h\nreq.target-type: Universal\nreq.target-min-winverclnt: Windows Vista\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\ntech.root: display\nreq.typenames: \nf1_keywords:\n - D3DKMTOpenResource\n - d3dkmthk/D3DKMTOpenResource\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Gdi32.dll\n - API-MS-Win-DX-D3DKmt-l1-1-0.dll\n - API-MS-Win-DX-D3DKmt-l1-1-1.dll\n - API-MS-Win-DX-D3DKMT-L1-1-2.dll\napi_name:\n - D3DKMTOpenResource\n---\n\n# D3DKMTOpenResource function\n\n\n## -description\n\nThe <b>D3DKMTOpenResource</b> function opens a shared resource.\n\n## -parameters\n\n### -param unnamedParam1\n\n*pData* [in, out]\n\nA pointer to a <a href=\"/windows-hardware/drivers/ddi/d3dkmthk/ns-d3dkmthk-_d3dkmt_openresource\">D3DKMT_OPENRESOURCE</a> structure that contains parameters for opening a shared resource.\n\n## -returns\n\n<b>D3DKMTOpenResource</b> returns one of the following values:\n\n|Return code|Description|\n|--- |--- |\n|STATUS_SUCCESS|The resource was successfully opened.|\n|STATUS_DEVICE_REMOVED|The graphics adapter was stopped or the display device was reset.|\n|STATUS_INVALID_PARAMETER|Parameters were validated and determined to be incorrect.|\n\nThis function might also return other <a href=\"/windows-hardware/drivers/kernel/ntstatus-values\">NTSTATUS</a> values.\n\n## -see-also\n\n<a href=\"/windows-hardware/drivers/ddi/d3dkmthk/nf-d3dkmthk-d3dkmtqueryresourceinfo\">D3DKMTQueryResourceInfo</a>\n\n<a href=\"/windows-hardware/drivers/ddi/d3dkmthk/ns-d3dkmthk-_d3dkmt_openresource\">D3DKMT_OPENRESOURCE</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_d3dkmt_object",
+   "file": "dlls/win32u/d3dkmt.c",
+   "start_line": 270,
+   "end_line": 282,
+   "static": true,
+   "called_from": [
+    "NtGdiDdDDIOpenResource"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/d3dkmt.c:452",
+    "dlls/win32u/d3dkmt.c:489",
+    "dlls/win32u/d3dkmt.c:556",
+    "dlls/win32u/d3dkmt.c:579",
+    "dlls/win32u/d3dkmt.c:665"
+   ],
+   "signature": "static void *get_d3dkmt_object( D3DKMT_HANDLE local, enum d3dkmt_type type )",
+   "code": "static void *get_d3dkmt_object( D3DKMT_HANDLE local, enum d3dkmt_type type )\n{\n    unsigned int index = handle_to_index( local );\n    struct d3dkmt_object *object;\n\n    pthread_mutex_lock( &d3dkmt_lock );\n    if (objects + index >= objects_end) object = NULL;\n    else object = objects[index];\n    pthread_mutex_unlock( &d3dkmt_lock );\n\n    if (!object || object->local != local || (type != -1 && object->type != type)) return NULL;\n    return object;\n}"
+  },
+  {
+   "name": "is_d3dkmt_global",
+   "file": "dlls/win32u/d3dkmt.c",
+   "start_line": 191,
+   "end_line": 194,
+   "static": true,
+   "called_from": [
+    "NtGdiDdDDIOpenResource"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/d3dkmt.c:1173",
+    "dlls/win32u/d3dkmt.c:1297",
+    "dlls/win32u/d3dkmt.c:1424",
+    "dlls/win32u/d3dkmt.c:1748"
+   ],
+   "signature": "static BOOL is_d3dkmt_global( D3DKMT_HANDLE handle )",
+   "code": "static BOOL is_d3dkmt_global( D3DKMT_HANDLE handle )\n{\n    return (handle & 0xc0000000) && (handle & 0x3f) == 2;\n}"
+  },
+  {
+   "name": "d3dkmt_object_alloc",
+   "file": "dlls/win32u/d3dkmt.c",
+   "start_line": 284,
+   "end_line": 293,
+   "static": true,
+   "called_from": [
+    "NtGdiDdDDIOpenResource"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/d3dkmt.c:527",
+    "dlls/win32u/d3dkmt.c:557",
+    "dlls/win32u/d3dkmt.c:1018",
+    "dlls/win32u/d3dkmt.c:1019",
+    "dlls/win32u/d3dkmt.c:1037"
+   ],
+   "signature": "static NTSTATUS d3dkmt_object_alloc( UINT size, enum d3dkmt_type type, void **obj )",
+   "code": "static NTSTATUS d3dkmt_object_alloc( UINT size, enum d3dkmt_type type, void **obj )\n{\n    struct d3dkmt_object *object;\n\n    if (!(object = calloc( 1, size ))) return STATUS_NO_MEMORY;\n    object->type = type;\n\n    *obj = object;\n    return STATUS_SUCCESS;\n}"
+  },
+  {
+   "name": "d3dkmt_object_open",
+   "file": "dlls/win32u/d3dkmt.c",
+   "start_line": 341,
+   "end_line": 364,
+   "static": true,
+   "called_from": [
+    "NtGdiDdDDIOpenResource"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/d3dkmt.c:1183",
+    "dlls/win32u/d3dkmt.c:1224",
+    "dlls/win32u/d3dkmt.c:1228",
+    "dlls/win32u/d3dkmt.c:1234",
+    "dlls/win32u/d3dkmt.c:1430"
+   ],
+   "signature": "static NTSTATUS d3dkmt_object_open( struct d3dkmt_object *obj, D3DKMT_HANDLE global, HANDLE handle, void *runtime, UINT *runtime_size )",
+   "code": "static NTSTATUS d3dkmt_object_open( struct d3dkmt_object *obj, D3DKMT_HANDLE global, HANDLE handle,\n                                    void *runtime, UINT *runtime_size )\n{\n    NTSTATUS status;\n\n    SERVER_START_REQ( d3dkmt_object_open )\n    {\n        req->type = obj->type;\n        req->global = global;\n        req->handle = wine_server_obj_handle( handle );\n        if (runtime) wine_server_set_reply( req, runtime, *runtime_size );\n        status = wine_server_call( req );\n        obj->handle = wine_server_ptr_handle( reply->handle );\n        obj->global = reply->global;\n        obj->shared = !global;\n        *runtime_size = reply->runtime_size;\n    }\n    SERVER_END_REQ;\n    if (!status) status = alloc_object_handle( obj );\n\n    if (status) WARN( \"Failed to open global object %#x/%p, status %#x\\n\", global, handle, status );\n    else TRACE( \"Opened global object %#x/%p as %p/%#x\\n\", global, handle, obj, obj->local );\n    return status;\n}"
+  },
+  {
+   "name": "alloc_object_handle",
+   "file": "dlls/win32u/d3dkmt.c",
+   "start_line": 234,
+   "end_line": 255,
+   "static": true,
+   "called_from": [
+    "NtGdiDdDDIOpenResource",
+    "d3dkmt_object_open"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/d3dkmt.c:316",
+    "dlls/win32u/d3dkmt.c:528",
+    "dlls/win32u/d3dkmt.c:558",
+    "dlls/win32u/d3dkmt.c:1021",
+    "dlls/win32u/d3dkmt.c:1041"
+   ],
+   "signature": "static NTSTATUS alloc_object_handle( struct d3dkmt_object *object )",
+   "code": "static NTSTATUS alloc_object_handle( struct d3dkmt_object *object )\n{\n    struct d3dkmt_object **entry;\n\n    pthread_mutex_lock( &d3dkmt_lock );\n    if (!objects && init_handle_table()) goto done;\n\n    for (entry = objects_next; entry < objects_end; entry++) if (!*entry) break;\n    if (entry == objects_end)\n    {\n        for (entry = objects; entry < objects_next; entry++) if (!*entry) break;\n        if (entry == objects_next && !(entry = grow_handle_table())) goto done;\n    }\n\n    object->local = index_to_handle( entry - objects );\n    objects_next = entry + 1;\n    *entry = object;\n\ndone:\n    pthread_mutex_unlock( &d3dkmt_lock );\n    return object->local ? STATUS_SUCCESS : STATUS_NO_MEMORY;\n}"
+  },
+  {
+   "name": "d3dkmt_object_free",
+   "file": "dlls/win32u/d3dkmt.c",
+   "start_line": 386,
+   "end_line": 392,
+   "static": true,
+   "called_from": [
+    "NtGdiDdDDIOpenResource"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/d3dkmt.c:491",
+    "dlls/win32u/d3dkmt.c:538",
+    "dlls/win32u/d3dkmt.c:564",
+    "dlls/win32u/d3dkmt.c:584",
+    "dlls/win32u/d3dkmt.c:1047"
+   ],
+   "signature": "static void d3dkmt_object_free( struct d3dkmt_object *object )",
+   "code": "static void d3dkmt_object_free( struct d3dkmt_object *object )\n{\n    TRACE( \"object %p/%#x, global %#x\\n\", object, object->local, object->global );\n    if (object->local) free_object_handle( object );\n    if (object->handle) NtClose( object->handle );\n    free( object );\n}"
+  },
+  {
+   "name": "handle_to_index",
+   "file": "dlls/win32u/d3dkmt.c",
+   "start_line": 201,
+   "end_line": 204,
+   "static": true,
+   "called_from": [
+    "free_object_handle",
+    "get_d3dkmt_object",
+    "grow_handle_table"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static int handle_to_index( D3DKMT_HANDLE handle )",
+   "code": "static int handle_to_index( D3DKMT_HANDLE handle )\n{\n    return (handle & ~0xc0000000) >> 6;\n}"
+  },
+  {
+   "name": "init_handle_table",
+   "file": "dlls/win32u/d3dkmt.c",
+   "start_line": 206,
+   "end_line": 212,
+   "static": true,
+   "called_from": [
+    "alloc_object_handle"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS init_handle_table(void)",
+   "code": "static NTSTATUS init_handle_table(void)\n{\n    if (!(objects = calloc( 1024, sizeof(*objects) ))) return STATUS_NO_MEMORY;\n    objects_end = objects + 1024;\n    objects_next = objects;\n    return STATUS_SUCCESS;\n}"
+  },
+  {
+   "name": "grow_handle_table",
+   "file": "dlls/win32u/d3dkmt.c",
+   "start_line": 214,
+   "end_line": 231,
+   "static": true,
+   "called_from": [
+    "alloc_object_handle"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static struct d3dkmt_object **grow_handle_table(void)",
+   "code": "static struct d3dkmt_object **grow_handle_table(void)\n{\n    size_t old_capacity = objects_end - objects, max_capacity = handle_to_index( D3DKMT_HANDLE_BIT - 1 );\n    unsigned int new_capacity = old_capacity * 3 / 2;\n    struct d3dkmt_object **tmp;\n\n    if (new_capacity > max_capacity) new_capacity = max_capacity;\n    if (new_capacity <= old_capacity) return NULL; /* exhausted handle capacity */\n\n    if (!(tmp = realloc( objects, new_capacity * sizeof(*objects) ))) return NULL;\n    memset( tmp + old_capacity, 0, (new_capacity - old_capacity) * sizeof(*tmp) );\n\n    objects = tmp;\n    objects_end = tmp + new_capacity;\n    objects_next = tmp + old_capacity;\n\n    return objects_next;\n}"
+  },
+  {
+   "name": "index_to_handle",
+   "file": "dlls/win32u/d3dkmt.c",
+   "start_line": 196,
+   "end_line": 199,
+   "static": true,
+   "called_from": [
+    "alloc_object_handle"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static D3DKMT_HANDLE index_to_handle( int index )",
+   "code": "static D3DKMT_HANDLE index_to_handle( int index )\n{\n    return (index << 6) | D3DKMT_HANDLE_BIT;\n}"
+  },
+  {
+   "name": "free_object_handle",
+   "file": "dlls/win32u/d3dkmt.c",
+   "start_line": 258,
+   "end_line": 267,
+   "static": true,
+   "called_from": [
+    "d3dkmt_object_free"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void free_object_handle( struct d3dkmt_object *object )",
+   "code": "static void free_object_handle( struct d3dkmt_object *object )\n{\n    unsigned int index = handle_to_index( object->local );\n\n    pthread_mutex_lock( &d3dkmt_lock );\n    assert( objects + index < objects_end && objects[index] == object );\n    objects[index] = NULL;\n    object->local = 0;\n    pthread_mutex_unlock( &d3dkmt_lock );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "d3dkmt_object",
+    "kind": "struct_decl",
+    "start_line": 144,
+    "end_line": 151,
+    "code": "struct d3dkmt_object\n{\n    enum d3dkmt_type    type;           /* object type */\n    D3DKMT_HANDLE       local;          /* object local handle */\n    D3DKMT_HANDLE       global;         /* object global handle */\n    BOOL                shared;         /* object is shared using nt handles */\n    HANDLE              handle;         /* internal handle of the server object */\n};"
+   },
+   {
+    "name": "d3dkmt_resource",
+    "kind": "struct_decl",
+    "start_line": 159,
+    "end_line": 163,
+    "code": "struct d3dkmt_resource\n{\n    struct d3dkmt_object obj;\n    D3DKMT_HANDLE allocation;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 39,
+    "end_line": 39,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(d3dkmt);"
+   },
+   {
+    "name": "d3dkmt_lock",
+    "type": "pthread_mutex_t",
+    "static": true,
+    "start_line": 184,
+    "end_line": 184,
+    "code": "static pthread_mutex_t d3dkmt_lock = PTHREAD_MUTEX_INITIALIZER;"
+   },
+   {
+    "name": "objects",
+    "type": "struct d3dkmt_object **",
+    "static": true,
+    "start_line": 187,
+    "end_line": 187,
+    "code": "static struct d3dkmt_object **objects, **objects_end, **objects_next;"
+   },
+   {
+    "name": "objects_end",
+    "type": "struct d3dkmt_object **",
+    "static": true,
+    "start_line": 187,
+    "end_line": 187,
+    "code": "static struct d3dkmt_object **objects, **objects_end, **objects_next;"
+   },
+   {
+    "name": "objects_next",
+    "type": "struct d3dkmt_object **",
+    "static": true,
+    "start_line": 187,
+    "end_line": 187,
+    "code": "static struct d3dkmt_object **objects, **objects_end, **objects_next;"
+   }
+  ],
+  "macros": [
+   {
+    "name": "D3DKMT_HANDLE_BIT",
+    "start_line": 189,
+    "end_line": 189,
+    "code": "#define D3DKMT_HANDLE_BIT  0x40000000"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "NtClose",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/server.c:1940"
+    ]
+   },
+   {
+    "name": "wine_server_call",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/loader.c:3436"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log",
+   "wine_server_obj_handle",
+   "wine_server_ptr_handle",
+   "wine_server_set_reply"
+  ],
+  "system": [
+   "__assert_fail",
+   "calloc",
+   "free",
+   "memset",
+   "pthread_mutex_lock",
+   "pthread_mutex_unlock",
+   "realloc"
+  ],
+  "unresolved": [],
+  "server_requests": [
+   {
+    "request": "d3dkmt_object_open",
+    "handler": "server/d3dkmt.c:581"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "win32u.NtGdiDdDDIOpenResource",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "Direct3D",
+   "header": "d3dkmthk.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 39,
+   "body": 38,
+   "code": 28
+  },
+  "cyclomatic": 11,
+  "return_type": "NTSTATUS",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/win32u/tests/d3dkmt.c::test_D3DKMTCreateAllocation"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/d3dkmthk/nf-d3dkmthk-d3dkmtopenresource",
+   "source": "ddi",
+   "description": "The D3DKMTOpenResource function opens a shared resource.",
+   "min_windows": "Windows Vista",
+   "documented_dll": "Gdi32.dll"
+  },
+  "exports": [
+   "gdi32.D3DKMTOpenResource",
+   "win32u.NtGdiDdDDIOpenResource"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.966,
+   "first_date": "2024-03-13",
+   "median_date": "2025-09-29",
+   "last_date": "2025-10-01",
+   "code_lines": 29
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "win32u.NtGdiEqualRgn",
+  "share_after_cutoff": 0.966,
+  "last_date": "2025-10-01"
+ }
+}

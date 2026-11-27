@@ -1,0 +1,188 @@
+{
+ "id": "0176",
+ "function": {
+  "name": "EnumMRUListW",
+  "export_name": "EnumMRUListW",
+  "module": "comctl32",
+  "source_module": "comctl32",
+  "exported_by": [
+   "comctl32",
+   "comctl32_v6"
+  ],
+  "side": "PE",
+  "file": "dlls/comctl32/commctrl.c",
+  "start_line": 2355,
+  "end_line": 2372,
+  "body_lines": 15,
+  "signature": "INT WINAPI EnumMRUListW(HANDLE hList, INT nItemPos, void *buffer, DWORD nBufferSize)",
+  "header_comment": "/**************************************************************************\n *                EnumMRUListW [COMCTL32.403]\n *\n * Enumerate item in a most-recently-used list\n *\n * PARAMS\n *    hList [I] list handle\n *    nItemPos [I] item position to enumerate\n *    lpBuffer [O] buffer to receive item\n *    nBufferSize [I] size of buffer\n *\n * RETURNS\n *    For binary lists specifies how many bytes were copied to buffer, for\n *    string lists specifies full length of string.  Enumerating past the end\n *    of list returns -1.\n *    If lpBuffer == NULL or nItemPos is -ve return value is no. of items in\n *    the list.\n */",
+  "code": "INT WINAPI EnumMRUListW(HANDLE hList, INT nItemPos, void *buffer, DWORD nBufferSize)\n{\n    const WINEMRULIST *mp = hList;\n    const WINEMRUITEM *witem;\n    INT desired, datasize;\n\n    if (!mp) return -1;\n    if ((nItemPos < 0) || !buffer) return mp->cursize;\n    if (nItemPos >= mp->cursize) return -1;\n    desired = mp->realMRU[nItemPos];\n    desired -= 'a';\n    TRACE(\"nItemPos=%d, desired=%d\\n\", nItemPos, desired);\n    witem = mp->array[desired];\n    datasize = min(witem->size, nBufferSize);\n    memcpy(buffer, &witem->datastart, datasize);\n    TRACE(\"(%p, %d, %p, %ld): returning len %d\\n\", hList, nItemPos, buffer, nBufferSize, datasize);\n    return datasize;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winnls.h\"",
+   "#include \"commctrl.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winreg.h\"",
+   "#include \"comctl32.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "comctl32!EnumMRUListW [stdcall -ordinal]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/comctl32/tests/mru.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "",
+   "path": "desktop-src/shell/enummrulist.md",
+   "url": "https://learn.microsoft.com/windows/win32/shell/enummrulist",
+   "documented_name": "enummrulistw",
+   "file": "docs/0176_win32_enummrulist.md",
+   "text": "---\ndescription: Enumerates the contents of the most recently used (MRU) list. Optionally retrieves an item from the enumeration.\ntitle: EnumMRUListW function\nms.topic: reference\nms.date: 05/31/2018\ntopic_type: \n- APIRef\n- kbSyntax\napi_name: \n- EnumMRUListW\n- EnumMRUListW\napi_type: \n- DllExport\napi_location: \n- Comctl32.dll\nms.assetid: 630e5f27-96bf-4e88-b01a-127b301cc051\n\n---\n\n# EnumMRUListW function\n\n\\[This function is available through Windows XP with Service Pack 2 (SP2) and Windows Server 2003. It might be altered or unavailable in subsequent versions of Windows. \\]\n\nEnumerates the contents of the most recently used (MRU) list. Optionally retrieves an item from the enumeration.\n\n## Syntax\n\n\n```C++\nint EnumMRUListW(\n  _In_  HANDLE hMRU,\n  _In_  int    nItem,\n  _Out_ void   *lpData,\n  _In_  UINT   uLen\n);\n```\n\n\n\n## Parameters\n\n<dl> <dt>\n\n*hMRU* \\[in\\]\n</dt> <dd>\n\nType: **HANDLE**\n\nThe handle of the MRU list, obtained when the list was created.\n\n</dd> <dt>\n\n*nItem* \\[in\\]\n</dt> <dd>\n\nType: **int**\n\nThe item to return. If this value is less than 0, the function returns the number of items in the MRU list.\n\n</dd> <dt>\n\n*lpData* \\[out\\]\n</dt> <dd>\n\nType: **void\\***\n\nA pointer to a buffer that receives the item requested in *nItem*. If *nItem* is less than 0, the contents of this buffer are unchanged.\n\n</dd> <dt>\n\n*uLen* \\[in\\]\n</dt> <dd>\n\nType: **UINT**\n\nThe size of the buffer, including the terminating null character. If the MRU list was created with the **MRU\\_BINARY** flag, this is the size in bytes. Otherwise, it is the size in characters.\n\n</dd> </dl>\n\n## Return value\n\nType: **int**\n\nReturns one of the following values.\n\n-   Returns the number of items in the enumeration, if *nItem* is less than 0.\n-   Returns -1 if an error occurred.\n-   Otherwise, returns the size of the string returned in *lpData*, including the terminating null character. If the MRU list was created with the **MRU\\_BINARY** flag, this is the size in bytes. Otherwise, it is the size in characters.\n\n## Remarks\n\nThis function is not included in a public header or library. It can be accessed through [**GetProcAddress**](/windows/win32/api/libloaderapi/nf-libloaderapi-getprocaddress) or extracted from comctl32.dll by its ordinal, which is 403 for **EnumMRUListW**.\n\n## Requirements\n\n\n\n| Requirement | Value |\n|-------------------------------------|----------------------------------------------------------------------------------------------------------------|\n| Minimum supported client<br/> | Windows 2000 Professional \\[desktop apps only\\]<br/>                                                     |\n| Minimum supported server<br/> | Windows 2000 Server \\[desktop apps only\\]<br/>                                                           |\n| DLL<br/>                      | <dl> <dt>Comctl32.dll (version 5.0 or later)</dt> </dl> |\n| Unicode and ANSI names<br/>   | **EnumMRUListW** (Unicode)<br/>                                                                          |\n\n\n\n## See also\n\n<dl> <dt>\n\n[**CreateMRUListW**](createmrulist.md)\n</dt> <dt>\n\n[**MRUINFO**](mruinfo.md)\n</dt> </dl>\n\n \n\n \n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "WINEMRUITEM",
+    "kind": "typedef_decl",
+    "start_line": 1854,
+    "end_line": 1859,
+    "code": "typedef struct tagWINEMRUITEM\n{\n    DWORD          size;        /* size of data stored               */\n    DWORD          itemFlag;    /* flags                             */\n    BYTE           datastart;\n} WINEMRUITEM, *LPWINEMRUITEM;"
+   },
+   {
+    "name": "WINEMRULIST",
+    "kind": "typedef_decl",
+    "start_line": 1864,
+    "end_line": 1873,
+    "code": "typedef struct tagWINEMRULIST\n{\n    struct MRUINFOW extview;    /* original create information       */\n    BOOL           isUnicode;   /* is compare fn Unicode */\n    DWORD          wineFlags;   /* internal flags                    */\n    DWORD          cursize;     /* current size of realMRU           */\n    LPWSTR         realMRU;     /* pointer to string of index names  */\n    LPWINEMRUITEM  *array;      /* array of pointers to data         */\n                                /* in 'a' to 'z' order               */\n} WINEMRULIST, *LPWINEMRULIST;"
+   },
+   {
+    "name": "tagWINEMRUITEM",
+    "kind": "struct_decl",
+    "start_line": 1854,
+    "end_line": 1859,
+    "code": "typedef struct tagWINEMRUITEM\n{\n    DWORD          size;        /* size of data stored               */\n    DWORD          itemFlag;    /* flags                             */\n    BYTE           datastart;\n} WINEMRUITEM, *LPWINEMRUITEM;"
+   },
+   {
+    "name": "tagWINEMRULIST",
+    "kind": "struct_decl",
+    "start_line": 1864,
+    "end_line": 1873,
+    "code": "typedef struct tagWINEMRULIST\n{\n    struct MRUINFOW extview;    /* original create information       */\n    BOOL           isUnicode;   /* is compare fn Unicode */\n    DWORD          wineFlags;   /* internal flags                    */\n    DWORD          cursize;     /* current size of realMRU           */\n    LPWSTR         realMRU;     /* pointer to string of index names  */\n    LPWINEMRUITEM  *array;      /* array of pointers to data         */\n                                /* in 'a' to 'z' order               */\n} WINEMRULIST, *LPWINEMRULIST;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 73,
+    "end_line": 73,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(commctrl);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "comctl32.EnumMRUListW",
+  "category": {
+   "l1": "Windows environment (Shell)",
+   "l2": "Windows Shell",
+   "header": "",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 18,
+   "body": 17,
+   "code": 14
+  },
+  "cyclomatic": 5,
+  "return_type": "INT",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/comctl32/tests/mru.c::test_EnumMRUList"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/shell/enummrulist",
+   "source": "win32-conceptual",
+   "description": "Enumerates the contents of the most recently used (MRU) list. Optionally retrieves an item from the enumeration.",
+   "min_windows": "",
+   "documented_dll": "Comctl32.dll"
+  },
+  "exports": [
+   "comctl32.EnumMRUListW"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2001-09-20",
+   "median_date": "2009-02-13",
+   "last_date": "2022-02-07",
+   "code_lines": 15,
+   "pair": "propsys.PropVariantToDouble",
+   "rank": 1,
+   "distance": 0.3
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "propsys.PropVariantToDouble",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-02-07",
+  "partner_rank": 1,
+  "distance": 0.3
+ }
+}

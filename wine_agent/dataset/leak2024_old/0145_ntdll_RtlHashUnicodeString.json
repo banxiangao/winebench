@@ -1,0 +1,170 @@
+{
+ "id": "0145",
+ "function": {
+  "name": "RtlHashUnicodeString",
+  "export_name": "RtlHashUnicodeString",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll",
+   "ntoskrnl.exe"
+  ],
+  "side": "PE",
+  "file": "dlls/ntdll/locale.c",
+  "start_line": 710,
+  "end_line": 737,
+  "body_lines": 25,
+  "signature": "NTSTATUS WINAPI RtlHashUnicodeString( const UNICODE_STRING *string, BOOLEAN case_insensitive, ULONG alg, ULONG *hash )",
+  "header_comment": "/******************************************************************************\n *\tRtlHashUnicodeString   (NTDLL.@)\n */",
+  "code": "NTSTATUS WINAPI RtlHashUnicodeString( const UNICODE_STRING *string, BOOLEAN case_insensitive,\n                                      ULONG alg, ULONG *hash )\n{\n    unsigned int i;\n\n    if (!string || !hash) return STATUS_INVALID_PARAMETER;\n\n    switch (alg)\n    {\n    case HASH_STRING_ALGORITHM_DEFAULT:\n    case HASH_STRING_ALGORITHM_X65599:\n        break;\n    default:\n        return STATUS_INVALID_PARAMETER;\n    }\n\n    *hash = 0;\n    if (!case_insensitive)\n        for (i = 0; i < string->Length / sizeof(WCHAR); i++)\n            *hash = *hash * 65599 + string->Buffer[i];\n    else if (nls_info.UpperCaseTable)\n        for (i = 0; i < string->Length / sizeof(WCHAR); i++)\n            *hash = *hash * 65599 + casemap( nls_info.UpperCaseTable, string->Buffer[i] );\n    else  /* locale not setup yet */\n        for (i = 0; i < string->Length / sizeof(WCHAR); i++)\n            *hash = *hash * 65599 + casemap_ascii( string->Buffer[i] );\n    return STATUS_SUCCESS;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include <stdlib.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"ntdll_misc.h\"",
+   "#include \"locale_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "ntdll!RtlHashUnicodeString [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntdll/tests/rtlstr.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "wdm",
+   "path": "wdk-ddi-src/content/wdm/nf-wdm-rtlhashunicodestring.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlhashunicodestring",
+   "documented_name": "rtlhashunicodestring",
+   "file": "docs/0145_windows-driver-docs-ddi_nf-wdm-rtlhashunicodestring.md",
+   "text": "---\nUID: NF:wdm.RtlHashUnicodeString\ntitle: RtlHashUnicodeString function (wdm.h)\ndescription: The RtlHashUnicodeString routine creates a hash value from a given Unicode string and hash algorithm.\nold-location: kernel\\rtlhashunicodestring.htm\ntech.root: kernel\nms.date: 04/30/2018\nkeywords: [\"RtlHashUnicodeString function\"]\nms.keywords: RtlHashUnicodeString, RtlHashUnicodeString routine [Kernel-Mode Driver Architecture], k109_090277b1-32f6-4c3d-b1fc-bacec35efc1d.xml, kernel.rtlhashunicodestring, wdm/RtlHashUnicodeString\nreq.header: wdm.h\nreq.include-header: Wdm.h, Ntddk.h, Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt: Available in Windows XP and later versions of Windows.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: <= APC_LEVEL\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - RtlHashUnicodeString\n - wdm/RtlHashUnicodeString\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - RtlHashUnicodeString\n---\n\n# RtlHashUnicodeString function\n\n\n## -description\n\nThe <b>RtlHashUnicodeString </b>routine creates a hash value from a given Unicode string and hash algorithm.\n\n## -parameters\n\n### -param String [in]\n\n\nA pointer to a <a href=\"/windows/win32/api/ntdef/ns-ntdef-_unicode_string\">UNICODE_STRING</a> structure that contains the Unicode string to be converted to a hash value.\n\n### -param CaseInSensitive [in]\n\n\nSpecifies whether to treat the Unicode string as case sensitive when computing the hash value. If <i>CaseInSensitive</i> is <b>TRUE</b>, a lowercase and uppercase string hash to the same value.\n\n### -param HashAlgorithm [in]\n\n\nThe hash algorithm to use. If <i>HashAlgorithm</i> is HASH_STRING_ALGORITHM_X65599, <b>RtlHashUnicodeString</b> uses the x65599 hashing algorithm. If <i>HashAlgorithm</i> is HASH_STRING_ALGORITHM_DEFAULT, <b>RtlHashUnicodeString</b> uses the default algorithm. Currently, the default algorithm is the x65599 hashing algorithm.\n\n### -param HashValue [out]\n\n\nA pointer to a ULONG variable that receives the hash value.\n\n## -returns\n\n<b>RtlHashUnicodeString</b> returns STATUS_SUCCESS on success, or the appropriate NTSTATUS value on failure. The routine returns a STATUS_INVALID_PARAMETER value if the Unicode string is <b>NULL</b>, <i>HashValue</i> is <b>NULL</b>, or the caller specifies an undefined value for <i>HashAlgorithm</i>.\n\n## -see-also\n\n<a href=\"/windows/win32/api/ntdef/ns-ntdef-_unicode_string\">UNICODE_STRING</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "casemap",
+   "file": "dlls/ntdll/locale.c",
+   "start_line": 57,
+   "end_line": 60,
+   "static": true,
+   "called_from": [
+    "RtlHashUnicodeString"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/locale.c:665",
+    "dlls/ntdll/locale.c:666",
+    "dlls/ntdll/locale.c:694",
+    "dlls/ntdll/locale.c:695",
+    "dlls/ntdll/locale.c:909"
+   ],
+   "signature": "static WCHAR casemap( USHORT *table, WCHAR ch )",
+   "code": "static WCHAR casemap( USHORT *table, WCHAR ch )\n{\n    return ch + table[table[table[ch >> 8] + ((ch >> 4) & 0x0f)] + (ch & 0x0f)];\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "nls_info",
+    "type": "NLSTABLEINFO",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "static NLSTABLEINFO nls_info = { { CP_UTF8 }, { CP_UTF8 } };"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [
+   "casemap_ascii"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ntdll.RtlHashUnicodeString",
+  "category": {
+   "l1": "System services",
+   "l2": "Run-time library (strings, bitmaps, utilities)",
+   "header": "wdm.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "name_rule"
+  },
+  "loc": {
+   "total": 28,
+   "body": 26,
+   "code": 19
+  },
+  "cyclomatic": 10,
+  "return_type": "NTSTATUS",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 2,
+   "n_tests_other": 1,
+   "own_test_functions": [
+    "dlls/ntdll/tests/rtlstr.c::test_RtlHashUnicodeString"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlhashunicodestring",
+   "source": "ddi",
+   "description": "The RtlHashUnicodeString routine creates a hash value from a given Unicode string and hash algorithm.",
+   "min_windows": "Available in Windows XP and later versions of Windows.",
+   "documented_dll": "NtosKrnl.exe"
+  },
+  "exports": [
+   "ntdll.RtlHashUnicodeString",
+   "ntoskrnl.exe.RtlHashUnicodeString"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2013-07-24",
+   "median_date": "2013-07-24",
+   "last_date": "2020-03-26",
+   "code_lines": 16,
+   "pair": "ntdll.RtlSplay",
+   "rank": 1,
+   "distance": 0.103
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "ntdll.RtlSplay",
+  "share_after_cutoff": 0.0,
+  "last_date": "2020-03-26",
+  "partner_rank": 1,
+  "distance": 0.103
+ }
+}

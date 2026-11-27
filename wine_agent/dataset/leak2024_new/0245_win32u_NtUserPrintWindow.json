@@ -1,0 +1,193 @@
+{
+ "id": "0245",
+ "function": {
+  "name": "NtUserPrintWindow",
+  "export_name": "PrintWindow",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/dce.c",
+  "start_line": 2238,
+  "end_line": 2269,
+  "body_lines": 29,
+  "signature": "BOOL WINAPI NtUserPrintWindow( HWND hwnd, HDC hdc, UINT flags )",
+  "header_comment": "/************************************************************************\n *           NtUserPrintWindow (win32u.@)\n */",
+  "code": "BOOL WINAPI NtUserPrintWindow( HWND hwnd, HDC hdc, UINT flags )\n{\n    RECT rect = {0};\n    HDC hwnd_dc;\n\n    TRACE( \"hwnd %p, hdc %p, flags %#x\\n\", hwnd, hdc, flags );\n\n    if (flags & PW_RENDERFULLCONTENT)\n        WARN( \"PW_RENDERFULLCONTENT is unsupported.\\n\" );\n\n    if (!is_window( hwnd ) || flags & ~(PW_CLIENTONLY | PW_RENDERFULLCONTENT))\n        return FALSE;\n\n    if (flags & PW_CLIENTONLY)\n        NtUserGetClientRect( hwnd, &rect, NtUserGetDpiForWindow( hwnd ) );\n    else\n        NtUserGetWindowRect( hwnd, &rect, NtUserGetDpiForWindow( hwnd ) );\n\n    if (is_window_visible( hwnd ))\n    {\n        NtUserRedrawWindow( hwnd, NULL, NULL, RDW_INVALIDATE | RDW_FRAME | RDW_ERASE | RDW_ALLCHILDREN | RDW_UPDATENOW );\n        hwnd_dc = flags & PW_CLIENTONLY ? NtUserGetDC( hwnd ) : NtUserGetWindowDC( hwnd );\n        NtGdiBitBlt( hdc, 0, 0, rect.right - rect.left, rect.bottom - rect.top, hwnd_dc, 0, 0, SRCCOPY, 0, 0 );\n        NtUserReleaseDC( hwnd, hwnd_dc );\n    }\n    else\n    {\n        NtGdiPatBlt( hdc, 0, 0, rect.right - rect.left, rect.bottom - rect.top, BLACKNESS );\n    }\n\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <pthread.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"ntgdi_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/opengl_driver.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "user32!PrintWindow [stdcall] -> NtUserPrintWindow implicitly imported from win32u",
+   "win32u!NtUserPrintWindow [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/msg.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-printwindow.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-printwindow",
+   "documented_name": "printwindow",
+   "file": "docs/0245_sdk-api_nf-winuser-printwindow.md",
+   "text": "---\nUID: NF:winuser.PrintWindow\ntitle: PrintWindow function (winuser.h)\ndescription: The PrintWindow function copies a visual window into the specified device context (DC), typically a printer DC.\nhelpviewer_keywords: [\"PW_CLIENTONLY\",\"PrintWindow\",\"PrintWindow function [Windows GDI]\",\"_win32_PrintWindow\",\"gdi.printwindow\",\"winuser/PrintWindow\"]\nold-location: gdi\\printwindow.htm\ntech.root: xps\nms.assetid: 00b38cd8-1cfb-408e-88da-6e61563d9d8e\nms.date: 12/05/2018\nms.keywords: PW_CLIENTONLY, PrintWindow, PrintWindow function [Windows GDI], _win32_PrintWindow, gdi.printwindow, winuser/PrintWindow\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - PrintWindow\n - winuser/PrintWindow\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-rtcore-ntuser-draw-l1-1-0.dll\n - user32.dll\n - ext-ms-win-ntuser-draw-l1-1-2.dll\napi_name:\n - PrintWindow\nreq.apiset: ext-ms-win-ntuser-draw-l1-1-2 (introduced in Windows 10, version 10.0.10240)\n---\n\n# PrintWindow function\n\n\n## -description\n\nThe <b>PrintWindow</b> function copies a visual window into the specified device context (DC), typically a printer DC.\n\n## -parameters\n\n### -param hwnd\n\nA handle to the window that will be copied.\n\n### -param hdcBlt\n\nA handle to the device context.\n\n### -param nFlags\n\nThe drawing options. It can be one of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"PW_CLIENTONLY\"></a><a id=\"pw_clientonly\"></a><dl>\n<dt><b>PW_CLIENTONLY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOnly the client area of the window is copied to <i>hdcBlt</i>. By default, the entire window is copied.\n\n</td>\n</tr>\n</table>\n\n## -returns\n\nIf the function succeeds, it returns a nonzero value.\n\nIf the function fails, it returns zero.\n\n## -remarks\n\n<div class=\"alert\"><b>Note</b>  This is a blocking or synchronous function and might not return immediately. How quickly this function returns depends on run-time factors such as network status, print server configuration, and printer driver implementation—factors that are difficult to predict when writing an application. Calling this function from a thread that manages interaction with the user interface could make the application appear to be unresponsive.</div>\n<div> </div>\nThe application that owns the window referenced by hWnd processes the <b>PrintWindow</b> call and renders the image in the device context that is referenced by <i>hdcBlt</i>. The application  receives a <a href=\"/windows/desktop/gdi/wm-print\">WM_PRINT</a> message or, if the <b>PW_PRINTCLIENT</b> flag is specified, a <a href=\"/windows/desktop/gdi/wm-printclient\">WM_PRINTCLIENT</a> message.\nFor more information, see <b>WM_PRINT</b> and <b>WM_PRINTCLIENT</b>.\n\n## -see-also\n\n<a href=\"/windows/desktop/gdi/painting-and-drawing-messages\">Painting and Drawing Messages</a>\n\n\n\n<a href=\"/windows/desktop/gdi/painting-and-drawing\">Painting and Drawing Overview</a>\n\n\n\n<a href=\"/windows/desktop/gdi/wm-print\">WM_PRINT</a>\n\n\n\n<a href=\"/windows/desktop/gdi/wm-printclient\">WM_PRINTCLIENT</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 35,
+    "end_line": 35,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(win);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "is_window",
+    "file": "dlls/win32u/window.c",
+    "start_line": 644
+   },
+   {
+    "name": "is_window_visible",
+    "file": "dlls/win32u/window.c",
+    "start_line": 1069
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "NtGdiBitBlt",
+    "impl": [
+     "dlls/win32u/bitblt.c:576"
+    ]
+   },
+   {
+    "name": "NtGdiPatBlt",
+    "impl": [
+     "dlls/win32u/bitblt.c:534"
+    ]
+   },
+   {
+    "name": "NtUserGetDC",
+    "impl": [
+     "dlls/win32u/dce.c:1416"
+    ]
+   },
+   {
+    "name": "NtUserGetWindowDC",
+    "impl": [
+     "dlls/win32u/dce.c:1425"
+    ]
+   },
+   {
+    "name": "NtUserRedrawWindow",
+    "impl": [
+     "dlls/win32u/dce.c:1808"
+    ]
+   },
+   {
+    "name": "NtUserReleaseDC",
+    "impl": [
+     "dlls/win32u/dce.c:1408"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "NtUserGetClientRect",
+   "NtUserGetDpiForWindow",
+   "NtUserGetWindowRect",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "win32u.NtUserPrintWindow",
+  "category": {
+   "l1": "Devices",
+   "l2": "Printing",
+   "header": "winuser.h",
+   "textbook": "Device management",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 32,
+   "body": 31,
+   "code": 19
+  },
+  "cyclomatic": 7,
+  "return_type": "BOOL",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/user32/tests/msg.c::test_PrintWindow"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-printwindow",
+   "source": "win32",
+   "description": "The PrintWindow function copies a visual window into the specified device context (DC), typically a printer DC.",
+   "min_windows": "Windows XP [desktop apps only]",
+   "documented_dll": "User32.dll"
+  },
+  "exports": [
+   "user32.PrintWindow",
+   "win32u.NtUserPrintWindow"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.9,
+   "first_date": "2022-11-29",
+   "median_date": "2026-09-21",
+   "last_date": "2026-09-21",
+   "code_lines": 20
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "wsdapi.WSDXMLGetValueFromAny",
+  "share_after_cutoff": 0.9,
+  "last_date": "2026-09-21"
+ }
+}

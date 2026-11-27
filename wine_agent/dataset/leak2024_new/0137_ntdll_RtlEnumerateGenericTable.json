@@ -1,0 +1,193 @@
+{
+ "id": "0137",
+ "function": {
+  "name": "RtlEnumerateGenericTable",
+  "export_name": "RtlEnumerateGenericTable",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll",
+   "ntoskrnl.exe"
+  ],
+  "side": "PE",
+  "file": "dlls/ntdll/rtl.c",
+  "start_line": 669,
+  "end_line": 695,
+  "body_lines": 24,
+  "signature": "void * WINAPI RtlEnumerateGenericTable(RTL_GENERIC_TABLE *table, BOOLEAN restart)",
+  "header_comment": "/******************************************************************************\n *  RtlEnumerateGenericTable           [NTDLL.@]\n *\n * RtlEnumerateGenericTable() uses TableRoot to keep track of enumeration status according to tests.\n * This also means that other functions that change TableRoot should not be used during enumerations.\n * Otherwise, RtlEnumerateGenericTable() won't be able to find the correct next element when restart\n * is FALSE. This is also the case on Windows.\n */",
+  "code": "void * WINAPI RtlEnumerateGenericTable(RTL_GENERIC_TABLE *table, BOOLEAN restart)\n{\n    RTL_SPLAY_LINKS *child;\n\n    TRACE(\"(%p, %d)\\n\", table, restart);\n\n    if (RtlIsGenericTableEmpty(table))\n        return NULL;\n\n    if (restart)\n    {\n        /* Find the smallest element */\n        child = table->TableRoot;\n        while (RtlLeftChild(child))\n            child = RtlLeftChild(child);\n    }\n    else\n    {\n        /* Find the successor of the root */\n        child = RtlRealSuccessor(table->TableRoot);\n        if (!child)\n            return NULL;\n    }\n\n    table->TableRoot = RtlSplay(child);\n    return get_data_from_splay_links(child);\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ntuser.h\"",
+   "#include \"zlib.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"ntdll_misc.h\"",
+   "#include \"ddk/ntifs.h\""
+  ],
+  "resolution": [
+   "ntdll!RtlEnumerateGenericTable [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntdll/tests/rtl.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "ntddk",
+   "path": "wdk-ddi-src/content/ntddk/nf-ntddk-rtlenumerategenerictable.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlenumerategenerictable",
+   "documented_name": "rtlenumerategenerictable",
+   "file": "docs/0137_windows-driver-docs-ddi_nf-ntddk-rtlenumerategenerictable.md",
+   "text": "---\nUID: NF:ntddk.RtlEnumerateGenericTable\ntitle: RtlEnumerateGenericTable function (ntddk.h)\ndescription: The RtlEnumerateGenericTable routine is used to enumerate the elements in a generic table.\ntech.root: ifsk\nms.date: 01/10/2023\nkeywords: [\"RtlEnumerateGenericTable function\"]\nms.keywords: RtlEnumerateGenericTable, RtlEnumerateGenericTable routine [Installable File System Drivers], ifsk.rtlenumerategenerictable, ntddk/RtlEnumerateGenericTable, rtlref_5fb7c196-aee1-4dcc-a39c-587472a2fbe9.xml\nreq.header: ntddk.h\nreq.include-header: Ntddk.h, Ntifs.h, Fltkernel.h\nreq.target-type: Universal\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: < DISPATCH_LEVEL (see Remarks section)\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - RtlEnumerateGenericTable\n - ntddk/RtlEnumerateGenericTable\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - RtlEnumerateGenericTable\n---\n\n## -description\n\nThe **RtlEnumerateGenericTable** routine is used to enumerate the elements in a generic table.\n\n## -parameters\n\n### -param Table [in]\n\nA pointer to the generic table ([**RTL_GENERIC_TABLE**](./ns-ntddk-_rtl_generic_table.md)). The table must have been initialized by calling [RtlInitializeGenericTable](./nf-ntddk-rtlinitializegenerictable.md).\n\n### -param Restart [in]\n\nSet to **TRUE** if the enumeration is to start at the first element in the table. Set to **FALSE** if resuming the enumeration from a previous call.\n\nTo enumerate all elements in the table, use **RtlEnumerateGenericTable** as follows:\n\n```cpp\nfor (p = RtlEnumerateGenericTable ( Table, TRUE );\n     p != NULL;\n     p = RtlEnumerateGenericTable ( Table, FALSE )) {\n        // Process the element pointed to by p\n}\n```\n\n## -returns\n\n**RtlEnumerateGenericTable** returns a pointer to the next element, if one exists. If there are no more elements in the table, **RtlEnumerateGenericTable** returns **NULL**.\n\n## -remarks\n\n**RtlEnumerateGenericTable** flattens the generic table by converting it from a splay tree into a sorted linked list. To enumerate the table without flattening it, use [RtlEnumerateGenericTableWithoutSplaying](./nf-ntddk-rtlenumerategenerictablewithoutsplaying.md).\n\nCallers of the *Rtl..GenericTable* routines are responsible for exclusively synchronizing access to the generic table. An exclusive fast mutex is the most efficient synchronization mechanism to use for this purpose.\n\nBy default, the operating system uses splay trees to implement generic tables. Under some circumstances, operations on a splay tree will make the tree deep and narrow and might even turn it into a straight line. Very deep trees degrade the performance of searches. You can ensure a more balanced, shallower tree implementation of generic tables by using Adelson-Velsky/Landis (AVL) trees. If you want to configure the generic table routines to use AVL trees instead of splay trees in your driver, insert the following define statement in a common header file before including *Ntddk.h*:\n\n`#define RTL_USE_AVL_TABLES 0`\n\nIf RTL_USE_AVL_TABLES is not defined, you must use the AVL form of the generic table routines. For example, use the [RtlEnumerateGenericTableAvl](./nf-ntddk-rtlenumerategenerictableavl.md) routine instead of **RtlEnumerateGenericTable**. In the call to **RtlEnumerateGenericTableAvl**, the caller must pass a [RTL_AVL_TABLE](./ns-ntddk-_rtl_avl_table.md) table structure rather than [**RTL_GENERIC_TABLE**](./ns-ntddk-_rtl_generic_table.md).\n\nCallers of **RtlEnumerateGenericTable** must be running at IRQL < DISPATCH_LEVEL if the caller-allocated memory for the generic table is pageable.\n\n## -see-also\n\n[ExInitializeFastMutex](../wdm/nf-wdm-exinitializefastmutex.md)\n\n[RtlEnumerateGenericTableWithoutSplaying](./nf-ntddk-rtlenumerategenerictablewithoutsplaying.md)\n\n[RtlInitializeGenericTable](./nf-ntddk-rtlinitializegenerictable.md)\n\n[RtlIsGenericTableEmpty](./nf-ntddk-rtlisgenerictableempty.md)\n\n[RtlNumberGenericTableElements](./nf-ntddk-rtlnumbergenerictableelements.md)"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_data_from_splay_links",
+   "file": "dlls/ntdll/rtl.c",
+   "start_line": 199,
+   "end_line": 202,
+   "static": true,
+   "called_from": [
+    "RtlEnumerateGenericTable"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/rtl.c:223",
+    "dlls/ntdll/rtl.c:568",
+    "dlls/ntdll/rtl.c:591",
+    "dlls/ntdll/rtl.c:596",
+    "dlls/ntdll/rtl.c:608"
+   ],
+   "signature": "static void *get_data_from_splay_links(RTL_SPLAY_LINKS *links)",
+   "code": "static void *get_data_from_splay_links(RTL_SPLAY_LINKS *links)\n{\n    return (unsigned char *)links + FIELD_OFFSET(struct rtl_generic_table_entry, data);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "rtl_generic_table_entry",
+    "kind": "struct_decl",
+    "start_line": 192,
+    "end_line": 197,
+    "code": "struct rtl_generic_table_entry\n{\n    RTL_SPLAY_LINKS splay_links;\n    LIST_ENTRY list_entry;\n    LONGLONG data;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ntdll);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "RtlIsGenericTableEmpty",
+    "impl": [
+     "dlls/ntdll/rtl.c:548"
+    ]
+   },
+   {
+    "name": "RtlRealSuccessor",
+    "impl": [
+     "dlls/ntdll/rtl.c:367"
+    ]
+   },
+   {
+    "name": "RtlSplay",
+    "impl": [
+     "dlls/ntdll/rtl.c:394"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ntdll.RtlEnumerateGenericTable",
+  "category": {
+   "l1": "System services",
+   "l2": "Run-time library (strings, bitmaps, utilities)",
+   "header": "ntddk.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "name_rule"
+  },
+  "loc": {
+   "total": 27,
+   "body": 26,
+   "code": 14
+  },
+  "cyclomatic": 5,
+  "return_type": "void *",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ntdll/tests/rtl.c::test_RtlEnumerateGenericTable"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlenumerategenerictable",
+   "source": "ddi",
+   "description": "The RtlEnumerateGenericTable routine is used to enumerate the elements in a generic table.",
+   "min_windows": "",
+   "documented_dll": "NtosKrnl.exe"
+  },
+  "exports": [
+   "ntdll.RtlEnumerateGenericTable",
+   "ntoskrnl.exe.RtlEnumerateGenericTable"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.933,
+   "first_date": "2009-06-04",
+   "median_date": "2025-02-10",
+   "last_date": "2025-02-10",
+   "code_lines": 15
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "ntdll.RtlFindMostSignificantBit",
+  "share_after_cutoff": 0.933,
+  "last_date": "2025-02-10"
+ }
+}

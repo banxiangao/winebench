@@ -1,0 +1,260 @@
+{
+ "id": "0105",
+ "function": {
+  "name": "CreateFiberEx",
+  "export_name": "CreateFiberEx",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/thread.c",
+  "start_line": 1090,
+  "end_line": 1119,
+  "body_lines": 27,
+  "signature": "LPVOID WINAPI DECLSPEC_HOTPATCH CreateFiberEx( SIZE_T stack_commit, SIZE_T stack_reserve, DWORD flags, LPFIBER_START_ROUTINE start, LPVOID param )",
+  "header_comment": "/***********************************************************************\n *           CreateFiberEx   (kernelbase.@)\n */",
+  "code": "LPVOID WINAPI DECLSPEC_HOTPATCH CreateFiberEx( SIZE_T stack_commit, SIZE_T stack_reserve, DWORD flags,\n                                               LPFIBER_START_ROUTINE start, LPVOID param )\n{\n    struct fiber_data *fiber;\n    INITIAL_TEB stack;\n\n    if (!(fiber = HeapAlloc( GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*fiber) )))\n    {\n        SetLastError( ERROR_NOT_ENOUGH_MEMORY );\n        return NULL;\n    }\n\n    if (!set_ntstatus( RtlCreateUserStack( stack_commit, stack_reserve, 0, 1, 1, &stack )))\n    {\n        HeapFree( GetProcessHeap(), 0, fiber );\n        return NULL;\n    }\n\n    fiber->stack_allocation = stack.DeallocationStack;\n    fiber->stack_base = stack.StackBase;\n    fiber->stack_limit = stack.StackLimit;\n    fiber->param       = param;\n    fiber->except      = (void *)-1;\n    fiber->start       = start;\n    fiber->flags       = flags;\n    InitializeListHead( &fiber->actctx.stack_space.FrameListCache );\n    fiber->actctx.stack_ptr = &fiber->actctx.stack_space;\n    init_fiber_context( fiber );\n    return fiber;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include <limits.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/asm.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!CreateFiberEx [stdcall -import] -> import from kernelbase",
+   "kernelbase!CreateFiberEx [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/fiber.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winbase",
+   "path": "sdk-api-src/content/winbase/nf-winbase-createfiberex.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-createfiberex",
+   "documented_name": "createfiberex",
+   "file": "docs/0105_sdk-api_nf-winbase-createfiberex.md",
+   "text": "---\nUID: NF:winbase.CreateFiberEx\ntitle: CreateFiberEx function (winbase.h)\ndescription: Allocates a fiber object, assigns it a stack, and sets up execution to begin at the specified start address, typically the fiber function. This function does not schedule the fiber. (CreateFiberEx)\nhelpviewer_keywords: [\"CreateFiberEx\",\"CreateFiberEx function\",\"_win32_createfiberex\",\"base.createfiberex\",\"winbase/CreateFiberEx\"]\nold-location: base\\createfiberex.htm\ntech.root: backup\nms.assetid: eb27cfcf-6086-47df-a5b4-93c51a5e1577\nms.date: 12/05/2018\nms.keywords: CreateFiberEx, CreateFiberEx function, _win32_createfiberex, base.createfiberex, winbase/CreateFiberEx\nreq.header: winbase.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CreateFiberEx\n - winbase/CreateFiberEx\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Kernel32.dll\n - API-MS-Win-Core-fibers-l2-1-1.dll\n - kernel32legacy.dll\n - KernelBase.dll\napi_name:\n - CreateFiberEx\n---\n\n# CreateFiberEx function\n\n\n## -description\n\nAllocates a fiber object, assigns it a stack, and sets up execution to begin at the specified start address, typically the fiber function. This function does not schedule the fiber.\n\n## -parameters\n\n### -param dwStackCommitSize [in]\n\nThe initial commit size of the stack, in bytes. If this parameter is zero, the new fiber uses the default commit stack size for the executable. For more information, see <a href=\"/windows/desktop/ProcThread/thread-stack-size\">Thread Stack Size</a>.\n\n### -param dwStackReserveSize [in]\n\nThe initial reserve size of the stack, in bytes. If this parameter is zero, the new fiber uses the default reserved stack size for the executable. For more information, see <a href=\"/windows/desktop/ProcThread/thread-stack-size\">Thread Stack Size</a>.\n\n### -param dwFlags [in]\n\nIf this parameter is zero, the floating-point state on x86 systems is not switched and data can be corrupted if a fiber uses floating-point arithmetic. If this parameter is <b>FIBER_FLAG_FLOAT_SWITCH</b>, the floating-point state is switched for the fiber.\n\n<b>Windows XP:  </b>The <b>FIBER_FLAG_FLOAT_SWITCH</b> flag is not supported.\n\n### -param lpStartAddress [in]\n\nA pointer to the application-defined function to be executed by the fiber and represents the starting address of the fiber. Execution of the newly created fiber does not begin until another fiber calls the \n<a href=\"/windows/desktop/api/winbase/nf-winbase-switchtofiber\">SwitchToFiber</a> function with this address. For more information on the fiber callback function, see \n<a href=\"/windows/desktop/api/winbase/nc-winbase-pfiber_start_routine\">FiberProc</a>.\n\n### -param lpParameter [in, optional]\n\nA pointer to a variable that is passed to the fiber. The fiber can retrieve this data by using the \n<a href=\"/windows/desktop/api/winnt/nf-winnt-getfiberdata\">GetFiberData</a> macro.\n\n## -returns\n\nIf the function succeeds, the return value is the address of the fiber.\n\nIf the function fails, the return value is NULL. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThe number of fibers a process can create is limited by the available virtual memory. By default, every fiber has 1 megabyte of reserved stack space. Therefore, you can create at most 2028 fibers. If you reduce the default stack size, you can create more fibers. However, your application will have better performance if you use an alternate strategy for processing requests.\n\nBefore a thread can schedule a fiber using the \n<a href=\"/windows/desktop/api/winbase/nf-winbase-switchtofiber\">SwitchToFiber</a> function, it must call the \n<a href=\"/windows/desktop/api/winbase/nf-winbase-convertthreadtofiber\">ConvertThreadToFiber</a> function so there is a fiber associated with the thread.\n\nTo compile an application that uses this function, define <b>_WIN32_WINNT</b> as 0x0400 or later. For more information, see \n<a href=\"/windows/desktop/WinProg/using-the-windows-headers\">Using the Windows Headers</a>.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-convertthreadtofiber\">ConvertThreadToFiber</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nc-winbase-pfiber_start_routine\">FiberProc</a>\n\n\n\n<a href=\"/windows/desktop/ProcThread/fibers\">Fibers</a>\n\n\n\n<a href=\"/windows/desktop/api/winnt/nf-winnt-getfiberdata\">GetFiberData</a>\n\n\n\n<a href=\"/windows/desktop/ProcThread/process-and-thread-functions\">Process and Thread Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-switchtofiber\">SwitchToFiber</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "init_fiber_context",
+   "file": "dlls/kernelbase/thread.c",
+   "start_line": 1025,
+   "end_line": 1043,
+   "static": true,
+   "called_from": [
+    "CreateFiberEx"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void init_fiber_context( struct fiber_data *fiber )",
+   "code": "static void init_fiber_context( struct fiber_data *fiber )\n{\n#ifdef __i386__\n    fiber->context.Esp = (ULONG_PTR)fiber->stack_base - 4;\n    fiber->context.Eip = (ULONG_PTR)start_fiber;\n#elif defined(__arm64ec__)\n    fiber->context.Rsp = (ULONG_PTR)fiber->stack_base;\n    fiber->context.Rip = (ULONG_PTR)start_fiber;\n#elif defined(__x86_64__)\n    fiber->context.Rsp = (ULONG_PTR)fiber->stack_base - 0x28;\n    fiber->context.Rip = (ULONG_PTR)start_fiber;\n#elif defined(__arm__)\n    fiber->context.Sp = (ULONG_PTR)fiber->stack_base;\n    fiber->context.Pc = (ULONG_PTR)start_fiber;\n#elif defined(__aarch64__)\n    fiber->context.Sp = (ULONG_PTR)fiber->stack_base;\n    fiber->context.Pc = (ULONG_PTR)start_fiber;\n#endif\n}"
+  },
+  {
+   "name": "start_fiber",
+   "file": "dlls/kernelbase/thread.c",
+   "start_line": 1008,
+   "end_line": 1023,
+   "static": true,
+   "called_from": [
+    "init_fiber_context"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void CDECL start_fiber(void)",
+   "code": "static void CDECL start_fiber(void)\n{\n    struct fiber_data *fiber = NtCurrentTeb()->Tib.FiberData;\n    LPFIBER_START_ROUTINE start = fiber->start;\n\n    __TRY\n    {\n        start( fiber->param );\n        RtlExitUserThread( 1 );\n    }\n    __EXCEPT(UnhandledExceptionFilter)\n    {\n        TerminateThread( GetCurrentThread(), GetExceptionCode() );\n    }\n    __ENDTRY\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "fiber_actctx",
+    "kind": "struct_decl",
+    "start_line": 841,
+    "end_line": 845,
+    "code": "struct fiber_actctx\n{\n    ACTIVATION_CONTEXT_STACK stack_space;    /* activation context stack space */\n    ACTIVATION_CONTEXT_STACK *stack_ptr;     /* last value of ActivationContextStackPointer */\n};"
+   },
+   {
+    "name": "fiber_data",
+    "kind": "struct_decl",
+    "start_line": 847,
+    "end_line": 859,
+    "code": "struct fiber_data\n{\n    LPVOID                param;             /* 00/00 fiber param */\n    void                 *except;            /* 04/08 saved exception handlers list */\n    void                 *stack_base;        /* 08/10 top of fiber stack */\n    void                 *stack_limit;       /* 0c/18 fiber stack low-water mark */\n    void                 *stack_allocation;  /* 10/20 base of the fiber stack allocation */\n    CONTEXT               context;           /* 14/30 fiber context */\n    DWORD                 flags;             /*       fiber flags */\n    LPFIBER_START_ROUTINE start;             /*       start routine */\n    void                 *fls_slots;         /*       fiber storage slots */\n    struct fiber_actctx   actctx;            /*       activation context state */\n};"
+   }
+  ],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetCurrentThread",
+    "impl": [
+     "dlls/kernelbase/thread.c:200"
+    ]
+   },
+   {
+    "name": "GetProcessHeap",
+    "impl": [
+     "dlls/kernelbase/process.c:910"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   },
+   {
+    "name": "TerminateThread",
+    "impl": [
+     "dlls/kernelbase/thread.c:689"
+    ]
+   },
+   {
+    "name": "UnhandledExceptionFilter",
+    "impl": [
+     "dlls/kernelbase/debug.c:679"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "RtlAllocateHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "RtlCreateUserStack",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/thread.c:306"
+    ]
+   },
+   {
+    "name": "RtlExitUserThread",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/thread.c:238"
+    ]
+   },
+   {
+    "name": "RtlFreeHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   }
+  ],
+  "header_inline": [
+   "NtCurrentTeb",
+   "__wine_pop_frame",
+   "__wine_push_frame"
+  ],
+  "system": [],
+  "unresolved": [
+   "__wine_exception_handler",
+   "__wine_setjmpex",
+   "set_ntstatus"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "start",
+    "in_function": "start_fiber",
+    "at": "dlls/kernelbase/thread.c:1015",
+    "candidates": [
+     "start @ dlls/kernelbase/thread.c:1113"
+    ]
+   }
+  ]
+ },
+ "winebench": {
+  "id": "kernelbase.CreateFiberEx",
+  "category": {
+   "l1": "System services",
+   "l2": "Processes and threads",
+   "header": "winbase.h",
+   "textbook": "Process control",
+   "basis": "name_rule"
+  },
+  "loc": {
+   "total": 30,
+   "body": 28,
+   "code": 19
+  },
+  "cyclomatic": 3,
+  "return_type": "LPVOID",
+  "n_params": 5,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/kernel32/tests/fiber.c::test_FiberHandling"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-createfiberex",
+   "source": "win32",
+   "description": "Allocates a fiber object, assigns it a stack, and sets up execution to begin at the specified start address, typically the fiber function. This function does not schedule the fiber. (CreateFiberEx)",
+   "min_windows": "Windows XP [desktop apps \\| UWP apps]",
+   "documented_dll": "Kernel32.dll"
+  },
+  "exports": [
+   "kernel32.CreateFiberEx",
+   "kernelbase.CreateFiberEx"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2002-12-17",
+   "median_date": "2019-06-17",
+   "last_date": "2023-04-19",
+   "code_lines": 21,
+   "pair": "kernelbase.ExpandEnvironmentStringsA",
+   "rank": 1,
+   "distance": 0.0
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "kernelbase.ExpandEnvironmentStringsA",
+  "share_after_cutoff": 0.0,
+  "last_date": "2023-04-19",
+  "partner_rank": 1,
+  "distance": 0.0
+ }
+}

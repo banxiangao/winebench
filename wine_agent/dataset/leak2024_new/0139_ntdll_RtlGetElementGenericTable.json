@@ -1,0 +1,167 @@
+{
+ "id": "0139",
+ "function": {
+  "name": "RtlGetElementGenericTable",
+  "export_name": "RtlGetElementGenericTable",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll",
+   "ntoskrnl.exe"
+  ],
+  "side": "PE",
+  "file": "dlls/ntdll/rtl.c",
+  "start_line": 709,
+  "end_line": 835,
+  "body_lines": 124,
+  "signature": "void * WINAPI RtlGetElementGenericTable(RTL_GENERIC_TABLE *table, ULONG index)",
+  "header_comment": "/******************************************************************************\n *  RtlGetElementGenericTable           [NTDLL.@]\n */",
+  "code": "void * WINAPI RtlGetElementGenericTable(RTL_GENERIC_TABLE *table, ULONG index)\n{\n    ULONG count, ordered_element_index;\n    LIST_ENTRY *list_entry;\n    BOOL forward;\n\n    TRACE(\"(%p, %lu)\\n\", table, index);\n\n    if (index >= table->NumberGenericTableElements)\n        return NULL;\n\n    /* No OrderedPointer, use list header InsertOrderList */\n    if (table->WhichOrderedElement == 0)\n    {\n        /*\n         * |  lower half  | upper half |\n         * ^       ^      ^            ^\n         * head, 0 |      |            tail, table->NumberGenericTableElements - 1\n         *         |      (table->NumberGenericTableElements - 1) / 2\n         *         index closer to head\n         */\n        if (index <= (table->NumberGenericTableElements - 1) / 2)\n        {\n            list_entry = table->InsertOrderList.Flink;\n            count = index;\n            forward = TRUE;\n        }\n        /*\n         * |  lower half  | upper half |\n         * ^              ^       ^    ^\n         * head, 0        |       |    tail, table->NumberGenericTableElements - 1\n         *                |       index closer to tail\n         *                (table->NumberGenericTableElements - 1) / 2\n         */\n        else\n        {\n            list_entry = table->InsertOrderList.Blink;\n            count = table->NumberGenericTableElements - index - 1;\n            forward = FALSE;\n        }\n    }\n    /* Has OrderedPointer, decide to use list header or OrderedPointer */\n    else\n    {\n        ordered_element_index = table->WhichOrderedElement - 1;\n\n        /*\n         * | -------------- | ---------- |\n         * ^         ^      ^            ^\n         * head, 0   |      |            table->NumberGenericTableElements - 1\n         *           |      ordered_element_index\n         *           index, 0 <= index <= ordered_element_index\n         */\n        if (index <= ordered_element_index)\n        {\n            /*\n             * | ------------------- |\n             * ^          ^          ^\n             * | <--d1--> | <--d2--> |\n             * head, 0    |          ordered_element_index\n             *            index\n             *\n             */\n            /* d1 <= d2, index is closer to head, forward from head */\n            if (index <= ordered_element_index - index)\n            {\n                list_entry = table->InsertOrderList.Flink;\n                count = index;\n                forward = TRUE;\n            }\n            /* d1 > d2, index is closer to ordered_element_index, backward from ordered_element_index */\n            else\n            {\n                list_entry = table->OrderedPointer;\n                count = ordered_element_index - index;\n                forward = FALSE;\n            }\n        }\n        /*\n         * | ------ | ---------- |\n         * ^        ^  ^         ^\n         * head, 0  |  |         tail, table->NumberGenericTableElements - 1\n         *          |  index, ordered_element_index < index <= table->NumberGenericTableElements - 1\n         *          ordered_element_index\n         */\n        else\n        {\n            /*\n             * | --------------------------------|\n             * ^                      ^          ^\n             * | <--------d1--------> | <--d2--> |\n             * ordered_element_index  |          tail, table->NumberGenericTableElements - 1\n             *                        index\n             *\n             */\n            /* d1 <= d2, index is closer to ordered_element_index, forward from ordered_element_index */\n            if (index - ordered_element_index <= table->NumberGenericTableElements - index - 1)\n            {\n                list_entry = table->OrderedPointer;\n                count = index - ordered_element_index;\n                forward = TRUE;\n            }\n            /* d1 > d2, index is closer to tail, backward from tail */\n            else\n            {\n                list_entry = table->InsertOrderList.Blink;\n                count = table->NumberGenericTableElements - index - 1;\n                forward = FALSE;\n            }\n        }\n    }\n\n    if (forward)\n    {\n        while (count--)\n            list_entry = list_entry->Flink;\n    }\n    else\n    {\n        while (count--)\n            list_entry = list_entry->Blink;\n    }\n\n    table->OrderedPointer = list_entry;\n    table->WhichOrderedElement = index + 1;\n    return get_data_from_list_entry(list_entry);\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ntuser.h\"",
+   "#include \"zlib.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"ntdll_misc.h\"",
+   "#include \"ddk/ntifs.h\""
+  ],
+  "resolution": [
+   "ntdll!RtlGetElementGenericTable [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntdll/tests/rtl.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "ntddk",
+   "path": "wdk-ddi-src/content/ntddk/nf-ntddk-rtlgetelementgenerictable.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlgetelementgenerictable",
+   "documented_name": "rtlgetelementgenerictable",
+   "file": "docs/0139_windows-driver-docs-ddi_nf-ntddk-rtlgetelementgenerictable.md",
+   "text": "---\nUID: NF:ntddk.RtlGetElementGenericTable\ntitle: RtlGetElementGenericTable function (ntddk.h)\ndescription: The RtlGetElementGenericTable routine returns a pointer to the caller-supplied data for a particular generic table element.\nold-location: ifsk\\rtlgetelementgenerictable.htm\ntech.root: ifsk\nms.date: 04/16/2018\nkeywords: [\"RtlGetElementGenericTable function\"]\nms.keywords: RtlGetElementGenericTable, RtlGetElementGenericTable routine [Installable File System Drivers], ifsk.rtlgetelementgenerictable, ntddk/RtlGetElementGenericTable, rtlref_5127995d-65ea-4a8b-8b5b-ad64c7cc4c0d.xml\nreq.header: ntddk.h\nreq.include-header: Ntddk.h, Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: Any level (see Remarks)\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - RtlGetElementGenericTable\n - ntddk/RtlGetElementGenericTable\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - RtlGetElementGenericTable\n---\n\n# RtlGetElementGenericTable function\n\n\n## -description\n\nThe <b>RtlGetElementGenericTable</b> routine returns a pointer to the caller-supplied data for a particular generic table element.\n\n## -parameters\n\n### -param Table [in]\n\n\nPointer to the generic table (<a href=\"/windows-hardware/drivers/ddi/ntddk/ns-ntddk-_rtl_generic_table\">RTL_GENERIC_TABLE</a>) from which the <i>I</i>th element is to be retrieved. The table must have been initialized by calling <b>RtlInitializeGenericTable</b>.\n\n### -param I [in]\n\n\nIndex of the element selected. This value is zero-based, so the index of the last-inserted element currently in <i>Table</i> is always one less than the value returned by <b>RtlNumberGenericTableElements</b>.\n\n## -returns\n\n<b>RtlGetElementGenericTable</b> returns a pointer to the caller-supplied data for the <i>I</i>th element in the generic table. It returns <b>NULL</b> if the given <i>I</i> is too large or if the generic table currently has no elements.\n\n## -remarks\n\n<b>RtlGetElementGenericTable</b> returns the <i>I</i>th element inserted in the generic table. To retrieve the first element, set <i>I</i> to zero. To retrieve the last element, set <i>I</i> to (<b>RtlNumberGenericTableElements</b>(<i>Table</i>)-1). Note that if an element is deleted from the generic table, the indexes of all elements inserted after the deleted element are decremented. Thus an element's index might change over time. \n\n<b>RtlGetElementGenericTable</b> is more efficient than <b>RtlLookupElementGenericTable</b> if the caller can supply the index of a particular element for which the caller needs access to the associated data. However, calling <b>RtlGetElementGenericTable</b> repeatedly to test for such an element is less efficient than calling <b>RtlLookupElementGenericTable</b> to locate it. \n\nCallers of the Rtl..GenericTable routines are responsible for exclusively synchronizing access to the generic table. An exclusive fast mutex is the most efficient synchronization mechanism to use for this purpose. \n\nBy default, the operating system uses splay trees to implement generic tables. Under some circumstances, operations on a splay tree will make the tree deep and narrow and might even turn it into a straight line. Very deep trees degrade the performance of searches. You can ensure a more balanced, shallower tree implementation of generic tables by using Adelson-Velsky/Landis (AVL) trees. If you want to configure the generic table routines to use AVL trees instead of splay trees in your driver, insert the following define statement in a common header file before including <i>Ntddk.h</i>:\n\n`#define RTL_USE_AVL_TABLES 0`\n\nIf RTL_USE_AVL_TABLES is not defined, you must use the AVL form of the generic table routines. For example, use the <b>RtlGetElementGenericTableAvl</b> routine instead of <b>RtlGetElementGenericTable</b>. In the call to <b>RtlGetElementGenericTableAvl</b>, the caller must pass a <a href=\"/windows-hardware/drivers/ddi/ntddk/ns-ntddk-_rtl_avl_table\">RTL_AVL_TABLE</a> table structure rather than <a href=\"/windows-hardware/drivers/ddi/ntddk/ns-ntddk-_rtl_generic_table\">RTL_GENERIC_TABLE</a>.\n\nCallers of <b>RtlGetElementGenericTable</b> must be running at IRQL < DISPATCH_LEVEL if the caller-allocated memory for the generic table is pageable.\n\n## -see-also\n\n<a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtldeleteelementgenerictable\">RtlDeleteElementGenericTable</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlenumerategenerictablewithoutsplaying\">RtlEnumerateGenericTableWithoutSplaying</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlinitializegenerictable\">RtlInitializeGenericTable</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlinsertelementgenerictable\">RtlInsertElementGenericTable</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtllookupelementgenerictable\">RtlLookupElementGenericTable</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlnumbergenerictableelements\">RtlNumberGenericTableElements</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_data_from_list_entry",
+   "file": "dlls/ntdll/rtl.c",
+   "start_line": 204,
+   "end_line": 208,
+   "static": true,
+   "called_from": [
+    "RtlGetElementGenericTable"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void *get_data_from_list_entry(LIST_ENTRY *list_entry)",
+   "code": "static void *get_data_from_list_entry(LIST_ENTRY *list_entry)\n{\n    return (unsigned char *)list_entry + FIELD_OFFSET(struct rtl_generic_table_entry, data)\n        - FIELD_OFFSET(struct rtl_generic_table_entry, list_entry);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "rtl_generic_table_entry",
+    "kind": "struct_decl",
+    "start_line": 192,
+    "end_line": 197,
+    "code": "struct rtl_generic_table_entry\n{\n    RTL_SPLAY_LINKS splay_links;\n    LIST_ENTRY list_entry;\n    LONGLONG data;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ntdll);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ntdll.RtlGetElementGenericTable",
+  "category": {
+   "l1": "System services",
+   "l2": "Run-time library (strings, bitmaps, utilities)",
+   "header": "ntddk.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "name_rule"
+  },
+  "loc": {
+   "total": 127,
+   "body": 126,
+   "code": 44
+  },
+  "cyclomatic": 10,
+  "return_type": "void *",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ntdll/tests/rtl.c::test_RtlGetElementGenericTable"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlgetelementgenerictable",
+   "source": "ddi",
+   "description": "The RtlGetElementGenericTable routine returns a pointer to the caller-supplied data for a particular generic table element.",
+   "min_windows": "",
+   "documented_dll": "NtosKrnl.exe"
+  },
+  "exports": [
+   "ntdll.RtlGetElementGenericTable",
+   "ntoskrnl.exe.RtlGetElementGenericTable"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.956,
+   "first_date": "2021-12-02",
+   "median_date": "2025-02-10",
+   "last_date": "2025-02-10",
+   "code_lines": 45
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "ntdll.RtlCharToInteger",
+  "share_after_cutoff": 0.956,
+  "last_date": "2025-02-10"
+ }
+}

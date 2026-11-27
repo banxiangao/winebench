@@ -1,0 +1,194 @@
+{
+ "id": "0011",
+ "function": {
+  "name": "BluetoothIsConnectable",
+  "export_name": "BluetoothIsConnectable",
+  "module": "bluetoothapis",
+  "source_module": "bluetoothapis",
+  "exported_by": [
+   "bluetoothapis",
+   "bthprops.cpl",
+   "irprops.cpl"
+  ],
+  "side": "PE",
+  "file": "dlls/bluetoothapis/main.c",
+  "start_line": 453,
+  "end_line": 496,
+  "body_lines": 41,
+  "signature": "BOOL WINAPI BluetoothIsConnectable( HANDLE radio )",
+  "header_comment": "/*********************************************************************\n *  BluetoothIsConnectable\n */",
+  "code": "BOOL WINAPI BluetoothIsConnectable( HANDLE radio )\n{\n    TRACE( \"(%p)\\n\", radio );\n\n    if (!radio)\n    {\n        BLUETOOTH_FIND_RADIO_PARAMS params = {.dwSize = sizeof( params )};\n        HBLUETOOTH_RADIO_FIND find = BluetoothFindFirstRadio( &params, &radio );\n\n        if (!find)\n            return FALSE;\n        for (;;)\n        {\n            if (BluetoothIsConnectable( radio ))\n            {\n                CloseHandle( radio );\n                BluetoothFindRadioClose( find );\n                return TRUE;\n            }\n\n            CloseHandle( radio );\n            if (!BluetoothFindNextRadio( find, &radio ))\n            {\n                BluetoothFindRadioClose( find );\n                return FALSE;\n            }\n        }\n    }\n    else\n    {\n        BTH_LOCAL_RADIO_INFO radio_info = {0};\n        DWORD bytes;\n        DWORD ret;\n\n        ret = DeviceIoControl( radio, IOCTL_BTH_GET_LOCAL_INFO, NULL, 0, &radio_info, sizeof( radio_info ), &bytes,\n                               NULL );\n        if (!ret)\n        {\n            ERR( \"DeviceIoControl failed: %#lx\\n\", GetLastError() );\n            return FALSE;\n        }\n        return !!(radio_info.flags & LOCAL_RADIO_CONNECTABLE);\n    }\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <winternl.h>",
+   "#include <windef.h>",
+   "#include <winbase.h>",
+   "#include <winuser.h>",
+   "#include <winreg.h>",
+   "#include <winnls.h>",
+   "#include \"bthsdpdef.h\"",
+   "#include \"cfgmgr32.h\"",
+   "#include \"setupapi.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"initguid.h\"",
+   "#include \"bluetoothapis.h\"",
+   "#include \"bthledef.h\"",
+   "#include \"bthdef.h\"",
+   "#include \"bthioctl.h\"",
+   "#include \"wine/winebth.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"resource.h\""
+  ],
+  "resolution": [
+   "bluetoothapis!BluetoothIsConnectable [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/bluetoothapis/tests/radio.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 4
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "bluetoothapis",
+   "path": "sdk-api-src/content/bluetoothapis/nf-bluetoothapis-bluetoothisconnectable.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothisconnectable",
+   "documented_name": "bluetoothisconnectable",
+   "file": "docs/0011_sdk-api_nf-bluetoothapis-bluetoothisconnectable.md",
+   "text": "---\nUID: NF:bluetoothapis.BluetoothIsConnectable\ntitle: BluetoothIsConnectable function (bluetoothapis.h)\ndescription: The BluetoothIsConnectable function determines whether a Bluetooth radio or radios is connectable.\nhelpviewer_keywords: [\"BluetoothIsConnectable\",\"BluetoothIsConnectable function [Bluetooth]\",\"bluetooth.bluetoothisconnectable\",\"bluetoothapis/BluetoothIsConnectable\"]\nold-location: bluetooth\\bluetoothisconnectable.htm\ntech.root: bluetooth\nms.assetid: e20ad938-cab4-4017-95bf-8d6843f048eb\nms.date: 12/05/2018\nms.keywords: BluetoothIsConnectable, BluetoothIsConnectable function [Bluetooth], bluetooth.bluetoothisconnectable, bluetoothapis/BluetoothIsConnectable\nreq.header: bluetoothapis.h\nreq.include-header: Bthsdpdef.h, BluetoothAPIs.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista, Windows XP with SP2 [desktop apps only]\nreq.target-min-winversvr: None supported\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Bthprops.lib\nreq.dll: bthprops.cpl\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - BluetoothIsConnectable\n - bluetoothapis/BluetoothIsConnectable\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - bthprops.cpl\n - BluetoothAPIs.dll\n - Ext-MS-Win-Bluetooth-APIs-l1-1-0.dll\napi_name:\n - BluetoothIsConnectable\n---\n\n# BluetoothIsConnectable function\n\n\n## -description\n\nThe <b>BluetoothIsConnectable</b> function determines whether a Bluetooth radio or radios is connectable.\n\n## -parameters\n\n### -param hRadio\n\nValid local radio handle, or <b>NULL</b>. If <b>NULL</b>, all local radios are checked for connectability; if any radio is connectable, the function call succeeds.\n\n## -returns\n\nReturns <b>TRUE</b> if at least one Bluetooth radio is accepting incoming connections. Returns <b>FALSE</b> if no radios are accepting incoming connections.\n\n## -remarks\n\nIf multiple Bluetooth radios exist, the first radio to return that it is connectable causes the <b>BluetoothIsConnectable</b> function to succeed.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothauthenticatedevice\">BluetoothAuthenticateDevice</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothauthenticatemultipledevices\">BluetoothAuthenticateMultipleDevices</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothenablediscovery\">BluetoothEnableDiscovery</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothenableincomingconnections\">BluetoothEnableIncomingConnections</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothisdiscoverable\">BluetoothIsDiscoverable</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothregisterforauthentication\">BluetoothRegisterForAuthentication</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothsendauthenticationresponse\">BluetoothSendAuthenticationResponse</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothunregisterauthentication\">BluetoothUnregisterAuthentication</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 48,
+    "end_line": 48,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(bluetoothapis);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "BluetoothFindFirstRadio",
+    "impl": [
+     "dlls/bluetoothapis/main.c:246"
+    ]
+   },
+   {
+    "name": "BluetoothFindNextRadio",
+    "impl": [
+     "dlls/bluetoothapis/main.c:335"
+    ]
+   },
+   {
+    "name": "BluetoothFindRadioClose",
+    "impl": [
+     "dlls/bluetoothapis/main.c:293"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CloseHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "DeviceIoControl",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:4379"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetLastError",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "bluetoothapis.BluetoothIsConnectable",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "Wireless networking",
+   "header": "bluetoothapis.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 44,
+   "body": 43,
+   "code": 25
+  },
+  "cyclomatic": 7,
+  "return_type": "BOOL",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 4,
+   "n_tests": 4,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/bluetoothapis/tests/radio.c::test_BluetoothEnableIncomingConnections",
+    "dlls/bluetoothapis/tests/radio.c::test_BluetoothIsConnectable",
+    "dlls/bluetoothapis/tests/radio.c::test_radio_BluetoothEnableIncomingConnections",
+    "dlls/bluetoothapis/tests/radio.c::test_radio_BluetoothIsConnectable"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothisconnectable",
+   "source": "win32",
+   "description": "The BluetoothIsConnectable function determines whether a Bluetooth radio or radios is connectable.",
+   "min_windows": "Windows Vista, Windows XP with SP2 [desktop apps only]",
+   "documented_dll": "bthprops.cpl"
+  },
+  "exports": [
+   "bluetoothapis.BluetoothIsConnectable",
+   "bthprops.cpl.BluetoothIsConnectable",
+   "irprops.cpl.BluetoothIsConnectable"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 1.0,
+   "first_date": "2024-12-01",
+   "median_date": "2025-01-23",
+   "last_date": "2025-01-23",
+   "code_lines": 26
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "ws2_32.WSAGetOverlappedResult",
+  "share_after_cutoff": 1.0,
+  "last_date": "2025-01-23"
+ }
+}

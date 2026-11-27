@@ -1,0 +1,178 @@
+{
+ "id": "0094",
+ "function": {
+  "name": "RtlIpv4AddressToStringExA",
+  "export_name": "RtlIpv4AddressToStringExA",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll",
+   "ntoskrnl.exe"
+  ],
+  "side": "PE",
+  "file": "dlls/ntdll/rtlstr.c",
+  "start_line": 2372,
+  "end_line": 2396,
+  "body_lines": 22,
+  "signature": "NTSTATUS WINAPI RtlIpv4AddressToStringExA(const IN_ADDR *pin, USHORT port, LPSTR buffer, PULONG psize)",
+  "header_comment": "/***********************************************************************\n * RtlIpv4AddressToStringExA [NTDLL.@]\n */",
+  "code": "NTSTATUS WINAPI RtlIpv4AddressToStringExA(const IN_ADDR *pin, USHORT port, LPSTR buffer, PULONG psize)\n{\n    CHAR tmp_ip[32];\n    ULONG needed;\n\n    if (!pin || !buffer || !psize)\n        return STATUS_INVALID_PARAMETER;\n\n    TRACE(\"(%p:0x%lx, %d, %p, %p:%ld)\\n\", pin, pin->S_un.S_addr, port, buffer, psize, *psize);\n\n    needed = sprintf(tmp_ip, \"%u.%u.%u.%u\",\n                     pin->S_un.S_un_b.s_b1, pin->S_un.S_un_b.s_b2,\n                     pin->S_un.S_un_b.s_b3, pin->S_un.S_un_b.s_b4);\n\n    if (port) needed += sprintf(tmp_ip + needed, \":%u\", ntohs(port));\n\n    if (*psize > needed) {\n        *psize = needed + 1;\n        strcpy(buffer, tmp_ip);\n        return STATUS_SUCCESS;\n    }\n\n    *psize = needed + 1;\n    return STATUS_INVALID_PARAMETER;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"winsock2.h\"",
+   "#include \"windef.h\"",
+   "#include \"winnt.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"in6addr.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"ntdll_misc.h\""
+  ],
+  "resolution": [
+   "ntdll!RtlIpv4AddressToStringExA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntdll/tests/rtl.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "ip2string",
+   "path": "sdk-api-src/content/ip2string/nf-ip2string-rtlipv4addresstostringexa.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/ip2string/nf-ip2string-rtlipv4addresstostringexa",
+   "documented_name": "rtlipv4addresstostringexa",
+   "file": "docs/0094_sdk-api_nf-ip2string-rtlipv4addresstostringexa.md",
+   "text": "---\nUID: NF:ip2string.RtlIpv4AddressToStringExA\ntech.root: IpHlp \ntitle: RtlIpv4AddressToStringExA\nms.date: 04/14/2021\ntargetos: Windows\ndescription: Converts an IPv4 address and port number to a string in Internet standard format. (ANSI)\nreq.assembly: \nreq.construct-type: function\nreq.ddi-compliance: \nreq.dll: Ntdll.dll \nreq.header: ip2string.h\nreq.idl: \nreq.include-header: Mstcpip.h \nreq.irql: \nreq.kmdf-ver: \nreq.lib: ntdll.lib \nreq.max-support: \nreq.namespace: \nreq.redist: \nreq.target-min-winverclnt: Windows Vista [desktop apps \\| UWP apps] \nreq.target-min-winversvr: Windows Server 2008 [desktop apps \\| UWP apps] \nreq.target-type: Windows \nreq.type-library: \nreq.umdf-ver: \nreq.unicode-ansi: \ntopic_type:\n - apiref\napi_type:\n - DllExport\napi_location:\n - Ntdll.dll\napi_name:\n - RtlIpv4AddressToStringExA\n - RtlIpv4AddressToStringEx\nf1_keywords:\n - RtlIpv4AddressToStringExA\n - ip2string/RtlIpv4AddressToStringExA\n - RtlIpv4AddressToStringEx\n - ip2string/RtlIpv4AddressToStringEx\ndev_langs:\n - c++\n---\n\n# RtlIpv4AddressToStringExA function\n\n## -description\n\nThe <b>RtlIpv4AddressToStringEx</b> function  converts an IPv4 address and port number to a string in Internet standard format.\n\n## -parameters\n\n### -param Address [in]\n\nThe IPv4 address in network byte order.\n\n### -param Port [in]\n\nThe port number in network byte order format. This parameter is optional.\n\n### -param AddressString [out]\n\nA pointer to the buffer to receive the <b>NULL</b>-terminated string representation of the IPv4 address and port. This buffer should be large enough to hold at least INET_ADDRSTRLEN characters. The INET_ADDRSTRLEN value is defined in the <i>Ws2ipdef.h</i> header file.\n\n### -param AddressStringLength [in, out]\n\nOn input, the number of characters that fit in the buffer pointed to by the <i>AddressString</i> parameter, including the NULL terminator.\n\nOn output, this parameter contains the number of characters actually written to the buffer pointed to by the <i>AddressString</i> parameter.\n\n## -returns\n\nIf the function succeeds, the return value is <b>STATUS_SUCCESS</b>.\n\nIf the function fails, the return value is one of the following error codes.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn invalid parameter was passed to the function. This error is returned if a <b>NULL</b> pointer is passed in the <i>AddressString</i> or <i>AddressStringLength</i> parameter. This error is also returned if the length of the buffer pointed to by the <i>AddressString</i> parameter is not large enough to receive the string representation of the IPv4 address and port.  \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>Other</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nUse <a href=\"/windows/desktop/api/winbase/nf-winbase-formatmessage\">FormatMessage</a> to obtain the message string for the returned error.\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe <b>RtlIpv4AddressToStringEx</b> function is used to convert an IPv4 address and port number to the string representation of the IPv4 address in Internet dotted-decimal format followed by a colon character and a string representation of the port.\n\n<b>RtlIpv4AddressToStringEx</b> is a convenience function that does not require that the Windows Sockets DLL be loaded to access a function provided in Windows Sockets to perform IP address to string conversion.\n\nIf the length of the buffer pointed to by the <i>AddressString</i> parameter is not large enough to receive the string representation of the IPv4 address and port, <b>RtlIpv4AddressToStringEx</b> returns <b>ERROR_INVALID_PARAMETER</b> and sets the <i>AddressStringLength</i> parameter to the buffer length required.\n\nWhen either UNICODE or _UNICODE is defined, <b>RtlIpv4AddressToStringEx</b> is defined to <b>RtlIpv4AddressToStringExW</b>, the Unicode version of this function. The <i>AddressString</i> parameter is defined to the PWSTR data type.\n\nWhen both UNICODE and _UNICODE are not defined, <b>RtlIpv4AddressToStringEx</b> is defined to <b>RtlIpv4AddressToStringExA</b>, the ANSI version of this function. The <i>AddressString</i> parameter is defined to the PSTR data type.\n\nThe <b>IN_ADDR</b> structure is defined in the <i>Inaddr.h</i> header file.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-getmodulehandlea\">GetModuleHandle</a>  \n<a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-getprocaddress\">GetProcAddress</a>  \n<a href=\"/windows/win32/api/ws2tcpip/nf-ws2tcpip-inet_ntop\">InetNtop</a>  \n<a href=\"/windows/win32/api/ws2tcpip/nf-ws2tcpip-inet_pton\">InetPton</a>  \n<a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-loadlibrarya\">LoadLibrary</a>  \n<a href=\"/windows/desktop/api/ip2string/nf-ip2string-rtlipv4addresstostringa\">RtlIpv4AddressToString</a>  \n<a href=\"/windows/desktop/api/ip2string/nf-ip2string-rtlipv4stringtoaddressa\">RtlIpv4StringToAddress</a>  \n<a href=\"/windows/desktop/api/ip2string/nf-ip2string-rtlipv4stringtoaddressexa\">RtlIpv4StringToAddressEx</a>  \n<a href=\"/windows/desktop/api/ip2string/nf-ip2string-rtlipv6addresstostringa\">RtlIpv6AddressToString</a>  \n<a href=\"/windows/desktop/api/ip2string/nf-ip2string-rtlipv6addresstostringexa\">RtlIpv6AddressToStringEx</a>  \n<a href=\"/windows/desktop/api/ip2string/nf-ip2string-rtlipv6stringtoaddressa\">RtlIpv6StringToAddress</a>  \n<a href=\"/windows/desktop/api/ip2string/nf-ip2string-rtlipv6stringtoaddressexa\">RtlIpv6StringToAddressEx</a>  \n<a href=\"/windows/desktop/api/wsipv6ok/nf-wsipv6ok-inet_addr\">inet_addr</a>  \n<a href=\"/windows/desktop/api/wsipv6ok/nf-wsipv6ok-inet_ntoa\">inet_ntoa</a>  \n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 38,
+    "end_line": 38,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ntdll);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "ntohs",
+    "start_line": 1953,
+    "end_line": 1953,
+    "code": "#define ntohs(x) RtlUshortByteSwap(x)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "RtlUshortByteSwap",
+    "impl": [
+     "dlls/ntdll/rtl.c:934 (macro)"
+    ]
+   },
+   {
+    "name": "sprintf",
+    "impl": [
+     "dlls/ntdll/printf.c:226"
+    ]
+   },
+   {
+    "name": "strcpy",
+    "impl": [
+     "dlls/ntdll/string.c:381"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ntdll.RtlIpv4AddressToStringExA",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "IP Helper",
+   "header": "ip2string.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 25,
+   "body": 24,
+   "code": 15
+  },
+  "cyclomatic": 6,
+  "return_type": "NTSTATUS",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ntdll/tests/rtl.c::test_RtlIpv4AddressToStringEx"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/ip2string/nf-ip2string-rtlipv4addresstostringexa",
+   "source": "win32",
+   "description": "Converts an IPv4 address and port number to a string in Internet standard format. (ANSI)",
+   "min_windows": "Windows Vista [desktop apps \\| UWP apps]",
+   "documented_dll": "Ntdll.dll"
+  },
+  "exports": [
+   "ntdll.RtlIpv4AddressToStringExA",
+   "ntoskrnl.exe.RtlIpv4AddressToStringExA"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2002-11-12",
+   "median_date": "2010-08-19",
+   "last_date": "2022-11-21",
+   "code_lines": 14,
+   "pair": "iphlpapi.IcmpSendEcho2Ex",
+   "rank": 1,
+   "distance": 0.3
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "iphlpapi.IcmpSendEcho2Ex",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-11-21",
+  "partner_rank": 1,
+  "distance": 0.3
+ }
+}

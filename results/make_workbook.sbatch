@@ -36,3 +36,29 @@ print('Agent per task, column totals of passes:', [x for x in last[6:24]])
 print('             same from table.csv, sorted:', sorted(int(r['passed']) for r in t.values()), '=', sorted(x for x in last[6:24] if isinstance(x, int)))
 os_ = b['One-shot']; print('One-shot A pass:', [(r[0], r[1], r[3]) for r in os_.iter_rows(min_row=5, max_row=10, values_only=True)])
 PY
+python - <<'PY'
+# the leakage sheets: the formulas' stored values against a recount of the sheet 'Leakage per pair' and against wine_agent/results/table.csv
+import csv, openpyxl
+b = openpyxl.load_workbook('results/WineBench_results.xlsx', data_only=True); pp = b['Leakage per pair']; lk = b['Leakage']
+rows = list(pp.iter_rows(min_row=5, values_only=True)); data = [r for r in rows if r[0] and str(r[0]).isdigit()]; head2 = [c.value for c in pp[3]]; head3 = [c.value for c in pp[4]]
+grp = None; cols = {}
+for j, (h2, h3) in enumerate(zip(head2, head3)):
+    grp = h2 or grp
+    if h3 in ('NEW', 'OLD') and grp: cols[(grp, h3)] = j
+t = {(r['scenario'], r['stage']): r for r in csv.DictReader(open('wine_agent/results/table.csv'))}; pk = {r['scenario']: r for r in csv.DictReader(open('wine_bench/results/pass_at_k.csv')) if 'gpt-oss' in r['model']}
+bad = 0
+for (g, side), j in sorted(cols.items()):
+    v = [r[j] for r in data]
+    if 'one-shot' in g:
+        s = g.split()[1].rstrip(','); n = sum(1 for x in v if x and x > 0); ref = int(pk[f'{s}-{side.lower()}']['solved'])
+    else:
+        s, h = g.split()[1].rstrip(','), g.split()[2].rstrip(':'); n = v.count('pass'); ref = int(t[(f'{s}-{side.lower()}', h)]['passed'])
+    bad += n != ref; print(f'  {g:48s} {side}: {n:3d} of {len(v)}   result table: {ref}' + ('   MISMATCH' if n != ref else ''))
+shown = {(r[0], r[1], r[2], r[3]): r for r in lk.iter_rows(values_only=True) if r[2] in ('pass', 'pass@100') and r[3] == 'all pairs'}
+for (s, h, m, _), r in sorted(shown.items()):
+    g = f'Scenario {s}, one-shot: passing samples of 100' if h == 'one-shot' else f'Scenario {s}, {h}: outcome'
+    for side, val in (('NEW', r[5]), ('OLD', r[6])):
+        v = [x[cols[(g, side)]] for x in data]; n = sum(1 for x in v if (x == 'pass' if h != 'one-shot' else (x or 0) > 0))
+        if abs(val - n / len(v)) > 0.0006: bad += 1; print('  MISMATCH on the sheet Leakage:', s, h, m, side, val, n / len(v))
+print(f'Leakage: {len(data)} pairs, {len(cols)} columns, {len(shown)} headline rows checked; mismatches: {bad}')
+PY

@@ -1,0 +1,318 @@
+{
+ "id": "0184",
+ "function": {
+  "name": "SetupDiGetDeviceInterfacePropertyW",
+  "export_name": "SetupDiGetDeviceInterfacePropertyW",
+  "module": "setupapi",
+  "source_module": "setupapi",
+  "exported_by": [
+   "setupapi"
+  ],
+  "side": "PE",
+  "file": "dlls/setupapi/devinst.c",
+  "start_line": 2785,
+  "end_line": 2851,
+  "body_lines": 64,
+  "signature": "BOOL WINAPI SetupDiGetDeviceInterfacePropertyW( HDEVINFO devinfo, SP_DEVICE_INTERFACE_DATA *iface_data, const DEVPROPKEY *key, DEVPROPTYPE *type, BYTE *buf, DWORD buf_size, DWORD *req_size, DWORD flags )",
+  "header_comment": null,
+  "code": "BOOL WINAPI SetupDiGetDeviceInterfacePropertyW( HDEVINFO devinfo, SP_DEVICE_INTERFACE_DATA *iface_data,\n                                                const DEVPROPKEY *key, DEVPROPTYPE *type, BYTE *buf, DWORD buf_size,\n                                                DWORD *req_size, DWORD flags )\n{\n    struct device_iface *iface;\n    LSTATUS ret;\n\n    TRACE( \"devinfo %p, iface_data %p, key %p, type %p, buf %p, buf_size %lu, req_size %p, flags %#lx\\n\",\n           devinfo, iface_data, key, type, buf, buf_size, req_size, flags );\n\n    if (!(iface = get_device_iface( devinfo, iface_data )))\n        return FALSE;\n    if (!type || (!buf && buf_size))\n    {\n        SetLastError( ERROR_INVALID_USER_BUFFER );\n        return FALSE;\n    }\n    if (!key)\n    {\n        SetLastError( ERROR_INVALID_DATA );\n        return FALSE;\n    }\n    if (flags)\n    {\n        SetLastError( ERROR_INVALID_FLAGS );\n        return FALSE;\n    }\n\n    ret = ERROR_SUCCESS;\n    if (IsEqualDevPropKey( *key, DEVPKEY_DeviceInterface_Enabled ))\n    {\n        *type = DEVPROP_TYPE_BOOLEAN;\n        if (buf_size >= sizeof( DEVPROP_BOOLEAN ))\n            *buf = (iface->flags & SPINT_ACTIVE) ? DEVPROP_TRUE : DEVPROP_FALSE;\n        else\n            ret = ERROR_INSUFFICIENT_BUFFER;\n        if (req_size)\n            *req_size = sizeof( DEVPROP_BOOLEAN );\n    }\n    else if (IsEqualDevPropKey( *key, DEVPKEY_DeviceInterface_ClassGuid ))\n    {\n        *type = DEVPROP_TYPE_GUID;\n        if (buf_size >= sizeof( iface->class ))\n            memcpy( buf, &iface->class, sizeof( iface->class ) );\n        else\n            ret = ERROR_INSUFFICIENT_BUFFER;\n        if (req_size)\n            *req_size = sizeof( GUID );\n    }\n    else if (IsEqualDevPropKey( *key, DEVPKEY_Device_InstanceId ))\n    {\n        DWORD size = (wcslen( iface->device->instanceId ) + 1) * sizeof( WCHAR );\n\n        *type = DEVPROP_TYPE_STRING;\n        if (buf_size >= size)\n            wcscpy( (WCHAR *)buf, iface->device->instanceId );\n        else\n            ret = ERROR_INSUFFICIENT_BUFFER;\n        if (req_size)\n            *req_size = size;\n    }\n    else\n        ret = get_device_reg_property( iface->refstr_key, key, type, buf, buf_size, req_size, flags );\n\n    SetLastError( ret );\n    return !ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdbool.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnt.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winternl.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winsvc.h\"",
+   "#include \"setupapi.h\"",
+   "#include \"softpub.h\"",
+   "#include \"mscat.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"cfgmgr32.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"rpc.h\"",
+   "#include \"rpcdce.h\"",
+   "#include \"cguid.h\"",
+   "#include \"setupapi_private.h\"",
+   "#include \"initguid.h\"",
+   "#include \"devpkey.h\""
+  ],
+  "resolution": [
+   "setupapi!SetupDiGetDeviceInterfacePropertyW [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/setupapi/tests/devinst.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "setupapi",
+   "path": "sdk-api-src/content/setupapi/nf-setupapi-setupdigetdeviceinterfacepropertyw.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/setupapi/nf-setupapi-setupdigetdeviceinterfacepropertyw",
+   "documented_name": "setupdigetdeviceinterfacepropertyw",
+   "file": "docs/0184_sdk-api_nf-setupapi-setupdigetdeviceinterfacepropertyw.md",
+   "text": "---\nUID: NF:setupapi.SetupDiGetDeviceInterfacePropertyW\ntitle: SetupDiGetDeviceInterfacePropertyW function (setupapi.h)\ndescription: The SetupDiGetDeviceInterfaceProperty function retrieves a device property that is set for a device interface.\nhelpviewer_keywords: [\"SetupDiGetDeviceInterfaceProperty\",\"SetupDiGetDeviceInterfaceProperty function [Device and Driver Installation]\",\"SetupDiGetDeviceInterfacePropertyW\",\"devinst.setupdigetdeviceinterfaceproperty\",\"di-rtns_7a7e0730-650f-4deb-a724-8f90385c762a.xml\",\"setupapi/SetupDiGetDeviceInterfaceProperty\"]\nold-location: devinst\\setupdigetdeviceinterfaceproperty.htm\ntech.root: devinst\nms.assetid: 72a44060-cebc-4690-8776-68db76810732\nms.date: 12/05/2018\nms.keywords: SetupDiGetDeviceInterfaceProperty, SetupDiGetDeviceInterfaceProperty function [Device and Driver Installation], SetupDiGetDeviceInterfacePropertyW, devinst.setupdigetdeviceinterfaceproperty, di-rtns_7a7e0730-650f-4deb-a724-8f90385c762a.xml, setupapi/SetupDiGetDeviceInterfaceProperty\nreq.header: setupapi.h\nreq.include-header: Setupapi.h\nreq.target-type: DesktopFor universal, call CM_Get_Device_Interface_Property\nreq.target-min-winverclnt: Available in Windows Vista and later versions of Windows.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Setupapi.lib\nreq.dll: \nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SetupDiGetDeviceInterfacePropertyW\n - setupapi/SetupDiGetDeviceInterfacePropertyW\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - LibDef\napi_location:\n - ext-ms-win-setupapi-devobj-l1-1-0.dll\n - ext-ms-win-setupapi-classinstallers-l1-1-2.dll\n - Setupapi.lib\n - Setupapi.dll\napi_name:\n - SetupDiGetDeviceInterfaceProperty\n---\n\n# SetupDiGetDeviceInterfacePropertyW function\n\n\n## -description\n\nThe <b>SetupDiGetDeviceInterfaceProperty</b> function retrieves a device property that is set for a device interface.\n\n## -parameters\n\n### -param DeviceInfoSet [in]\n\nA handle to a <a href=\"/windows-hardware/drivers/install/device-information-sets\">device information set</a> that contains a device interface for which to retrieve a device interface property.\n\n### -param DeviceInterfaceData [in]\n\nA pointer to an <a href=\"/windows/desktop/api/setupapi/ns-setupapi-sp_device_interface_data\">SP_DEVICE_INTERFACE_DATA</a> structure that represents the device interface for which to retrieve a device interface property.\n\n### -param PropertyKey [in]\n\nA pointer to a <a href=\"/windows-hardware/drivers/install/devpropkey\">DEVPROPKEY</a> structure that represents the device interface property key of the device interface property to retrieve.\n\n### -param PropertyType [out]\n\nA pointer to a <a href=\"/windows-hardware/drivers/install/property-data-type-identifiers\">DEVPROPTYPE</a>-typed variable that receives the property-data-type identifier of the requested device interface property. The property-data-type identifier is a bitwise OR between a base-data-type identifier and, if the base-data type is modified, a property-data-type modifier.\n\n### -param PropertyBuffer [out]\n\nA pointer to a buffer that receives the requested device interface property. <b>SetupDiGetDeviceInterfaceProperty</b> retrieves the requested property only if the buffer is large enough to hold all the property value data. The pointer can be <b>NULL</b>. If the pointer is set to <b>NULL</b> and <i>RequiredSize</i> is supplied, <b>SetupDiGetDeviceInterfaceProperty</b> returns the size of the property, in bytes, in *<i>RequiredSize</i>.\n\n### -param PropertyBufferSize [in]\n\nThe size, in bytes, of the <i>PropertyBuffer</i> buffer. If <i>PropertyBuffer</i> is set to <b>NULL</b>, <i>PropertyBufferSize</i> must be set to zero.\n\n### -param RequiredSize [out, optional]\n\nA pointer to a DWORD-typed variable that receives the size, in bytes, of either the device interface property if the property is retrieved or the required buffer size, if the buffer is not large enough. This pointer can be set to <b>NULL</b>.\n\n### -param Flags [in]\n\nThis parameter must be set to zero.\n\n## -returns\n\n<b>SetupDiGetDeviceInterfaceProperty</b> returns <b>TRUE</b> if it is successful. Otherwise, it returns <b>FALSE</b>, and the logged error can be retrieved by calling <a href=\"/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\nThe following table includes some of the more common error codes that this function might log. Other error codes can be set by the device installer functions that are called by this API.\n\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_FLAGS</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe value of<i> Flags</i> is not zero.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_HANDLE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe device information set that is specified by <i>DevInfoSet</i> is not valid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA supplied parameter is not valid. One possibility is that the device interface that is specified by <i>DeviceInterfaceData</i> is not valid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_REG_PROPERTY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe property key that is supplied by <i>PropertyKey</i> is not valid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_DATA</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn unspecified internal data value was not valid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_USER_BUFFER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA user buffer is not valid. One possibility is that <i>PropertyBuffer</i> is <b>NULL</b>, and <i>PropertyBufferSize</i> is not zero.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NO_SUCH_DEVICE_INTERFACE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe device interface that is specified by <i>DeviceInterfaceData</i> does not exist.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INSUFFICIENT_BUFFER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <i>PropertyBuffer</i> buffer is not large enough to hold the property value, or an internal data buffer that was passed to a system call was too small.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOT_ENOUGH_MEMORY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThere was not enough system memory available to complete the operation.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOT_FOUND</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe requested device property does not exist.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_ACCESS_DENIED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe caller does not have Administrator privileges. \n\n</td>\n</tr>\n</table>\n\n## -remarks\n\n<b>SetupDiGetDeviceInterfaceProperty</b> is part of the <a href=\"/windows-hardware/drivers/install/unified-device-property-model--windows-vista-and-later-\">unified device property model</a>. \n\nSetupAPI supports only a Unicode version of <b>SetupDiGetDeviceInterfaceProperty</b>. \n\nA caller of <b>SetupDiGetDeviceInterfaceProperty</b> must be a member of the Administrators group to set a device interface property. \n\nTo obtain the device property keys that represent the device properties that are set for a device interface, call <a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupdigetdeviceinterfacepropertykeys\">SetupDiGetDeviceInterfacePropertyKeys</a>.\n\nTo set a device interface property, call <a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupdisetdeviceinterfacepropertyw\">SetupDiSetDeviceInterfaceProperty</a>.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupdigetdeviceinterfacepropertykeys\">SetupDiGetDeviceInterfacePropertyKeys</a>\n\n\n\n<a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupdisetdeviceinterfacepropertyw\">SetupDiSetDeviceInterfaceProperty</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_device_iface",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 231,
+   "end_line": 243,
+   "static": true,
+   "called_from": [
+    "SetupDiGetDeviceInterfacePropertyW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:1537",
+    "dlls/setupapi/devinst.c:1554",
+    "dlls/setupapi/devinst.c:2331",
+    "dlls/setupapi/devinst.c:2361",
+    "dlls/setupapi/devinst.c:2510"
+   ],
+   "signature": "static struct device_iface *get_device_iface(HDEVINFO devinfo, const SP_DEVICE_INTERFACE_DATA *data)",
+   "code": "static struct device_iface *get_device_iface(HDEVINFO devinfo, const SP_DEVICE_INTERFACE_DATA *data)\n{\n    if (!get_device_set(devinfo))\n        return FALSE;\n\n    if (!data || data->cbSize != sizeof(*data) || !data->Reserved)\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return NULL;\n    }\n\n    return (struct device_iface *)data->Reserved;\n}"
+  },
+  {
+   "name": "get_device_reg_property",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 2737,
+   "end_line": 2783,
+   "static": true,
+   "called_from": [
+    "SetupDiGetDeviceInterfacePropertyW"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:4311",
+    "dlls/setupapi/devinst.c:4362"
+   ],
+   "signature": "static DWORD get_device_reg_property( HKEY base_key, const DEVPROPKEY *prop_key, DEVPROPTYPE *prop_type, BYTE *buf, DWORD buf_size, DWORD *req_size, DWORD flags )",
+   "code": "static DWORD get_device_reg_property( HKEY base_key, const DEVPROPKEY *prop_key, DEVPROPTYPE *prop_type,\n                                      BYTE *buf, DWORD buf_size, DWORD *req_size, DWORD flags )\n{\n    WCHAR prop_path[55] = L\"Properties\\\\\";\n    HKEY property;\n    DWORD size = 0, val_type;\n    LSTATUS ret;\n\n    if (!prop_key)\n        return ERROR_INVALID_DATA;\n    if (!prop_type || (!buf && buf_size))\n        return ERROR_INVALID_USER_BUFFER;\n    if (flags)\n        return ERROR_INVALID_FLAGS;\n\n    SETUPDI_GuidToString( &prop_key->fmtid, prop_path + 11 );\n    swprintf( prop_path + 49, ARRAY_SIZE( prop_path ) - 49, L\"\\\\%04X\", prop_key->pid );\n    if (!(ret = RegOpenKeyExW( base_key, prop_path, 0, KEY_QUERY_VALUE, &property )))\n    {\n        size = buf_size;\n        ret = RegQueryValueExW( property, NULL, NULL, &val_type, buf, &size );\n        RegCloseKey( property );\n    }\n\n    switch (ret)\n    {\n    case ERROR_SUCCESS:\n    case ERROR_MORE_DATA:\n        *prop_type = val_type & 0xffff;\n        ret = (ret == ERROR_MORE_DATA || !buf) ? ERROR_INSUFFICIENT_BUFFER : ERROR_SUCCESS;\n        break;\n    case ERROR_FILE_NOT_FOUND:\n        *prop_type = DEVPROP_TYPE_EMPTY;\n        size = 0;\n        ret = ERROR_NOT_FOUND;\n        break;\n    default:\n        *prop_type = DEVPROP_TYPE_EMPTY;\n        size = 0;\n        FIXME( \"Unhandled error: %lu\\n\", ret );\n        break;\n    }\n\n    if (req_size)\n        *req_size = size;\n    return ret;\n}"
+  },
+  {
+   "name": "get_device_set",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 187,
+   "end_line": 198,
+   "static": true,
+   "called_from": [
+    "get_device_iface"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:205",
+    "dlls/setupapi/devinst.c:1358",
+    "dlls/setupapi/devinst.c:1573",
+    "dlls/setupapi/devinst.c:2169",
+    "dlls/setupapi/devinst.c:2193"
+   ],
+   "signature": "static struct DeviceInfoSet *get_device_set(HDEVINFO devinfo)",
+   "code": "static struct DeviceInfoSet *get_device_set(HDEVINFO devinfo)\n{\n    struct DeviceInfoSet *set = devinfo;\n\n    if (!devinfo || devinfo == INVALID_HANDLE_VALUE || set->magic != SETUP_DEVICE_INFO_SET_MAGIC)\n    {\n        SetLastError(ERROR_INVALID_HANDLE);\n        return NULL;\n    }\n\n    return set;\n}"
+  },
+  {
+   "name": "SETUPDI_GuidToString",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 260,
+   "end_line": 266,
+   "static": true,
+   "called_from": [
+    "get_device_reg_property"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:281",
+    "dlls/setupapi/devinst.c:310",
+    "dlls/setupapi/devinst.c:358",
+    "dlls/setupapi/devinst.c:553",
+    "dlls/setupapi/devinst.c:687"
+   ],
+   "signature": "static void SETUPDI_GuidToString(const GUID *guid, LPWSTR guidStr)",
+   "code": "static void SETUPDI_GuidToString(const GUID *guid, LPWSTR guidStr)\n{\n    swprintf(guidStr, 39, L\"{%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}\",\n        guid->Data1, guid->Data2, guid->Data3,\n        guid->Data4[0], guid->Data4[1], guid->Data4[2], guid->Data4[3],\n        guid->Data4[4], guid->Data4[5], guid->Data4[6], guid->Data4[7]);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "DeviceInfoSet",
+    "kind": "struct_decl",
+    "start_line": 86,
+    "end_line": 92,
+    "code": "struct DeviceInfoSet\n{\n    DWORD magic;        /* if is equal to SETUP_DEVICE_INFO_SET_MAGIC struct is okay */\n    GUID ClassGuid;\n    HWND hwndParent;\n    struct list devices;\n};"
+   },
+   {
+    "name": "device",
+    "kind": "struct_decl",
+    "start_line": 94,
+    "end_line": 109,
+    "code": "struct device\n{\n    struct DeviceInfoSet *set;\n    HKEY                  key;\n    BOOL                  phantom;\n    WCHAR                *instanceId;\n    struct list           interfaces;\n    GUID                  class;\n    DEVINST               devnode;\n    struct list           entry;\n    BOOL                  removed;\n    SP_DEVINSTALL_PARAMS_W params;\n    struct driver        *drivers;\n    unsigned int          driver_count;\n    struct driver        *selected_driver;\n};"
+   },
+   {
+    "name": "device_iface",
+    "kind": "struct_decl",
+    "start_line": 111,
+    "end_line": 121,
+    "code": "struct device_iface\n{\n    WCHAR           *refstr;\n    WCHAR           *symlink;\n    struct device   *device;\n    GUID             class;\n    DWORD            flags;\n    HKEY             class_key;\n    HKEY             refstr_key;\n    struct list      entry;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 52,
+    "end_line": 52,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(setupapi);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "SETUP_DEVICE_INFO_SET_MAGIC",
+    "start_line": 84,
+    "end_line": 84,
+    "code": "#define SETUP_DEVICE_INFO_SET_MAGIC 0xd00ff056"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "RegCloseKey",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1129"
+    ]
+   },
+   {
+    "name": "RegOpenKeyExW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:644"
+    ]
+   },
+   {
+    "name": "RegQueryValueExW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1636"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "wcscpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:184"
+    ]
+   },
+   {
+    "name": "wcslen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:215"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "swprintf",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "setupapi.SetupDiGetDeviceInterfacePropertyW",
+  "category": {
+   "l1": "Devices",
+   "l2": "Device management and installation",
+   "header": "setupapi.h",
+   "textbook": "Device management",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 67,
+   "body": 64,
+   "code": 45
+  },
+  "cyclomatic": 17,
+  "return_type": "BOOL",
+  "n_params": 8,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 3,
+   "n_tests_other": 2,
+   "own_test_functions": [
+    "dlls/setupapi/tests/devinst.c::test_device_interface_properties"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/setupapi/nf-setupapi-setupdigetdeviceinterfacepropertyw",
+   "source": "win32",
+   "description": "The SetupDiGetDeviceInterfaceProperty function retrieves a device property that is set for a device interface.",
+   "min_windows": "Available in Windows Vista and later versions of Windows.",
+   "documented_dll": ""
+  },
+  "exports": [
+   "setupapi.SetupDiGetDeviceInterfacePropertyW"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.976,
+   "first_date": "2018-08-16",
+   "median_date": "2025-06-23",
+   "last_date": "2025-06-25",
+   "code_lines": 41
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "setupapi.SetupDiGetDriverInfoDetailA",
+  "share_after_cutoff": 0.976,
+  "last_date": "2025-06-25"
+ }
+}

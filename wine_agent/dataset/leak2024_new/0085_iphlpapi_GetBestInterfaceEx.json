@@ -1,0 +1,160 @@
+{
+ "id": "0085",
+ "function": {
+  "name": "GetBestInterfaceEx",
+  "export_name": "GetBestInterfaceEx",
+  "module": "iphlpapi",
+  "source_module": "iphlpapi",
+  "exported_by": [
+   "iphlpapi"
+  ],
+  "side": "PE",
+  "file": "dlls/iphlpapi/iphlpapi_main.c",
+  "start_line": 1397,
+  "end_line": 1418,
+  "body_lines": 19,
+  "signature": "DWORD WINAPI GetBestInterfaceEx( struct sockaddr *dst, DWORD *best_index )",
+  "header_comment": "/******************************************************************\n *    GetBestInterfaceEx (IPHLPAPI.@)\n *\n * Get the interface, with the best route for the given IP address.\n *\n * PARAMS\n *  dwDestAddr     [In]  IP address to search the interface for\n *  pdwBestIfIndex [Out] found best interface\n *\n * RETURNS\n *  Success: NO_ERROR\n *  Failure: error code from winerror.h\n */",
+  "code": "DWORD WINAPI GetBestInterfaceEx( struct sockaddr *dst, DWORD *best_index )\n{\n    SOCKADDR_INET best_address;\n    SOCKADDR_INET dst_address;\n    MIB_IPFORWARD_ROW2 row;\n    DWORD ret;\n\n    TRACE( \"dst %p, best_index %p\\n\", dst, best_index );\n\n    if (!dst || !best_index) return ERROR_INVALID_PARAMETER;\n    if (dst->sa_family != AF_INET && dst->sa_family != AF_INET6) return ERROR_INVALID_PARAMETER;\n\n    dst_address.si_family = dst->sa_family;\n    if (dst->sa_family == AF_INET6) dst_address.Ipv6 = *(struct sockaddr_in6 *)dst;\n    else dst_address.Ipv4 = *(struct sockaddr_in *)dst;\n\n    ret = GetBestRoute2( NULL, 0, NULL, &dst_address, 0, &row, &best_address );\n    if (!ret) *best_index = row.InterfaceIndex;\n\n    TRACE( \"returning %ld\\n\", ret );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winsock2.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ws2ipdef.h\"",
+   "#include \"windns.h\"",
+   "#include \"iphlpapi.h\"",
+   "#include \"ipifcons.h\"",
+   "#include \"fltdefs.h\"",
+   "#include \"ifdef.h\"",
+   "#include \"netioapi.h\"",
+   "#include \"ip2string.h\"",
+   "#include \"netiodef.h\"",
+   "#include \"icmpapi.h\"",
+   "#include \"psapi.h\"",
+   "#include \"wine/nsi.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "iphlpapi!GetBestInterfaceEx [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/iphlpapi/tests/iphlpapi.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 2
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "iphlpapi",
+   "path": "sdk-api-src/content/iphlpapi/nf-iphlpapi-getbestinterfaceex.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/iphlpapi/nf-iphlpapi-getbestinterfaceex",
+   "documented_name": "getbestinterfaceex",
+   "file": "docs/0085_sdk-api_nf-iphlpapi-getbestinterfaceex.md",
+   "text": "---\nUID: NF:iphlpapi.GetBestInterfaceEx\ntitle: GetBestInterfaceEx function (iphlpapi.h)\ndescription: The GetBestInterfaceEx function retrieves the index of the interface that has the best route to the specified IPv4 or IPv6 address.\nhelpviewer_keywords: [\"GetBestInterfaceEx\",\"GetBestInterfaceEx function [IP Helper]\",\"iphlp.getbestinterfaceex\",\"iphlpapi/GetBestInterfaceEx\"]\nold-location: iphlp\\getbestinterfaceex.htm\ntech.root: IpHlp\nms.assetid: cfd1108e-d7a0-4fe5-be3f-299189089d37\nms.date: 12/05/2018\nms.keywords: GetBestInterfaceEx, GetBestInterfaceEx function [IP Helper], iphlp.getbestinterfaceex, iphlpapi/GetBestInterfaceEx\nreq.header: iphlpapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Iphlpapi.lib\nreq.dll: Iphlpapi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetBestInterfaceEx\n - iphlpapi/GetBestInterfaceEx\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Iphlpapi.dll\napi_name:\n - GetBestInterfaceEx\n---\n\n# GetBestInterfaceEx function\n\n\n## -description\n\nThe \n<b>GetBestInterfaceEx</b> function retrieves the index of the interface that has the best route to the specified IPv4 or IPv6 address.\n\n## -parameters\n\n### -param pDestAddr [in]\n\nThe destination IPv6 or IPv4 address for which to retrieve the interface with the best route, in the form of a <a href=\"/windows/desktop/WinSock/sockaddr-2\">sockaddr</a> structure.\n\n### -param pdwBestIfIndex [out]\n\nA pointer to the index of the interface with the best route to the IPv6 or IPv4 address specified by <i>pDestAddr</i>.\n\n## -returns\n\nIf the function succeeds, the return value is NO_ERROR.\n\nIf the function fails, the return value is one of the following error codes.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_CAN_NOT_COMPLETE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe operation could not be completed. \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn invalid parameter was passed to the function. This error is returned if a <b>NULL</b> pointer is passed in the <i>pdwBestIfIndex</i> parameter or if the <i>pDestAddr </i> or <i>pdwBestIfIndex</i> parameters point to memory that cannot be accessed. This error can also be returned if the <i>pdwBestIfIndex</i> parameter points to memory that can't be written to.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOT_SUPPORTED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe request is not supported. This error is returned if no IPv4 stack is on the local computer and an IPv4 address was specified in the <i>pDestAddr</i> parameter or no IPv6 stack is on the local computer and an IPv6 address was specified in the <i>pDestAddr</i> parameter.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>Other</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nUse \nthe <a href=\"/windows/desktop/api/winbase/nf-winbase-formatmessage\">FormatMessage</a> function to obtain the message string for the returned error.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe <b>GetBestInterfaceEx</b> function differs from the <a href=\"/windows/desktop/api/iphlpapi/nf-iphlpapi-getbestinterface\">GetBestInterface</a> function in that it can be used with either IPv4 or IPv6 addresses.\n\nThe <b>Family</b> member of the sockaddr structure pointed to by the <i>pDestAddr</i> parameter must be set to one of the following values: <b>AF_INET</b> or <b>AF_INET6</b>. \n\nOn Windows Vista and later, the <i>pdwBestIfIndex</i> parameter is treated internally by IP Helper as a pointer to a <b>NET_IFINDEX</b> datatype.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/iphlpapi/nf-iphlpapi-getbestinterface\">GetBestInterface</a>\n\n\n\n<a href=\"/windows/desktop/IpHlp/ip-helper-function-reference\">IP Helper Function Reference</a>\n\n\n\n<a href=\"/windows/desktop/IpHlp/ip-helper-start-page\">IP Helper Start Page</a>\n\n\n\n<a href=\"/windows/desktop/api/iprtrmib/ns-iprtrmib-mib_best_if\">MIB_BEST_IF</a>\n\n\n\n<a href=\"/windows/desktop/WinSock/sockaddr-2\">sockaddr</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(iphlpapi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetBestRoute2",
+    "impl": [
+     "dlls/iphlpapi/iphlpapi_main.c:4819"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "iphlpapi.GetBestInterfaceEx",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "IP Helper",
+   "header": "iphlpapi.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 22,
+   "body": 21,
+   "code": 14
+  },
+  "cyclomatic": 7,
+  "return_type": "DWORD",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 2,
+   "n_tests": 2,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/iphlpapi/tests/iphlpapi.c::testGetBestInterfaceEx",
+    "dlls/iphlpapi/tests/iphlpapi.c::test_best_routes"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/iphlpapi/nf-iphlpapi-getbestinterfaceex",
+   "source": "win32",
+   "description": "The GetBestInterfaceEx function retrieves the index of the interface that has the best route to the specified IPv4 or IPv6 address.",
+   "min_windows": "Windows XP [desktop apps \\| UWP apps]",
+   "documented_dll": "Iphlpapi.dll"
+  },
+  "exports": [
+   "iphlpapi.GetBestInterfaceEx"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.8,
+   "first_date": "2003-09-08",
+   "median_date": "2025-09-19",
+   "last_date": "2025-10-15",
+   "code_lines": 15
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "iphlpapi.ConvertInterfaceLuidToNameW",
+  "share_after_cutoff": 0.8,
+  "last_date": "2025-10-15"
+ }
+}

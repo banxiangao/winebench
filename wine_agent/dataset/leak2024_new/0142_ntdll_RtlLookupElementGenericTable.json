@@ -1,0 +1,207 @@
+{
+ "id": "0142",
+ "function": {
+  "name": "RtlLookupElementGenericTable",
+  "export_name": "RtlLookupElementGenericTable",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll",
+   "ntoskrnl.exe"
+  ],
+  "side": "PE",
+  "file": "dlls/ntdll/rtl.c",
+  "start_line": 840,
+  "end_line": 852,
+  "body_lines": 10,
+  "signature": "void * WINAPI RtlLookupElementGenericTable(RTL_GENERIC_TABLE *table, void *value)",
+  "header_comment": "/******************************************************************************\n *  RtlLookupElementGenericTable           [NTDLL.@]\n */",
+  "code": "void * WINAPI RtlLookupElementGenericTable(RTL_GENERIC_TABLE *table, void *value)\n{\n    RTL_SPLAY_LINKS *child;\n\n    TRACE(\"(%p, %p)\\n\", table, value);\n\n    child = rtl_splay_find(table, value);\n    if (!child)\n        return FALSE;\n\n    table->TableRoot = RtlSplay(child);\n    return get_data_from_splay_links(child);\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ntuser.h\"",
+   "#include \"zlib.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"ntdll_misc.h\"",
+   "#include \"ddk/ntifs.h\""
+  ],
+  "resolution": [
+   "ntdll!RtlLookupElementGenericTable [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntdll/tests/rtl.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "ntddk",
+   "path": "wdk-ddi-src/content/ntddk/nf-ntddk-rtllookupelementgenerictable.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtllookupelementgenerictable",
+   "documented_name": "rtllookupelementgenerictable",
+   "file": "docs/0142_windows-driver-docs-ddi_nf-ntddk-rtllookupelementgenerictable.md",
+   "text": "---\nUID: NF:ntddk.RtlLookupElementGenericTable\ntitle: RtlLookupElementGenericTable function (ntddk.h)\ndescription: The RtlLookupElementGenericTable routine searches a generic table for an element that matches the specified data.\ntech.root: ifsk\nms.date: 01/10/2023\nkeywords: [\"RtlLookupElementGenericTable function\"]\nms.keywords: RtlLookupElementGenericTable, RtlLookupElementGenericTable routine [Installable File System Drivers], ifsk.rtllookupelementgenerictable, ntddk/RtlLookupElementGenericTable, rtlref_609e7ba3-35a1-40e8-9e94-f16605e52155.xml\nreq.header: ntddk.h\nreq.include-header: Ntddk.h, Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: See Remarks section.\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - RtlLookupElementGenericTable\n - ntddk/RtlLookupElementGenericTable\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - RtlLookupElementGenericTable\n---\n\n## -description\n\nThe **RtlLookupElementGenericTable** routine searches a generic table for an element that matches the specified data.\n\n## -parameters\n\n### -param Table\n\nPointer to the generic table ([**RTL_GENERIC_TABLE**](ns-ntddk-_rtl_generic_table.md)). The table must have been initialized by calling **RtlInitializeGenericTable**.\n\n### -param Buffer\n\nA buffer of search data to pass to the *CompareRoutine* that was registered when [RtlInitializeGenericTable](nf-ntddk-rtlinitializegenerictable.md) initialized the generic table. For more information, see the description of **RtlInitializeGenericTable**.\n\n## -returns\n\n**RtlLookupElementGenericTable** returns a pointer to the caller-supplied data for the desired element in the generic table. It returns **NULL** if the generic table currently has no elements or if no matching element is found.\n\n## -remarks\n\nIf a matching element is found, **RtlLookupElementGenericTable** re-balances the generic table's splay tree.\n\nCallers of the Rtl..GenericTable routines are responsible for exclusively synchronizing access to the generic table. An exclusive fast mutex is the most efficient synchronization mechanism to use for this purpose.\n\nBy default, the operating system uses splay trees to implement generic tables. Under some circumstances, operations on a splay tree will make the tree deep and narrow and might even turn it into a straight line. Very deep trees degrade the performance of searches. You can ensure a more balanced, shallower tree implementation of generic tables by using Adelson-Velsky/Landis (AVL) trees. If you want to configure the generic table routines to use AVL trees instead of splay trees in your driver, insert the following define statement in a common header file before including *ntddk.h*:\n\n```cpp\n`#define RTL_USE_AVL_TABLES 0`\n```\n\nIf you do not define RTL_USE_AVL_TABLES as specified above, you must use the AVL form of the generic table routines. For example, use the [RtlLookupElementGenericTableAvl](nf-ntddk-rtllookupelementgenerictableavl.md) routine instead of **RtlLookupElementGenericTable**. In the call to **RtlLookupElementGenericTableAvl**, the caller must pass a [**RTL_AVL_TABLE**](ns-ntddk-_rtl_avl_table.md) table structure rather than [RTL_GENERIC_TABLE](ns-ntddk-_rtl_generic_table.md).\n\nCallers of **RtlLookupElementGenericTable** must be running at IRQL < DISPATCH_LEVEL if either of the following conditions holds:\n\n- The caller-allocated memory at *Table* or at *Buffer* is pageable.\n\n- The caller-supplied *CompareRoutine* contains pageable code.\n\nOtherwise, callers of **RtlLookupElementGenericTable** can run at IRQL <= DISPATCH_LEVEL when using non-paged memory or code.\n\n## -see-also\n\n[**RTL_AVL_TABLE**](ns-ntddk-_rtl_avl_table.md)\n\n[**RTL_GENERIC_TABLE**](ns-ntddk-_rtl_generic_table.md)\n\n[RtlInitializeGenericTable](nf-ntddk-rtlinitializegenerictable.md)\n\n[RtlIsGenericTableEmpty](nf-ntddk-rtlisgenerictableempty.md)\n\n[RtlNumberGenericTableElements](nf-ntddk-rtlnumbergenerictableelements.md)\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "rtl_splay_find",
+   "file": "dlls/ntdll/rtl.c",
+   "start_line": 215,
+   "end_line": 232,
+   "static": true,
+   "called_from": [
+    "RtlLookupElementGenericTable"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/rtl.c:617"
+   ],
+   "signature": "static RTL_SPLAY_LINKS *rtl_splay_find(RTL_GENERIC_TABLE *table, void *value)",
+   "code": "static RTL_SPLAY_LINKS *rtl_splay_find(RTL_GENERIC_TABLE *table, void *value)\n{\n    RTL_GENERIC_COMPARE_RESULTS result;\n    RTL_SPLAY_LINKS *child;\n\n    child = table->TableRoot;\n    while (child)\n    {\n        result = table->CompareRoutine(table, get_data_from_splay_links(child), value);\n        if (result == GenericLessThan)\n            child = child->RightChild;\n        else if (result == GenericGreaterThan)\n            child = child->LeftChild;\n        else\n            return child;\n    }\n    return NULL;\n}"
+  },
+  {
+   "name": "get_data_from_splay_links",
+   "file": "dlls/ntdll/rtl.c",
+   "start_line": 199,
+   "end_line": 202,
+   "static": true,
+   "called_from": [
+    "RtlLookupElementGenericTable",
+    "rtl_splay_find"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/rtl.c:568",
+    "dlls/ntdll/rtl.c:591",
+    "dlls/ntdll/rtl.c:596",
+    "dlls/ntdll/rtl.c:608",
+    "dlls/ntdll/rtl.c:658"
+   ],
+   "signature": "static void *get_data_from_splay_links(RTL_SPLAY_LINKS *links)",
+   "code": "static void *get_data_from_splay_links(RTL_SPLAY_LINKS *links)\n{\n    return (unsigned char *)links + FIELD_OFFSET(struct rtl_generic_table_entry, data);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "rtl_generic_table_entry",
+    "kind": "struct_decl",
+    "start_line": 192,
+    "end_line": 197,
+    "code": "struct rtl_generic_table_entry\n{\n    RTL_SPLAY_LINKS splay_links;\n    LIST_ENTRY list_entry;\n    LONGLONG data;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ntdll);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "RtlSplay",
+    "impl": [
+     "dlls/ntdll/rtl.c:394"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "table->CompareRoutine",
+    "in_function": "rtl_splay_find",
+    "at": "dlls/ntdll/rtl.c:223",
+    "candidates": [
+     "compare @ dlls/ntdll/rtl.c:539"
+    ]
+   }
+  ]
+ },
+ "winebench": {
+  "id": "ntdll.RtlLookupElementGenericTable",
+  "category": {
+   "l1": "System services",
+   "l2": "Run-time library (strings, bitmaps, utilities)",
+   "header": "ntddk.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "name_rule"
+  },
+  "loc": {
+   "total": 13,
+   "body": 12,
+   "code": 7
+  },
+  "cyclomatic": 2,
+  "return_type": "void *",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ntdll/tests/rtl.c::test_RtlLookupElementGenericTable"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtllookupelementgenerictable",
+   "source": "ddi",
+   "description": "The RtlLookupElementGenericTable routine searches a generic table for an element that matches the specified data.",
+   "min_windows": "",
+   "documented_dll": "NtosKrnl.exe"
+  },
+  "exports": [
+   "ntdll.RtlLookupElementGenericTable",
+   "ntoskrnl.exe.RtlLookupElementGenericTable"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 1.0,
+   "first_date": "2025-02-07",
+   "median_date": "2025-02-07",
+   "last_date": "2025-02-07",
+   "code_lines": 8
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "ntdll.RtlFindLongestRunClear",
+  "share_after_cutoff": 1.0,
+  "last_date": "2025-02-07"
+ }
+}

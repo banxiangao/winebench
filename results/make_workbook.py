@@ -13,7 +13,7 @@ reads correctly in viewers that do not calculate).
 """
 import os, csv, datetime
 import xlsxwriter
-from xlsxwriter.utility import xl_rowcol_to_cell as cell, xl_range
+from xlsxwriter.utility import xl_rowcol_to_cell as cell, xl_range, xl_range_abs
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def rows(rel):
@@ -24,6 +24,9 @@ def num(x):
 
 AGENT = rows('wine_agent/results/table.csv'); ONE = rows('wine_bench/results/table.csv'); PASSK = rows('wine_bench/results/pass_at_k.csv')
 SET = rows('results/metrics_settings.csv'); TASKS = rows('results/metrics_tasks.csv')
+MAIN = ('1.1', '1.2', '2.1', '2.2')                # the main benchmark; the settings of the leakage experiment (2.1-new, ...) have their own sheets
+AGENT = [a for a in AGENT if a['scenario'] in MAIN]; ONE = [a for a in ONE if a['scenario'] in MAIN]; PASSK = [a for a in PASSK if a['scenario'] in MAIN]
+LRES = rows('leakage/results.csv'); LT = rows('leakage/results_tasks.csv')
 tree = {}
 with open(os.path.join(ROOT, 'results/tree_access_settings.txt'), encoding='utf-8') as f:
     head = f.readline().split()
@@ -60,13 +63,15 @@ def header(ws, r, labels, widths=None, left=()):
 # ---------------------------------------------------------------- Overview
 ws = wb.add_worksheet('Overview'); ws.set_column(0, 0, 24); ws.set_column(1, 1, 110); ws.hide_gridlines(2)
 ws.write(0, 0, 'WineBench: results of the experiments', f_title)
-ws.write(1, 0, f'Wine 11.19, 205 tasks, 30 settings.  Generated {datetime.date.today().isoformat()} by results/make_workbook.py from the result files of the repository.', f_sub)
+ws.write(1, 0, f'Wine 11.19, 205 tasks, 30 settings; leakage experiment: 252 pairs of tasks, 12 settings.  Generated {datetime.date.today().isoformat()} by results/make_workbook.py from the result files of the repository.', f_sub)
 r = 3; ws.write(r, 0, 'Sheets', f_sec); ws.write(r, 1, '', f_sec); r += 1
 for a, b in [('Agent', 'Scenarios 2.1 and 2.2: one line per setting (scenario x harness x model) with the outcome of the 205 tasks and the ./compile runs of the agent; below it the pass counts as a matrix.'),
              ('One-shot', 'Scenarios 1.1 and 1.2. Table A: API models, one reply per task. Table B: local models, 100 samples per task (pass@1 / pass@10 / pass@100).'),
              ('Cost', 'Wall time, tokens and agent steps of every setting.'),
              ('Agent per task', 'One line per task: the outcome in each of the 18 agent settings.'),
              ('One-shot per task', 'One line per task: the outcome of the single reply of each API model, and the number of passing samples (of 100) of each local model.'),
+             ('Leakage', 'Leakage experiment: gpt-oss-20b on 252 functions written after its training cutoff (NEW) and 252 matched functions untouched since (OLD), in the four scenarios. Not part of the 205-task benchmark.'),
+             ('Leakage per pair', 'One line per pair of tasks: passing samples (one-shot) and outcome (agent) of the NEW and the OLD function.'),
              ('Notes', 'Definitions of the outcomes and what should be known when the numbers are read.')]:
     ws.write(r, 0, a, f_b); ws.write(r, 1, b, f_wrap); r += 1
 r += 1; ws.write(r, 0, 'Scenarios', f_sec); ws.write(r, 1, '', f_sec); r += 1
@@ -247,6 +252,116 @@ per_task('One-shot per task', 'One-shot settings: every task', 'API models: outc
          [('API models, scenario 1.1: outcome', 'oneshot1', [('1.1', m) for m in api], 'status'), ('API models, scenario 1.2: outcome', 'oneshot1', [('1.2', m) for m in api], 'status'),
           ('Local models, scenario 1.1: passing replies of 100', 'oneshot', [('1.1', m) for m in loc], 'count'), ('Local models, scenario 1.2: passing replies of 100', 'oneshot', [('1.2', m) for m in loc], 'count')])
 
+# ---------------------------------------------------------------- Leakage experiment
+LP = 'Leakage per pair'; lfirst = 4; llast = lfirst + len(LT) - 1
+lbase = [('Task', 'task', 6), ('NEW function', 'new', 34), ('OLD function', 'old', 34), ('Category', 'category_new', 26), ('Code lines, NEW', 'code_lines_new', 8), ('Code lines, OLD', 'code_lines_old', 8),
+         ('Share of the NEW function written after the cutoff', 'share_after_cutoff_new', 13), ('Last change, NEW', 'last_date_new', 11), ('Last change, OLD', 'last_date_old', 11)]
+lgroups = [(f'Scenario {s}, one-shot: passing samples of 100', [(f'{s}_{g}_passed', g.upper()) for g in ('new', 'old')], 'count') for s in ('1.1', '1.2')] + \
+          [(f'Scenario {s}, {h}: outcome', [(f'{s}_{h}_{g}', g.upper()) for g in ('new', 'old')], 'status') for s in ('2.1', '2.2') for h in ('mini_swe', 'openhands')]
+lcol = {}; c = len(lbase)
+for _, sets, _k in lgroups:
+    for key, _g in sets: lcol[key] = c; c += 1
+def lrng(key): return f"'{LP}'!{xl_range_abs(lfirst, lcol[key], llast, lcol[key])}"
+def lvals(key): return [t.get(key, '') for t in LT]
+f_pp = F(border=1, num_format='+0.0%;-0.0%;0.0%'); f_d3 = F(border=1, num_format='0.000')
+COMP = ('pass', 'test_fail', 'crash', 'timeout')
+
+ws = wb.add_worksheet('Leakage'); ws.freeze_panes(0, 3)
+for c_, w in enumerate([10, 12, 16, 22, 9, 9, 9, 11, 11, 11, 11, 11, 11]): ws.set_column(c_, c_, w)
+ws.write(0, 0, 'Leakage experiment: gpt-oss-20b on functions written before and after its training cutoff', f_title)
+ws.write(1, 0, f'NEW = at least half of the code lines committed to Wine after 2024-06-30 (the cutoff the model states); OLD = no line committed after it, matched to the NEW function. {len(LT)} pairs of tasks. '
+               'OLD - NEW in percentage points; the interval is a 95 % paired bootstrap.', f_sub)
+def lsec(r, t):
+    ws.write(r, 0, t, f_sec)
+    for c_ in range(1, 12): ws.write(r, c_, '', f_sec)
+def lhead(r, labels):
+    for c_, l in enumerate(labels): ws.write(r, c_, l, f_hl if c_ < 4 else f_h)
+    ws.set_row(r, 44)
+def lrow(r, a, new_f=None, old_f=None):
+    """one line of leakage/results.csv; new_f / old_f: formulas over the sheet 'Leakage per pair' (their values are the ones of the file)"""
+    n = int(a['pairs']); ws.write(r, 0, a['scenario'], f_tc); ws.write(r, 1, a['harness'], f_t); ws.write(r, 2, a['metric'], f_t); ws.write(r, 3, a['subset'], f_t); ws.write(r, 4, n, f_i)
+    for c_, key, fm in ((5, 'new', new_f), (6, 'old', old_f)):
+        if fm: ws.write_formula(r, c_, fm.format(n=cell(r, 4)), f_p, float(a[key]) / 100)
+        else: ws.write(r, c_, float(a[key]) / 100, f_p)
+    ws.write_formula(r, 7, f'={cell(r, 6)}-{cell(r, 5)}', f_pp, float(a['old_minus_new']) / 100)
+    ws.write(r, 8, float(a['ci_low']) / 100, f_pp); ws.write(r, 9, float(a['ci_high']) / 100, f_pp)
+HL = ['Scenario', 'Mode', 'Metric', 'Pairs compared', 'Pairs', 'NEW', 'OLD', 'OLD - NEW', '95 % interval, from', '95 % interval, to']
+r = 3; lsec(r, 'A. One-shot, 100 samples per task'); r += 1; lhead(r, HL)
+for a in [a for a in LRES if a['harness'] == 'one-shot' and a['subset'] == 'all pairs']:
+    r += 1
+    if a['metric'] == 'pass@100': lrow(r, a, *(f'=COUNTIF({lrng(a["scenario"] + "_" + g + "_passed")},">0")/{{n}}' for g in ('new', 'old')))
+    else: lrow(r, a)
+r += 2; lsec(r, 'B. Agent'); r += 1; lhead(r, HL + ['Pairs in which only OLD did', 'Pairs in which only NEW did', 'McNemar test, p (exact)'])
+for a in [a for a in LRES if a['harness'] in ('mini_swe', 'openhands') and a['subset'] == 'all pairs']:
+    r += 1; k = lambda g: lrng(f'{a["scenario"]}_{a["harness"]}_{g}')
+    if a['metric'] == 'pass': lrow(r, a, *(f'=COUNTIF({k(g)},"pass")/{{n}}' for g in ('new', 'old')))
+    elif a['metric'] == 'compiled': lrow(r, a, *('=(' + '+'.join(f'COUNTIF({k(g)},"{s}")' for s in COMP) + ')/{n}' for g in ('new', 'old')))
+    elif a['metric'] == 'with code': lrow(r, a, *(f'=1-COUNTIF({k(g)},"no_code")/{{n}}' for g in ('new', 'old')))
+    else: lrow(r, a)
+    if a['mcnemar_p']: ws.write(r, 10, int(a['only_old']), f_i); ws.write(r, 11, int(a['only_new']), f_i); ws.write(r, 12, float(a['mcnemar_p']), f_d3)
+    else:
+        for c_ in (10, 11, 12): ws.write(r, c_, '', f_t)
+r += 2; lsec(r, 'C. Outcome of the tasks in the agent settings'); r += 1
+for c_, l in enumerate(['Scenario', 'Harness', 'Group', '', 'Tasks'] + ['Pass', 'Test fail', 'Crash', 'Timeout', 'Compile fail', 'Splice fail', 'No code'] + ['Outcomes (check)']): ws.write(r, c_, l, f_hl if c_ < 4 else f_h)
+ws.set_row(r, 30)
+for s in ('2.1', '2.2'):
+    for h in ('mini_swe', 'openhands'):
+        for g in ('new', 'old'):
+            r += 1; key = f'{s}_{h}_{g}'; v = lvals(key)
+            ws.write(r, 0, s, f_tc); ws.write(r, 1, h, f_t); ws.write(r, 2, g.upper(), f_t); ws.write(r, 3, '', f_t); ws.write_formula(r, 4, f'=COUNTA({lrng(key)})', f_i, sum(1 for x in v if x))
+            for j, st in enumerate(STATUSES): ws.write_formula(r, 5 + j, f'=COUNTIF({lrng(key)},"{st}")', f_i, v.count(st))
+            ws.write_formula(r, 12, f'=SUM({xl_range(r, 5, r, 11)})', f_i, sum(v.count(st) for st in STATUSES))
+r += 2; lsec(r, 'D. One-shot: tasks by the number of passing samples (of 100)'); r += 1
+for c_, l in enumerate(['Scenario', 'Mode', 'Group', '', 'Tasks', 'None', '1 to 9', '10 to 49', '50 or more', 'Check']): ws.write(r, c_, l, f_hl if c_ < 4 else f_h)
+ws.set_row(r, 30)
+for s in ('1.1', '1.2'):
+    for g in ('new', 'old'):
+        r += 1; key = f'{s}_{g}_passed'; v = [int(x) for x in lvals(key) if x != '']; R = lrng(key)
+        ws.write(r, 0, s, f_tc); ws.write(r, 1, 'one-shot', f_t); ws.write(r, 2, g.upper(), f_t); ws.write(r, 3, '', f_t); ws.write_formula(r, 4, f'=COUNT({R})', f_i, len(v))
+        ws.write_formula(r, 5, f'=COUNTIF({R},0)', f_i, sum(1 for x in v if x == 0)); ws.write_formula(r, 6, f'=COUNTIFS({R},">=1",{R},"<=9")', f_i, sum(1 for x in v if 1 <= x <= 9))
+        ws.write_formula(r, 7, f'=COUNTIFS({R},">=10",{R},"<=49")', f_i, sum(1 for x in v if 10 <= x <= 49)); ws.write_formula(r, 8, f'=COUNTIF({R},">=50")', f_i, sum(1 for x in v if x >= 50))
+        ws.write_formula(r, 9, f'=SUM({xl_range(r, 5, r, 8)})', f_i, len(v))
+r += 2; lsec(r, 'E. The headline number (pass@100, tasks passed) on subsets of the pairs'); r += 1; lhead(r, HL)
+for a in [a for a in LRES if a['metric'] in ('pass@100', 'pass')]: r += 1; lrow(r, a)
+r += 2; lsec(r, 'Reading'); r += 1
+for t in ['No sign that the original code is recited: the code handed in is as close to Wine\'s implementation for the NEW functions as for the OLD ones (rows identical, near copy, similarity, max similarity).',
+          'With an agent, OLD and NEW functions are passed equally often: none of the four differences is significant.',
+          'One-shot, pass@1 is the same but pass@100 is 13 to 15 points higher for the OLD functions; the difference sits in the tasks that are solved rarely (table D) and is larger where the NEW function is entirely new (table E).',
+          'Interpretation, not shown by the experiment: without the source tree the model depends on what it remembers of Wine\'s internals, which fits old code more often - familiarity with the code base rather than recall of the function. '
+          'One model only: without a control model with a later cutoff a difference in difficulty between the groups cannot be ruled out. See leakage/README.md.']:
+    ws.merge_range(r, 0, r, 12, t, f_note); ws.set_row(r, 15 * (1 + len(t) // 150)); r += 1
+ws.merge_range(r, 0, r, 12, 'Metrics: pass@k / compile@k as on the sheet One-shot; identical = a sample (the patch) is identical to Wine\'s implementation; near copy = similarity of at least 0.9; similarity = mean similarity to the original '
+               '(one-shot: over the distinct samples of a task); max similarity = the closest of the 100 samples. Rows NEW / OLD of pass@100, pass, compiled and with code are formulas over the sheet "Leakage per pair".', f_note); ws.set_row(r, 32)
+
+ws = wb.add_worksheet(LP); ws.freeze_panes(4, 3)
+ws.write(0, 0, 'Leakage experiment: every pair of tasks', f_title)
+ws.write(1, 0, 'Task NNNN of the NEW dataset and task NNNN of the OLD dataset are a pair. One-shot: number of passing samples out of 100. Agent: outcome of the task (see Notes).', f_sub)
+for c_, (l, _k, w) in enumerate(lbase): ws.merge_range(2, c_, 3, c_, l, f_hl); ws.set_column(c_, c_, w)
+c = len(lbase)
+for heading, sets, kind in lgroups:
+    ws.merge_range(2, c, 2, c + len(sets) - 1, heading, f_h)
+    for key, g in sets: ws.write(3, c, g, f_h); ws.set_column(c, c, 12); c += 1
+ws.set_row(2, 44); ws.set_row(3, 18)
+for k, t in enumerate(LT):
+    r = lfirst + k
+    for c_, (_l, key, _w) in enumerate(lbase):
+        v = t[key]
+        if key.startswith('code_lines'): ws.write(r, c_, int(v), f_i)
+        elif key.startswith('share'): ws.write(r, c_, float(v), f_d2)
+        else: ws.write(r, c_, v, f_tc if key == 'task' else f_t)
+    for _h, sets, kind in lgroups:
+        for key, _g in sets:
+            v = t.get(key, '')
+            if kind == 'count': ws.write(r, lcol[key], int(v) if v != '' else '', f_i)
+            else: ws.write(r, lcol[key], v, f_pass if v == 'pass' else f_tc)
+r = llast + 1; ws.write(r, 0, '', f_tb); ws.merge_range(r, 1, r, len(lbase) - 1, 'Tasks with a passing sample (one-shot) / tasks passed (agent)', f_tb)
+for _h, sets, kind in lgroups:
+    for key, _g in sets:
+        rng = xl_range(lfirst, lcol[key], llast, lcol[key]); v = lvals(key)
+        if kind == 'count': ws.write_formula(r, lcol[key], f'=COUNTIF({rng},">0")', f_ib, sum(1 for x in v if x != '' and int(x) > 0))
+        else: ws.write_formula(r, lcol[key], f'=COUNTIF({rng},"pass")', f_ib, v.count('pass'))
+ws.autofilter(3, 0, llast, c - 1)
+
 # ---------------------------------------------------------------- Notes
 ws = wb.add_worksheet('Notes'); ws.set_column(0, 0, 26); ws.set_column(1, 1, 120); ws.hide_gridlines(2)
 ws.write(0, 0, 'Notes', f_title); r = 2
@@ -272,12 +387,18 @@ block('To be known when reading the numbers', [
     ('deepseek-v4-flash', 'Not run on the cluster (its API is not reachable from there): replies and agent runs were produced on another machine with the same scripts, prompts, container image and trees, and evaluated on the cluster. Its wall times are not comparable with the others.'),
     ('deepseek-v4-flash, mini_swe', '40 of its 205 tasks left their own tree, 36 read the target file elsewhere (8 of them passed) and 31 wrote into another tree. Its 82 passes may be too high or too low. Its OpenHands run shows none of this.'),
     ('other agent settings', 'In the 16 settings run on the cluster (3,280 tasks) 76 tasks named another tree; 6 tasks that read their target file there passed (gpt-oss-20b 4, claude-haiku-5-5 1, qwen3.8-27b 1).'),
+    ('project directory in the containers', 'Until 2026-11-27 the cluster mounted the project directory and the scratch space into every agent container (dataset with the original code included). The commands of 33 tasks name one of these places (glm-4.7-flash 20, qwen3.8-27b 10, claude-haiku-5-5 2, deepseek-v4-flash 1); 6 of them passed. Upper bound from the text of the commands.'),
     ('API models: two attempts', 'A task is generated a second time only if the first attempt returned nothing because of an API, network or runner error. No task needed its second attempt.'),
     ('output caps', 'One-shot: 8,192 tokens for deepseek-v4-flash (8 replies truncated), 16,000 for claude-haiku-5-5, none for openai-gpt-6-luna. Agent: 8,192 for the local models, deepseek and gpt-6-luna (for gpt-6-luna added during the runs).'),
     ('wall time', 'Local models run several tasks at a time on two L40S GPUs; API models go through a vendor\'s API. Times of the two groups cannot be compared directly.'),
     ('input tokens of agents', 'summed over the steps of a task: the history is sent again at every step'),
     ('pass@k', 'the pipeline\'s unbiased estimate from 100 samples per task, see the sheet One-shot')])
-block('Sources', [('files', 'wine_agent/results/table.csv, wine_bench/results/table.csv, wine_bench/results/pass_at_k.csv, results/metrics_settings.csv, results/metrics_tasks.csv, results/tree_access_settings.txt'),
+block('Leakage experiment (sheets Leakage, Leakage per pair)', [
+    ('what is compared', 'gpt-oss-20b states a knowledge cutoff of 2024-06. NEW: functions of which at least half of the code lines were committed to Wine after 2024-06-30 (git blame on Wine 11.19). OLD: functions without a line committed after it, one per NEW function, matched on category, code lines, number of tests and DLL.'),
+    ('not comparable with the main tables', 'These functions are shorter than those of the 205-task benchmark (no lower bound of 15 lines), so the pass rates are higher.'),
+    ('isolation', 'The agent settings of this experiment ran with one source tree per container and without the project directory: no task named another tree, the project or the scratch space. The 205-task settings ran before that change.'),
+    ('limits', 'One model and no control model with a later cutoff; the pairs are matched on size and tests, not on difficulty; a NEW function may replace an older implementation the model has seen.')])
+block('Sources', [('files', 'wine_agent/results/table.csv, wine_bench/results/table.csv, wine_bench/results/pass_at_k.csv, results/metrics_settings.csv, results/metrics_tasks.csv, results/tree_access_settings.txt, leakage/results.csv, leakage/results_tasks.csv'),
                   ('more', 'README.md at the root of the repository; raw outputs in runs_archive/')])
 wb.close()
 print('wrote', OUT)

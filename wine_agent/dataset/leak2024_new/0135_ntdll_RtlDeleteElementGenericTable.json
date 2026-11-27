@@ -1,0 +1,235 @@
+{
+ "id": "0135",
+ "function": {
+  "name": "RtlDeleteElementGenericTable",
+  "export_name": "RtlDeleteElementGenericTable",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll",
+   "ntoskrnl.exe"
+  ],
+  "side": "PE",
+  "file": "dlls/ntdll/rtl.c",
+  "start_line": 611,
+  "end_line": 628,
+  "body_lines": 15,
+  "signature": "BOOLEAN WINAPI RtlDeleteElementGenericTable(RTL_GENERIC_TABLE *table, void *value)",
+  "header_comment": null,
+  "code": "BOOLEAN WINAPI RtlDeleteElementGenericTable(RTL_GENERIC_TABLE *table, void *value)\n{\n    RTL_SPLAY_LINKS *child;\n\n    TRACE(\"(%p, %p)\\n\", table, value);\n\n    child = rtl_splay_find(table, value);\n    if (!child)\n        return FALSE;\n\n    table->TableRoot = RtlDelete(child);\n    RemoveEntryList(get_list_entry_from_splay_links(child));\n    table->NumberGenericTableElements--;\n    table->OrderedPointer = &table->InsertOrderList;\n    table->WhichOrderedElement = 0;\n    table->FreeRoutine(table, child);\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ntuser.h\"",
+   "#include \"zlib.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"ntdll_misc.h\"",
+   "#include \"ddk/ntifs.h\""
+  ],
+  "resolution": [
+   "ntdll!RtlDeleteElementGenericTable [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntdll/tests/rtl.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 6
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "ntddk",
+   "path": "wdk-ddi-src/content/ntddk/nf-ntddk-rtldeleteelementgenerictable.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtldeleteelementgenerictable",
+   "documented_name": "rtldeleteelementgenerictable",
+   "file": "docs/0135_windows-driver-docs-ddi_nf-ntddk-rtldeleteelementgenerictable.md",
+   "text": "---\nUID: NF:ntddk.RtlDeleteElementGenericTable\ntitle: RtlDeleteElementGenericTable function (ntddk.h)\ndescription: The RtlDeleteElementGenericTable routine deletes an element from a generic table.\nold-location: ifsk\\rtldeleteelementgenerictable.htm\ntech.root: ifsk\nms.date: 04/16/2018\nkeywords: [\"RtlDeleteElementGenericTable function\"]\nms.keywords: RtlDeleteElementGenericTable, RtlDeleteElementGenericTable routine [Installable File System Drivers], ifsk.rtldeleteelementgenerictable, ntddk/RtlDeleteElementGenericTable, rtlref_914df898-52aa-48cd-80ae-f57ffc5e60dd.xml\nreq.header: ntddk.h\nreq.include-header: Ntddk.h, Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: See Remarks section.\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - RtlDeleteElementGenericTable\n - ntddk/RtlDeleteElementGenericTable\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - RtlDeleteElementGenericTable\n---\n\n# RtlDeleteElementGenericTable function\n\n\n## -description\n\nThe <b>RtlDeleteElementGenericTable</b> routine deletes an element from a generic table.\n\n## -parameters\n\n### -param Table [in]\n\n\nA pointer to the generic table (<a href=\"/windows-hardware/drivers/ddi/ntddk/ns-ntddk-_rtl_generic_table\">RTL_GENERIC_TABLE</a>). The table must have been initialized by calling <a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlinitializegenerictable\">RtlInitializeGenericTable</a>.\n\n### -param Buffer [in]\n\n\nA pointer to a caller-allocated buffer containing a value that uniquely identifies the element to be deleted.\n\n## -returns\n\n<b>RtlDeleteElementGenericTable</b> returns <b>TRUE</b> if the element was successfully deleted, <b>FALSE</b> otherwise.\n\n## -remarks\n\n<b>RtlDeleteElementGenericTable</b> calls the <i>CompareRoutine</i> and <i>FreeRoutine</i> that were registered in the call to <a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlinitializegenerictable\">RtlInitializeGenericTable</a>. \n\nCallers of the Rtl..GenericTable routines are responsible for exclusively synchronizing access to the generic table. An exclusive fast mutex is the most efficient synchronization mechanism to use for this purpose. \n\nBy default, the operating system uses splay trees to implement generic tables. Under some circumstances, operations on a splay tree will make the tree deep and narrow and might even turn it into a straight line. Very deep trees degrade the performance of searches. You can ensure a more balanced, shallower tree implementation of generic tables by using Adelson-Velsky/Landis (AVL) trees. If you want to configure the generic table routines to use AVL trees instead of splay trees in your driver, insert the following define statement in a common header file before including <i>Ntddk.h</i>:\n\n`#define RTL_USE_AVL_TABLES 0`\n\nIf RTL_USE_AVL_TABLES is not defined, you must use the AVL form of the generic table routines. For example, use the <a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtldeleteelementgenerictableavl\">RtlDeleteElementGenericTableAvl</a> routine instead of <b>RtlDeleteElementGenericTable</b>. In the call to <b>RtlDeleteElementGenericTableAvl</b>, the caller must pass a <a href=\"/windows-hardware/drivers/ddi/ntddk/ns-ntddk-_rtl_avl_table\">RTL_AVL_TABLE</a> table structure rather than <a href=\"/windows-hardware/drivers/ddi/ntddk/ns-ntddk-_rtl_generic_table\">RTL_GENERIC_TABLE</a>.\n\nCallers of <b>RtlDeleteElementGenericTable</b> must be running at IRQL < DISPATCH_LEVEL if either of the following conditions holds:\n\n<ul>\n<li>\nThe caller-allocated memory at <i>Table</i> or at <i>Buffer</i> is pageable.\n\n</li>\n<li>\nThe caller-supplied <i>CompareRoutine</i> or <i>FreeRoutine</i> contains pageable code. \n\n</li>\n</ul>\n\n## -see-also\n\n<a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlinitializegenerictable\">RtlInitializeGenericTable</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlinsertelementgenerictable\">RtlInsertElementGenericTable</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "rtl_splay_find",
+   "file": "dlls/ntdll/rtl.c",
+   "start_line": 215,
+   "end_line": 232,
+   "static": true,
+   "called_from": [
+    "RtlDeleteElementGenericTable"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/rtl.c:846"
+   ],
+   "signature": "static RTL_SPLAY_LINKS *rtl_splay_find(RTL_GENERIC_TABLE *table, void *value)",
+   "code": "static RTL_SPLAY_LINKS *rtl_splay_find(RTL_GENERIC_TABLE *table, void *value)\n{\n    RTL_GENERIC_COMPARE_RESULTS result;\n    RTL_SPLAY_LINKS *child;\n\n    child = table->TableRoot;\n    while (child)\n    {\n        result = table->CompareRoutine(table, get_data_from_splay_links(child), value);\n        if (result == GenericLessThan)\n            child = child->RightChild;\n        else if (result == GenericGreaterThan)\n            child = child->LeftChild;\n        else\n            return child;\n    }\n    return NULL;\n}"
+  },
+  {
+   "name": "get_list_entry_from_splay_links",
+   "file": "dlls/ntdll/rtl.c",
+   "start_line": 210,
+   "end_line": 213,
+   "static": true,
+   "called_from": [
+    "RtlDeleteElementGenericTable"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/rtl.c:590"
+   ],
+   "signature": "static LIST_ENTRY *get_list_entry_from_splay_links(RTL_SPLAY_LINKS *links)",
+   "code": "static LIST_ENTRY *get_list_entry_from_splay_links(RTL_SPLAY_LINKS *links)\n{\n    return (LIST_ENTRY *)((unsigned char *)links + FIELD_OFFSET(struct rtl_generic_table_entry, list_entry));\n}"
+  },
+  {
+   "name": "get_data_from_splay_links",
+   "file": "dlls/ntdll/rtl.c",
+   "start_line": 199,
+   "end_line": 202,
+   "static": true,
+   "called_from": [
+    "rtl_splay_find"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/rtl.c:568",
+    "dlls/ntdll/rtl.c:591",
+    "dlls/ntdll/rtl.c:596",
+    "dlls/ntdll/rtl.c:608",
+    "dlls/ntdll/rtl.c:658"
+   ],
+   "signature": "static void *get_data_from_splay_links(RTL_SPLAY_LINKS *links)",
+   "code": "static void *get_data_from_splay_links(RTL_SPLAY_LINKS *links)\n{\n    return (unsigned char *)links + FIELD_OFFSET(struct rtl_generic_table_entry, data);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "rtl_generic_table_entry",
+    "kind": "struct_decl",
+    "start_line": 192,
+    "end_line": 197,
+    "code": "struct rtl_generic_table_entry\n{\n    RTL_SPLAY_LINKS splay_links;\n    LIST_ENTRY list_entry;\n    LONGLONG data;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ntdll);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "RtlDelete",
+    "impl": [
+     "dlls/ntdll/rtl.c:473"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "table->FreeRoutine",
+    "in_function": "RtlDeleteElementGenericTable",
+    "at": "dlls/ntdll/rtl.c:626",
+    "candidates": [
+     "free @ dlls/ntdll/rtl.c:541"
+    ]
+   },
+   {
+    "expr": "table->CompareRoutine",
+    "in_function": "rtl_splay_find",
+    "at": "dlls/ntdll/rtl.c:223",
+    "candidates": [
+     "compare @ dlls/ntdll/rtl.c:539"
+    ]
+   }
+  ]
+ },
+ "winebench": {
+  "id": "ntdll.RtlDeleteElementGenericTable",
+  "category": {
+   "l1": "System services",
+   "l2": "Run-time library (strings, bitmaps, utilities)",
+   "header": "ntddk.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "name_rule"
+  },
+  "loc": {
+   "total": 18,
+   "body": 17,
+   "code": 12
+  },
+  "cyclomatic": 2,
+  "return_type": "BOOLEAN",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 6,
+   "n_tests": 6,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ntdll/tests/rtl.c::test_RtlDeleteElementGenericTable",
+    "dlls/ntdll/tests/rtl.c::test_RtlEnumerateGenericTable",
+    "dlls/ntdll/tests/rtl.c::test_RtlEnumerateGenericTableWithoutSplaying",
+    "dlls/ntdll/tests/rtl.c::test_RtlGetElementGenericTable",
+    "dlls/ntdll/tests/rtl.c::test_RtlInsertElementGenericTable",
+    "dlls/ntdll/tests/rtl.c::test_RtlLookupElementGenericTable"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtldeleteelementgenerictable",
+   "source": "ddi",
+   "description": "The RtlDeleteElementGenericTable routine deletes an element from a generic table.",
+   "min_windows": "",
+   "documented_dll": "NtosKrnl.exe"
+  },
+  "exports": [
+   "ntdll.RtlDeleteElementGenericTable",
+   "ntoskrnl.exe.RtlDeleteElementGenericTable"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.846,
+   "first_date": "2021-12-02",
+   "median_date": "2025-02-07",
+   "last_date": "2025-02-07",
+   "code_lines": 13
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "kernelbase.SetEnvironmentVariableW",
+  "share_after_cutoff": 0.846,
+  "last_date": "2025-02-07"
+ }
+}

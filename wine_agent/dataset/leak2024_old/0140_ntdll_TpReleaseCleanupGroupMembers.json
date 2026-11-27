@@ -1,0 +1,622 @@
+{
+ "id": "0140",
+ "function": {
+  "name": "TpReleaseCleanupGroupMembers",
+  "export_name": "TpReleaseCleanupGroupMembers",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll"
+  ],
+  "side": "PE",
+  "file": "dlls/ntdll/threadpool.c",
+  "start_line": 2881,
+  "end_line": 2949,
+  "body_lines": 66,
+  "signature": "VOID WINAPI TpReleaseCleanupGroupMembers( TP_CLEANUP_GROUP *group, BOOL cancel_pending, PVOID userdata )",
+  "header_comment": "/***********************************************************************\n *           TpReleaseCleanupGroupMembers    (NTDLL.@)\n */",
+  "code": "VOID WINAPI TpReleaseCleanupGroupMembers( TP_CLEANUP_GROUP *group, BOOL cancel_pending, PVOID userdata )\n{\n    struct threadpool_group *this = impl_from_TP_CLEANUP_GROUP( group );\n    struct threadpool_object *object, *next;\n    struct list members;\n\n    TRACE( \"%p %u %p\\n\", group, cancel_pending, userdata );\n\n    RtlEnterCriticalSection( &this->cs );\n\n    /* Unset group, increase references, and mark objects for shutdown */\n    LIST_FOR_EACH_ENTRY_SAFE( object, next, &this->members, struct threadpool_object, group_entry )\n    {\n        assert( object->group == this );\n        assert( object->is_group_member );\n\n        if (InterlockedIncrement( &object->refcount ) == 1)\n        {\n            /* Object is basically already destroyed, but group reference\n             * was not deleted yet. We can safely ignore this object. */\n            InterlockedDecrement( &object->refcount );\n            list_remove( &object->group_entry );\n            object->is_group_member = FALSE;\n            continue;\n        }\n\n        object->is_group_member = FALSE;\n        tp_object_prepare_shutdown( object );\n    }\n\n    /* Move members to a new temporary list */\n    list_init( &members );\n    list_move_tail( &members, &this->members );\n\n    RtlLeaveCriticalSection( &this->cs );\n\n    /* Cancel pending callbacks if requested */\n    if (cancel_pending)\n    {\n        LIST_FOR_EACH_ENTRY( object, &members, struct threadpool_object, group_entry )\n        {\n            tp_object_cancel( object );\n        }\n    }\n\n    /* Wait for remaining callbacks to finish */\n    LIST_FOR_EACH_ENTRY_SAFE( object, next, &members, struct threadpool_object, group_entry )\n    {\n        tp_object_wait( object, TRUE );\n\n        if (!object->shutdown)\n        {\n            /* Execute group cancellation callback if defined, and if this was actually a group cancel. */\n            if (cancel_pending && object->group_cancel_callback)\n            {\n                TRACE( \"executing group cancel callback %p(%p, %p)\\n\",\n                       object->group_cancel_callback, object->userdata, userdata );\n                object->group_cancel_callback( object->userdata, userdata );\n                TRACE( \"callback %p returned\\n\", object->group_cancel_callback );\n            }\n\n            if (object->type != TP_OBJECT_TYPE_SIMPLE)\n                tp_object_release( object );\n        }\n\n        object->shutdown = TRUE;\n        tp_object_release( object );\n    }\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <limits.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"winternl.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"ntdll_misc.h\""
+  ],
+  "resolution": [
+   "ntdll!TpReleaseCleanupGroupMembers [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntdll/tests/threadpool.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 5
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "threadpoolapiset",
+   "path": "sdk-api-src/content/threadpoolapiset/nf-threadpoolapiset-closethreadpoolcleanupgroupmembers.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/threadpoolapiset/nf-threadpoolapiset-closethreadpoolcleanupgroupmembers",
+   "documented_name": "closethreadpoolcleanupgroupmembers",
+   "file": "docs/0140_sdk-api_nf-threadpoolapiset-closethreadpoolcleanupgroupmembers.md",
+   "text": "---\nUID: NF:threadpoolapiset.CloseThreadpoolCleanupGroupMembers\ntitle: CloseThreadpoolCleanupGroupMembers function (threadpoolapiset.h)\ndescription: Releases the members of the specified cleanup group, waits for all callback functions to complete, and optionally cancels any outstanding callback functions.\nhelpviewer_keywords: [\"CloseThreadpoolCleanupGroupMembers\",\"CloseThreadpoolCleanupGroupMembers function\",\"base.closethreadpoolcleanupgroupmembers\",\"threadpoolapiset/CloseThreadpoolCleanupGroupMembers\",\"winbase/CloseThreadpoolCleanupGroupMembers\"]\nold-location: base\\closethreadpoolcleanupgroupmembers.htm\ntech.root: backup\nms.assetid: 9c78db13-d8dd-4eda-83d9-c9dbbfc6e822\nms.date: 12/05/2018\nms.keywords: CloseThreadpoolCleanupGroupMembers, CloseThreadpoolCleanupGroupMembers function, base.closethreadpoolcleanupgroupmembers, threadpoolapiset/CloseThreadpoolCleanupGroupMembers, winbase/CloseThreadpoolCleanupGroupMembers\nreq.header: threadpoolapiset.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CloseThreadpoolCleanupGroupMembers\n - threadpoolapiset/CloseThreadpoolCleanupGroupMembers\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Kernel32.dll\n - API-MS-Win-Core-threadpool-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-threadpool-l1-2-0.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\napi_name:\n - CloseThreadpoolCleanupGroupMembers\n---\n\n# CloseThreadpoolCleanupGroupMembers function\n\n\n## -description\n\nReleases the members of the specified cleanup group, waits for all callback functions to complete, and optionally cancels any outstanding callback functions.\n\n## -parameters\n\n### -param ptpcg [in, out]\n\nA pointer to a <b>TP_CLEANUP_GROUP</b> structure that defines the cleanup group. The <a href=\"/windows/desktop/api/threadpoolapiset/nf-threadpoolapiset-createthreadpoolcleanupgroup\">CreateThreadpoolCleanupGroup</a> function returns this pointer.\n\n### -param fCancelPendingCallbacks [in]\n\nIf this parameter is TRUE, the function cancels outstanding callbacks that have not yet started. If this parameter is FALSE, the function waits for outstanding callback functions to complete.\n\n### -param pvCleanupContext [in, out, optional]\n\nThe application-defined data to pass to the application's cleanup group callback function. You can specify the callback function when you call <a href=\"/windows/desktop/api/winbase/nf-winbase-setthreadpoolcallbackcleanupgroup\">SetThreadpoolCallbackCleanupGroup</a>.\n\n## -remarks\n\nThe <b>CloseThreadpoolCleanupGroupMembers</b> function simplifies cleanup of thread pool callback objects by releasing, in a single operation, all work objects, wait objects, and timer objects that are members of the cleanup group. An object becomes a member of a cleanup group when the object is created with the threadpool callback environment that was specified when the cleanup group was created. For more information, see <a href=\"/windows/desktop/api/threadpoolapiset/nf-threadpoolapiset-createthreadpoolcleanupgroup\">CreateThreadpoolCleanupGroup</a>.\n\nThe <b>CloseThreadpoolCleanupGroupMembers</b> function blocks until all currently executing callback functions finish. If <i>fCancelPendingCallbacks</i> is TRUE, outstanding callbacks are canceled; otherwise, the function blocks until all outstanding callbacks also finish.  After the <b>CloseThreadpoolCleanupGroupMembers</b> function returns, an application should not use any object that was a member of the cleanup group at the time <b>CloseThreadpoolCleanupGroupMembers</b> was called.  Also, an application should not release any of the objects individually by calling a function such as <a href=\"/windows/desktop/api/threadpoolapiset/nf-threadpoolapiset-closethreadpoolwork\">CloseThreadpoolWork</a>, because the objects have already been released. \n\nThe <b>CloseThreadpoolCleanupGroupMembers</b> function does not close the cleanup group itself. Instead, the cleanup group persists until the <a href=\"/windows/desktop/api/threadpoolapiset/nf-threadpoolapiset-closethreadpoolcleanupgroup\">CloseThreadpoolCleanupGroup</a> function is called. Also, closing a cleanup group does not affect the associated threadpool callback environment. The callback environment persists until it is destroyed by calling <a href=\"/windows/desktop/api/winbase/nf-winbase-destroythreadpoolenvironment\">DestroyThreadpoolEnvironment</a>.\n\n As long as a cleanup group persists, new objects created with the cleanup group's associated threadpool callback environment are added to the cleanup group. This allows an application to reuse the cleanup group. However, it can lead to errors if the application does not synchronize code that calls <b>CloseThreadpoolCleanupGroupMembers</b> with code that creates new objects. For example, suppose a thread creates two threadpool work objects, Work1 and Work2. Another thread calls <b>CloseThreadpoolCleanupGroupMembers</b>. Depending on when the threads run, any of the following might occur: \n\n<ul>\n<li>Work1 and Work2 are added to the cleanup group after its existing members were released. Code that submits Work1 and Work2 will succeed.</li>\n<li>Work1 is added to the cleanup group before its existing members are released, causing Work1 to be released along with other members. Then Work2 is added. Code that submits Work1 will generate an exception; code that submits Work2 will succeed.</li>\n<li>Work1 and Work2 are added to the cleanup group before its existing members are released, causing both Work1 and Work2 to be released. Code that submits Work1 or Work2 will generate an exception.</li>\n</ul>\nTo simply wait for or cancel pending work items without releasing them, use one of the threadpool callback functions: <a href=\"/windows/desktop/api/threadpoolapiset/nf-threadpoolapiset-waitforthreadpooliocallbacks\">WaitForThreadpoolIoCallbacks</a>, <a href=\"/windows/desktop/api/threadpoolapiset/nf-threadpoolapiset-waitforthreadpooltimercallbacks\">WaitForThreadpoolTimerCallbacks</a>, <a href=\"/windows/desktop/api/threadpoolapiset/nf-threadpoolapiset-waitforthreadpoolwaitcallbacks\">WaitForThreadpoolWaitCallbacks</a>, or <a href=\"/windows/desktop/api/threadpoolapiset/nf-threadpoolapiset-waitforthreadpoolworkcallbacks\">WaitForThreadpoolWorkCallbacks</a>.\n\nTo compile an application that uses this function, define _WIN32_WINNT as 0x0600 or higher.\n\n\n#### Examples\n\nFor an example, see <a href=\"/windows/desktop/ProcThread/using-the-thread-pool-functions\">Using the Thread Pool Functions</a>.\n\n<div class=\"code\"></div>\n\n## -see-also\n\n<a href=\"/windows/desktop/api/threadpoolapiset/nf-threadpoolapiset-closethreadpoolcleanupgroup\">CloseThreadpoolCleanupGroup</a>\n\n\n\n<a href=\"/windows/desktop/api/threadpoolapiset/nf-threadpoolapiset-createthreadpoolcleanupgroup\">CreateThreadpoolCleanupGroup</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-setthreadpoolcallbackcleanupgroup\">SetThreadpoolCallbackCleanupGroup</a>\n\n\n\n<a href=\"/windows/desktop/ProcThread/thread-pools\">Thread Pools</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "impl_from_TP_CLEANUP_GROUP",
+   "file": "dlls/ntdll/threadpool.c",
+   "start_line": 363,
+   "end_line": 366,
+   "static": true,
+   "called_from": [
+    "TpReleaseCleanupGroupMembers"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/threadpool.c:2018",
+    "dlls/ntdll/threadpool.c:2870"
+   ],
+   "signature": "static inline struct threadpool_group *impl_from_TP_CLEANUP_GROUP( TP_CLEANUP_GROUP *group )",
+   "code": "static inline struct threadpool_group *impl_from_TP_CLEANUP_GROUP( TP_CLEANUP_GROUP *group )\n{\n    return (struct threadpool_group *)group;\n}"
+  },
+  {
+   "name": "tp_object_prepare_shutdown",
+   "file": "dlls/ntdll/threadpool.c",
+   "start_line": 2195,
+   "end_line": 2203,
+   "static": true,
+   "called_from": [
+    "TpReleaseCleanupGroupMembers"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/threadpool.c:2419",
+    "dlls/ntdll/threadpool.c:2968",
+    "dlls/ntdll/threadpool.c:2996",
+    "dlls/ntdll/threadpool.c:3010",
+    "dlls/ntdll/threadpool.c:3024"
+   ],
+   "signature": "static void tp_object_prepare_shutdown( struct threadpool_object *object )",
+   "code": "static void tp_object_prepare_shutdown( struct threadpool_object *object )\n{\n    if (object->type == TP_OBJECT_TYPE_TIMER)\n        tp_timerqueue_unlock( object );\n    else if (object->type == TP_OBJECT_TYPE_WAIT)\n        tp_waitqueue_unlock( object );\n    else if (object->type == TP_OBJECT_TYPE_IO)\n        tp_ioqueue_unlock( object );\n}"
+  },
+  {
+   "name": "tp_object_cancel",
+   "file": "dlls/ntdll/threadpool.c",
+   "start_line": 2116,
+   "end_line": 2140,
+   "static": true,
+   "called_from": [
+    "TpReleaseCleanupGroupMembers"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/threadpool.c:3302",
+    "dlls/ntdll/threadpool.c:3316",
+    "dlls/ntdll/threadpool.c:3330",
+    "dlls/ntdll/threadpool.c:3344"
+   ],
+   "signature": "static void tp_object_cancel( struct threadpool_object *object )",
+   "code": "static void tp_object_cancel( struct threadpool_object *object )\n{\n    struct threadpool *pool = object->pool;\n    LONG pending_callbacks = 0;\n\n    RtlEnterCriticalSection( &pool->cs );\n    if (object->num_pending_callbacks)\n    {\n        pending_callbacks = object->num_pending_callbacks;\n        object->num_pending_callbacks = 0;\n        list_remove( &object->pool_entry );\n\n        if (object->type == TP_OBJECT_TYPE_WAIT)\n            object->u.wait.signaled = 0;\n    }\n    if (object->type == TP_OBJECT_TYPE_IO)\n    {\n        object->u.io.skipped_count += object->u.io.pending_count;\n        object->u.io.pending_count = 0;\n    }\n    RtlLeaveCriticalSection( &pool->cs );\n\n    while (pending_callbacks--)\n        tp_object_release( object );\n}"
+  },
+  {
+   "name": "tp_object_wait",
+   "file": "dlls/ntdll/threadpool.c",
+   "start_line": 2161,
+   "end_line": 2174,
+   "static": true,
+   "called_from": [
+    "TpReleaseCleanupGroupMembers"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/threadpool.c:3303",
+    "dlls/ntdll/threadpool.c:3317",
+    "dlls/ntdll/threadpool.c:3331",
+    "dlls/ntdll/threadpool.c:3345"
+   ],
+   "signature": "static void tp_object_wait( struct threadpool_object *object, BOOL group_wait )",
+   "code": "static void tp_object_wait( struct threadpool_object *object, BOOL group_wait )\n{\n    struct threadpool *pool = object->pool;\n\n    RtlEnterCriticalSection( &pool->cs );\n    while (!RtlDllShutdownInProgress() && !object_is_finished( object, group_wait ))\n    {\n        if (group_wait)\n            RtlSleepConditionVariableCS( &object->group_finished_event, &pool->cs, NULL );\n        else\n            RtlSleepConditionVariableCS( &object->finished_event, &pool->cs, NULL );\n    }\n    RtlLeaveCriticalSection( &pool->cs );\n}"
+  },
+  {
+   "name": "tp_object_release",
+   "file": "dlls/ntdll/threadpool.c",
+   "start_line": 2219,
+   "end_line": 2260,
+   "static": true,
+   "called_from": [
+    "TpReleaseCleanupGroupMembers",
+    "tp_object_cancel"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/threadpool.c:1368",
+    "dlls/ntdll/threadpool.c:1445",
+    "dlls/ntdll/threadpool.c:1657",
+    "dlls/ntdll/threadpool.c:2062",
+    "dlls/ntdll/threadpool.c:2466"
+   ],
+   "signature": "static BOOL tp_object_release( struct threadpool_object *object )",
+   "code": "static BOOL tp_object_release( struct threadpool_object *object )\n{\n    if (InterlockedDecrement( &object->refcount ))\n        return FALSE;\n\n    TRACE( \"destroying object %p of type %u\\n\", object, object->type );\n\n    assert( object->shutdown );\n    assert( !object->num_pending_callbacks );\n    assert( !object->num_running_callbacks );\n    assert( !object->num_associated_callbacks );\n\n    /* release reference to the group */\n    if (object->group)\n    {\n        struct threadpool_group *group = object->group;\n\n        RtlEnterCriticalSection( &group->cs );\n        if (object->is_group_member)\n        {\n            list_remove( &object->group_entry );\n            object->is_group_member = FALSE;\n        }\n        RtlLeaveCriticalSection( &group->cs );\n\n        tp_group_release( group );\n    }\n\n    if (object->type == TP_OBJECT_TYPE_WAIT)\n        tp_wait_close_duped_handle( object );\n\n    tp_threadpool_unlock( object->pool );\n\n    if (object->race_dll)\n        LdrUnloadDll( object->race_dll );\n\n    if (object->completed_event && object->completed_event != INVALID_HANDLE_VALUE)\n        NtSetEvent( object->completed_event, NULL );\n\n    RtlFreeHeap( GetProcessHeap(), 0, object );\n    return TRUE;\n}"
+  },
+  {
+   "name": "tp_timerqueue_unlock",
+   "file": "dlls/ntdll/threadpool.c",
+   "start_line": 1292,
+   "end_line": 1320,
+   "static": true,
+   "called_from": [
+    "tp_object_prepare_shutdown"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void tp_timerqueue_unlock( struct threadpool_object *timer )",
+   "code": "static void tp_timerqueue_unlock( struct threadpool_object *timer )\n{\n    assert( timer->type == TP_OBJECT_TYPE_TIMER );\n\n    RtlEnterCriticalSection( &timerqueue.cs );\n    if (timer->u.timer.timer_initialized)\n    {\n        /* If timer was pending, remove it. */\n        if (timer->u.timer.timer_pending)\n        {\n            list_remove( &timer->u.timer.timer_entry );\n            timer->u.timer.timer_pending = FALSE;\n        }\n\n        /* If the last timer object was destroyed, then update timeout. */\n        if (!--timerqueue.objcount)\n        {\n            LARGE_INTEGER rel_now;\n\n            assert( list_empty( &timerqueue.abs_timers ) );\n            assert( list_empty( &timerqueue.rel_timers ) );\n            NtQueryPerformanceCounter( &rel_now, NULL );\n            update_timers( rel_now.QuadPart );\n        }\n\n        timer->u.timer.timer_initialized = FALSE;\n    }\n    RtlLeaveCriticalSection( &timerqueue.cs );\n}"
+  },
+  {
+   "name": "tp_waitqueue_unlock",
+   "file": "dlls/ntdll/threadpool.c",
+   "start_line": 1590,
+   "end_line": 1607,
+   "static": true,
+   "called_from": [
+    "tp_object_prepare_shutdown"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void tp_waitqueue_unlock( struct threadpool_object *wait )",
+   "code": "static void tp_waitqueue_unlock( struct threadpool_object *wait )\n{\n    assert( wait->type == TP_OBJECT_TYPE_WAIT );\n\n    RtlEnterCriticalSection( &waitqueue.cs );\n    if (wait->u.wait.bucket)\n    {\n        struct waitqueue_bucket *bucket = wait->u.wait.bucket;\n        assert( bucket->objcount > 0 );\n\n        list_remove( &wait->u.wait.wait_entry );\n        wait->u.wait.bucket = NULL;\n        bucket->objcount--;\n\n        NtSetEvent( bucket->update_event, NULL );\n    }\n    RtlLeaveCriticalSection( &waitqueue.cs );\n}"
+  },
+  {
+   "name": "tp_ioqueue_unlock",
+   "file": "dlls/ntdll/threadpool.c",
+   "start_line": 2176,
+   "end_line": 2188,
+   "static": true,
+   "called_from": [
+    "tp_object_prepare_shutdown"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void tp_ioqueue_unlock( struct threadpool_object *io )",
+   "code": "static void tp_ioqueue_unlock( struct threadpool_object *io )\n{\n    assert( io->type == TP_OBJECT_TYPE_IO );\n\n    RtlEnterCriticalSection( &ioqueue.cs );\n\n    assert(ioqueue.objcount);\n\n    if (!io->shutdown && !--ioqueue.objcount)\n        NtSetIoCompletion( ioqueue.port, 0, 0, STATUS_SUCCESS, 0 );\n\n    RtlLeaveCriticalSection( &ioqueue.cs );\n}"
+  },
+  {
+   "name": "object_is_finished",
+   "file": "dlls/ntdll/threadpool.c",
+   "start_line": 2142,
+   "end_line": 2153,
+   "static": true,
+   "called_from": [
+    "tp_object_wait"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/threadpool.c:2424",
+    "dlls/ntdll/threadpool.c:2430",
+    "dlls/ntdll/threadpool.c:2692",
+    "dlls/ntdll/threadpool.c:2694",
+    "dlls/ntdll/threadpool.c:2834"
+   ],
+   "signature": "static BOOL object_is_finished( struct threadpool_object *object, BOOL group )",
+   "code": "static BOOL object_is_finished( struct threadpool_object *object, BOOL group )\n{\n    if (object->num_pending_callbacks)\n        return FALSE;\n    if (object->type == TP_OBJECT_TYPE_IO && object->u.io.pending_count)\n        return FALSE;\n\n    if (group)\n        return !object->num_running_callbacks;\n    else\n        return !object->num_associated_callbacks;\n}"
+  },
+  {
+   "name": "tp_group_release",
+   "file": "dlls/ntdll/threadpool.c",
+   "start_line": 1962,
+   "end_line": 1977,
+   "static": true,
+   "called_from": [
+    "tp_object_release"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/threadpool.c:2875"
+   ],
+   "signature": "static BOOL tp_group_release( struct threadpool_group *group )",
+   "code": "static BOOL tp_group_release( struct threadpool_group *group )\n{\n    if (InterlockedDecrement( &group->refcount ))\n        return FALSE;\n\n    TRACE( \"destroying group %p\\n\", group );\n\n    assert( group->shutdown );\n    assert( list_empty( &group->members ) );\n\n    group->cs.DebugInfo->Spare[0] = 0;\n    RtlDeleteCriticalSection( &group->cs );\n\n    RtlFreeHeap( GetProcessHeap(), 0, group );\n    return TRUE;\n}"
+  },
+  {
+   "name": "tp_wait_close_duped_handle",
+   "file": "dlls/ntdll/threadpool.c",
+   "start_line": 2205,
+   "end_line": 2212,
+   "static": true,
+   "called_from": [
+    "tp_object_release"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/threadpool.c:3199"
+   ],
+   "signature": "static void tp_wait_close_duped_handle( struct threadpool_object *wait )",
+   "code": "static void tp_wait_close_duped_handle( struct threadpool_object *wait )\n{\n    if (wait->u.wait.duped_handle)\n    {\n        NtClose( wait->u.wait.duped_handle );\n        wait->u.wait.duped_handle = NULL;\n    }\n}"
+  },
+  {
+   "name": "tp_threadpool_unlock",
+   "file": "dlls/ntdll/threadpool.c",
+   "start_line": 1912,
+   "end_line": 1918,
+   "static": true,
+   "called_from": [
+    "tp_object_release"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/threadpool.c:2529",
+    "dlls/ntdll/threadpool.c:2536",
+    "dlls/ntdll/threadpool.c:2590",
+    "dlls/ntdll/threadpool.c:2626"
+   ],
+   "signature": "static void tp_threadpool_unlock( struct threadpool *pool )",
+   "code": "static void tp_threadpool_unlock( struct threadpool *pool )\n{\n    RtlEnterCriticalSection( &pool->cs );\n    pool->objcount--;\n    RtlLeaveCriticalSection( &pool->cs );\n    tp_threadpool_release( pool );\n}"
+  },
+  {
+   "name": "update_timers",
+   "file": "dlls/ntdll/threadpool.c",
+   "start_line": 1140,
+   "end_line": 1162,
+   "static": true,
+   "called_from": [
+    "tp_timerqueue_unlock"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/threadpool.c:1182",
+    "dlls/ntdll/threadpool.c:3149"
+   ],
+   "signature": "static void update_timers( ULONGLONG rel_now )",
+   "code": "static void update_timers( ULONGLONG rel_now )\n{\n    LARGE_INTEGER timeout;\n\n    timeout.QuadPart = get_next_timeout( &timerqueue.abs_timers );\n    NtSetTimer( timerqueue.timers[ABS_TIMER], &timeout, NULL, NULL, FALSE, 0, NULL );\n\n    if (timerqueue.objcount)\n    {\n        timeout.QuadPart = get_next_timeout( &timerqueue.rel_timers );\n        if (timeout.QuadPart > rel_now)\n            timeout.QuadPart = rel_now - timeout.QuadPart;\n        else\n            timeout.QuadPart = 0;\n    }\n    else\n    {\n        /* All timers have been destroyed, if no new timers are created\n         * within some amount of time, then we can shutdown this thread. */\n        timeout.QuadPart = (ULONGLONG)THREADPOOL_WORKER_TIMEOUT * -10000;\n    }\n    NtSetTimer( timerqueue.timers[REL_TIMER], &timeout, NULL, NULL, FALSE, 0, NULL );\n}"
+  },
+  {
+   "name": "tp_threadpool_release",
+   "file": "dlls/ntdll/threadpool.c",
+   "start_line": 1812,
+   "end_line": 1831,
+   "static": true,
+   "called_from": [
+    "tp_threadpool_unlock"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/threadpool.c:1877",
+    "dlls/ntdll/threadpool.c:2490",
+    "dlls/ntdll/threadpool.c:2984"
+   ],
+   "signature": "static BOOL tp_threadpool_release( struct threadpool *pool )",
+   "code": "static BOOL tp_threadpool_release( struct threadpool *pool )\n{\n    unsigned int i;\n\n    if (InterlockedDecrement( &pool->refcount ))\n        return FALSE;\n\n    TRACE( \"destroying threadpool %p\\n\", pool );\n\n    assert( pool->shutdown );\n    assert( !pool->objcount );\n    for (i = 0; i < ARRAY_SIZE(pool->pools); ++i)\n        assert( list_empty( &pool->pools[i] ) );\n\n    pool->cs.DebugInfo->Spare[0] = 0;\n    RtlDeleteCriticalSection( &pool->cs );\n\n    RtlFreeHeap( GetProcessHeap(), 0, pool );\n    return TRUE;\n}"
+  },
+  {
+   "name": "get_next_timeout",
+   "file": "dlls/ntdll/threadpool.c",
+   "start_line": 1113,
+   "end_line": 1133,
+   "static": true,
+   "called_from": [
+    "update_timers"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static ULONGLONG get_next_timeout( struct list *list )",
+   "code": "static ULONGLONG get_next_timeout( struct list *list )\n{\n    ULONGLONG timeout_lower, timeout_upper, new_timeout;\n    struct threadpool_object *other_timer;\n\n    timeout_lower = timeout_upper = MAXLONGLONG;\n\n    /* Determine next timeout and use the window length to optimize wakeup times. */\n    LIST_FOR_EACH_ENTRY( other_timer, list, struct threadpool_object, u.timer.timer_entry )\n    {\n        assert( other_timer->type == TP_OBJECT_TYPE_TIMER );\n        if (other_timer->u.timer.timeout >= timeout_upper)\n            break;\n\n        timeout_lower = other_timer->u.timer.timeout;\n        new_timeout   = timeout_lower + (ULONGLONG)other_timer->u.timer.window_length * 10000;\n        if (new_timeout < timeout_upper)\n            timeout_upper = new_timeout;\n    }\n    return timeout_lower;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "enum (unnamed at /w/wine/dlls/ntdll/threadpool.c:242:1)",
+    "kind": "enum_decl",
+    "start_line": 242,
+    "end_line": 246,
+    "code": "enum\n{\n    ABS_TIMER,\n    REL_TIMER\n};"
+   },
+   {
+    "name": "struct (unnamed at /w/wine/dlls/ntdll/threadpool.c:174:9)",
+    "kind": "struct_decl",
+    "start_line": 174,
+    "end_line": 185,
+    "code": "        struct\n        {\n            PTP_TIMER_CALLBACK callback;\n            /* information about the timer, locked via timerqueue.cs */\n            BOOL            timer_initialized;\n            BOOL            timer_pending;\n            struct list     timer_entry;\n            BOOL            timer_set;\n            ULONGLONG       timeout;\n            LONG            period;\n            LONG            window_length;\n        } timer;"
+   },
+   {
+    "name": "struct (unnamed at /w/wine/dlls/ntdll/threadpool.c:186:9)",
+    "kind": "struct_decl",
+    "start_line": 186,
+    "end_line": 199,
+    "code": "        struct\n        {\n            PTP_WAIT_CALLBACK callback;\n            LONG            signaled;\n            /* information about the wait object, locked via waitqueue.cs */\n            struct waitqueue_bucket *bucket;\n            BOOL            wait_pending;\n            struct list     wait_entry;\n            ULONGLONG       timeout;\n            HANDLE          handle;\n            HANDLE          duped_handle;\n            DWORD           flags;\n            RTL_WAITORTIMERCALLBACKFUNC rtl_callback;\n        } wait;"
+   },
+   {
+    "name": "struct (unnamed at /w/wine/dlls/ntdll/threadpool.c:200:9)",
+    "kind": "struct_decl",
+    "start_line": 200,
+    "end_line": 207,
+    "code": "        struct\n        {\n            PTP_IO_CALLBACK callback;\n            /* locked via .pool->cs */\n            unsigned int    pending_count, skipped_count, completion_count, completion_max;\n            BOOL            shutting_down;\n            struct io_completion *completions;\n        } io;"
+   },
+   {
+    "name": "struct (unnamed at /w/wine/dlls/ntdll/threadpool.c:248:8)",
+    "kind": "struct_decl",
+    "start_line": 248,
+    "end_line": 256,
+    "code": "static struct\n{\n    CRITICAL_SECTION        cs;\n    LONG                    objcount;\n    BOOL                    thread_running;\n    HANDLE                  timers[2];\n    struct list             abs_timers;\n    struct list             rel_timers;\n}"
+   },
+   {
+    "name": "struct (unnamed at /w/wine/dlls/ntdll/threadpool.c:277:8)",
+    "kind": "struct_decl",
+    "start_line": 277,
+    "end_line": 282,
+    "code": "static struct\n{\n    CRITICAL_SECTION        cs;\n    LONG                    num_buckets;\n    struct list             buckets;\n}"
+   },
+   {
+    "name": "struct (unnamed at /w/wine/dlls/ntdll/threadpool.c:310:8)",
+    "kind": "struct_decl",
+    "start_line": 310,
+    "end_line": 317,
+    "code": "static struct\n{\n    CRITICAL_SECTION        cs;\n    LONG                    objcount;\n    BOOL                    thread_running;\n    HANDLE                  port;\n    RTL_CONDITION_VARIABLE  update_event;\n}"
+   },
+   {
+    "name": "threadpool",
+    "kind": "struct_decl",
+    "start_line": 102,
+    "end_line": 118,
+    "code": "struct threadpool\n{\n    LONG                    refcount;\n    LONG                    objcount;\n    BOOL                    shutdown;\n    CRITICAL_SECTION        cs;\n    /* Pools of work items, locked via .cs, order matches TP_CALLBACK_PRIORITY - high, normal, low. */\n    struct list             pools[3];\n    RTL_CONDITION_VARIABLE  update_event;\n    /* information about worker threads, locked via .cs */\n    int                     max_workers;\n    int                     min_workers;\n    int                     num_workers;\n    int                     num_busy_workers;\n    HANDLE                  compl_port;\n    TP_POOL_STACK_INFORMATION stack_info;\n};"
+   },
+   {
+    "name": "threadpool_group",
+    "kind": "struct_decl",
+    "start_line": 230,
+    "end_line": 237,
+    "code": "struct threadpool_group\n{\n    LONG                    refcount;\n    BOOL                    shutdown;\n    CRITICAL_SECTION        cs;\n    /* list of group members, locked via .cs */\n    struct list             members;\n};"
+   },
+   {
+    "name": "threadpool_object",
+    "kind": "struct_decl",
+    "start_line": 136,
+    "end_line": 209,
+    "code": "struct threadpool_object\n{\n    void                   *win32_callback; /* leave space for kernelbase to store win32 callback */\n    LONG                    refcount;\n    BOOL                    shutdown;\n    /* read-only information */\n    enum threadpool_objtype type;\n    struct threadpool       *pool;\n    struct threadpool_group *group;\n    PVOID                   userdata;\n    PTP_CLEANUP_GROUP_CANCEL_CALLBACK group_cancel_callback;\n    PTP_SIMPLE_CALLBACK     finalization_callback;\n    BOOL                    may_run_long;\n    HMODULE                 race_dll;\n    TP_CALLBACK_PRIORITY    priority;\n    /* information about the group, locked via .group->cs */\n    struct list             group_entry;\n    BOOL                    is_group_member;\n    /* information about the pool, locked via .pool->cs */\n    struct list             pool_entry;\n    RTL_CONDITION_VARIABLE  finished_event;\n    RTL_CONDITION_VARIABLE  group_finished_event;\n    HANDLE                  completed_event;\n    LONG                    num_pending_callbacks;\n    LONG                    num_running_callbacks;\n    LONG                    num_associated_callbacks;\n    LONG                    update_serial;\n    /* arguments for callback */\n    union\n    {\n        struct\n        {\n            PTP_SIMPLE_CALLBACK callback;\n        } simple;\n        struct\n        {\n            PTP_WORK_CALLBACK callback;\n        } work;\n        struct\n        {\n            PTP_TIMER_CALLBACK callback;\n            /* information about the timer, locked via timerqueue.cs */\n            BOOL            timer_initialized;\n            BOOL            timer_pending;\n            struct list     timer_entry;\n            BOOL            timer_set;\n            ULONGLONG       timeout;\n            LONG            period;\n            LONG            window_length;\n        } timer;\n        struct\n        {\n            PTP_WAIT_CALLBACK callback;\n            LONG            signaled;\n            /* information about the wait object, locked via waitqueue.cs */\n            struct waitqueue_bucket *bucket;\n            BOOL            wait_pending;\n            struct list     wait_entry;\n            ULONGLONG       timeout;\n            HANDLE          handle;\n            HANDLE          duped_handle;\n            DWORD           flags;\n            RTL_WAITORTIMERCALLBACKFUNC rtl_callback;\n        } wait;\n        struct\n        {\n            PTP_IO_CALLBACK callback;\n            /* locked via .pool->cs */\n            unsigned int    pending_count, skipped_count, completion_count, completion_max;\n            BOOL            shutting_down;\n            struct io_completion *completions;\n        } io;\n    } u;\n};"
+   },
+   {
+    "name": "threadpool_objtype",
+    "kind": "enum_decl",
+    "start_line": 120,
+    "end_line": 127,
+    "code": "enum threadpool_objtype\n{\n    TP_OBJECT_TYPE_SIMPLE,\n    TP_OBJECT_TYPE_WORK,\n    TP_OBJECT_TYPE_TIMER,\n    TP_OBJECT_TYPE_WAIT,\n    TP_OBJECT_TYPE_IO,\n};"
+   },
+   {
+    "name": "union (unnamed at /w/wine/dlls/ntdll/threadpool.c:164:5)",
+    "kind": "union_decl",
+    "start_line": 164,
+    "end_line": 208,
+    "code": "    union\n    {\n        struct\n        {\n            PTP_SIMPLE_CALLBACK callback;\n        } simple;\n        struct\n        {\n            PTP_WORK_CALLBACK callback;\n        } work;\n        struct\n        {\n            PTP_TIMER_CALLBACK callback;\n            /* information about the timer, locked via timerqueue.cs */\n            BOOL            timer_initialized;\n            BOOL            timer_pending;\n            struct list     timer_entry;\n            BOOL            timer_set;\n            ULONGLONG       timeout;\n            LONG            period;\n            LONG            window_length;\n        } timer;\n        struct\n        {\n            PTP_WAIT_CALLBACK callback;\n            LONG            signaled;\n            /* information about the wait object, locked via waitqueue.cs */\n            struct waitqueue_bucket *bucket;\n            BOOL            wait_pending;\n            struct list     wait_entry;\n            ULONGLONG       timeout;\n            HANDLE          handle;\n            HANDLE          duped_handle;\n            DWORD           flags;\n            RTL_WAITORTIMERCALLBACKFUNC rtl_callback;\n        } wait;\n        struct\n        {\n            PTP_IO_CALLBACK callback;\n            /* locked via .pool->cs */\n            unsigned int    pending_count, skipped_count, completion_count, completion_max;\n            BOOL            shutting_down;\n            struct io_completion *completions;\n        } io;\n    } u;"
+   },
+   {
+    "name": "waitqueue_bucket",
+    "kind": "struct_decl",
+    "start_line": 297,
+    "end_line": 305,
+    "code": "struct waitqueue_bucket\n{\n    struct list             bucket_entry;\n    LONG                    objcount;\n    struct list             reserved;\n    struct list             waiting;\n    HANDLE                  update_event;\n    BOOL                    alertable;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 34,
+    "end_line": 34,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(threadpool);"
+   },
+   {
+    "name": "ioqueue",
+    "type": "struct (unnamed struct at /w/wine/dlls/ntdll/threadpool.c:310:8)",
+    "static": true,
+    "start_line": 318,
+    "end_line": 321,
+    "code": "ioqueue =\n{\n    .cs = { &ioqueue_debug, -1, 0, 0, 0, 0 },\n};"
+   },
+   {
+    "name": "timerqueue",
+    "type": "struct (unnamed struct at /w/wine/dlls/ntdll/threadpool.c:248:8)",
+    "static": true,
+    "start_line": 257,
+    "end_line": 265,
+    "code": "timerqueue =\n{\n    { &timerqueue_debug, -1, 0, 0, 0, 0 },      /* cs */\n    0,                                          /* objcount */\n    FALSE,                                      /* thread_running */\n    { 0, 0 },                                   /* timers */\n    LIST_INIT( timerqueue.abs_timers ),         /* abs_timers */\n    LIST_INIT( timerqueue.rel_timers )          /* rel_timers */\n};"
+   },
+   {
+    "name": "waitqueue",
+    "type": "struct (unnamed struct at /w/wine/dlls/ntdll/threadpool.c:277:8)",
+    "static": true,
+    "start_line": 283,
+    "end_line": 288,
+    "code": "waitqueue =\n{\n    { &waitqueue_debug, -1, 0, 0, 0, 0 },       /* cs */\n    0,                                          /* num_buckets */\n    LIST_INIT( waitqueue.buckets )              /* buckets */\n};"
+   }
+  ],
+  "macros": [
+   {
+    "name": "THREADPOOL_WORKER_TIMEOUT",
+    "start_line": 98,
+    "end_line": 98,
+    "code": "#define THREADPOOL_WORKER_TIMEOUT 5000"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "_assert",
+    "file": "dlls/ntdll/exception.c",
+    "start_line": 472
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "LdrUnloadDll",
+    "impl": [
+     "dlls/ntdll/loader.c:4137"
+    ]
+   },
+   {
+    "name": "NtClose",
+    "impl": [
+     "dlls/ntdll/unix/server.c:1940"
+    ]
+   },
+   {
+    "name": "NtQueryPerformanceCounter",
+    "impl": [
+     "dlls/ntdll/unix/sync.c:2474"
+    ]
+   },
+   {
+    "name": "NtSetEvent",
+    "impl": [
+     "dlls/ntdll/unix/sync.c:1154"
+    ]
+   },
+   {
+    "name": "NtSetIoCompletion",
+    "impl": [
+     "dlls/ntdll/unix/sync.c:2775"
+    ]
+   },
+   {
+    "name": "NtSetTimer",
+    "impl": [
+     "dlls/ntdll/unix/sync.c:2209"
+    ]
+   },
+   {
+    "name": "RtlDeleteCriticalSection",
+    "impl": [
+     "dlls/ntdll/sync.c:271"
+    ]
+   },
+   {
+    "name": "RtlDllShutdownInProgress",
+    "impl": [
+     "dlls/ntdll/loader.c:3841"
+    ]
+   },
+   {
+    "name": "RtlEnterCriticalSection",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "RtlFreeHeap",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "RtlLeaveCriticalSection",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "RtlSleepConditionVariableCS",
+    "impl": [
+     "dlls/ntdll/sync.c:763"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "GetProcessHeap",
+   "_InterlockedDecrement",
+   "_InterlockedIncrement",
+   "list_empty",
+   "list_init",
+   "list_move_tail",
+   "list_remove",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "object->group_cancel_callback",
+    "in_function": "TpReleaseCleanupGroupMembers",
+    "at": "dlls/ntdll/threadpool.c:2938",
+    "candidates": []
+   }
+  ]
+ },
+ "winebench": {
+  "id": "ntdll.TpReleaseCleanupGroupMembers",
+  "category": {
+   "l1": "System services",
+   "l2": "Processes and threads",
+   "header": "threadpoolapiset.h",
+   "textbook": "Process control",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 69,
+   "body": 68,
+   "code": 33
+  },
+  "cyclomatic": 7,
+  "return_type": "VOID",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 5,
+   "n_tests": 5,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ntdll/tests/threadpool.c::test_tp_disassociate",
+    "dlls/ntdll/tests/threadpool.c::test_tp_group_cancel",
+    "dlls/ntdll/tests/threadpool.c::test_tp_group_wait",
+    "dlls/ntdll/tests/threadpool.c::test_tp_simple",
+    "dlls/ntdll/tests/threadpool.c::test_tp_work_scheduler"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/threadpoolapiset/nf-threadpoolapiset-closethreadpoolcleanupgroupmembers",
+   "source": "win32",
+   "description": "Releases the members of the specified cleanup group, waits for all callback functions to complete, and optionally cancels any outstanding callback functions.",
+   "min_windows": "Windows Vista [desktop apps \\| UWP apps]",
+   "documented_dll": "Kernel32.dll"
+  },
+  "exports": [
+   "kernel32.CloseThreadpoolCleanupGroupMembers",
+   "kernelbase.CloseThreadpoolCleanupGroupMembers",
+   "ntdll.TpReleaseCleanupGroupMembers"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2015-07-01",
+   "median_date": "2015-07-01",
+   "last_date": "2020-05-02",
+   "code_lines": 34,
+   "pair": "ntdll.RtlInsertElementGenericTable",
+   "rank": 1,
+   "distance": 0.214
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "ntdll.RtlInsertElementGenericTable",
+  "share_after_cutoff": 0.0,
+  "last_date": "2020-05-02",
+  "partner_rank": 1,
+  "distance": 0.214
+ }
+}

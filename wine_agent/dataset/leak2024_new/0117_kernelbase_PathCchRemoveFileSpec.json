@@ -1,0 +1,184 @@
+{
+ "id": "0117",
+ "function": {
+  "name": "PathCchRemoveFileSpec",
+  "export_name": "PathCchRemoveFileSpec",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/path.c",
+  "start_line": 818,
+  "end_line": 840,
+  "body_lines": 20,
+  "signature": "HRESULT WINAPI PathCchRemoveFileSpec(WCHAR *path, SIZE_T size)",
+  "header_comment": null,
+  "code": "HRESULT WINAPI PathCchRemoveFileSpec(WCHAR *path, SIZE_T size)\n{\n    WCHAR *last, *root_end;\n\n    TRACE(\"%s %Iu\\n\", wine_dbgstr_w(path), size);\n\n    if (!path || !size || size > PATHCCH_MAX_CCH) return E_INVALIDARG;\n\n    if (FAILED(PathCchSkipRoot(path, (const WCHAR **)&root_end)))\n        root_end = path;\n\n    /* The backslash at the end of UNC and \\\\* are not considered part of root in this case */\n    if (root_end > path && root_end[-1] == '\\\\' && ((is_prefixed_unc(path) && path[8])\n        || (path[0] == '\\\\' && path[1] == '\\\\' && path[2] && path[2] != '?')))\n        root_end--;\n\n    if (!(last = StrRChrW(root_end, NULL, '\\\\'))) last = root_end;\n    if (last > root_end && last[-1] == '\\\\' && last[1] != '?') --last;\n    if (last - path >= size) return E_INVALIDARG;\n    if (!*last) return S_FALSE;\n    *last = 0;\n    return S_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdbool.h>",
+   "#include <string.h>",
+   "#include <wchar.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"pathcch.h\"",
+   "#include \"strsafe.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"wininet.h\"",
+   "#include \"intshcut.h\"",
+   "#include \"winternl.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernelbase!PathCchRemoveFileSpec [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernelbase/tests/path.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 2
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "pathcch",
+   "path": "sdk-api-src/content/pathcch/nf-pathcch-pathcchremovefilespec.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/pathcch/nf-pathcch-pathcchremovefilespec",
+   "documented_name": "pathcchremovefilespec",
+   "file": "docs/0117_sdk-api_nf-pathcch-pathcchremovefilespec.md",
+   "text": "---\nUID: NF:pathcch.PathCchRemoveFileSpec\ntitle: PathCchRemoveFileSpec function (pathcch.h)\ndescription: Removes the last element in a path string, whether that element is a file name or a directory name.\nhelpviewer_keywords: [\"PathCchRemoveFileSpec\",\"PathCchRemoveFileSpec function [Windows Shell]\",\"pathcch/PathCchRemoveFileSpec\",\"shell.PathCchRemoveFileSpec\"]\nold-location: shell\\PathCchRemoveFileSpec.htm\ntech.root: shell\nms.assetid: c37aeddc-ed24-4828-b92b-bce0e6384726\nms.date: 12/05/2018\nms.keywords: PathCchRemoveFileSpec, PathCchRemoveFileSpec function [Windows Shell], pathcch/PathCchRemoveFileSpec, shell.PathCchRemoveFileSpec\nreq.header: pathcch.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 8 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2012 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Pathcch.lib\nreq.dll: \nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - PathCchRemoveFileSpec\n - pathcch/PathCchRemoveFileSpec\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - pathcch.lib\n - API-MS-Win-Core-Path-l1-1-0.dll\n - KernelBase.dll\napi_name:\n - PathCchRemoveFileSpec\n---\n\n# PathCchRemoveFileSpec function\n\n\n## -description\n\nRemoves the last element in a path string, whether that element is a file name or a directory name. The element's leading backslash is also removed.\n\nThis function differs from <a href=\"/windows/desktop/api/shlwapi/nf-shlwapi-pathremovefilespeca\">PathRemoveFileSpec</a> in that it accepts paths with \"\\\\\", \"\\\\?\\\" and \"\\\\?\\UNC\\\" prefixes.\n\n<div class=\"alert\"><b>Note</b>This function should be used in place of <a href=\"/windows/desktop/api/shlwapi/nf-shlwapi-pathremovefilespeca\">PathRemoveFileSpec</a> to prevent the possibility of a buffer overrun.</div>\n\n## -parameters\n\n### -param pszPath [in, out]\n\nA pointer to the fully-qualified path string. When this function returns successfully, the string will have had its last element and its leading backslash removed. This function does not affect root paths such as \"C:\\\". In the case of a root path, the path string is returned unaltered. If a path string ends with a trailing backslash, only that backslash is removed.\n\n### -param cchPath [in]\n\nThe size of the buffer pointed to by <i>pszPath</i>, in characters.\n\n## -returns\n\nThis function returns <b>S_OK</b> if the function was successful, <b>S_FALSE</b> if there was nothing to remove, or an error code otherwise.\n\n## -remarks\n\nThe following table shows the effect of this function on a selection of path strings.\n\n<table class=\"clsStd\">\n<tr>\n<th>Original String</th>\n<th>Returned String</th>\n</tr>\n<tr>\n<td>\"C:\\path1\"</td>\n<td>\"C:\\\"</td>\n</tr>\n<tr>\n<td>\"C:\\path1\\path2\"</td>\n<td>\"C:\\path1\"</td>\n</tr>\n<tr>\n<td>\"C:\\path1\\\"</td>\n<td>\"C:\\path1\"</td>\n</tr>\n<tr>\n<td>\"\\\\path1\\path2\\path3\"</td>\n<td>\"\\\\path1\\path2\"</td>\n</tr>\n<tr>\n<td>\"\\path1\"</td>\n<td>\"\\\"</td>\n</tr>\n</table>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "is_prefixed_unc",
+   "file": "dlls/kernelbase/path.c",
+   "start_line": 148,
+   "end_line": 151,
+   "static": true,
+   "called_from": [
+    "PathCchRemoveFileSpec"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/path.c:216",
+    "dlls/kernelbase/path.c:726",
+    "dlls/kernelbase/path.c:860",
+    "dlls/kernelbase/path.c:868",
+    "dlls/kernelbase/path.c:891"
+   ],
+   "signature": "static BOOL is_prefixed_unc(const WCHAR *string)",
+   "code": "static BOOL is_prefixed_unc(const WCHAR *string)\n{\n    return !wcsnicmp(string, L\"\\\\\\\\?\\\\UNC\\\\\", 8 );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 39,
+    "end_line": 39,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(path);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "PathCchSkipRoot",
+    "impl": [
+     "dlls/kernelbase/path.c:855"
+    ]
+   },
+   {
+    "name": "StrRChrW",
+    "impl": [
+     "dlls/kernelbase/string.c:622"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wcsnicmp",
+   "wine_dbg_log",
+   "wine_dbgstr_w"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "kernelbase.PathCchRemoveFileSpec",
+  "category": {
+   "l1": "Windows environment (Shell)",
+   "l2": "Windows Shell",
+   "header": "pathcch.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 23,
+   "body": 22,
+   "code": 14
+  },
+  "cyclomatic": 19,
+  "return_type": "HRESULT",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 2,
+   "n_tests": 3,
+   "n_tests_other": 1,
+   "own_test_functions": [
+    "dlls/kernelbase/tests/path.c::test_PathCchRemoveFileSpec",
+    "dlls/kernelbase/tests/path.c::test_path_manipulation"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/pathcch/nf-pathcch-pathcchremovefilespec",
+   "source": "win32",
+   "description": "Removes the last element in a path string, whether that element is a file name or a directory name.",
+   "min_windows": "Windows 8 [desktop apps \\| UWP apps]",
+   "documented_dll": ""
+  },
+  "exports": [
+   "kernelbase.PathCchRemoveFileSpec"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.643,
+   "first_date": "2018-11-21",
+   "median_date": "2024-08-20",
+   "last_date": "2024-08-20",
+   "code_lines": 14
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "kernelbase.PathCchSkipRoot",
+  "share_after_cutoff": 0.643,
+  "last_date": "2024-08-20"
+ }
+}

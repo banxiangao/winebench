@@ -1,0 +1,721 @@
+{
+ "id": "0070",
+ "function": {
+  "name": "GdipCreateHBITMAPFromBitmap",
+  "export_name": "GdipCreateHBITMAPFromBitmap",
+  "module": "gdiplus",
+  "source_module": "gdiplus",
+  "exported_by": [
+   "gdiplus"
+  ],
+  "side": "PE",
+  "file": "dlls/gdiplus/image.c",
+  "start_line": 1597,
+  "end_line": 1657,
+  "body_lines": 58,
+  "signature": "GpStatus WINGDIPAPI GdipCreateHBITMAPFromBitmap(GpBitmap* bitmap, HBITMAP* hbmReturn, ARGB background)",
+  "header_comment": null,
+  "code": "GpStatus WINGDIPAPI GdipCreateHBITMAPFromBitmap(GpBitmap* bitmap,\n    HBITMAP* hbmReturn, ARGB background)\n{\n    GpStatus stat;\n    HBITMAP result;\n    UINT width, height;\n    BITMAPINFOHEADER bih;\n    LPBYTE bits;\n\n    TRACE(\"(%p,%p,%lx)\\n\", bitmap, hbmReturn, background);\n\n    if (!bitmap || !hbmReturn) return InvalidParameter;\n    if (!image_lock(&bitmap->image)) return ObjectBusy;\n\n    GdipGetImageWidth(&bitmap->image, &width);\n    GdipGetImageHeight(&bitmap->image, &height);\n\n    bih.biSize = sizeof(bih);\n    bih.biWidth = width;\n    bih.biHeight = height;\n    bih.biPlanes = 1;\n    bih.biBitCount = 32;\n    bih.biCompression = BI_RGB;\n    bih.biSizeImage = 0;\n    bih.biXPelsPerMeter = 0;\n    bih.biYPelsPerMeter = 0;\n    bih.biClrUsed = 0;\n    bih.biClrImportant = 0;\n\n    result = CreateDIBSection(0, (BITMAPINFO*)&bih, DIB_RGB_COLORS, (void**)&bits, NULL, 0);\n    if (!result)\n    {\n        image_unlock(&bitmap->image);\n        return GenericError;\n    }\n\n    stat = convert_pixels(width, height, -width*4,\n            bits + (width * 4 * (height - 1)), PixelFormat32bppPARGB, bitmap->image.palette,\n            bitmap->stride, bitmap->bits, bitmap->format, bitmap->image.palette);\n    if (stat != Ok)\n    {\n        DeleteObject(result);\n        image_unlock(&bitmap->image);\n        return stat;\n    }\n\n    if (background & 0xffffff)\n    {\n        DWORD *ptr;\n        UINT i;\n        for (ptr = (DWORD*)bits, i = 0; i < width * height; ptr++, i++)\n        {\n            if ((*ptr & 0xff000000) == 0xff000000) continue;\n            *ptr = blend_argb_no_bkgnd_alpha(*ptr, background);\n        }\n    }\n\n    *hbmReturn = result;\n    image_unlock(&bitmap->image);\n    return Ok;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <assert.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winuser.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"objbase.h\"",
+   "#include \"olectl.h\"",
+   "#include \"ole2.h\"",
+   "#include \"initguid.h\"",
+   "#include \"wincodec.h\"",
+   "#include \"gdiplus.h\"",
+   "#include \"gdiplus_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "gdiplus!GdipCreateHBITMAPFromBitmap [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdiplus/tests/image.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 2
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "gdiplusflat",
+   "path": "desktop-src/gdiplus/-gdiplus-bitmap-flat.md",
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-bitmap-flat",
+   "documented_name": "gdipcreatehbitmapfrombitmap",
+   "excerpt": {
+    "note": "GDI+ flat API page: one table row per function; only the page introduction, the table header and this function's row are kept",
+    "full_page_chars": 69855
+   },
+   "file": "docs/0070_win32_-gdiplus-bitmap-flat.md",
+   "text": "---\ndescription: Windows GDI+ exposes a flat API that consists of about 600 functions. These flat API functions are wrapped by the Bitmap C++ class.\nms.assetid: a9b87d6d-2fbd-49f3-b4a2-a6b54a34dd8f\ntitle: Bitmap Functions (GDI+)\nms.topic: reference\nms.date: 05/31/2018\n---\n\n# Bitmap Functions (GDI+)\n\nWindows GDI+ exposes a flat API that consists of about 600 functions, which are implemented in Gdiplus.dll and declared in Gdiplusflat.h. The functions in the GDI+ flat API are wrapped by a collection of about 40 C++ classes. It is recommended that you do not directly call the functions in the flat API. Whenever you make calls to GDI+, you should do so by calling the methods and functions provided by the C++ wrappers. Microsoft Product Support Services will not provide support for code that calls the flat API directly. For more information on using these wrapper methods, see [GDI+ Flat API](-gdiplus-flatapi-flat.md).\n\nThe following flat API functions are wrapped by the [**Bitmap**](/windows/desktop/api/gdiplusheaders/nl-gdiplusheaders-bitmap) C++ class.\n\n## Bitmap Functions and Corresponding Wrapper Methods\n\n\n\n| Flat function                                                                                                                                                                                                                 | Wrapper method                                                                                                | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |\n|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|\n| GpStatus WINGDIPAPI GdipCreateHBITMAPFromBitmap(GpBitmap\\* bitmap, HBITMAP\\* hbmReturn, ARGB background)                                                                                                                      | [**Bitmap::GetHBITMAP**](/windows/desktop/api/Gdiplusheaders/nf-gdiplusheaders-bitmap-gethbitmap)                     | The [**Bitmap::GetHBITMAP**](/windows/desktop/api/Gdiplusheaders/nf-gdiplusheaders-bitmap-gethbitmap) method creates a GDI bitmap from this [**Bitmap**](/windows/desktop/api/gdiplusheaders/nl-gdiplusheaders-bitmap) object.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "convert_pixels",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 607,
+   "end_line": 1117,
+   "static": false,
+   "called_from": [
+    "GdipCreateHBITMAPFromBitmap"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:3531",
+    "dlls/gdiplus/image.c:1182",
+    "dlls/gdiplus/image.c:1195",
+    "dlls/gdiplus/image.c:1234",
+    "dlls/gdiplus/image.c:1312"
+   ],
+   "signature": "GpStatus convert_pixels(INT width, INT height, INT dst_stride, BYTE *dst_bits, PixelFormat dst_format, ColorPalette *dst_palette, INT src_stride, const BYTE *src_bits, PixelFormat src_format, ColorPalette *src_palette)",
+   "code": "GpStatus convert_pixels(INT width, INT height,\n    INT dst_stride, BYTE *dst_bits, PixelFormat dst_format,\n    ColorPalette *dst_palette,\n    INT src_stride, const BYTE *src_bits, PixelFormat src_format,\n    ColorPalette *src_palette)\n{\n    INT x, y;\n\n    if (src_format == dst_format ||\n        (dst_format == PixelFormat32bppRGB && PIXELFORMATBPP(src_format) == 32))\n    {\n        UINT widthbytes = (PIXELFORMATBPP(src_format) * width + 7) / 8;\n        for (y=0; y<height; y++)\n            memcpy(dst_bits+dst_stride*y, src_bits+src_stride*y, widthbytes);\n        return Ok;\n    }\n\n#define convert_indexed_to_rgb(getpixel_function, setpixel_function) do { \\\n    for (y=0; y<height; y++) \\\n        for (x=0; x<width; x++) { \\\n            BYTE index; \\\n            ARGB argb; \\\n            BYTE *color = (BYTE *)&argb; \\\n            getpixel_function(&index, src_bits+src_stride*y, x); \\\n            argb = (src_palette && index < src_palette->Count) ? src_palette->Entries[index] : 0; \\\n            setpixel_function(color[2], color[1], color[0], color[3], dst_bits+dst_stride*y, x); \\\n        } \\\n    return Ok; \\\n} while (0);\n\n#define convert_indexed_to_indexed(getpixel_function, setpixel_function) do { \\\n    for (y=0; y<height; y++) \\\n        for (x=0; x<width; x++) { \\\n            BYTE index; \\\n            ARGB argb; \\\n            BYTE *color = (BYTE *)&argb; \\\n            getpixel_function(&index, src_bits+src_stride*y, x); \\\n            argb = (src_palette && index < src_palette->Count) ? src_palette->Entries[index] : 0; \\\n            setpixel_function(color[2], color[1], color[0], color[3], dst_bits+dst_stride*y, x, dst_palette); \\\n        } \\\n    return Ok; \\\n} while (0);\n\n#define convert_rgb_to_rgb(getpixel_function, setpixel_function) do { \\\n    for (y=0; y<height; y++) \\\n        for (x=0; x<width; x++) { \\\n            BYTE r, g, b, a; \\\n            getpixel_function(&r, &g, &b, &a, src_bits+src_stride*y, x); \\\n            setpixel_function(r, g, b, a, dst_bits+dst_stride*y, x); \\\n        } \\\n    return Ok; \\\n} while (0);\n\n#define convert_rgb_to_indexed(getpixel_function, setpixel_function) do { \\\n    for (y=0; y<height; y++) \\\n        for (x=0; x<width; x++) { \\\n            BYTE r, g, b, a; \\\n            getpixel_function(&r, &g, &b, &a, src_bits+src_stride*y, x); \\\n            setpixel_function(r, g, b, a, dst_bits+dst_stride*y, x, dst_palette); \\\n        } \\\n    return Ok; \\\n} while (0);\n\n    switch (src_format)\n    {\n    case PixelFormat1bppIndexed:\n        switch (dst_format)\n        {\n        case PixelFormat4bppIndexed:\n            convert_indexed_to_indexed(getpixel_1bppIndexed, setpixel_4bppIndexed);\n        case PixelFormat8bppIndexed:\n            convert_indexed_to_indexed(getpixel_1bppIndexed, setpixel_8bppIndexed);\n        case PixelFormat16bppGrayScale:\n            convert_indexed_to_rgb(getpixel_1bppIndexed, setpixel_16bppGrayScale);\n        case PixelFormat16bppRGB555:\n            convert_indexed_to_rgb(getpixel_1bppIndexed, setpixel_16bppRGB555);\n        case PixelFormat16bppRGB565:\n            convert_indexed_to_rgb(getpixel_1bppIndexed, setpixel_16bppRGB565);\n        case PixelFormat16bppARGB1555:\n            convert_indexed_to_rgb(getpixel_1bppIndexed, setpixel_16bppARGB1555);\n        case PixelFormat24bppRGB:\n            convert_indexed_to_rgb(getpixel_1bppIndexed, setpixel_24bppRGB);\n        case PixelFormat32bppRGB:\n            convert_indexed_to_rgb(getpixel_1bppIndexed, setpixel_32bppRGB);\n        case PixelFormat32bppARGB:\n            convert_indexed_to_rgb(getpixel_1bppIndexed, setpixel_32bppARGB);\n        case PixelFormat32bppPARGB:\n            convert_indexed_to_rgb(getpixel_1bppIndexed, setpixel_32bppPARGB);\n        case PixelFormat48bppRGB:\n            convert_indexed_to_rgb(getpixel_1bppIndexed, setpixel_48bppRGB);\n        case PixelFormat64bppARGB:\n            convert_indexed_to_rgb(getpixel_1bppIndexed, setpixel_64bppARGB);\n        default:\n            break;\n        }\n        break;\n    case PixelFormat4bppIndexed:\n        switch (dst_format)\n        {\n        case PixelFormat1bppIndexed:\n            convert_indexed_to_indexed(getpixel_4bppIndexed, setpixel_1bppIndexed);\n        case PixelFormat8bppIndexed:\n            convert_indexed_to_indexed(getpixel_4bppIndexed, setpixel_8bppIndexed);\n        case PixelFormat16bppGrayScale:\n            convert_indexed_to_rgb(getpixel_4bppIndexed, setpixel_16bppGrayScale);\n        case PixelFormat16bppRGB555:\n            convert_indexed_to_rgb(getpixel_4bppIndexed, setpixel_16bppRGB555);\n        case PixelFormat16bppRGB565:\n            convert_indexed_to_rgb(getpixel_4bppIndexed, setpixel_16bppRGB565);\n        case PixelFormat16bppARGB1555:\n            convert_indexed_to_rgb(getpixel_4bppIndexed, setpixel_16bppARGB1555);\n        case PixelFormat24bppRGB:\n            convert_indexed_to_rgb(getpixel_4bppIndexed, setpixel_24bppRGB);\n        case PixelFormat32bppRGB:\n            convert_indexed_to_rgb(getpixel_4bppIndexed, setpixel_32bppRGB);\n        case PixelFormat32bppARGB:\n            convert_indexed_to_rgb(getpixel_4bppIndexed, setpixel_32bppARGB);\n        case PixelFormat32bppPARGB:\n            convert_indexed_to_rgb(getpixel_4bppIndexed, setpixel_32bppPARGB);\n        case PixelFormat48bppRGB:\n            convert_indexed_to_rgb(getpixel_4bppIndexed, setpixel_48bppRGB);\n        case PixelFormat64bppARGB:\n            convert_indexed_to_rgb(getpixel_4bppIndexed, setpixel_64bppARGB);\n        default:\n            break;\n        }\n        break;\n    case PixelFormat8bppIndexed:\n        switch (dst_format)\n        {\n        case PixelFormat1bppIndexed:\n            convert_indexed_to_indexed(getpixel_8bppIndexed, setpixel_1bppIndexed);\n        case PixelFormat4bppIndexed:\n            convert_indexed_to_indexed(getpixel_8bppIndexed, setpixel_4bppIndexed);\n        case PixelFormat16bppGrayScale:\n            convert_indexed_to_rgb(getpixel_8bppIndexed, setpixel_16bppGrayScale);\n        case PixelFormat16bppRGB555:\n            convert_indexed_to_rgb(getpixel_8bppIndexed, setpixel_16bppRGB555);\n        case PixelFormat16bppRGB565:\n            convert_indexed_to_rgb(getpixel_8bppIndexed, setpixel_16bppRGB565);\n        case PixelFormat16bppARGB1555:\n            convert_indexed_to_rgb(getpixel_8bppIndexed, setpixel_16bppARGB1555);\n        case PixelFormat24bppRGB:\n            convert_indexed_to_rgb(getpixel_8bppIndexed, setpixel_24bppRGB);\n        case PixelFormat32bppRGB:\n            convert_indexed_to_rgb(getpixel_8bppIndexed, setpixel_32bppRGB);\n        case PixelFormat32bppARGB:\n            convert_indexed_to_rgb(getpixel_8bppIndexed, setpixel_32bppARGB);\n        case PixelFormat32bppPARGB:\n            convert_indexed_to_rgb(getpixel_8bppIndexed, setpixel_32bppPARGB);\n        case PixelFormat48bppRGB:\n            convert_indexed_to_rgb(getpixel_8bppIndexed, setpixel_48bppRGB);\n        case PixelFormat64bppARGB:\n            convert_indexed_to_rgb(getpixel_8bppIndexed, setpixel_64bppARGB);\n        default:\n            break;\n        }\n        break;\n    case PixelFormat16bppGrayScale:\n        switch (dst_format)\n        {\n        case PixelFormat1bppIndexed:\n            convert_rgb_to_indexed(getpixel_16bppGrayScale, setpixel_1bppIndexed);\n        case PixelFormat4bppIndexed:\n            convert_rgb_to_indexed(getpixel_16bppGrayScale, setpixel_4bppIndexed);\n        case PixelFormat8bppIndexed:\n            convert_rgb_to_indexed(getpixel_16bppGrayScale, setpixel_8bppIndexed);\n        case PixelFormat16bppRGB555:\n            convert_rgb_to_rgb(getpixel_16bppGrayScale, setpixel_16bppRGB555);\n        case PixelFormat16bppRGB565:\n            convert_rgb_to_rgb(getpixel_16bppGrayScale, setpixel_16bppRGB565);\n        case PixelFormat16bppARGB1555:\n            convert_rgb_to_rgb(getpixel_16bppGrayScale, setpixel_16bppARGB1555);\n        case PixelFormat24bppRGB:\n            convert_rgb_to_rgb(getpixel_16bppGrayScale, setpixel_24bppRGB);\n        case PixelFormat32bppRGB:\n            convert_rgb_to_rgb(getpixel_16bppGrayScale, setpixel_32bppRGB);\n        case PixelFormat32bppARGB:\n            convert_rgb_to_rgb(getpixel_16bppGrayScale, setpixel_32bppARGB);\n        case PixelFormat32bppPARGB:\n            convert_rgb_to_rgb(getpixel_16bppGrayScale, setpixel_32bppPARGB);\n        case PixelFormat48bppRGB:\n            convert_rgb_to_rgb(getpixel_16bppGrayScale, setpixel_48bppRGB);\n        case PixelFormat64bppARGB:\n            convert_rgb_to_rgb(getpixel_16bppGrayScale, setpixel_64bppARGB);\n        default:\n            break;\n        }\n        break;\n    case PixelFormat16bppRGB555:\n        switch (dst_format)\n        {\n        case PixelFormat1bppIndexed:\n            convert_rgb_to_indexed(getpixel_16bppRGB555, setpixel_1bppIndexed);\n        case PixelFormat4bppIndexed:\n            convert_rgb_to_indexed(getpixel_16bppRGB555, setpixel_4bppIndexed);\n        case PixelFormat8bppIndexed:\n            convert_rgb_to_indexed(getpixel_16bppRGB555, setpixel_8bppIndexed);\n        case PixelFormat16bppGrayScale:\n            convert_rgb_to_rgb(getpixel_16bppRGB555, setpixel_16bppGrayScale);\n        case PixelFormat16bppRGB565:\n            convert_rgb_to_rgb(getpixel_16bppRGB555, setpixel_16bppRGB565);\n        case PixelFormat16bppARGB1555:\n            convert_rgb_to_rgb(getpixel_16bppRGB555, setpixel_16bppARGB1555);\n        case PixelFormat24bppRGB:\n            convert_rgb_to_rgb(getpixel_16bppRGB555, setpixel_24bppRGB);\n        case PixelFormat32bppRGB:\n            convert_rgb_to_rgb(getpixel_16bppRGB555, setpixel_32bppRGB);\n        case PixelFormat32bppARGB:\n            convert_rgb_to_rgb(getpixel_16bppRGB555, setpixel_32bppARGB);\n        case PixelFormat32bppPARGB:\n            convert_rgb_to_rgb(getpixel_16bppRGB555, setpixel_32bppPARGB);\n        case PixelFormat48bppRGB:\n            convert_rgb_to_rgb(getpixel_16bppRGB555, setpixel_48bppRGB);\n        case PixelFormat64bppARGB:\n            convert_rgb_to_rgb(getpixel_16bppRGB555, setpixel_64bppARGB);\n        default:\n            break;\n        }\n        break;\n    case PixelFormat16bppRGB565:\n        switch (dst_format)\n        {\n        case PixelFormat1bppIndexed:\n            convert_rgb_to_indexed(getpixel_16bppRGB565, setpixel_1bppIndexed);\n        case PixelFormat4bppIndexed:\n            convert_rgb_to_indexed(getpixel_16bppRGB565, setpixel_4bppIndexed);\n        case PixelFormat8bppIndexed:\n            convert_rgb_to_indexed(getpixel_16bppRGB565, setpixel_8bppIndexed);\n        case PixelFormat16bppGrayScale:\n            convert_rgb_to_rgb(getpixel_16bppRGB565, setpixel_16bppGrayScale);\n        case PixelFormat16bppRGB555:\n            convert_rgb_to_rgb(getpixel_16bppRGB565, setpixel_16bppRGB555);\n        case PixelFormat16bppARGB1555:\n            convert_rgb_to_rgb(getpixel_16bppRGB565, setpixel_16bppARGB1555);\n        case PixelFormat24bppRGB:\n            convert_rgb_to_rgb(getpixel_16bppRGB565, setpixel_24bppRGB);\n        case PixelFormat32bppRGB:\n            convert_rgb_to_rgb(getpixel_16bppRGB565, setpixel_32bppRGB);\n        case PixelFormat32bppARGB:\n            convert_rgb_to_rgb(getpixel_16bppRGB565, setpixel_32bppARGB);\n        case PixelFormat32bppPARGB:\n            convert_rgb_to_rgb(getpixel_16bppRGB565, setpixel_32bppPARGB);\n        case PixelFormat48bppRGB:\n            convert_rgb_to_rgb(getpixel_16bppRGB565, setpixel_48bppRGB);\n        case PixelFormat64bppARGB:\n            convert_rgb_to_rgb(getpixel_16bppRGB565, setpixel_64bppARGB);\n        default:\n            break;\n        }\n        break;\n    case PixelFormat16bppARGB1555:\n        switch (dst_format)\n        {\n        case PixelFormat1bppIndexed:\n            convert_rgb_to_indexed(getpixel_16bppARGB1555, setpixel_1bppIndexed);\n        case PixelFormat4bppIndexed:\n            convert_rgb_to_indexed(getpixel_16bppARGB1555, setpixel_4bppIndexed);\n        case PixelFormat8bppIndexed:\n            convert_rgb_to_indexed(getpixel_16bppARGB1555, setpixel_8bppIndexed);\n        case PixelFormat16bppGrayScale:\n            convert_rgb_to_rgb(getpixel_16bppARGB1555, setpixel_16bppGrayScale);\n        case PixelFormat16bppRGB555:\n            convert_rgb_to_rgb(getpixel_16bppARGB1555, setpixel_16bppRGB555);\n        case PixelFormat16bppRGB565:\n            convert_rgb_to_rgb(getpixel_16bppARGB1555, setpixel_16bppRGB565);\n        case PixelFormat24bppRGB:\n            convert_rgb_to_rgb(getpixel_16bppARGB1555, setpixel_24bppRGB);\n        case PixelFormat32bppRGB:\n            convert_rgb_to_rgb(getpixel_16bppARGB1555, setpixel_32bppRGB);\n        case PixelFormat32bppARGB:\n            convert_rgb_to_rgb(getpixel_16bppARGB1555, setpixel_32bppARGB);\n        case PixelFormat32bppPARGB:\n            convert_rgb_to_rgb(getpixel_16bppARGB1555, setpixel_32bppPARGB);\n        case PixelFormat48bppRGB:\n            convert_rgb_to_rgb(getpixel_16bppARGB1555, setpixel_48bppRGB);\n        case PixelFormat64bppARGB:\n            convert_rgb_to_rgb(getpixel_16bppARGB1555, setpixel_64bppARGB);\n        default:\n            break;\n        }\n        break;\n    case PixelFormat24bppRGB:\n        switch (dst_format)\n        {\n        case PixelFormat1bppIndexed:\n            convert_rgb_to_indexed(getpixel_24bppRGB, setpixel_1bppIndexed);\n        case PixelFormat4bppIndexed:\n            convert_rgb_to_indexed(getpixel_24bppRGB, setpixel_4bppIndexed);\n        case PixelFormat8bppIndexed:\n            convert_rgb_to_indexed(getpixel_24bppRGB, setpixel_8bppIndexed);\n        case PixelFormat16bppGrayScale:\n            convert_rgb_to_rgb(getpixel_24bppRGB, setpixel_16bppGrayScale);\n        case PixelFormat16bppRGB555:\n            convert_rgb_to_rgb(getpixel_24bppRGB, setpixel_16bppRGB555);\n        case PixelFormat16bppRGB565:\n            convert_rgb_to_rgb(getpixel_24bppRGB, setpixel_16bppRGB565);\n        case PixelFormat16bppARGB1555:\n            convert_rgb_to_rgb(getpixel_24bppRGB, setpixel_16bppARGB1555);\n        case PixelFormat32bppRGB:\n            convert_rgb_to_rgb(getpixel_24bppRGB, setpixel_32bppRGB);\n        case PixelFormat32bppARGB:\n            convert_rgb_to_rgb(getpixel_24bppRGB, setpixel_32bppARGB);\n        case PixelFormat32bppPARGB:\n            convert_rgb_to_rgb(getpixel_24bppRGB, setpixel_32bppPARGB);\n        case PixelFormat48bppRGB:\n            convert_rgb_to_rgb(getpixel_24bppRGB, setpixel_48bppRGB);\n        case PixelFormat64bppARGB:\n            convert_rgb_to_rgb(getpixel_24bppRGB, setpixel_64bppARGB);\n        default:\n            break;\n        }\n        break;\n    case PixelFormat32bppRGB:\n        switch (dst_format)\n        {\n        case PixelFormat1bppIndexed:\n            convert_rgb_to_indexed(getpixel_32bppRGB, setpixel_1bppIndexed);\n        case PixelFormat4bppIndexed:\n            convert_rgb_to_indexed(getpixel_32bppRGB, setpixel_4bppIndexed);\n        case PixelFormat8bppIndexed:\n            convert_rgb_to_indexed(getpixel_32bppRGB, setpixel_8bppIndexed);\n        case PixelFormat16bppGrayScale:\n            convert_rgb_to_rgb(getpixel_32bppRGB, setpixel_16bppGrayScale);\n        case PixelFormat16bppRGB555:\n            convert_rgb_to_rgb(getpixel_32bppRGB, setpixel_16bppRGB555);\n        case PixelFormat16bppRGB565:\n            convert_rgb_to_rgb(getpixel_32bppRGB, setpixel_16bppRGB565);\n        case PixelFormat16bppARGB1555:\n            convert_rgb_to_rgb(getpixel_32bppRGB, setpixel_16bppARGB1555);\n        case PixelFormat24bppRGB:\n            convert_rgb_to_rgb(getpixel_32bppRGB, setpixel_24bppRGB);\n        case PixelFormat32bppARGB:\n            convert_rgb_to_rgb(getpixel_32bppRGB, setpixel_32bppARGB);\n        case PixelFormat32bppPARGB:\n            convert_rgb_to_rgb(getpixel_32bppRGB, setpixel_32bppPARGB);\n        case PixelFormat48bppRGB:\n            convert_rgb_to_rgb(getpixel_32bppRGB, setpixel_48bppRGB);\n        case PixelFormat64bppARGB:\n            convert_rgb_to_rgb(getpixel_32bppRGB, setpixel_64bppARGB);\n        default:\n            break;\n        }\n        break;\n    case PixelFormat32bppARGB:\n        switch (dst_format)\n        {\n        case PixelFormat1bppIndexed:\n            convert_rgb_to_indexed(getpixel_32bppARGB, setpixel_1bppIndexed);\n        case PixelFormat4bppIndexed:\n            convert_rgb_to_indexed(getpixel_32bppARGB, setpixel_4bppIndexed);\n        case PixelFormat8bppIndexed:\n            convert_rgb_to_indexed(getpixel_32bppARGB, setpixel_8bppIndexed);\n        case PixelFormat16bppGrayScale:\n            convert_rgb_to_rgb(getpixel_32bppARGB, setpixel_16bppGrayScale);\n        case PixelFormat16bppRGB555:\n            convert_rgb_to_rgb(getpixel_32bppARGB, setpixel_16bppRGB555);\n        case PixelFormat16bppRGB565:\n            convert_rgb_to_rgb(getpixel_32bppARGB, setpixel_16bppRGB565);\n        case PixelFormat16bppARGB1555:\n            convert_rgb_to_rgb(getpixel_32bppARGB, setpixel_16bppARGB1555);\n        case PixelFormat24bppRGB:\n            convert_rgb_to_rgb(getpixel_32bppARGB, setpixel_24bppRGB);\n        case PixelFormat32bppPARGB:\n            convert_32bppARGB_to_32bppPARGB(width, height, dst_bits, dst_stride, src_bits, src_stride);\n            return Ok;\n        case PixelFormat48bppRGB:\n            convert_rgb_to_rgb(getpixel_32bppARGB, setpixel_48bppRGB);\n        case PixelFormat64bppARGB:\n            convert_rgb_to_rgb(getpixel_32bppARGB, setpixel_64bppARGB);\n        default:\n            break;\n        }\n        break;\n    case PixelFormat32bppPARGB:\n        switch (dst_format)\n        {\n        case PixelFormat1bppIndexed:\n            convert_rgb_to_indexed(getpixel_32bppPARGB, setpixel_1bppIndexed);\n        case PixelFormat4bppIndexed:\n            convert_rgb_to_indexed(getpixel_32bppPARGB, setpixel_4bppIndexed);\n        case PixelFormat8bppIndexed:\n            convert_rgb_to_indexed(getpixel_32bppPARGB, setpixel_8bppIndexed);\n        case PixelFormat16bppGrayScale:\n            convert_rgb_to_rgb(getpixel_32bppPARGB, setpixel_16bppGrayScale);\n        case PixelFormat16bppRGB555:\n            convert_rgb_to_rgb(getpixel_32bppPARGB, setpixel_16bppRGB555);\n        case PixelFormat16bppRGB565:\n            convert_rgb_to_rgb(getpixel_32bppPARGB, setpixel_16bppRGB565);\n        case PixelFormat16bppARGB1555:\n            convert_rgb_to_rgb(getpixel_32bppPARGB, setpixel_16bppARGB1555);\n        case PixelFormat24bppRGB:\n            convert_rgb_to_rgb(getpixel_32bppPARGB, setpixel_24bppRGB);\n        case PixelFormat32bppRGB:\n            convert_rgb_to_rgb(getpixel_32bppPARGB, setpixel_32bppRGB);\n        case PixelFormat32bppARGB:\n            convert_rgb_to_rgb(getpixel_32bppPARGB, setpixel_32bppARGB);\n        case PixelFormat48bppRGB:\n            convert_rgb_to_rgb(getpixel_32bppPARGB, setpixel_48bppRGB);\n        case PixelFormat64bppARGB:\n            convert_rgb_to_rgb(getpixel_32bppPARGB, setpixel_64bppARGB);\n        default:\n            break;\n        }\n        break;\n    case PixelFormat48bppRGB:\n        switch (dst_format)\n        {\n        case PixelFormat1bppIndexed:\n            convert_rgb_to_indexed(getpixel_48bppRGB, setpixel_1bppIndexed);\n        case PixelFormat4bppIndexed:\n            convert_rgb_to_indexed(getpixel_48bppRGB, setpixel_4bppIndexed);\n        case PixelFormat8bppIndexed:\n            convert_rgb_to_indexed(getpixel_48bppRGB, setpixel_8bppIndexed);\n        case PixelFormat16bppGrayScale:\n            convert_rgb_to_rgb(getpixel_48bppRGB, setpixel_16bppGrayScale);\n        case PixelFormat16bppRGB555:\n            convert_rgb_to_rgb(getpixel_48bppRGB, setpixel_16bppRGB555);\n        case PixelFormat16bppRGB565:\n            convert_rgb_to_rgb(getpixel_48bppRGB, setpixel_16bppRGB565);\n        case PixelFormat16bppARGB1555:\n            convert_rgb_to_rgb(getpixel_48bppRGB, setpixel_16bppARGB1555);\n        case PixelFormat24bppRGB:\n            convert_rgb_to_rgb(getpixel_48bppRGB, setpixel_24bppRGB);\n        case PixelFormat32bppRGB:\n            convert_rgb_to_rgb(getpixel_48bppRGB, setpixel_32bppRGB);\n        case PixelFormat32bppARGB:\n            convert_rgb_to_rgb(getpixel_48bppRGB, setpixel_32bppARGB);\n        case PixelFormat32bppPARGB:\n            convert_rgb_to_rgb(getpixel_48bppRGB, setpixel_32bppPARGB);\n        case PixelFormat64bppARGB:\n            convert_rgb_to_rgb(getpixel_48bppRGB, setpixel_64bppARGB);\n        default:\n            break;\n        }\n        break;\n    case PixelFormat64bppARGB:\n        switch (dst_format)\n        {\n        case PixelFormat1bppIndexed:\n            convert_rgb_to_indexed(getpixel_64bppARGB, setpixel_1bppIndexed);\n        case PixelFormat4bppIndexed:\n            convert_rgb_to_indexed(getpixel_64bppARGB, setpixel_4bppIndexed);\n        case PixelFormat8bppIndexed:\n            convert_rgb_to_indexed(getpixel_64bppARGB, setpixel_8bppIndexed);\n        case PixelFormat16bppGrayScale:\n            convert_rgb_to_rgb(getpixel_64bppARGB, setpixel_16bppGrayScale);\n        case PixelFormat16bppRGB555:\n            convert_rgb_to_rgb(getpixel_64bppARGB, setpixel_16bppRGB555);\n        case PixelFormat16bppRGB565:\n            convert_rgb_to_rgb(getpixel_64bppARGB, setpixel_16bppRGB565);\n        case PixelFormat16bppARGB1555:\n            convert_rgb_to_rgb(getpixel_64bppARGB, setpixel_16bppARGB1555);\n        case PixelFormat24bppRGB:\n            convert_rgb_to_rgb(getpixel_64bppARGB, setpixel_24bppRGB);\n        case PixelFormat32bppRGB:\n            convert_rgb_to_rgb(getpixel_64bppARGB, setpixel_32bppRGB);\n        case PixelFormat32bppARGB:\n            convert_rgb_to_rgb(getpixel_64bppARGB, setpixel_32bppARGB);\n        case PixelFormat32bppPARGB:\n            convert_rgb_to_rgb(getpixel_64bppARGB, setpixel_32bppPARGB);\n        case PixelFormat48bppRGB:\n            convert_rgb_to_rgb(getpixel_64bppARGB, setpixel_48bppRGB);\n        default:\n            break;\n        }\n        break;\n    case PixelFormat64bppPARGB:\n        switch (dst_format)\n        {\n        case PixelFormat1bppIndexed:\n            convert_rgb_to_indexed(getpixel_64bppPARGB, setpixel_1bppIndexed);\n        case PixelFormat4bppIndexed:\n            convert_rgb_to_indexed(getpixel_64bppPARGB, setpixel_4bppIndexed);\n        case PixelFormat8bppIndexed:\n            convert_rgb_to_indexed(getpixel_64bppPARGB, setpixel_8bppIndexed);\n        case PixelFormat16bppGrayScale:\n            convert_rgb_to_rgb(getpixel_64bppPARGB, setpixel_16bppGrayScale);\n        case PixelFormat16bppRGB555:\n            convert_rgb_to_rgb(getpixel_64bppPARGB, setpixel_16bppRGB555);\n        case PixelFormat16bppRGB565:\n            convert_rgb_to_rgb(getpixel_64bppPARGB, setpixel_16bppRGB565);\n        case PixelFormat16bppARGB1555:\n            convert_rgb_to_rgb(getpixel_64bppPARGB, setpixel_16bppARGB1555);\n        case PixelFormat24bppRGB:\n            convert_rgb_to_rgb(getpixel_64bppPARGB, setpixel_24bppRGB);\n        case PixelFormat32bppRGB:\n            convert_rgb_to_rgb(getpixel_64bppPARGB, setpixel_32bppRGB);\n        case PixelFormat32bppARGB:\n            convert_rgb_to_rgb(getpixel_64bppPARGB, setpixel_32bppARGB);\n        case PixelFormat32bppPARGB:\n            convert_rgb_to_rgb(getpixel_64bppPARGB, setpixel_32bppPARGB);\n        case PixelFormat48bppRGB:\n            convert_rgb_to_rgb(getpixel_64bppPARGB, setpixel_48bppRGB);\n        case PixelFormat64bppARGB:\n            convert_rgb_to_rgb(getpixel_64bppPARGB, setpixel_64bppARGB);\n        default:\n            break;\n        }\n        break;\n    default:\n        break;\n    }\n\n#undef convert_indexed_to_rgb\n#undef convert_indexed_to_indexed\n#undef convert_rgb_to_rgb\n#undef convert_rgb_to_indexed\n\n    return NotImplemented;\n}"
+  },
+  {
+   "name": "blend_argb_no_bkgnd_alpha",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 1585,
+   "end_line": 1595,
+   "static": true,
+   "called_from": [
+    "GdipCreateHBITMAPFromBitmap"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static inline DWORD blend_argb_no_bkgnd_alpha(DWORD src, DWORD bkgnd)",
+   "code": "static inline DWORD blend_argb_no_bkgnd_alpha(DWORD src, DWORD bkgnd)\n{\n    BYTE b = (BYTE)src;\n    BYTE g = (BYTE)(src >> 8);\n    BYTE r = (BYTE)(src >> 16);\n    DWORD alpha  = (BYTE)(src >> 24);\n    return ((b     + ((BYTE)bkgnd         * (255 - alpha) + 127) / 255) |\n            (g     + ((BYTE)(bkgnd >> 8)  * (255 - alpha) + 127) / 255) << 8 |\n            (r     + ((BYTE)(bkgnd >> 16) * (255 - alpha) + 127) / 255) << 16 |\n            (alpha << 24));\n}"
+  },
+  {
+   "name": "getpixel_1bppIndexed",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 179,
+   "end_line": 182,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:331",
+    "dlls/gdiplus/image.c:6046"
+   ],
+   "signature": "static inline void getpixel_1bppIndexed(BYTE *index, const BYTE *row, UINT x)",
+   "code": "static inline void getpixel_1bppIndexed(BYTE *index, const BYTE *row, UINT x)\n{\n    *index = (row[x/8]>>(7-x%8)) & 1;\n}"
+  },
+  {
+   "name": "setpixel_4bppIndexed",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 436,
+   "end_line": 443,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:594"
+   ],
+   "signature": "static inline void setpixel_4bppIndexed(BYTE r, BYTE g, BYTE b, BYTE a, BYTE *row, UINT x, ColorPalette *palette)",
+   "code": "static inline void setpixel_4bppIndexed(BYTE r, BYTE g, BYTE b, BYTE a,\n    BYTE *row, UINT x, ColorPalette *palette)\n{\n    if (x & 1)\n        row[x/2] = (row[x/2] & 0xf0) | get_palette_index(r,g,b,a,palette);\n    else\n        row[x/2] = (row[x/2] & 0x0f) | get_palette_index(r,g,b,a,palette)<<4;\n}"
+  },
+  {
+   "name": "setpixel_8bppIndexed",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 418,
+   "end_line": 423,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:591"
+   ],
+   "signature": "static inline void setpixel_8bppIndexed(BYTE r, BYTE g, BYTE b, BYTE a, BYTE *row, UINT x, ColorPalette *palette)",
+   "code": "static inline void setpixel_8bppIndexed(BYTE r, BYTE g, BYTE b, BYTE a,\n    BYTE *row, UINT x, ColorPalette *palette)\n{\n     BYTE index = get_palette_index(r,g,b,a,palette);\n     row[x]=index;\n}"
+  },
+  {
+   "name": "setpixel_16bppGrayScale",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 453,
+   "end_line": 457,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:558"
+   ],
+   "signature": "static inline void setpixel_16bppGrayScale(BYTE r, BYTE g, BYTE b, BYTE a, BYTE *row, UINT x)",
+   "code": "static inline void setpixel_16bppGrayScale(BYTE r, BYTE g, BYTE b, BYTE a,\n    BYTE *row, UINT x)\n{\n    *((WORD*)(row)+x) = (r+g+b)*85;\n}"
+  },
+  {
+   "name": "setpixel_16bppRGB555",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 459,
+   "end_line": 465,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:561"
+   ],
+   "signature": "static inline void setpixel_16bppRGB555(BYTE r, BYTE g, BYTE b, BYTE a, BYTE *row, UINT x)",
+   "code": "static inline void setpixel_16bppRGB555(BYTE r, BYTE g, BYTE b, BYTE a,\n    BYTE *row, UINT x)\n{\n    *((WORD*)(row)+x) = (r<<7&0x7c00)|\n                        (g<<2&0x03e0)|\n                        (b>>3&0x001f);\n}"
+  },
+  {
+   "name": "setpixel_16bppRGB565",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 467,
+   "end_line": 473,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:564"
+   ],
+   "signature": "static inline void setpixel_16bppRGB565(BYTE r, BYTE g, BYTE b, BYTE a, BYTE *row, UINT x)",
+   "code": "static inline void setpixel_16bppRGB565(BYTE r, BYTE g, BYTE b, BYTE a,\n    BYTE *row, UINT x)\n{\n    *((WORD*)(row)+x) = (r<<8&0xf800)|\n                         (g<<3&0x07e0)|\n                         (b>>3&0x001f);\n}"
+  },
+  {
+   "name": "setpixel_16bppARGB1555",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 475,
+   "end_line": 482,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:567"
+   ],
+   "signature": "static inline void setpixel_16bppARGB1555(BYTE r, BYTE g, BYTE b, BYTE a, BYTE *row, UINT x)",
+   "code": "static inline void setpixel_16bppARGB1555(BYTE r, BYTE g, BYTE b, BYTE a,\n    BYTE *row, UINT x)\n{\n    *((WORD*)(row)+x) = (a<<8&0x8000)|\n                        (r<<7&0x7c00)|\n                        (g<<2&0x03e0)|\n                        (b>>3&0x001f);\n}"
+  },
+  {
+   "name": "setpixel_24bppRGB",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 484,
+   "end_line": 490,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:570"
+   ],
+   "signature": "static inline void setpixel_24bppRGB(BYTE r, BYTE g, BYTE b, BYTE a, BYTE *row, UINT x)",
+   "code": "static inline void setpixel_24bppRGB(BYTE r, BYTE g, BYTE b, BYTE a,\n    BYTE *row, UINT x)\n{\n    row[x*3+2] = r;\n    row[x*3+1] = g;\n    row[x*3] = b;\n}"
+  },
+  {
+   "name": "setpixel_32bppRGB",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 492,
+   "end_line": 496,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:573"
+   ],
+   "signature": "static inline void setpixel_32bppRGB(BYTE r, BYTE g, BYTE b, BYTE a, BYTE *row, UINT x)",
+   "code": "static inline void setpixel_32bppRGB(BYTE r, BYTE g, BYTE b, BYTE a,\n    BYTE *row, UINT x)\n{\n    *((DWORD*)(row)+x) = (r<<16)|(g<<8)|b;\n}"
+  },
+  {
+   "name": "setpixel_32bppARGB",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 498,
+   "end_line": 502,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:576"
+   ],
+   "signature": "static inline void setpixel_32bppARGB(BYTE r, BYTE g, BYTE b, BYTE a, BYTE *row, UINT x)",
+   "code": "static inline void setpixel_32bppARGB(BYTE r, BYTE g, BYTE b, BYTE a,\n    BYTE *row, UINT x)\n{\n    *((DWORD*)(row)+x) = (a<<24)|(r<<16)|(g<<8)|b;\n}"
+  },
+  {
+   "name": "setpixel_32bppPARGB",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 504,
+   "end_line": 511,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:579"
+   ],
+   "signature": "static inline void setpixel_32bppPARGB(BYTE r, BYTE g, BYTE b, BYTE a, BYTE *row, UINT x)",
+   "code": "static inline void setpixel_32bppPARGB(BYTE r, BYTE g, BYTE b, BYTE a,\n    BYTE *row, UINT x)\n{\n    r = (r * a + 127) / 255;\n    g = (g * a + 127) / 255;\n    b = (b * a + 127) / 255;\n    *((DWORD*)(row)+x) = (a<<24)|(r<<16)|(g<<8)|b;\n}"
+  },
+  {
+   "name": "setpixel_48bppRGB",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 513,
+   "end_line": 519,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:582"
+   ],
+   "signature": "static inline void setpixel_48bppRGB(BYTE r, BYTE g, BYTE b, BYTE a, BYTE *row, UINT x)",
+   "code": "static inline void setpixel_48bppRGB(BYTE r, BYTE g, BYTE b, BYTE a,\n    BYTE *row, UINT x)\n{\n    row[x*6+5] = row[x*6+4] = r;\n    row[x*6+3] = row[x*6+2] = g;\n    row[x*6+1] = row[x*6] = b;\n}"
+  },
+  {
+   "name": "setpixel_64bppARGB",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 521,
+   "end_line": 526,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:585"
+   ],
+   "signature": "static inline void setpixel_64bppARGB(BYTE r, BYTE g, BYTE b, BYTE a, BYTE *row, UINT x)",
+   "code": "static inline void setpixel_64bppARGB(BYTE r, BYTE g, BYTE b, BYTE a,\n    BYTE *row, UINT x)\n{\n    UINT64 a64=a, r64=r, g64=g, b64=b;\n    *((UINT64*)(row)+x) = (a64<<56)|(a64<<48)|(r64<<40)|(r64<<32)|(g64<<24)|(g64<<16)|(b64<<8)|b64;\n}"
+  },
+  {
+   "name": "getpixel_4bppIndexed",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 184,
+   "end_line": 190,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:334",
+    "dlls/gdiplus/image.c:6051"
+   ],
+   "signature": "static inline void getpixel_4bppIndexed(BYTE *index, const BYTE *row, UINT x)",
+   "code": "static inline void getpixel_4bppIndexed(BYTE *index, const BYTE *row, UINT x)\n{\n    if (x & 1)\n        *index = row[x/2]&0xf;\n    else\n        *index = row[x/2]>>4;\n}"
+  },
+  {
+   "name": "setpixel_1bppIndexed",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 425,
+   "end_line": 429,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:597"
+   ],
+   "signature": "static inline void setpixel_1bppIndexed(BYTE r, BYTE g, BYTE b, BYTE a, BYTE *row, UINT x, ColorPalette *palette)",
+   "code": "static inline void setpixel_1bppIndexed(BYTE r, BYTE g, BYTE b, BYTE a,\n    BYTE *row, UINT x, ColorPalette *palette)\n{\n    row[x/8]  = (row[x/8] & ~(1<<(7-x%8))) | (get_palette_index(r,g,b,a,palette)<<(7-x%8));\n}"
+  },
+  {
+   "name": "getpixel_8bppIndexed",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 192,
+   "end_line": 195,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:337"
+   ],
+   "signature": "static inline void getpixel_8bppIndexed(BYTE *index, const BYTE *row, UINT x)",
+   "code": "static inline void getpixel_8bppIndexed(BYTE *index, const BYTE *row, UINT x)\n{\n    *index = row[x];\n}"
+  },
+  {
+   "name": "getpixel_16bppGrayScale",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 197,
+   "end_line": 202,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:340"
+   ],
+   "signature": "static inline void getpixel_16bppGrayScale(BYTE *r, BYTE *g, BYTE *b, BYTE *a, const BYTE *row, UINT x)",
+   "code": "static inline void getpixel_16bppGrayScale(BYTE *r, BYTE *g, BYTE *b, BYTE *a,\n    const BYTE *row, UINT x)\n{\n    *r = *g = *b = row[x*2+1];\n    *a = 255;\n}"
+  },
+  {
+   "name": "getpixel_16bppRGB555",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 204,
+   "end_line": 212,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:343"
+   ],
+   "signature": "static inline void getpixel_16bppRGB555(BYTE *r, BYTE *g, BYTE *b, BYTE *a, const BYTE *row, UINT x)",
+   "code": "static inline void getpixel_16bppRGB555(BYTE *r, BYTE *g, BYTE *b, BYTE *a,\n    const BYTE *row, UINT x)\n{\n    WORD pixel = *((const WORD*)(row)+x);\n    *r = (pixel>>7&0xf8)|(pixel>>12&0x7);\n    *g = (pixel>>2&0xf8)|(pixel>>6&0x7);\n    *b = (pixel<<3&0xf8)|(pixel>>2&0x7);\n    *a = 255;\n}"
+  },
+  {
+   "name": "getpixel_16bppRGB565",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 214,
+   "end_line": 222,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:346"
+   ],
+   "signature": "static inline void getpixel_16bppRGB565(BYTE *r, BYTE *g, BYTE *b, BYTE *a, const BYTE *row, UINT x)",
+   "code": "static inline void getpixel_16bppRGB565(BYTE *r, BYTE *g, BYTE *b, BYTE *a,\n    const BYTE *row, UINT x)\n{\n    WORD pixel = *((const WORD*)(row)+x);\n    *r = (pixel>>8&0xf8)|(pixel>>13&0x7);\n    *g = (pixel>>3&0xfc)|(pixel>>9&0x3);\n    *b = (pixel<<3&0xf8)|(pixel>>2&0x7);\n    *a = 255;\n}"
+  },
+  {
+   "name": "getpixel_16bppARGB1555",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 224,
+   "end_line": 235,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:349"
+   ],
+   "signature": "static inline void getpixel_16bppARGB1555(BYTE *r, BYTE *g, BYTE *b, BYTE *a, const BYTE *row, UINT x)",
+   "code": "static inline void getpixel_16bppARGB1555(BYTE *r, BYTE *g, BYTE *b, BYTE *a,\n    const BYTE *row, UINT x)\n{\n    WORD pixel = *((const WORD*)(row)+x);\n    *r = (pixel>>7&0xf8)|(pixel>>12&0x7);\n    *g = (pixel>>2&0xf8)|(pixel>>6&0x7);\n    *b = (pixel<<3&0xf8)|(pixel>>2&0x7);\n    if ((pixel&0x8000) == 0x8000)\n        *a = 255;\n    else\n        *a = 0;\n}"
+  },
+  {
+   "name": "getpixel_24bppRGB",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 237,
+   "end_line": 244,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:352"
+   ],
+   "signature": "static inline void getpixel_24bppRGB(BYTE *r, BYTE *g, BYTE *b, BYTE *a, const BYTE *row, UINT x)",
+   "code": "static inline void getpixel_24bppRGB(BYTE *r, BYTE *g, BYTE *b, BYTE *a,\n    const BYTE *row, UINT x)\n{\n    *r = row[x*3+2];\n    *g = row[x*3+1];\n    *b = row[x*3];\n    *a = 255;\n}"
+  },
+  {
+   "name": "getpixel_32bppRGB",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 246,
+   "end_line": 253,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:355"
+   ],
+   "signature": "static inline void getpixel_32bppRGB(BYTE *r, BYTE *g, BYTE *b, BYTE *a, const BYTE *row, UINT x)",
+   "code": "static inline void getpixel_32bppRGB(BYTE *r, BYTE *g, BYTE *b, BYTE *a,\n    const BYTE *row, UINT x)\n{\n    *r = row[x*4+2];\n    *g = row[x*4+1];\n    *b = row[x*4];\n    *a = 255;\n}"
+  },
+  {
+   "name": "getpixel_32bppARGB",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 255,
+   "end_line": 262,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:358"
+   ],
+   "signature": "static inline void getpixel_32bppARGB(BYTE *r, BYTE *g, BYTE *b, BYTE *a, const BYTE *row, UINT x)",
+   "code": "static inline void getpixel_32bppARGB(BYTE *r, BYTE *g, BYTE *b, BYTE *a,\n    const BYTE *row, UINT x)\n{\n    *r = row[x*4+2];\n    *g = row[x*4+1];\n    *b = row[x*4];\n    *a = row[x*4+3];\n}"
+  },
+  {
+   "name": "getpixel_32bppPARGB",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 264,
+   "end_line": 281,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:361"
+   ],
+   "signature": "static inline void getpixel_32bppPARGB(BYTE *r, BYTE *g, BYTE *b, BYTE *a, const BYTE *row, UINT x)",
+   "code": "static inline void getpixel_32bppPARGB(BYTE *r, BYTE *g, BYTE *b, BYTE *a,\n    const BYTE *row, UINT x)\n{\n    *a = row[x*4+3];\n    if (*a == 0)\n    {\n        *r = row[x*4+2];\n        *g = row[x*4+1];\n        *b = row[x*4];\n    }\n    else\n    {\n        DWORD scaled_q = (255 << 15) / *a;\n        *r = (row[x*4+2] > *a) ? 0xff : (row[x*4+2] * scaled_q) >> 15;\n        *g = (row[x*4+1] > *a) ? 0xff : (row[x*4+1] * scaled_q) >> 15;\n        *b = (row[x*4] > *a) ? 0xff : (row[x*4] * scaled_q) >> 15;\n    }\n}"
+  },
+  {
+   "name": "getpixel_48bppRGB",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 283,
+   "end_line": 290,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:364"
+   ],
+   "signature": "static inline void getpixel_48bppRGB(BYTE *r, BYTE *g, BYTE *b, BYTE *a, const BYTE *row, UINT x)",
+   "code": "static inline void getpixel_48bppRGB(BYTE *r, BYTE *g, BYTE *b, BYTE *a,\n    const BYTE *row, UINT x)\n{\n    *r = row[x*6+5];\n    *g = row[x*6+3];\n    *b = row[x*6+1];\n    *a = 255;\n}"
+  },
+  {
+   "name": "getpixel_64bppARGB",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 292,
+   "end_line": 299,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:367"
+   ],
+   "signature": "static inline void getpixel_64bppARGB(BYTE *r, BYTE *g, BYTE *b, BYTE *a, const BYTE *row, UINT x)",
+   "code": "static inline void getpixel_64bppARGB(BYTE *r, BYTE *g, BYTE *b, BYTE *a,\n    const BYTE *row, UINT x)\n{\n    *r = row[x*8+5];\n    *g = row[x*8+3];\n    *b = row[x*8+1];\n    *a = row[x*8+7];\n}"
+  },
+  {
+   "name": "getpixel_64bppPARGB",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 301,
+   "end_line": 313,
+   "static": true,
+   "called_from": [
+    "convert_pixels"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/image.c:370"
+   ],
+   "signature": "static inline void getpixel_64bppPARGB(BYTE *r, BYTE *g, BYTE *b, BYTE *a, const BYTE *row, UINT x)",
+   "code": "static inline void getpixel_64bppPARGB(BYTE *r, BYTE *g, BYTE *b, BYTE *a,\n    const BYTE *row, UINT x)\n{\n    *a = row[x*8+7];\n    if (*a == 0)\n        *r = *g = *b = 0;\n    else\n    {\n        *r = row[x*8+5] * 255 / *a;\n        *g = row[x*8+3] * 255 / *a;\n        *b = row[x*8+1] * 255 / *a;\n    }\n}"
+  },
+  {
+   "name": "get_palette_index",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 390,
+   "end_line": 416,
+   "static": true,
+   "called_from": [
+    "setpixel_1bppIndexed",
+    "setpixel_4bppIndexed",
+    "setpixel_8bppIndexed"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static inline UINT get_palette_index(BYTE r, BYTE g, BYTE b, BYTE a, ColorPalette *palette)",
+   "code": "static inline UINT get_palette_index(BYTE r, BYTE g, BYTE b, BYTE a, ColorPalette *palette)\n{\n    BYTE index = 0;\n    int best_distance = 0x7fff;\n    int distance;\n    UINT i;\n\n    if (!palette) return 0;\n    /* This algorithm scans entire palette,\n       computes difference from desired color (all color components have equal weight)\n       and returns the index of color with least difference.\n\n       Note: Maybe it could be replaced with a better algorithm for better image quality\n       and performance, though better algorithm would probably need some pre-built lookup\n       tables and thus may actually be slower if this method is called only few times per\n       every image.\n    */\n    for(i=0;i<palette->Count;i++) {\n        ARGB color=palette->Entries[i];\n        distance=absdiff(b, color & 0xff) + absdiff(g, color>>8 & 0xff) + absdiff(r, color>>16 & 0xff) + absdiff(a, color>>24 & 0xff);\n        if (distance<best_distance) {\n            best_distance=distance;\n            index=i;\n        }\n    }\n    return index;\n}"
+  },
+  {
+   "name": "absdiff",
+   "file": "dlls/gdiplus/image.c",
+   "start_line": 385,
+   "end_line": 388,
+   "static": true,
+   "called_from": [
+    "get_palette_index"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static unsigned int absdiff(unsigned int x, unsigned int y)",
+   "code": "static unsigned int absdiff(unsigned int x, unsigned int y)\n{\n    return x > y ? x - y : y - x;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 39,
+    "end_line": 39,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(gdiplus);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "convert_indexed_to_indexed",
+    "start_line": 637,
+    "end_line": 648,
+    "code": "#define convert_indexed_to_indexed(getpixel_function, setpixel_function) do { \\\n    for (y=0; y<height; y++) \\\n        for (x=0; x<width; x++) { \\\n            BYTE index; \\\n            ARGB argb; \\\n            BYTE *color = (BYTE *)&argb; \\\n            getpixel_function(&index, src_bits+src_stride*y, x); \\\n            argb = (src_palette && index < src_palette->Count) ? src_palette->Entries[index] : 0; \\\n            setpixel_function(color[2], color[1], color[0], color[3], dst_bits+dst_stride*y, x, dst_palette); \\\n        } \\\n    return Ok; \\\n} while (0);"
+   },
+   {
+    "name": "convert_indexed_to_rgb",
+    "start_line": 624,
+    "end_line": 635,
+    "code": "#define convert_indexed_to_rgb(getpixel_function, setpixel_function) do { \\\n    for (y=0; y<height; y++) \\\n        for (x=0; x<width; x++) { \\\n            BYTE index; \\\n            ARGB argb; \\\n            BYTE *color = (BYTE *)&argb; \\\n            getpixel_function(&index, src_bits+src_stride*y, x); \\\n            argb = (src_palette && index < src_palette->Count) ? src_palette->Entries[index] : 0; \\\n            setpixel_function(color[2], color[1], color[0], color[3], dst_bits+dst_stride*y, x); \\\n        } \\\n    return Ok; \\\n} while (0);"
+   },
+   {
+    "name": "convert_rgb_to_indexed",
+    "start_line": 660,
+    "end_line": 668,
+    "code": "#define convert_rgb_to_indexed(getpixel_function, setpixel_function) do { \\\n    for (y=0; y<height; y++) \\\n        for (x=0; x<width; x++) { \\\n            BYTE r, g, b, a; \\\n            getpixel_function(&r, &g, &b, &a, src_bits+src_stride*y, x); \\\n            setpixel_function(r, g, b, a, dst_bits+dst_stride*y, x, dst_palette); \\\n        } \\\n    return Ok; \\\n} while (0);"
+   },
+   {
+    "name": "convert_rgb_to_rgb",
+    "start_line": 650,
+    "end_line": 658,
+    "code": "#define convert_rgb_to_rgb(getpixel_function, setpixel_function) do { \\\n    for (y=0; y<height; y++) \\\n        for (x=0; x<width; x++) { \\\n            BYTE r, g, b, a; \\\n            getpixel_function(&r, &g, &b, &a, src_bits+src_stride*y, x); \\\n            setpixel_function(r, g, b, a, dst_bits+dst_stride*y, x); \\\n        } \\\n    return Ok; \\\n} while (0);"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "convert_32bppARGB_to_32bppPARGB",
+    "file": "dlls/gdiplus/gdiplus.c",
+    "start_line": 445
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "GdipGetImageHeight",
+    "impl": [
+     "dlls/gdiplus/image.c:2275"
+    ]
+   },
+   {
+    "name": "GdipGetImageWidth",
+    "impl": [
+     "dlls/gdiplus/image.c:2395"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CreateDIBSection",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:857"
+    ]
+   },
+   {
+    "name": "DeleteObject",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:194"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "image_lock",
+   "image_unlock"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "gdiplus.GdipCreateHBITMAPFromBitmap",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI+",
+   "header": "gdiplusflat.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 61,
+   "body": 59,
+   "code": 41
+  },
+  "cyclomatic": 9,
+  "return_type": "GpStatus",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 2,
+   "n_tests": 2,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/gdiplus/tests/image.c::test_createhbitmap",
+    "dlls/gdiplus/tests/image.c::test_image_format"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-bitmap-flat",
+   "source": "win32-gdiplus-flat",
+   "description": "",
+   "min_windows": "",
+   "documented_dll": "gdiplus.dll"
+  },
+  "exports": [
+   "gdiplus.GdipCreateHBITMAPFromBitmap"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2007-12-20",
+   "median_date": "2014-10-29",
+   "last_date": "2022-10-24",
+   "code_lines": 41,
+   "pair": "d3dx9_36.D3DXLoadVolumeFromFileInMemory",
+   "rank": 1,
+   "distance": 0.348
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "d3dx9_36.D3DXLoadVolumeFromFileInMemory",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-10-24",
+  "partner_rank": 1,
+  "distance": 0.348
+ }
+}

@@ -1,0 +1,222 @@
+{
+ "id": "0008",
+ "function": {
+  "name": "WsAddErrorString",
+  "export_name": "WsAddErrorString",
+  "module": "webservices",
+  "source_module": "webservices",
+  "exported_by": [
+   "webservices"
+  ],
+  "side": "PE",
+  "file": "dlls/webservices/error.c",
+  "start_line": 515,
+  "end_line": 554,
+  "body_lines": 37,
+  "signature": "HRESULT WINAPI WsAddErrorString( WS_ERROR *handle, const WS_STRING *str )",
+  "header_comment": "/**************************************************************************\n *          WsAddErrorString\t\t[webservices.@]\n */",
+  "code": "HRESULT WINAPI WsAddErrorString( WS_ERROR *handle, const WS_STRING *str )\n{\n    struct error *error = (struct error *)handle;\n    WCHAR *chars;\n    HRESULT hr;\n\n    TRACE( \"%p %p\\n\", handle, str );\n\n    if (!error || !str) return E_INVALIDARG;\n\n    EnterCriticalSection( &error->cs );\n\n    if (error->magic != ERROR_MAGIC)\n    {\n        hr = E_INVALIDARG;\n        goto done;\n    }\n    if (!(chars = ws_alloc( error->heap, str->length * sizeof(*chars) )))\n    {\n        hr = E_OUTOFMEMORY;\n        goto done;\n    }\n\n    if ( (hr = grow_strs_array( error )) != S_OK )\n    {\n        ws_free( error->heap, chars, str->length * sizeof(*chars) );\n        goto done;\n    }\n\n    memcpy( chars, str->chars, str->length * sizeof(*chars) );\n\n    error->strs[error->strs_count].chars = chars;\n    error->strs[error->strs_count].length = str->length;\n    error->strs_count++;\n\ndone:\n    LeaveCriticalSection( &error->cs );\n    TRACE( \"returning %#lx\\n\", hr );\n    return hr;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"webservices.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"webservices_private.h\""
+  ],
+  "resolution": [
+   "webservices!WsAddErrorString [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/webservices/tests/reader.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 2
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "webservices",
+   "path": "sdk-api-src/content/webservices/nf-webservices-wsadderrorstring.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/webservices/nf-webservices-wsadderrorstring",
+   "documented_name": "wsadderrorstring",
+   "file": "docs/0008_sdk-api_nf-webservices-wsadderrorstring.md",
+   "text": "---\nUID: NF:webservices.WsAddErrorString\ntitle: WsAddErrorString function (webservices.h)\ndescription: Adds a specified error string to the error object.\nhelpviewer_keywords: [\"WsAddErrorString\",\"WsAddErrorString function [Web Services for Windows]\",\"webservices/WsAddErrorString\",\"wsw.wsadderrorstring\"]\nold-location: wsw\\wsadderrorstring.htm\ntech.root: wsw\nms.assetid: 5fdad296-5024-4360-b1c5-f0192929c612\nms.date: 12/05/2018\nms.keywords: WsAddErrorString, WsAddErrorString function [Web Services for Windows], webservices/WsAddErrorString, wsw.wsadderrorstring\nreq.header: webservices.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 7 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 R2 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: WebServices.lib\nreq.dll: WebServices.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - WsAddErrorString\n - webservices/WsAddErrorString\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - WebServices.dll\napi_name:\n - WsAddErrorString\n---\n\n# WsAddErrorString function\n\n\n## -description\n\nAdds a specified error string to the error object.\n\n## -parameters\n\n### -param error [in]\n\nPointer to a <a href=\"/windows/desktop/wsw/ws-error\">WS_ERROR</a> structure representing the error object to which to add the string.\n\n### -param string [in]\n\nThe string to add.  The error object will\n                    make a copy of the string.\n\n## -returns\n\nIf the function succeeds, it returns NO_ERROR; otherwise, it returns an HRESULT error code.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_INVALIDARG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOne or more arguments are invalid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_OUTOFMEMORY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nInsufficient memory to complete the operation.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b> Other Errors </b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThis function may return other errors not listed above.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThis function requires that the string be in the language specified by the LANGID of the \n                error object.  You can retrieve this LANGID value by calling the  <a href=\"/windows/desktop/api/webservices/nf-webservices-wsgeterrorproperty\">WsGetErrorProperty</a> function with the WS_ERROR_PROPERTY_LANGID value of the <a href=\"/windows/desktop/api/webservices/ne-webservices-ws_error_property_id\">WS_ERROR_PROPERTY_ID</a> enumeration."
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "grow_strs_array",
+   "file": "dlls/webservices/error.c",
+   "start_line": 145,
+   "end_line": 170,
+   "static": true,
+   "called_from": [
+    "WsAddErrorString"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/webservices/error.c:256"
+   ],
+   "signature": "static HRESULT grow_strs_array( struct error *error )",
+   "code": "static HRESULT grow_strs_array( struct error *error )\n{\n    WS_STRING *new_ptr;\n    ULONG new_size;\n\n    if (error->strs_count < error->strs_size)\n        return S_OK;\n\n    if (error->strs_size > 0)\n    {\n        new_size = 2 * error->strs_size;\n        new_ptr = ws_realloc_zero( error->heap, error->strs, error->strs_size * sizeof(WS_STRING),\n                                   new_size * sizeof(WS_STRING) );\n    }\n    else\n    {\n        new_size = 1;\n        new_ptr = ws_alloc_zero( error->heap, sizeof(WS_STRING) );\n    }\n    if (!new_ptr)\n        return E_OUTOFMEMORY;\n\n    error->strs = new_ptr;\n    error->strs_size = new_size;\n    return S_OK;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "error",
+    "kind": "struct_decl",
+    "start_line": 40,
+    "end_line": 52,
+    "code": "struct error\n{\n    ULONG            magic;\n    CRITICAL_SECTION cs;\n    WS_HEAP         *heap;\n    ULONG            prop_count;\n    struct prop      prop[ARRAY_SIZE( error_props )];\n    ULONG            strs_count;\n    ULONG            strs_size; /* Maximum length of the strs array */\n    WS_STRING       *strs;\n    WS_FAULT        *fault;\n    WS_XML_STRING    fault_action;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 31,
+    "end_line": 31,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(webservices);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "ERROR_MAGIC",
+    "start_line": 54,
+    "end_line": 54,
+    "code": "#define ERROR_MAGIC (('E' << 24) | ('R' << 16) | ('R' << 8) | 'O')"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "ws_alloc",
+    "file": "dlls/webservices/heap.c",
+    "start_line": 65
+   },
+   {
+    "name": "ws_alloc_zero",
+    "file": "dlls/webservices/heap.c",
+    "start_line": 81
+   },
+   {
+    "name": "ws_free",
+    "file": "dlls/webservices/heap.c",
+    "start_line": 147
+   },
+   {
+    "name": "ws_realloc_zero",
+    "file": "dlls/webservices/heap.c",
+    "start_line": 122
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "webservices.WsAddErrorString",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "Windows Web Services",
+   "header": "webservices.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 40,
+   "body": 39,
+   "code": 23
+  },
+  "cyclomatic": 6,
+  "return_type": "HRESULT",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 2,
+   "n_tests": 2,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/webservices/tests/reader.c::test_WsAddErrorString",
+    "dlls/webservices/tests/reader.c::test_WsResetError"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/webservices/nf-webservices-wsadderrorstring",
+   "source": "win32",
+   "description": "Adds a specified error string to the error object.",
+   "min_windows": "Windows 7 [desktop apps \\| UWP apps]",
+   "documented_dll": "WebServices.dll"
+  },
+  "exports": [
+   "webservices.WsAddErrorString"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2017-03-08",
+   "median_date": "2022-08-03",
+   "last_date": "2022-08-03",
+   "code_lines": 24,
+   "pair": "bluetoothapis.BluetoothFindFirstRadio",
+   "rank": 2,
+   "distance": 0.754
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "bluetoothapis.BluetoothFindFirstRadio",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-08-03",
+  "partner_rank": 2,
+  "distance": 0.754
+ }
+}

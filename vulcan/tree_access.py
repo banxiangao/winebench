@@ -13,7 +13,8 @@ the commands in the trajectories:
   sibling_target ... and names the source file of the task's function there (the original implementation was in reach)
   sibling_write  a command that writes while naming another tree (the agent may have changed another task's tree)
   wide_search    a search or listing from / or /t (find /, ls -R /, grep -r ... /t): how siblings are usually found
-  project        a command names the project directory or the dataset
+  project        a command names the project directory, the scratch directory (where the clean Wine tree is) or a dataset:
+                 the cluster's apptainer module mounts all of /project and /scratch into every container
 
 Reads   wine_agent/runs/scenario<S>/<harness>/responses/<model>/<id>.json + .traj.json, eval/<model>/<id>.json
 Writes  <out>/tree_access_tasks.csv     one line per task and setting with any of the above
@@ -24,7 +25,7 @@ import os, re, sys, json, glob, csv, argparse
 ROOT_RE = re.compile(r'(?<![\w.-])(?:/t/)?(wine-swe(?:-w\d+)?)(?![\w-])')            # a tree root, absolute or relative to /t
 WRITE_RE = re.compile(r"sed\s+-i|>>?\s*[\w./$~-]|\btee\b|open\([^)]*['\"][wa]['\"]|\.write\(|python3?\s+-\s*<<|\bpatch\b|git\s+apply|\bcp\b|\bmv\b|\brm\b|cat\s*<<")
 WIDE_RE = re.compile(r"(?:\bfind\s+/(?:t)?(?:\s|$)|\bls\s+(?:-\w+\s+)*/(?:t/?)?(?:\s|$|;|&|\|)|grep\s+-\w*[rR]\w*\b[^|;&]*\s/(?:t/?)?(?:\s|$)|\bdu\s+(?:-\w+\s+)*/(?:t/?)?(?:\s|$)|\btree\s+/(?:t/?)?(?:\s|$))")
-PROJECT_RE = re.compile(r'/project/|wine_agent|wine_bench|winebench205|/dataset/')
+PROJECT_RE = re.compile(r'/project/|/scratch/|winebench-w|wine_agent|wine_bench|winebench205|/dataset/')      # project directory, clean Wine tree, datasets
 
 def jload(f):
     try: return json.load(open(f, encoding='utf-8', errors='replace'))
@@ -52,6 +53,9 @@ def commands_openhands(traj):
         if m: own = m.group(1)
     return own, cmds
 
+def dataset_of(scen):                                 # the leakage settings (2.x-new, 2.x-old) have their own datasets
+    return 'leak2024_' + scen.rsplit('-', 1)[1] if scen.endswith(('-new', '-old')) else 'winebench205_doc'
+
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('--root', default=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))); ap.add_argument('--out', default='')
     a = ap.parse_args(); root = os.path.abspath(a.root); out = a.out or os.path.join(root, 'results'); rows = []; settings = []
@@ -71,7 +75,7 @@ def main():
                     for m in ROOT_RE.finditer(x): c[m.group(1)] = c.get(m.group(1), 0) + 1
                 own = max(c, key=c.get) if c else ''; s['own_unknown'] += 1
             target = os.path.basename((r.get('hidden') or {}).get('file') or '') or os.path.basename(next(iter(r.get('files') or []), ''))
-            rec = jload(next(iter(glob.glob(os.path.join(root, 'wine_agent', 'dataset', 'winebench205_doc', r['id'] + '_*.json'))), '')) or {}
+            rec = jload(next(iter(glob.glob(os.path.join(root, 'wine_agent', 'dataset', dataset_of(scen), r['id'] + '_*.json'))), '')) or {}
             target = os.path.basename((rec.get('function') or {}).get('file') or target)
             tfile = (rec.get('function') or {}).get('file') or ''; tdir = '/'.join(tfile.split('/')[:2])
             foreign = [x for x in (r.get('files') or []) if tdir and not x.startswith(tdir + '/')]      # files of the patch outside the task's module: written by somebody else?

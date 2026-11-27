@@ -1,0 +1,63 @@
+---
+UID: NF:wdm.RtlFindMostSignificantBit
+title: RtlFindMostSignificantBit function (wdm.h)
+description: The RtlFindMostSignificantBit routine returns the zero-based position of the most significant nonzero bit in its parameter.
+old-location: kernel\rtlfindmostsignificantbit.htm
+tech.root: kernel
+ms.date: 04/30/2018
+keywords: ["RtlFindMostSignificantBit function"]
+ms.keywords: RtlFindMostSignificantBit, RtlFindMostSignificantBit routine [Kernel-Mode Driver Architecture], k109_c8dcb9dd-ec2c-4b0c-92f2-167dcee10a96.xml, kernel.rtlfindmostsignificantbit, wdm/RtlFindMostSignificantBit
+req.header: wdm.h
+req.include-header: Wdm.h, Ntddk.h, Ntifs.h
+req.target-type: Universal
+req.target-min-winverclnt: Available starting with Windows 2000.
+req.target-min-winversvr: 
+req.kmdf-ver: 
+req.umdf-ver: 
+req.ddi-compliance: 
+req.unicode-ansi: 
+req.idl: 
+req.max-support: 
+req.namespace: 
+req.assembly: 
+req.type-library: 
+req.lib: NtosKrnl.lib
+req.dll: NtosKrnl.exe
+req.irql: Any level
+targetos: Windows
+req.typenames: 
+f1_keywords:
+ - RtlFindMostSignificantBit
+ - wdm/RtlFindMostSignificantBit
+topic_type:
+ - APIRef
+ - kbSyntax
+api_type:
+ - DllExport
+api_location:
+ - NtosKrnl.exe
+api_name:
+ - RtlFindMostSignificantBit
+---
+
+# RtlFindMostSignificantBit function
+
+
+## -description
+
+The <b>RtlFindMostSignificantBit</b> routine returns the zero-based position of the most significant nonzero bit in its parameter.
+
+## -parameters
+
+### -param Set [in]
+
+
+The 64-bit value to be searched for its most significant nonzero bit.
+
+## -returns
+
+The zero-based bit position of the most significant nonzero bit, or -1 if every bit is zero.
+
+## -see-also
+
+<a href="/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlfindleastsignificantbit">RtlFindLeastSignificantBit</a>

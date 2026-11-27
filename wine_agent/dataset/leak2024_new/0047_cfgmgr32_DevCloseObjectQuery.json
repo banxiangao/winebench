@@ -1,0 +1,287 @@
+{
+ "id": "0047",
+ "function": {
+  "name": "DevCloseObjectQuery",
+  "export_name": "DevCloseObjectQuery",
+  "module": "cfgmgr32",
+  "source_module": "cfgmgr32",
+  "exported_by": [
+   "cfgmgr32"
+  ],
+  "side": "PE",
+  "file": "dlls/cfgmgr32/devobject.c",
+  "start_line": 1026,
+  "end_line": 1065,
+  "body_lines": 37,
+  "signature": "void WINAPI DevCloseObjectQuery( HDEVQUERY query )",
+  "header_comment": null,
+  "code": "void WINAPI DevCloseObjectQuery( HDEVQUERY query )\n{\n    struct device_query_context *ctx = (struct device_query_context *)query;\n    BOOL async = ctx->flags & DevQueryFlagAsyncClose;\n    DEV_QUERY_STATE old;\n\n    TRACE( \"(%p)\\n\", query );\n\n    if (!query)\n        return;\n\n    EnterCriticalSection( &ctx->cs );\n    old = ctx->state;\n    ctx->state = DevQueryStateClosed;\n\n    if (ctx->notify)\n    {\n        CM_Unregister_Notification( ctx->notify );\n        device_query_context_release( ctx ); /* Reference held by CM_Register_Notification. */\n    }\n    if (async && old == DevQueryStateEnumCompleted)\n    {\n        /* No asynchronous operation involving this query is active, so we need to notify DevQueryStateClosed. */\n        BOOL success = TrySubmitThreadpoolCallback( device_query_context_notify_closed_async, ctx, NULL );\n        LeaveCriticalSection( &ctx->cs );\n        if (success)\n            return;\n    }\n    else if (!async && old == DevQueryStateInitialized)\n    {\n        LeaveCriticalSection( &ctx->cs );\n        /* Wait for the active async operation to end. */\n        WaitForSingleObject( ctx->closed, INFINITE );\n    }\n    else\n        LeaveCriticalSection( &ctx->cs );\n\n    device_query_context_release( ctx );\n    return;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"cfgmgr32_private.h\"",
+   "#include \"devpkey.h\""
+  ],
+  "resolution": [
+   "cfgmgr32!DevCloseObjectQuery [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/cfgmgr32/tests/cfgmgr32.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "devquery",
+   "path": "sdk-api-src/content/devquery/nf-devquery-devcloseobjectquery.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/devquery/nf-devquery-devcloseobjectquery",
+   "documented_name": "devcloseobjectquery",
+   "file": "docs/0047_sdk-api_nf-devquery-devcloseobjectquery.md",
+   "text": "---\nUID: NF:devquery.DevCloseObjectQuery\ntech.root: devinst\ntitle: DevCloseObjectQuery\nms.date: 11/05/2024\ntargetos: Windows\ndescription: Closes a device query handle.\nprerelease: false\nreq.assembly: \nreq.construct-type: function\nreq.ddi-compliance: \nreq.dll: Cfgmgr32.dll\nreq.header: devquery.h\nreq.idl: \nreq.include-header: \nreq.irql: \nreq.kmdf-ver: \nreq.lib: onecore.lib\nreq.max-support: \nreq.namespace: \nreq.redist: \nreq.target-min-winverclnt: Windows 10 version 1809\nreq.target-min-winversvr: Windows Server 2019\nreq.target-type: \nreq.type-library: \nreq.umdf-ver: \nreq.unicode-ansi: \ntopic_type:\n - apiref\napi_type:\n - DllExport\napi_location:\n - api-ms-win-devices-query-l1-1-1.dll\n - api-ms-win-devices-query-l1-1-0.dll\n - Cfgmgr32.dll\napi_name:\n - DevCloseObjectQuery\nf1_keywords:\n - DevCloseObjectQuery\n - devquery/DevCloseObjectQuery\ndev_langs:\n - c++\nhelpviewer_keywords:\n - DevCloseObjectQuery\n---\n\n## -description\n\nCloses a device query handle.\n\n## -parameters\n\n### -param hDevQuery [in]\n\nA query handle returned from one of the query creation APIs such as [DevCreateObjectQuery](nf-devquery-devcreateobjectquery.md).\n\n## -remarks\n\n## -see-also\n\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "device_query_context_release",
+   "file": "dlls/cfgmgr32/devobject.c",
+   "start_line": 708,
+   "end_line": 719,
+   "static": true,
+   "called_from": [
+    "DevCloseObjectQuery",
+    "device_query_context_notify_closed_async"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/cfgmgr32/devobject.c:733",
+    "dlls/cfgmgr32/devobject.c:745",
+    "dlls/cfgmgr32/devobject.c:762",
+    "dlls/cfgmgr32/devobject.c:891",
+    "dlls/cfgmgr32/devobject.c:899"
+   ],
+   "signature": "static void device_query_context_release( struct device_query_context *ctx )",
+   "code": "static void device_query_context_release( struct device_query_context *ctx )\n{\n    if (!InterlockedDecrement( &ctx->ref ))\n    {\n        free( ctx->prop_keys );\n        ctx->cs.DebugInfo->Spare[0] = 0;\n        DeleteCriticalSection( &ctx->cs );\n        if (ctx->closed) CloseHandle( ctx->closed );\n        rb_destroy( &ctx->known_ifaces, device_iface_path_free, NULL );\n        free( ctx );\n    }\n}"
+  },
+  {
+   "name": "device_query_context_notify_closed_async",
+   "file": "dlls/cfgmgr32/devobject.c",
+   "start_line": 736,
+   "end_line": 740,
+   "static": true,
+   "called_from": [
+    "DevCloseObjectQuery"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/cfgmgr32/devobject.c:959"
+   ],
+   "signature": "static void CALLBACK device_query_context_notify_closed_async( TP_CALLBACK_INSTANCE *instance, void *data )",
+   "code": "static void CALLBACK device_query_context_notify_closed_async( TP_CALLBACK_INSTANCE *instance, void *data )\n{\n    device_query_context_notify_state_change( data, DevQueryStateClosed );\n    device_query_context_release( data );\n}"
+  },
+  {
+   "name": "device_iface_path_free",
+   "file": "dlls/cfgmgr32/devobject.c",
+   "start_line": 701,
+   "end_line": 706,
+   "static": true,
+   "called_from": [
+    "device_query_context_release"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void device_iface_path_free( struct rb_entry *entry, void *data )",
+   "code": "static void device_iface_path_free( struct rb_entry *entry, void *data )\n{\n    struct device_iface_path *path = RB_ENTRY_VALUE( entry, struct device_iface_path, entry );\n    free( path->path );\n    free( path );\n}"
+  },
+  {
+   "name": "device_query_context_notify_state_change",
+   "file": "dlls/cfgmgr32/devobject.c",
+   "start_line": 721,
+   "end_line": 728,
+   "static": true,
+   "called_from": [
+    "device_query_context_notify_closed_async"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/cfgmgr32/devobject.c:732",
+    "dlls/cfgmgr32/devobject.c:744"
+   ],
+   "signature": "static void device_query_context_notify_state_change( struct device_query_context *ctx, DEV_QUERY_STATE state )",
+   "code": "static void device_query_context_notify_state_change( struct device_query_context *ctx, DEV_QUERY_STATE state )\n{\n    DEV_QUERY_RESULT_ACTION_DATA action_data = {0};\n\n    action_data.Action = DevQueryResultStateChange;\n    action_data.Data.State = state;\n    ctx->callback( (HDEVQUERY)ctx, ctx->user_data, &action_data );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "device_iface_path",
+    "kind": "struct_decl",
+    "start_line": 579,
+    "end_line": 583,
+    "code": "struct device_iface_path\n{\n    struct rb_entry entry;\n    WCHAR *path;\n};"
+   },
+   {
+    "name": "device_query_context",
+    "kind": "struct_decl",
+    "start_line": 591,
+    "end_line": 607,
+    "code": "struct device_query_context\n{\n    LONG ref;\n    DEV_OBJECT_TYPE type;\n    ULONG flags;\n    ULONG prop_keys_len;\n    DEVPROPCOMPKEY *prop_keys;\n    BOOL filters;\n\n    CRITICAL_SECTION cs;\n    PDEV_QUERY_RESULT_CALLBACK callback;\n    void *user_data;\n    DEV_QUERY_STATE state;\n    HANDLE closed;\n    struct rb_tree known_ifaces;\n    HCMNOTIFICATION notify;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 23,
+    "end_line": 23,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(setupapi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "CM_Unregister_Notification",
+    "impl": [
+     "dlls/cfgmgr32/notification.c:196"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CloseHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "DeleteCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:271"
+    ]
+   },
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "TrySubmitThreadpoolCallback",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/thread.c:1383"
+    ]
+   },
+   {
+    "name": "WaitForSingleObject",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/sync.c:395"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   }
+  ],
+  "header_inline": [
+   "_InterlockedDecrement",
+   "rb_destroy",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "ctx->callback",
+    "in_function": "device_query_context_notify_state_change",
+    "at": "dlls/cfgmgr32/devobject.c:727",
+    "candidates": [
+     "callback @ dlls/cfgmgr32/devobject.c:471",
+     "callback @ dlls/cfgmgr32/devobject.c:687",
+     "callback @ dlls/cfgmgr32/notification.c:164"
+    ]
+   }
+  ]
+ },
+ "winebench": {
+  "id": "cfgmgr32.DevCloseObjectQuery",
+  "category": {
+   "l1": "Devices",
+   "l2": "Device management and installation",
+   "header": "devquery.h",
+   "textbook": "Device management",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 40,
+   "body": 39,
+   "code": 24
+  },
+  "cyclomatic": 8,
+  "return_type": "void",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 2,
+   "n_tests_other": 1,
+   "own_test_functions": [
+    "dlls/cfgmgr32/tests/cfgmgr32.c::test_DevCreateObjectQuery"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/devquery/nf-devquery-devcloseobjectquery",
+   "source": "win32",
+   "description": "Closes a device query handle.",
+   "min_windows": "Windows 10 version 1809",
+   "documented_dll": "Cfgmgr32.dll"
+  },
+  "exports": [
+   "cfgmgr32.DevCloseObjectQuery"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 1.0,
+   "first_date": "2025-07-11",
+   "median_date": "2025-07-11",
+   "last_date": "2025-08-03",
+   "code_lines": 24
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "cfgmgr32.CM_MapCrToWin32Err",
+  "share_after_cutoff": 1.0,
+  "last_date": "2025-08-03"
+ }
+}

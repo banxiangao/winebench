@@ -1,0 +1,175 @@
+{
+ "id": "0120",
+ "function": {
+  "name": "PathCchAddExtension",
+  "export_name": "PathCchAddExtension",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/path.c",
+  "start_line": 516,
+  "end_line": 557,
+  "body_lines": 39,
+  "signature": "HRESULT WINAPI PathCchAddExtension(WCHAR *path, SIZE_T size, const WCHAR *extension)",
+  "header_comment": null,
+  "code": "HRESULT WINAPI PathCchAddExtension(WCHAR *path, SIZE_T size, const WCHAR *extension)\n{\n    const WCHAR *existing_extension, *next;\n    SIZE_T path_length, extension_length, dot_length;\n    BOOL has_dot;\n    HRESULT hr;\n\n    TRACE(\"%s %Iu %s\\n\", wine_dbgstr_w(path), size, wine_dbgstr_w(extension));\n\n    if (!path || !size || size > PATHCCH_MAX_CCH || !extension) return E_INVALIDARG;\n\n    next = extension;\n    while (*next)\n    {\n        if ((*next == '.' && next > extension) || *next == ' ' || *next == '\\\\') return E_INVALIDARG;\n        next++;\n    }\n\n    has_dot = extension[0] == '.';\n\n    hr = PathCchFindExtension(path, size, &existing_extension);\n    if (FAILED(hr)) return hr;\n    if (*existing_extension) return S_FALSE;\n\n    path_length = wcsnlen(path, size);\n    dot_length = has_dot ? 0 : 1;\n    extension_length = lstrlenW(extension);\n\n    if (path_length + dot_length + extension_length + 1 > size) return STRSAFE_E_INSUFFICIENT_BUFFER;\n\n    /* If extension is empty or only dot, return S_OK with path unchanged */\n    if (!extension[0] || (extension[0] == '.' && !extension[1])) return S_OK;\n\n    if (!has_dot)\n    {\n        path[path_length] = '.';\n        path_length++;\n    }\n\n    lstrcpyW(path + path_length, extension);\n    return S_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdbool.h>",
+   "#include <string.h>",
+   "#include <wchar.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"pathcch.h\"",
+   "#include \"strsafe.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"wininet.h\"",
+   "#include \"intshcut.h\"",
+   "#include \"winternl.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernelbase!PathCchAddExtension [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernelbase/tests/path.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "pathcch",
+   "path": "sdk-api-src/content/pathcch/nf-pathcch-pathcchaddextension.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/pathcch/nf-pathcch-pathcchaddextension",
+   "documented_name": "pathcchaddextension",
+   "file": "docs/0120_sdk-api_nf-pathcch-pathcchaddextension.md",
+   "text": "---\nUID: NF:pathcch.PathCchAddExtension\ntitle: PathCchAddExtension function (pathcch.h)\ndescription: Adds a file name extension to a path string.This function differs from PathAddExtension in that it accepts paths with &quot;\\\\&quot;, &quot;\\\\?\\&quot; and &quot;\\\\?\\UNC\\&quot; prefixes.\nhelpviewer_keywords: [\"PathCchAddExtension\",\"PathCchAddExtension function [Windows Shell]\",\"pathcch/PathCchAddExtension\",\"shell.PathCchAddExtension\"]\nold-location: shell\\PathCchAddExtension.htm\ntech.root: shell\nms.assetid: c37b438b-39e7-4f24-b076-2401900dab71\nms.date: 12/05/2018\nms.keywords: PathCchAddExtension, PathCchAddExtension function [Windows Shell], pathcch/PathCchAddExtension, shell.PathCchAddExtension\nreq.header: pathcch.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 8 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2012 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Pathcch.lib\nreq.dll: \nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - PathCchAddExtension\n - pathcch/PathCchAddExtension\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - pathcch.lib\n - API-MS-Win-Core-Path-l1-1-0.dll\n - KernelBase.dll\napi_name:\n - PathCchAddExtension\n---\n\n# PathCchAddExtension function\n\n\n## -description\n\nAdds a file name extension to a path string.\n\nThis function differs from <a href=\"/windows/desktop/api/shlwapi/nf-shlwapi-pathaddextensiona\">PathAddExtension</a> in that it accepts paths with \"\\\\\", \"\\\\?\\\" and \"\\\\?\\UNC\\\" prefixes.\n\n<div class=\"alert\"><b>Note</b>  This function should be used in place of <a href=\"/windows/desktop/api/shlwapi/nf-shlwapi-pathaddextensiona\">PathAddExtension</a> to prevent the possibility of a buffer overrun.</div>\n\n## -parameters\n\n### -param pszPath [in, out]\n\nA pointer to the path string. When this function returns successfully, the buffer contains the string with the appended extension. This value should not be <b>NULL</b>.\n\n<div class=\"alert\"><b>Note</b>  If the original string already has a file name extension present, no new extension will be added and the original string will be unchanged.</div>\n\n### -param cchPath [in]\n\nThe size of the buffer pointed to by <i>pszPath</i>, in characters.\n\n### -param pszExt [in]\n\nA pointer to the file name extension string. This string can be given either with or without a preceding period (\".ext\" or \"ext\").\n\n## -returns\n\nThis function returns an <b>HRESULT</b> code, including the following.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>S_OK</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe function succeeded. Note that this also includes the case of an empty extension, such as a period with no characters following it. In that case, the original string is returned unaltered.\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_INVALIDARG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThis value can be caused by several things, such as the <i>pszPath</i> param being set to <b>NULL</b>, the <i>cchPath</i> being set to 0 or a value greater than <b>PATHCCH_MAX_CCH</b>, or the extension string containing illegal characters or otherwise not being a valid extension.\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>S_FALSE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe original string already has an extension.\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>PATHCCH_E_FILENAME_TOO_LONG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe buffer is too small to hold the returned string.\n</td>\n</tr>\n</table>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 39,
+    "end_line": 39,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(path);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "PathCchFindExtension",
+    "impl": [
+     "dlls/kernelbase/path.c:680"
+    ]
+   },
+   {
+    "name": "lstrlenW",
+    "impl": [
+     "dlls/kernelbase/string.c:166"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "wcsnlen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:408"
+    ]
+   }
+  ],
+  "header_inline": [
+   "lstrcpyW",
+   "wine_dbg_log",
+   "wine_dbgstr_w"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "kernelbase.PathCchAddExtension",
+  "category": {
+   "l1": "Windows environment (Shell)",
+   "l2": "Windows Shell",
+   "header": "pathcch.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 42,
+   "body": 41,
+   "code": 24
+  },
+  "cyclomatic": 18,
+  "return_type": "HRESULT",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/kernelbase/tests/path.c::test_PathCchAddExtension"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/pathcch/nf-pathcch-pathcchaddextension",
+   "source": "win32",
+   "description": "Adds a file name extension to a path string.This function differs from PathAddExtension in that it accepts paths with &quot;&quot;, &quot;?&quot; and &quot;?UNC&quot; prefixes.",
+   "min_windows": "Windows 8 [desktop apps \\| UWP apps]",
+   "documented_dll": ""
+  },
+  "exports": [
+   "kernelbase.PathCchAddExtension"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2018-11-21",
+   "median_date": "2018-11-21",
+   "last_date": "2022-02-11",
+   "code_lines": 25,
+   "pair": "kernelbase.PathRemoveFileSpecW",
+   "rank": 1,
+   "distance": 0.085
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "kernelbase.PathRemoveFileSpecW",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-02-11",
+  "partner_rank": 1,
+  "distance": 0.085
+ }
+}

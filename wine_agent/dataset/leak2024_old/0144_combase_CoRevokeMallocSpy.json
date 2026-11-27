@@ -1,0 +1,182 @@
+{
+ "id": "0144",
+ "function": {
+  "name": "CoRevokeMallocSpy",
+  "export_name": "CoRevokeMallocSpy",
+  "module": "combase",
+  "source_module": "combase",
+  "exported_by": [
+   "combase",
+   "ole32"
+  ],
+  "side": "PE",
+  "file": "dlls/combase/malloc.c",
+  "start_line": 431,
+  "end_line": 455,
+  "body_lines": 22,
+  "signature": "HRESULT WINAPI CoRevokeMallocSpy(void)",
+  "header_comment": "/***********************************************************************\n *           CoRevokeMallocSpy (combase.@)\n */",
+  "code": "HRESULT WINAPI CoRevokeMallocSpy(void)\n{\n    HRESULT hr = S_OK;\n\n    TRACE(\"\\n\");\n\n    EnterCriticalSection(&allocspy_cs);\n\n    if (!allocator.spy)\n        hr = CO_E_OBJNOTREG;\n    else if (allocator.spyed_allocations)\n    {\n        allocator.spy_release_pending = TRUE;\n        hr = E_ACCESSDENIED;\n    }\n    else\n    {\n        IMallocSpy_Release(allocator.spy);\n        allocator.spy = NULL;\n    }\n\n    LeaveCriticalSection(&allocspy_cs);\n\n    return hr;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"oleauto.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "ole32!CoRevokeMallocSpy [stdcall] -> forward combase.CoRevokeMallocSpy",
+   "combase!CoRevokeMallocSpy [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ole32/tests/compobj.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "objbase",
+   "path": "sdk-api-src/content/objbase/nf-objbase-corevokemallocspy.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/objbase/nf-objbase-corevokemallocspy",
+   "documented_name": "corevokemallocspy",
+   "file": "docs/0144_sdk-api_nf-objbase-corevokemallocspy.md",
+   "text": "---\nUID: NF:objbase.CoRevokeMallocSpy\ntitle: CoRevokeMallocSpy function (objbase.h)\ndescription: Revokes a registered IMallocSpy object.\nhelpviewer_keywords: [\"CoRevokeMallocSpy\",\"CoRevokeMallocSpy function [COM]\",\"_com_CoRevokeMallocSpy\",\"com.corevokemallocspy\",\"objbase/CoRevokeMallocSpy\"]\nold-location: com\\corevokemallocspy.htm\ntech.root: com\nms.assetid: e1e984a2-2aee-452c-840c-42201ef5ee96\nms.date: 12/05/2018\nms.keywords: CoRevokeMallocSpy, CoRevokeMallocSpy function [COM], _com_CoRevokeMallocSpy, com.corevokemallocspy, objbase/CoRevokeMallocSpy\nreq.header: objbase.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ole32.lib\nreq.dll: Ole32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CoRevokeMallocSpy\n - objbase/CoRevokeMallocSpy\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-com-private-l1-3-1.dll\n - api-ms-win-core-com-private-l1-3-0.dll\n - api-ms-win-core-com-private-l1-2-0.dll\n - Ole32.dll\n - API-MS-Win-Core-Com-private-l1-1-0.dll\n - ComBase.dll\n - API-MS-Win-Core-COM-Private-l1-1-1.dll\napi_name:\n - CoRevokeMallocSpy\n---\n\n# CoRevokeMallocSpy function\n\n\n## -description\n\nRevokes a registered <a href=\"/windows/desktop/api/objidl/nn-objidl-imallocspy\">IMallocSpy</a> object.\n\n\n\n## -returns\n\nThis function can return the following values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>S_OK</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe object was revoked successfully.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>CO_E_OBJNOTREG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nNo spy is currently registered.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_ACCESSDENIED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA spy is registered but there are outstanding allocations (not yet freed) made while this spy was active.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe <a href=\"/windows/desktop/api/objidl/nn-objidl-imallocspy\">IMallocSpy</a> object is released when it is revoked. This release corresponds to the call to <a href=\"/windows/desktop/api/unknwn/nf-unknwn-iunknown-addref\">IUnknown::AddRef</a> in the implementation of the <a href=\"/windows/desktop/api/unknwn/nf-unknwn-iunknown-queryinterface(q)\">QueryInterface</a> function by the <a href=\"/windows/desktop/api/objbase/nf-objbase-coregistermallocspy\">CoRegisterMallocSpy</a> function. The implementation of the <b>IMallocSpy</b> interface should then do any appropriate cleanup.\n\n\n\nIf the return code is E_ACCESSDENIED, there are still outstanding allocations that were made while the spy was active. In this case, the registered spy cannot be revoked at this time because it may have attached arbitrary headers and/or trailers to these allocations that only the spy knows about. Only the spy's <a href=\"/windows/desktop/api/objidl/nf-objidl-imallocspy-prefree\">PreFree</a> (or <a href=\"/windows/desktop/api/objidl/nf-objidl-imallocspy-prerealloc\">PreRealloc</a>) method knows how to account for these headers and trailers. Before returning E_ACCESSDENIED, <b>CoRevokeMallocSpy</b> notes internally that a revoke is pending. When the outstanding allocations have been freed, the revoke proceeds automatically, releasing the <a href=\"/windows/desktop/api/objidl/nn-objidl-imallocspy\">IMallocSpy</a> object. Thus, it is necessary to call <b>CoRevokeMallocSpy</b> only once for each call to <a href=\"/windows/desktop/api/objbase/nf-objbase-coregistermallocspy\">CoRegisterMallocSpy</a>, even if E_ACCESSDENIED is returned.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/objbase/nf-objbase-coregistermallocspy\">CoRegisterMallocSpy</a>\n\n\n\n<a href=\"/windows/desktop/api/objidl/nn-objidl-imallocspy\">IMallocSpy</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "allocator",
+    "kind": "struct_decl",
+    "start_line": 29,
+    "end_line": 37,
+    "code": "struct allocator\n{\n    IMalloc IMalloc_iface;\n    IMallocSpy *spy;\n    DWORD spyed_allocations;\n    BOOL spy_release_pending; /* CoRevokeMallocSpy called with spyed allocations left */\n    void **blocks;\n    DWORD blocks_length;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 25,
+    "end_line": 25,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(olemalloc);"
+   },
+   {
+    "name": "allocator",
+    "type": "struct allocator",
+    "static": true,
+    "start_line": 39,
+    "end_line": 39,
+    "code": "static struct allocator allocator = { .IMalloc_iface.lpVtbl = &allocator_vtbl };"
+   },
+   {
+    "name": "allocspy_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 48,
+    "end_line": 48,
+    "code": "static CRITICAL_SECTION allocspy_cs = { &allocspy_cs_debug, -1, 0, 0, 0, 0 };"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   }
+  ],
+  "header_inline": [
+   "IMallocSpy_Release",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "combase.CoRevokeMallocSpy",
+  "category": {
+   "l1": "System services",
+   "l2": "COM",
+   "header": "objbase.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 25,
+   "body": 24,
+   "code": 13
+  },
+  "cyclomatic": 3,
+  "return_type": "HRESULT",
+  "n_params": 0,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ole32/tests/compobj.c::test_IMallocSpy"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/objbase/nf-objbase-corevokemallocspy",
+   "source": "win32",
+   "description": "Revokes a registered IMallocSpy object.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Ole32.dll"
+  },
+  "exports": [
+   "combase.CoRevokeMallocSpy",
+   "ole32.CoRevokeMallocSpy"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2020-08-05",
+   "median_date": "2020-08-05",
+   "last_date": "2020-08-05",
+   "code_lines": 14,
+   "pair": "ntdll.RtlRealSuccessor",
+   "rank": 1,
+   "distance": 0.3
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "ntdll.RtlRealSuccessor",
+  "share_after_cutoff": 0.0,
+  "last_date": "2020-08-05",
+  "partner_rank": 1,
+  "distance": 0.3
+ }
+}

@@ -1,0 +1,262 @@
+{
+ "id": "0051",
+ "function": {
+  "name": "HidP_GetUsages",
+  "export_name": "HidP_GetUsages",
+  "module": "hid",
+  "source_module": "hid",
+  "exported_by": [
+   "hid",
+   "hidparse.sys"
+  ],
+  "side": "PE",
+  "file": "dlls/hid/hidp.c",
+  "start_line": 384,
+  "end_line": 406,
+  "body_lines": 20,
+  "signature": "NTSTATUS WINAPI HidP_GetUsages( HIDP_REPORT_TYPE report_type, USAGE usage_page, USHORT collection, USAGE *usages, ULONG *usages_len, PHIDP_PREPARSED_DATA preparsed_data, char *report_buf, ULONG report_len )",
+  "header_comment": null,
+  "code": "NTSTATUS WINAPI HidP_GetUsages( HIDP_REPORT_TYPE report_type, USAGE usage_page, USHORT collection, USAGE *usages,\n                                ULONG *usages_len, PHIDP_PREPARSED_DATA preparsed_data, char *report_buf, ULONG report_len )\n{\n    struct hid_preparsed_data *preparsed = (struct hid_preparsed_data *)preparsed_data;\n    struct get_usage_params params = {.usages = usages, .usages_end = usages + *usages_len, .report_buf = report_buf};\n    struct caps_filter filter = {.buttons = TRUE, .usage_page = usage_page, .collection = collection, .usage = USAGE_ANY};\n    NTSTATUS status;\n    USHORT limit = -1;\n\n    TRACE( \"report_type %d, usage_page %u, collection %u, usages %p, usages_len %p, preparsed_data %p, \"\n           \"report_buf %p, report_len %lu.\\n\",\n           report_type, usage_page, collection, usages, usages_len, preparsed_data, report_buf, report_len );\n\n    if (!report_len) return HIDP_STATUS_INVALID_REPORT_LENGTH;\n\n    filter.report_id = report_buf[0];\n    status = enum_value_caps( preparsed, report_type, report_len, &filter, get_usage, &params, &limit );\n    *usages_len = params.usages - usages;\n    if (status != HIDP_STATUS_SUCCESS) return status;\n\n    if (params.usages > params.usages_end) return HIDP_STATUS_BUFFER_TOO_SMALL;\n    return status;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"ddk/wdm.h\"",
+   "#include \"hidusage.h\"",
+   "#include \"ddk/hidpi.h\"",
+   "#include \"wine/hid.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "hid!HidP_GetUsages [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/hid/tests/device.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "hidpi",
+   "path": "wdk-ddi-src/content/hidpi/nf-hidpi-hidp_getusages.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/hidpi/nf-hidpi-hidp_getusages",
+   "documented_name": "hidp_getusages",
+   "file": "docs/0051_windows-driver-docs-ddi_nf-hidpi-hidp_getusages.md",
+   "text": "---\nUID: NF:hidpi.HidP_GetUsages\ntitle: HidP_GetUsages function (hidpi.h)\ndescription: The HidP_GetUsages routine returns a list of all the HID control button usages that are on a specified usage page and are set to ON in a HID report.\nold-location: hid\\hidp_getusages.htm\ntech.root: hid\nms.date: 07/09/2025\nkeywords: [\"HidP_GetUsages function\"]\nms.keywords: HidP_GetUsages, HidP_GetUsages routine [Human Input Devices], hid.hidp_getusages, hidfunc_ed08f7c0-5435-417a-958f-34a6cbb1f541.xml, hidpi/HidP_GetUsages\nreq.header: hidpi.h\nreq.include-header: Hidpi.h\nreq.target-type: Universal\nreq.target-min-winverclnt: Available in Windows 2000 and later versions of Windows.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Hidparse.lib\nreq.dll: \nreq.irql: <= DISPATCH_LEVEL\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - HidP_GetUsages\n - hidpi/HidP_GetUsages\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - LibDef\napi_location:\n - Hidparse.lib\n - Hidparse.dll\napi_name:\n - HidP_GetUsages\n---\n\n# HidP_GetUsages function\n\n## -description\n\nThe **HidP_GetUsages** routine returns a list of all the HID control button [usages](/windows-hardware/drivers/hid/hid-usages) that are on a specified [usage page](/windows-hardware/drivers/hid/hid-usages) and are set to ON in a HID report.\n\n## -parameters\n\n### -param ReportType [in]\n\nSpecifies a [HIDP_REPORT_TYPE](/windows-hardware/drivers/ddi/hidpi/ne-hidpi-_hidp_report_type) enumerator value that identifies the report type.\n\n### -param UsagePage [in]\n\nSpecifies the [usage page](/windows-hardware/drivers/hid/hid-usages) of the button usages. The routine only returns information about buttons on this usage page.\n\n### -param LinkCollection [in]\n\nSpecifies the [link collection](/windows-hardware/drivers/hid/link-collections) of the button usages. If *LinkCollection* is nonzero, the routine only returns information about the buttons that this link collection contains; otherwise, if *LinkCollection* is zero, the routine returns information about all the buttons in the [top-level collection](/windows-hardware/drivers/hid/top-level-collections) associated with *PreparsedData*.\n\n### -param UsageList [out]\n\nPointer to a caller-allocated buffer that the routine uses to return the usages of all buttons that are set to ON and belong to the usage page specified by *UsagePage*.\n\n### -param UsageLength [in, out]\n\nSpecifies, on input, the length, in array elements, of the *UsageList* buffer. Specifies, on output, the number of buttons that are set to ON on the specified usage page.\n\n### -param PreparsedData [in]\n\nPointer to a top-level collection's [preparsed data](/windows-hardware/drivers/hid/preparsed-data).\n\n### -param Report [out]\n\nPointer to a report.\n\n### -param ReportLength [in]\n\nSpecifies the length, in bytes, of the report located at *Report*.\n\n## -returns\n\n**HidP_GetUsages** returns one of the following status values:\n\n| Return code | Description |\n|-------------|-------------|\n| **HIDP_STATUS_SUCCESS** | The routine successfully returned all button usages set to ON. |\n| **HIDP_STATUS_INVALID_REPORT_LENGTH** | The report length is not valid. |\n| **HIDP_STATUS_INVALID_REPORT_TYPE** | The specified report type is not valid. |\n| **HIDP_STATUS_BUFFER_TOO_SMALL** | The *UsageList* buffer is too small to hold all the usages that are currently set to ON on the specified usage page. |\n| **HIDP_STATUS_INCOMPATIBLE_REPORT_ID** | The collection contains buttons on the specified usage page in a report of the specified type, but there are no such usages in the specified report. |\n| **HIDP_STATUS_INVALID_PREPARSED_DATA** | The preparsed data is not valid. |\n| **HIDP_STATUS_USAGE_NOT_FOUND** | The collection does not contain any buttons on the specified usage page in any report of the specified report type. |\n\n## -remarks\n\nUser-mode applications and kernel-mode drivers call [HidP_MaxUsageListLength](/windows-hardware/drivers/ddi/hidpi/nf-hidpi-hidp_maxusagelistlength) to determine the maximum number of buttons that can be returned for specified report type. Alternatively, applications or drivers can call **HidP_GetUsages** and set *(\\*UsageLength)* to zero to return the required length in *UsageLength*. In other words, *UsageLength* should be a valid pointer that points to a ULONG value **0** to get the required length.\n\nApplications or drivers determine the required report length from the *Xxx***ReportByteLength** members in a top-level collection's [HIDP_CAPS](/windows-hardware/drivers/ddi/hidpi/ns-hidpi-_hidp_caps) structure.\n\nFor more information, see [HID Collections](/windows-hardware/drivers/hid/hid-collections).\n\n## -see-also\n\n- [HidP_GetButtons](/windows-hardware/drivers/hid/hdpi-h-macros)\n- [HidP_GetButtonsEx](/windows-hardware/drivers/hid/hdpi-h-macros)\n- [HidP_GetCaps](/windows-hardware/drivers/ddi/hidpi/nf-hidpi-hidp_getcaps)\n- [HidP_GetScaledUsageValue](/windows-hardware/drivers/ddi/hidpi/nf-hidpi-hidp_getscaledusagevalue)\n- [HidP_GetUsageValue](/windows-hardware/drivers/ddi/hidpi/nf-hidpi-hidp_getusagevalue)\n- [HidP_GetUsageValueArray](/windows-hardware/drivers/ddi/hidpi/nf-hidpi-hidp_getusagevaluearray)\n- [HidP_GetUsagesEx](/windows-hardware/drivers/ddi/hidpi/nf-hidpi-hidp_getusagesex)\n- [HidP_MaxUsageListLength](/windows-hardware/drivers/ddi/hidpi/nf-hidpi-hidp_maxusagelistlength)\n- [_HIDP_PREPARSED_DATA](/windows-hardware/drivers/ddi/hidsdi/nf-hidsdi-hidd_getpreparseddata)\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "enum_value_caps",
+   "file": "dlls/hid/hidp.c",
+   "start_line": 97,
+   "end_line": 123,
+   "static": true,
+   "called_from": [
+    "HidP_GetUsages"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/hid/hidp.c:302",
+    "dlls/hid/hidp.c:319",
+    "dlls/hid/hidp.c:338",
+    "dlls/hid/hidp.c:452",
+    "dlls/hid/hidp.c:515"
+   ],
+   "signature": "static NTSTATUS enum_value_caps( struct hid_preparsed_data *preparsed, HIDP_REPORT_TYPE report_type, ULONG report_len, const struct caps_filter *filter, enum_value_caps_callback callback, void *user, USHORT *count )",
+   "code": "static NTSTATUS enum_value_caps( struct hid_preparsed_data *preparsed, HIDP_REPORT_TYPE report_type,\n                                 ULONG report_len, const struct caps_filter *filter,\n                                 enum_value_caps_callback callback, void *user, USHORT *count )\n{\n    const struct hid_value_caps *caps, *caps_end;\n    BOOL is_range, incompatible = FALSE;\n    LONG remaining = *count;\n    NTSTATUS status;\n\n    for (status = get_value_caps_range( preparsed, report_type, report_len, &caps, &caps_end );\n         status == HIDP_STATUS_SUCCESS && caps != caps_end; caps++)\n    {\n        is_range = caps->flags & HID_VALUE_CAPS_IS_RANGE;\n        if (!match_value_caps( caps, filter )) continue;\n        if (filter->report_id && caps->report_id != filter->report_id) incompatible = TRUE;\n        else if (filter->array && (is_range || caps->report_count <= 1)) return HIDP_STATUS_NOT_VALUE_ARRAY;\n        else if (remaining-- > 0) status = callback( caps, user );\n    }\n\n    if (status == HIDP_STATUS_NULL) status = HIDP_STATUS_SUCCESS;\n    if (status != HIDP_STATUS_SUCCESS) return status;\n\n    *count -= remaining;\n    if (*count == 0) return incompatible ? HIDP_STATUS_INCOMPATIBLE_REPORT_ID : HIDP_STATUS_USAGE_NOT_FOUND;\n    if (remaining < 0) return HIDP_STATUS_BUFFER_TOO_SMALL;\n    return HIDP_STATUS_SUCCESS;\n}"
+  },
+  {
+   "name": "get_usage",
+   "file": "dlls/hid/hidp.c",
+   "start_line": 349,
+   "end_line": 382,
+   "static": true,
+   "called_from": [
+    "HidP_GetUsages"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static NTSTATUS get_usage( const struct hid_value_caps *caps, void *user )",
+   "code": "static NTSTATUS get_usage( const struct hid_value_caps *caps, void *user )\n{\n    const struct hid_value_caps *end = caps;\n    ULONG index_min, index_max, bit, last;\n    struct get_usage_params *params = user;\n    unsigned char *report_buf;\n    BYTE index;\n\n    report_buf = (unsigned char *)params->report_buf + caps->start_byte;\n\n    if (HID_VALUE_CAPS_IS_ARRAY( caps ))\n    {\n        while (end->flags & HID_VALUE_CAPS_ARRAY_HAS_MORE) end++;\n        index_min = end - caps + 1;\n        index_max = index_min + caps->usage_max - caps->usage_min;\n\n        for (bit = caps->start_bit, last = bit + caps->report_count * caps->bit_size - 1; bit <= last; bit += 8)\n        {\n            if (!(index = report_buf[bit / 8]) || index < index_min || index > index_max) continue;\n            if (params->usages < params->usages_end) *params->usages = caps->usage_min + index - index_min;\n            params->usages++;\n        }\n        return HIDP_STATUS_SUCCESS;\n    }\n\n    for (bit = caps->start_bit, last = bit + caps->usage_max - caps->usage_min; bit <= last; ++bit)\n    {\n        if (!(report_buf[bit / 8] & (1 << (bit % 8)))) continue;\n        if (params->usages < params->usages_end) *params->usages = caps->usage_min + bit - caps->start_bit;\n        params->usages++;\n    }\n\n    return HIDP_STATUS_SUCCESS;\n}"
+  },
+  {
+   "name": "get_value_caps_range",
+   "file": "dlls/hid/hidp.c",
+   "start_line": 38,
+   "end_line": 68,
+   "static": true,
+   "called_from": [
+    "enum_value_caps"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/hid/hidp.c:426"
+   ],
+   "signature": "static NTSTATUS get_value_caps_range( struct hid_preparsed_data *preparsed, HIDP_REPORT_TYPE report_type, ULONG report_len, const struct hid_value_caps **caps, const struct hid_value_caps **caps_end )",
+   "code": "static NTSTATUS get_value_caps_range( struct hid_preparsed_data *preparsed, HIDP_REPORT_TYPE report_type, ULONG report_len,\n                                      const struct hid_value_caps **caps, const struct hid_value_caps **caps_end )\n{\n    if (!preparsed || memcmp( preparsed->magic, \"HidP KDR\", 8 )) return HIDP_STATUS_INVALID_PREPARSED_DATA;\n\n    switch (report_type)\n    {\n    case HidP_Input:\n        if (report_len && report_len != preparsed->input_report_byte_length)\n            return HIDP_STATUS_INVALID_REPORT_LENGTH;\n        *caps = HID_INPUT_VALUE_CAPS( preparsed );\n        *caps_end = *caps + preparsed->input_caps_count;\n        break;\n    case HidP_Output:\n        if (report_len && report_len != preparsed->output_report_byte_length)\n            return HIDP_STATUS_INVALID_REPORT_LENGTH;\n        *caps = HID_OUTPUT_VALUE_CAPS( preparsed );\n        *caps_end = *caps + preparsed->output_caps_count;\n        break;\n    case HidP_Feature:\n        if (report_len && report_len != preparsed->feature_report_byte_length)\n            return HIDP_STATUS_INVALID_REPORT_LENGTH;\n        *caps = HID_FEATURE_VALUE_CAPS( preparsed );\n        *caps_end = *caps + preparsed->feature_caps_count;\n        break;\n    default:\n        return HIDP_STATUS_INVALID_REPORT_TYPE;\n    }\n\n    return HIDP_STATUS_SUCCESS;\n}"
+  },
+  {
+   "name": "match_value_caps",
+   "file": "dlls/hid/hidp.c",
+   "start_line": 84,
+   "end_line": 93,
+   "static": true,
+   "called_from": [
+    "enum_value_caps"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL match_value_caps( const struct hid_value_caps *caps, const struct caps_filter *filter )",
+   "code": "static BOOL match_value_caps( const struct hid_value_caps *caps, const struct caps_filter *filter )\n{\n    if (!caps->usage_min && !caps->usage_max) return FALSE;\n    if (filter->buttons && !(caps->flags & HID_VALUE_CAPS_IS_BUTTON)) return FALSE;\n    if (filter->values && (caps->flags & HID_VALUE_CAPS_IS_BUTTON)) return FALSE;\n    if (filter->usage_page != USAGE_ANY && (filter->usage_page & USAGE_MASK) != caps->usage_page) return FALSE;\n    if (filter->collection && filter->collection != caps->link_collection) return FALSE;\n    if (filter->usage == USAGE_ANY) return TRUE;\n    return caps->usage_min <= (filter->usage & USAGE_MASK) && caps->usage_max >= (filter->usage & USAGE_MASK);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "caps_filter",
+    "kind": "struct_decl",
+    "start_line": 73,
+    "end_line": 82,
+    "code": "struct caps_filter\n{\n    BOOLEAN buttons;\n    BOOLEAN values;\n    BOOLEAN array;\n    DWORD   usage_page;\n    USHORT  collection;\n    DWORD   usage;\n    UCHAR   report_id;\n};"
+   },
+   {
+    "name": "enum_value_caps_callback",
+    "kind": "typedef_decl",
+    "start_line": 95,
+    "end_line": 95,
+    "code": "typedef NTSTATUS (*enum_value_caps_callback)( const struct hid_value_caps *caps, void *user );"
+   },
+   {
+    "name": "get_usage_params",
+    "kind": "struct_decl",
+    "start_line": 342,
+    "end_line": 347,
+    "code": "struct get_usage_params\n{\n    USAGE *usages;\n    USAGE *usages_end;\n    char *report_buf;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(hid);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "USAGE_ANY",
+    "start_line": 71,
+    "end_line": 71,
+    "code": "#define USAGE_ANY  0x10000"
+   },
+   {
+    "name": "USAGE_MASK",
+    "start_line": 70,
+    "end_line": 70,
+    "code": "#define USAGE_MASK  0xffff"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "callback",
+    "in_function": "enum_value_caps",
+    "at": "dlls/hid/hidp.c:113",
+    "candidates": []
+   }
+  ]
+ },
+ "winebench": {
+  "id": "hid.HidP_GetUsages",
+  "category": {
+   "l1": "Devices",
+   "l2": "Human Interface Devices",
+   "header": "hidpi.h",
+   "textbook": "Device management",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 23,
+   "body": 21,
+   "code": 15
+  },
+  "cyclomatic": 4,
+  "return_type": "NTSTATUS",
+  "n_params": 8,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/hid/tests/device.c::process_data"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/hidpi/nf-hidpi-hidp_getusages",
+   "source": "ddi",
+   "description": "The HidP_GetUsages routine returns a list of all the HID control button usages that are on a specified usage page and are set to ON in a HID report.",
+   "min_windows": "Available in Windows 2000 and later versions of Windows.",
+   "documented_dll": ""
+  },
+  "exports": [
+   "hid.HidP_GetUsages"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2021-06-23",
+   "median_date": "2021-06-24",
+   "last_date": "2023-01-25",
+   "code_lines": 16,
+   "pair": "cfgmgr32.DevFreeObjects",
+   "rank": 1,
+   "distance": 1.557
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "cfgmgr32.DevFreeObjects",
+  "share_after_cutoff": 0.0,
+  "last_date": "2023-01-25",
+  "partner_rank": 1,
+  "distance": 1.557
+ }
+}

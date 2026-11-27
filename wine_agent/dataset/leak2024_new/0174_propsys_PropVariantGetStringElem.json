@@ -1,0 +1,180 @@
+{
+ "id": "0174",
+ "function": {
+  "name": "PropVariantGetStringElem",
+  "export_name": "PropVariantGetStringElem",
+  "module": "propsys",
+  "source_module": "propsys",
+  "exported_by": [
+   "propsys"
+  ],
+  "side": "PE",
+  "file": "dlls/propsys/propvar.c",
+  "start_line": 1293,
+  "end_line": 1340,
+  "body_lines": 45,
+  "signature": "HRESULT WINAPI PropVariantGetStringElem(const PROPVARIANT *propvar, ULONG idx, WCHAR **ret)",
+  "header_comment": null,
+  "code": "HRESULT WINAPI PropVariantGetStringElem(const PROPVARIANT *propvar, ULONG idx, WCHAR **ret)\n{\n    const WCHAR *wstr;\n\n    TRACE(\"propvar %p, idx %lu, ret %p, propvar->vt %#x.\\n\", propvar, idx, ret, propvar ? propvar->vt : 0);\n\n    *ret = 0;\n    switch (propvar->vt)\n    {\n    case VT_BSTR:\n        if (idx != 0) return E_INVALIDARG;\n        wstr = propvar->bstrVal;\n        break;\n    case VT_LPWSTR:\n        if (idx != 0) return E_INVALIDARG;\n        wstr = propvar->pwszVal;\n        break;\n    case VT_BSTR | VT_VECTOR:\n        if (idx >= propvar->cabstr.cElems) return E_INVALIDARG;\n        wstr = propvar->cabstr.pElems[idx];\n        break;\n    case VT_LPWSTR | VT_VECTOR:\n        if (idx >= propvar->calpwstr.cElems) return E_INVALIDARG;\n        wstr = propvar->calpwstr.pElems[idx];\n        break;\n    case VT_BSTR | VT_ARRAY:\n    {\n        LONG l = idx;\n        HRESULT hr;\n\n        if (SafeArrayGetDim(propvar->parray) != 1) return E_INVALIDARG;\n        /* bug in native implementation: ignore lower-bound when checking bounds */\n        if (idx >= propvar->parray->rgsabound[0].cElements) return E_INVALIDARG;\n        hr = SafeArrayGetElement(propvar->parray, &l, &wstr);\n        if (FAILED(hr)) return hr;\n        break;\n    }\n    default:\n        return E_INVALIDARG;\n    }\n\n    if (!wstr) wstr = L\"\";\n    *ret = CoTaskMemAlloc((wcslen(wstr) + 1) * sizeof(WCHAR));\n    if (!*ret)\n        return E_OUTOFMEMORY;\n    wcscpy(*ret, wstr);\n    return S_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winuser.h\"",
+   "#include \"shlobj.h\"",
+   "#include \"propvarutil.h\"",
+   "#include \"strsafe.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "propsys!PropVariantGetStringElem [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/propsys/tests/propsys.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "propvarutil",
+   "path": "sdk-api-src/content/propvarutil/nf-propvarutil-propvariantgetstringelem.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/propvarutil/nf-propvarutil-propvariantgetstringelem",
+   "documented_name": "propvariantgetstringelem",
+   "file": "docs/0174_sdk-api_nf-propvarutil-propvariantgetstringelem.md",
+   "text": "---\nUID: NF:propvarutil.PropVariantGetStringElem\ntitle: PropVariantGetStringElem function (propvarutil.h)\ndescription: Extracts a single Unicode string element from a PROPVARIANT structure of type VT_LPWSTR, VT_BSTR, VT_VECTOR | VT_LPWSTR, VT_VECTOR | VT_BSTR, or VT_ARRAY | VT_BSTR.\nhelpviewer_keywords: [\"PropVariantGetStringElem\",\"PropVariantGetStringElem function [Windows Properties]\",\"_shell_PropVariantGetStringElem\",\"properties.PropVariantGetStringElem\",\"propvarutil/PropVariantGetStringElem\",\"shell.PropVariantGetStringElem\"]\nold-location: properties\\PropVariantGetStringElem.htm\ntech.root: properties\nms.assetid: 6e803d93-5b55-4b73-8e23-a584f5f91969\nms.date: 12/05/2018\nms.keywords: PropVariantGetStringElem, PropVariantGetStringElem function [Windows Properties], _shell_PropVariantGetStringElem, properties.PropVariantGetStringElem, propvarutil/PropVariantGetStringElem, shell.PropVariantGetStringElem\nreq.header: propvarutil.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP with SP2, Windows Vista [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 with SP1 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Propsys.lib\nreq.dll: Propsys.dll (version 6.0 or later)\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: Windows Desktop Search (WDS) 3.0\nms.custom: 19H1\nf1_keywords:\n - PropVariantGetStringElem\n - propvarutil/PropVariantGetStringElem\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Propsys.dll\napi_name:\n - PropVariantGetStringElem\n---\n\n# PropVariantGetStringElem function\n\n\n## -description\n\nExtracts a single Unicode string element from a <a href=\"/windows/desktop/api/propidl/ns-propidl-propvariant\">PROPVARIANT</a> structure of type VT_LPWSTR, VT_BSTR, VT_VECTOR | VT_LPWSTR, VT_VECTOR | VT_BSTR, or VT_ARRAY | VT_BSTR.\n\n## -parameters\n\n### -param propvar [in]\n\nType: <b>REFPROPVARIANT</b>\n\nReference to a source <a href=\"/windows/desktop/api/propidl/ns-propidl-propvariant\">PROPVARIANT</a> structure.\n\n### -param iElem [in]\n\nType: <b>ULONG</b>\n\nThe vector or array index; otherwise, <i>iElem</i> must be 0.\n\n### -param ppszVal [out]\n\nType: <b>PWSTR*</b>\n\nWhen this function returns, contains the extracted string value. The calling application is responsible for freeing this string by calling <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-cotaskmemfree\">CoTaskMemFree</a> when it is no longer needed.\n\n## -returns\n\nType: <b>HRESULT</b>\n\nIf this function succeeds, it returns <b>S_OK</b>. Otherwise, it returns an <b>HRESULT</b> error code.\n\n## -remarks\n\nThis helper function works for <a href=\"/windows/desktop/api/propidl/ns-propidl-propvariant\">PROPVARIANT</a> structures of the following types: \n\n                \n\n<ul>\n<li>VT_LPWSTR</li>\n<li>VT_BSTR</li>\n<li>VT_VECTOR | VT_LPWSTR</li>\n<li>VT_VECTOR | VT_BSTR</li>\n<li>VT_ARRAY | VT_BSTR</li>\n</ul>\nIf the source <a href=\"/windows/desktop/api/propidl/ns-propidl-propvariant\">PROPVARIANT</a> has type VT_LPWSTR or VT_BSTR, <i>iElem</i> must be 0. Otherwise <i>iElem</i> must be less than the number of elements in the vector or array. You can use <a href=\"/windows/desktop/api/propvarutil/nf-propvarutil-propvariantgetelementcount\">PropVariantGetElementCount</a> to obtain the number of elements in the vector or array.\n\nIf a BSTR element has a <b>NULL</b> pointer, this function allocates an empty string.\n\n\n#### Examples\n\nThe following code example, to be included as part of a larger program, demonstrates how to use <a href=\"/windows/desktop/api/propvarutil/nf-propvarutil-propvariantgetstringelem\">PropVariantGetStringElem</a> with an iteration statement to access the values in a <a href=\"/windows/desktop/api/propidl/ns-propidl-propvariant\">PROPVARIANT</a>.\n\n\n```cpp\n// PROPVARIANT propvar;\n// Assume the variable propvar is initialized and valid\n\nif ((propvar.vt & VT_TYPEMASK) == VT_LPWSTR || (propvar.vt & VT_TYPEMASK) == VT_BSTR)\n{\n    UINT cElem = PropVariantGetElementCount(propvar);\n    HRESULT hr = <mark type=\"const\">S_OK</mark>;\n\n    for (UINT iElem = 0; SUCCEEDED(hr) && iElem < cElem; iElem ++)\n    {\n        PWSTR pszValue;\n        hr = PropVariantGetStringElem(propvar, iElem, &pszValue);\n\n        if (SUCCEEDED(hr))\n        {\n            // pszValue is valid now\n            CoTaskMemFree(pszValue);\n        }\n    }\n}\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/api/propvarutil/nf-propvarutil-propvariantgetelem\">PropVariantGetElem</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 37,
+    "end_line": 37,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(propsys);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "CoTaskMemAlloc",
+    "module": "ole32",
+    "impl": [
+     "dlls/combase/malloc.c:381"
+    ]
+   },
+   {
+    "name": "SafeArrayGetDim",
+    "module": "oleaut32",
+    "impl": [
+     "dlls/oleaut32/safearray.c:1094"
+    ]
+   },
+   {
+    "name": "SafeArrayGetElement",
+    "module": "oleaut32",
+    "impl": [
+     "dlls/oleaut32/safearray.c:947"
+    ]
+   },
+   {
+    "name": "wcscpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:184"
+    ]
+   },
+   {
+    "name": "wcslen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:215"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "propsys.PropVariantGetStringElem",
+  "category": {
+   "l1": "Windows environment (Shell)",
+   "l2": "Windows Property System",
+   "header": "propvarutil.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 48,
+   "body": 47,
+   "code": 36
+  },
+  "cyclomatic": 16,
+  "return_type": "HRESULT",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/propsys/tests/propsys.c::test_PropVariantGetStringElem"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/propvarutil/nf-propvarutil-propvariantgetstringelem",
+   "source": "win32",
+   "description": "Extracts a single Unicode string element from a PROPVARIANT structure of type VT_LPWSTR, VT_BSTR, VT_VECTOR | VT_LPWSTR, VT_VECTOR | VT_BSTR, or VT_ARRAY | VT_BSTR.",
+   "min_windows": "Windows XP with SP2, Windows Vista [desktop apps only]",
+   "documented_dll": "Propsys.dll (version 6.0 or later)"
+  },
+  "exports": [
+   "propsys.PropVariantGetStringElem"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 1.0,
+   "first_date": "2025-01-23",
+   "median_date": "2025-01-23",
+   "last_date": "2025-01-23",
+   "code_lines": 35
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "propsys.PSPropertyKeyFromString",
+  "share_after_cutoff": 1.0,
+  "last_date": "2025-01-23"
+ }
+}

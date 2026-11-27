@@ -1,0 +1,239 @@
+{
+ "id": "0070",
+ "function": {
+  "name": "D3DXLoadVolumeFromFileInMemory",
+  "export_name": "D3DXLoadVolumeFromFileInMemory",
+  "module": "d3dx9_36",
+  "source_module": "d3dx9_36",
+  "exported_by": [
+   "d3dx9_24",
+   "d3dx9_25",
+   "d3dx9_26",
+   "d3dx9_27",
+   "d3dx9_28",
+   "d3dx9_29",
+   "d3dx9_30",
+   "d3dx9_31",
+   "d3dx9_32",
+   "d3dx9_33",
+   "d3dx9_34",
+   "d3dx9_35",
+   "d3dx9_36",
+   "d3dx9_37",
+   "d3dx9_38",
+   "d3dx9_39",
+   "d3dx9_40",
+   "d3dx9_41",
+   "d3dx9_42",
+   "d3dx9_43"
+  ],
+  "side": "PE",
+  "file": "dlls/d3dx9_36/volume.c",
+  "start_line": 179,
+  "end_line": 245,
+  "body_lines": 64,
+  "signature": "HRESULT WINAPI D3DXLoadVolumeFromFileInMemory(IDirect3DVolume9 *dst_volume, const PALETTEENTRY *dst_palette, const D3DBOX *dst_box, const void *src_data, UINT src_data_size, const D3DBOX *src_box, DWORD filter, D3DCOLOR color_key, D3DXIMAGE_INFO *src_info)",
+  "header_comment": null,
+  "code": "HRESULT WINAPI D3DXLoadVolumeFromFileInMemory(IDirect3DVolume9 *dst_volume, const PALETTEENTRY *dst_palette,\n        const D3DBOX *dst_box, const void *src_data, UINT src_data_size, const D3DBOX *src_box,\n        DWORD filter, D3DCOLOR color_key, D3DXIMAGE_INFO *src_info)\n{\n    HRESULT hr;\n    D3DBOX box;\n    struct d3dx_image image;\n    struct d3dx_pixels pixels;\n    D3DXIMAGE_INFO image_info;\n\n    TRACE(\"dst_volume %p, dst_palette %p, dst_box %p, src_data %p, src_data_size %u, src_box %p, \"\n            \"filter %#lx, color_key 0x%08lx, src_info %p.\\n\",\n            dst_volume, dst_palette, dst_box, src_data, src_data_size, src_box,\n            filter, color_key, src_info);\n\n    if (!dst_volume || !src_data || !src_data_size)\n        return D3DERR_INVALIDCALL;\n\n    if (FAILED(hr = d3dx9_handle_load_filter(&filter)))\n        return hr;\n\n    hr = d3dx_image_init(src_data, src_data_size, &image, 0, 0);\n    if (FAILED(hr))\n        return D3DXERR_INVALIDDATA;\n\n    if (!d3dximage_info_from_d3dx_image(&image_info, &image))\n    {\n        hr = D3DXERR_INVALIDDATA;\n        goto exit;\n    }\n\n    if (src_box)\n    {\n        if (src_box->Right > image_info.Width\n                || src_box->Bottom > image_info.Height\n                || src_box->Back > image_info.Depth)\n        {\n            hr = D3DERR_INVALIDCALL;\n            goto exit;\n        }\n        if (src_box->Left >= src_box->Right || src_box->Top >= src_box->Bottom\n                || src_box->Front >= src_box->Back)\n        {\n            hr = E_FAIL;\n            goto exit;\n        }\n\n        box = *src_box;\n    }\n    else\n    {\n        set_d3dbox(&box, 0, 0, image_info.Width, image_info.Height, 0, image_info.Depth);\n    }\n\n    hr = d3dx_image_get_pixels(&image, 0, 0, &pixels);\n    if (FAILED(hr))\n        goto exit;\n\n    hr = d3dx_load_volume_from_memory(dst_volume, dst_palette, dst_box, pixels.data, image.format,\n            pixels.row_pitch, pixels.slice_pitch, pixels.palette, &box, filter, color_key);\n    if (SUCCEEDED(hr) && src_info)\n        *src_info = image_info;\n\nexit:\n    d3dx_image_cleanup(&image);\n    return FAILED(hr) ? hr : D3D_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"d3dx9_private.h\""
+  ],
+  "resolution": [
+   "d3dx9_36!D3DXLoadVolumeFromFileInMemory [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/d3dx9_36/tests/volume.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 2
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "",
+   "path": "desktop-src/direct3d9/d3dxloadvolumefromfileinmemory.md",
+   "url": "https://learn.microsoft.com/windows/win32/direct3d9/d3dxloadvolumefromfileinmemory",
+   "documented_name": "d3dxloadvolumefromfileinmemory",
+   "file": "docs/0070_win32_d3dxloadvolumefromfileinmemory.md",
+   "text": "---\ndescription: Loads a volume from a file in memory.\nms.assetid: d450b652-3a74-45ea-9506-e05da87821d7\ntitle: D3DXLoadVolumeFromFileInMemory function (D3dx9tex.h)\nms.topic: reference\nms.date: 05/31/2018\ntopic_type:\n- APIRef\n- kbSyntax\napi_name:\n- D3DXLoadVolumeFromFileInMemory\napi_type:\n- LibDef\napi_location:\n- d3dx9.lib\n- d3dx9.dll\n---\n\n# D3DXLoadVolumeFromFileInMemory function\n\nLoads a volume from a file in memory.\n\n## Syntax\n\n\n```C++\nHRESULT D3DXLoadVolumeFromFileInMemory(\n  _In_       LPDIRECT3DVOLUME9 pDestVolume,\n  _In_ const PALETTEENTRY      *pDestPalette,\n  _In_ const D3DBOX            *pDestBox,\n  _In_       LPCVOID           pSrcData,\n  _In_       UINT              SrcDataSize,\n  _In_ const D3DBOX            *pSrcBox,\n  _In_       DWORD             Filter,\n  _In_       D3DCOLOR          ColorKey,\n  _In_       D3DXIMAGE_INFO    *pSrcInfo\n);\n```\n\n\n\n## Parameters\n\n<dl> <dt>\n\n*pDestVolume* \\[in\\]\n</dt> <dd>\n\nType: **[**LPDIRECT3DVOLUME9**](/windows/win32/api/d3d9helper/nn-d3d9helper-idirect3dvolume9)**\n\nPointer to an [**IDirect3DVolume9**](/windows/win32/api/d3d9helper/nn-d3d9helper-idirect3dvolume9) interface. Specifies the destination volume.\n\n</dd> <dt>\n\n*pDestPalette* \\[in\\]\n</dt> <dd>\n\nType: **const [**PALETTEENTRY**](/windows/win32/api/wingdi/ns-wingdi-paletteentry)\\***\n\nPointer to a [**PALETTEENTRY**](/windows/win32/api/wingdi/ns-wingdi-paletteentry) structure, the destination palette of 256 colors or **NULL**.\n\n</dd> <dt>\n\n*pDestBox* \\[in\\]\n</dt> <dd>\n\nType: **const [**D3DBOX**](d3dbox.md)\\***\n\nPointer to a [**D3DBOX**](d3dbox.md) structure. Specifies the destination box. Set this parameter to **NULL** to specify the entire volume.\n\n</dd> <dt>\n\n*pSrcData* \\[in\\]\n</dt> <dd>\n\nType: **[**LPCVOID**](../winprog/windows-data-types.md)**\n\nPointer to the file in memory from which to load the volume.\n\n</dd> <dt>\n\n*SrcDataSize* \\[in\\]\n</dt> <dd>\n\nType: **[**UINT**](../winprog/windows-data-types.md)**\n\nSize in bytes of the file in memory.\n\n</dd> <dt>\n\n*pSrcBox* \\[in\\]\n</dt> <dd>\n\nType: **const [**D3DBOX**](d3dbox.md)\\***\n\nPointer to a [**D3DBOX**](d3dbox.md) structure. Specifies the source box. Set this parameter to **NULL** to specify the entire volume.\n\n</dd> <dt>\n\n*Filter* \\[in\\]\n</dt> <dd>\n\nType: **[**DWORD**](../winprog/windows-data-types.md)**\n\nCombination of one or more [D3DX\\_FILTER](d3dx-filter.md), controlling how the image is filtered. Specifying D3DX\\_DEFAULT for this parameter is the equivalent of specifying D3DX\\_FILTER\\_TRIANGLE \\| D3DX\\_FILTER\\_DITHER.\n\n</dd> <dt>\n\n*ColorKey* \\[in\\]\n</dt> <dd>\n\nType: **[**D3DCOLOR**](d3dcolor.md)**\n\n[**D3DCOLOR**](d3dcolor.md) value to replace with transparent black, or 0 to disable the colorkey. This is always a 32-bit ARGB color, independent of the source image format. Alpha is significant and should usually be set to FF for opaque color keys. Thus, for opaque black, the value would be equal to 0xFF000000.\n\n</dd> <dt>\n\n*pSrcInfo* \\[in\\]\n</dt> <dd>\n\nType: **[**D3DXIMAGE\\_INFO**](d3dximage-info.md)\\***\n\nPointer to a [**D3DXIMAGE\\_INFO**](d3dximage-info.md) structure to be filled with a description of the data in the source image file, or **NULL**.\n\n</dd> </dl>\n\n## Return value\n\nType: **[**HRESULT**](https://msdn.microsoft.com/library/Bb401631(v=MSDN.10).aspx)**\n\nIf the function succeeds, the return value is D3D\\_OK. If the function fails, the return value can be one of the following: D3DERR\\_INVALIDCALL, D3DXERR\\_INVALIDDATA.\n\n## Remarks\n\nThis function handles conversion to and from compressed texture formats and supports the following file formats: .bmp, .dds, .dib, .hdr, .jpg, .pfm, .png, .ppm, and .tga. See [**D3DXIMAGE\\_FILEFORMAT**](./d3dximage-fileformat.md).\n\nWriting to a non-level-zero surface of the volume texture will not cause the dirty rectangle to be updated. If **D3DXLoadVolumeFromFileInMemory** is called and the texture was not already dirty (this is unlikely under normal usage scenarios), the application needs to explicitly call [**IDirect3DVolumeTexture9::AddDirtyBox**](/windows/win32/api/d3d9helper/nf-d3d9helper-idirect3dvolumetexture9-adddirtybox) on the volume texture.\n\n## Requirements\n\n\n\n| Requirement | Value |\n|--------------------|---------------------------------------------------------------------------------------|\n| Header<br/>  | <dl> <dt>D3dx9tex.h</dt> </dl> |\n| Library<br/> | <dl> <dt>D3dx9.lib</dt> </dl>  |\n\n\n\n## See also\n\n<dl> <dt>\n\n[**D3DXLoadVolumeFromFile**](d3dxloadvolumefromfile.md)\n</dt> <dt>\n\n[**D3DXLoadVolumeFromMemory**](d3dxloadvolumefrommemory.md)\n</dt> <dt>\n\n[**D3DXLoadVolumeFromResource**](d3dxloadvolumefromresource.md)\n</dt> <dt>\n\n[**D3DXLoadVolumeFromVolume**](d3dxloadvolumefromvolume.md)\n</dt> <dt>\n\n[Texture Functions in D3DX 9](dx9-graphics-reference-d3dx-functions-texture.md)\n</dt> </dl>\n\n \n\n \n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "set_d3dbox",
+   "file": "dlls/d3dx9_36/volume.c",
+   "start_line": 74,
+   "end_line": 83,
+   "static": true,
+   "called_from": [
+    "D3DXLoadVolumeFromFileInMemory",
+    "d3dx_load_volume_from_memory"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/d3dx9_36/volume.c:332"
+   ],
+   "signature": "static void set_d3dbox(D3DBOX *box, uint32_t left, uint32_t top, uint32_t right, uint32_t bottom, uint32_t front, uint32_t back)",
+   "code": "static void set_d3dbox(D3DBOX *box, uint32_t left, uint32_t top, uint32_t right, uint32_t bottom, uint32_t front,\n        uint32_t back)\n{\n    box->Left = left;\n    box->Top = top;\n    box->Right = right;\n    box->Bottom = bottom;\n    box->Front = front;\n    box->Back = back;\n}"
+  },
+  {
+   "name": "d3dx_load_volume_from_memory",
+   "file": "dlls/d3dx9_36/volume.c",
+   "start_line": 85,
+   "end_line": 144,
+   "static": true,
+   "called_from": [
+    "D3DXLoadVolumeFromFileInMemory"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/d3dx9_36/volume.c:175"
+   ],
+   "signature": "static HRESULT d3dx_load_volume_from_memory(IDirect3DVolume9 *dst_volume, const PALETTEENTRY *dst_palette, const D3DBOX *dst_box, const void *src_memory, enum d3dx_pixel_format_id src_format, uint32_t src_row_pitch, uint32_t src_slice_pitch, const PALETTEENTRY *src_palette, const D3DBOX *src_box, DWORD filter, D3DCOLOR color_key)",
+   "code": "static HRESULT d3dx_load_volume_from_memory(IDirect3DVolume9 *dst_volume,\n        const PALETTEENTRY *dst_palette, const D3DBOX *dst_box, const void *src_memory,\n        enum d3dx_pixel_format_id src_format, uint32_t src_row_pitch, uint32_t src_slice_pitch,\n        const PALETTEENTRY *src_palette, const D3DBOX *src_box, DWORD filter, D3DCOLOR color_key)\n{\n    const struct pixel_format_desc *src_format_desc, *dst_format_desc;\n    struct d3dx_pixels src_pixels, dst_pixels;\n    RECT dst_rect_aligned, dst_rect_unaligned;\n    D3DBOX dst_box_aligned, dst_box_tmp;\n    D3DLOCKED_BOX locked_box;\n    D3DVOLUME_DESC desc;\n    HRESULT hr;\n\n    IDirect3DVolume9_GetDesc(dst_volume, &desc);\n    dst_format_desc = get_format_info(desc.Format);\n    if (is_unknown_format(dst_format_desc))\n        return E_NOTIMPL;\n\n    if (!dst_box)\n    {\n        set_d3dbox(&dst_box_tmp, 0, 0, desc.Width, desc.Height, 0, desc.Depth);\n        dst_box = &dst_box_tmp;\n    }\n    else\n    {\n        if (dst_box->Left >= dst_box->Right || dst_box->Right > desc.Width)\n            return D3DERR_INVALIDCALL;\n        if (dst_box->Top >= dst_box->Bottom || dst_box->Bottom > desc.Height)\n            return D3DERR_INVALIDCALL;\n        if (dst_box->Front >= dst_box->Back || dst_box->Back > desc.Depth)\n            return D3DERR_INVALIDCALL;\n    }\n\n    src_format_desc = get_d3dx_pixel_format_info(src_format);\n    hr = d3dx_pixels_init(src_memory, src_row_pitch, src_slice_pitch,\n        src_palette, src_format_desc->format, src_box->Left, src_box->Top, src_box->Right, src_box->Bottom,\n        src_box->Front, src_box->Back, &src_pixels);\n    if (FAILED(hr))\n        return hr;\n\n    get_aligned_rect(dst_box->Left, dst_box->Top, dst_box->Right, dst_box->Bottom, desc.Width, desc.Height,\n        dst_format_desc, &dst_rect_aligned);\n    set_d3dbox(&dst_box_aligned, dst_rect_aligned.left, dst_rect_aligned.top, dst_rect_aligned.right,\n            dst_rect_aligned.bottom, dst_box->Front, dst_box->Back);\n\n    hr = IDirect3DVolume9_LockBox(dst_volume, &locked_box, &dst_box_aligned, 0);\n    if (FAILED(hr))\n        return hr;\n\n    SetRect(&dst_rect_unaligned, dst_box->Left, dst_box->Top, dst_box->Right, dst_box->Bottom);\n    OffsetRect(&dst_rect_unaligned, -dst_rect_aligned.left, -dst_rect_aligned.top);\n    set_d3dx_pixels(&dst_pixels, locked_box.pBits, locked_box.RowPitch, locked_box.SlicePitch, dst_palette,\n            (dst_box_aligned.Right - dst_box_aligned.Left), (dst_box_aligned.Bottom - dst_box_aligned.Top),\n            (dst_box_aligned.Back - dst_box_aligned.Front), &dst_rect_unaligned);\n\n    hr = d3dx_load_pixels_from_pixels(&dst_pixels, dst_format_desc, &src_pixels, src_format_desc, filter,\n            color_key);\n    IDirect3DVolume9_UnlockBox(dst_volume);\n    return hr;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 22,
+    "end_line": 22,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(d3dx);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "d3dx_image_cleanup",
+    "file": "dlls/d3dx9_36/d3dx_helpers.c",
+    "start_line": 1908
+   },
+   {
+    "name": "d3dx_image_get_pixels",
+    "file": "dlls/d3dx9_36/d3dx_helpers.c",
+    "start_line": 1914
+   },
+   {
+    "name": "d3dx_image_init",
+    "file": "dlls/d3dx9_36/d3dx_helpers.c",
+    "start_line": 1845
+   },
+   {
+    "name": "d3dx_load_pixels_from_pixels",
+    "file": "dlls/d3dx9_36/d3dx_helpers.c",
+    "start_line": 3193
+   },
+   {
+    "name": "d3dx_pixels_init",
+    "file": "dlls/d3dx9_36/d3dx_helpers.c",
+    "start_line": 3143
+   },
+   {
+    "name": "d3dximage_info_from_d3dx_image",
+    "file": "dlls/d3dx9_36/util.c",
+    "start_line": 204
+   },
+   {
+    "name": "get_aligned_rect",
+    "file": "dlls/d3dx9_36/d3dx_helpers.c",
+    "start_line": 3390
+   },
+   {
+    "name": "get_d3dx_pixel_format_info",
+    "file": "dlls/d3dx9_36/d3dx_helpers.c",
+    "start_line": 155
+   },
+   {
+    "name": "get_format_info",
+    "file": "dlls/d3dx9_36/util.c",
+    "start_line": 409
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [],
+  "header_inline": [
+   "OffsetRect",
+   "SetRect",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "d3dx9_handle_load_filter",
+   "is_unknown_format",
+   "set_d3dx_pixels"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "d3dx9_36.D3DXLoadVolumeFromFileInMemory",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "Direct3D",
+   "header": "",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 67,
+   "body": 64,
+   "code": 42
+  },
+  "cyclomatic": 18,
+  "return_type": "HRESULT",
+  "n_params": 9,
+  "tests": {
+   "n_tests_own": 2,
+   "n_tests": 2,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/d3dx9_36/tests/volume.c::test_D3DXLoadVolumeFromFileInMemory",
+    "dlls/d3dx9_36/tests/volume.c::test_d3dx_save_volume_to_file"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/direct3d9/d3dxloadvolumefromfileinmemory",
+   "source": "win32-conceptual",
+   "description": "Loads a volume from a file in memory.",
+   "min_windows": "",
+   "documented_dll": "d3dx9.dll"
+  },
+  "exports": [
+   "d3dx9_36.D3DXLoadVolumeFromFileInMemory"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.591,
+   "first_date": "2012-07-02",
+   "median_date": "2024-07-04",
+   "last_date": "2025-08-01",
+   "code_lines": 44
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "gdiplus.GdipCreateHBITMAPFromBitmap",
+  "share_after_cutoff": 0.591,
+  "last_date": "2025-08-01"
+ }
+}

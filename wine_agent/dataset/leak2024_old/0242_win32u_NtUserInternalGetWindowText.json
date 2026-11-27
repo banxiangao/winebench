@@ -1,0 +1,329 @@
+{
+ "id": "0242",
+ "function": {
+  "name": "NtUserInternalGetWindowText",
+  "export_name": "NtUserInternalGetWindowText",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "win32u"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/window.c",
+  "start_line": 3438,
+  "end_line": 3456,
+  "body_lines": 16,
+  "signature": "INT WINAPI NtUserInternalGetWindowText( HWND hwnd, WCHAR *text, INT count )",
+  "header_comment": "/*******************************************************************\n *           NtUserInternalGetWindowText (win32u.@)\n */",
+  "code": "INT WINAPI NtUserInternalGetWindowText( HWND hwnd, WCHAR *text, INT count )\n{\n    WND *win;\n\n    if (count <= 0) return 0;\n    if (!(win = get_win_ptr( hwnd ))) return 0;\n    if (win == WND_DESKTOP) text[0] = 0;\n    else if (win != WND_OTHER_PROCESS)\n    {\n        if (win->text) lstrcpynW( text, win->text, count );\n        else text[0] = 0;\n        release_win_ptr( win );\n    }\n    else\n    {\n        get_server_window_text( hwnd, text, count );\n    }\n    return lstrlenW(text);\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"ntgdi_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/opengl_driver.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "win32u!NtUserInternalGetWindowText [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/win.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-internalgetwindowtext.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-internalgetwindowtext",
+   "documented_name": "internalgetwindowtext",
+   "file": "docs/0242_sdk-api_nf-winuser-internalgetwindowtext.md",
+   "text": "---\nUID: NF:winuser.InternalGetWindowText\ntitle: InternalGetWindowText function (winuser.h)\ndescription: Copies the text of the specified window's title bar (if it has one) into a buffer.\nhelpviewer_keywords: [\"InternalGetWindowText\",\"InternalGetWindowText function [Windows and Messages]\",\"_win32_InternalGetWindowText\",\"_win32_internalgetwindowtext_cpp\",\"winmsg.internalgetwindowtext\",\"winui._win32_internalgetwindowtext\",\"winuser/InternalGetWindowText\"]\nold-location: winmsg\\internalgetwindowtext.htm\ntech.root: winmsg\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\windowing\\windows\\windowreference\\windowfunctions\\internalgetwindowtext.htm\nms.date: 12/05/2018\nms.keywords: InternalGetWindowText, InternalGetWindowText function [Windows and Messages], _win32_InternalGetWindowText, _win32_internalgetwindowtext_cpp, winmsg.internalgetwindowtext, winui._win32_internalgetwindowtext, winuser/InternalGetWindowText\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - InternalGetWindowText\n - winuser/InternalGetWindowText\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - User32.dll\napi_name:\n - InternalGetWindowText\n---\n\n# InternalGetWindowText function\n\n\n## -description\n\n<p class=\"CCE_Message\">[This function is not intended for general\n      use. It may\n      be altered or unavailable in subsequent versions of Windows.]\n\nCopies the text of the specified window's title bar (if it has one) into a buffer.\n\nThis function is similar to the <a href=\"/windows/desktop/api/winuser/nf-winuser-getwindowtexta\">GetWindowText</a> function.\n\t\tHowever, it obtains the window text directly from the window structure\n\t\tassociated with the specified window's handle and then always provides the text as a\n\t\tUnicode string. This is unlike <b>GetWindowText</b> which obtains the\n\t\ttext by sending the window a <a href=\"/windows/desktop/winmsg/wm-gettext\">WM_GETTEXT</a> message.  If the\n\t\tspecified window is a control, the text of the control is obtained.\n\n## -parameters\n\n### -param hWnd [in]\n\nType: <b>HWND</b>\n\nA handle to the window or control containing the text.\n\n### -param pString [out]\n\nType: <b>LPWSTR</b>\n\nThe buffer that is to receive the text.\n\t\t\t\t\nIf the string is as long or longer than the buffer, the string is truncated and terminated with a null character.\n\n### -param cchMaxCount [in]\n\nType: <b>int</b>\n\nThe maximum number of characters to be copied to the buffer, including the null character. If the text exceeds this limit, it is truncated.\n\n## -returns\n\nType: <b>int</b>\n\nIf the function succeeds, the return value is the length, in characters, of the copied string, not including the terminating null character.\n\nIf the window has no title bar or text, if the title bar is empty, or if the window or control handle is invalid, the return value is zero. To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThis function was not included in the SDK headers and libraries until Windows XP with Service Pack 1 (SP1) and Windows Server 2003. If you do not have a header file and import library for this function, you can call the function using <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-loadlibrarya\">LoadLibrary</a> and <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-getprocaddress\">GetProcAddress</a>.\n\n## -see-also\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-getwindowtexta\">GetWindowText</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-getwindowtextlengtha\">GetWindowTextLength</a>\n\n\n\n<b>Reference</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-setwindowtexta\">SetWindowText</a>\n\n\n\n<a href=\"/windows/desktop/winmsg/using-messages-and-message-queues\">Using Messages and Message Queues</a>\n\n\n\n<a href=\"/windows/desktop/winmsg/wm-gettext\">WM_GETTEXT</a>\n\n\n\n<a href=\"/windows/desktop/winmsg/windows\">Windows</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_win_ptr",
+   "file": "dlls/win32u/window.c",
+   "start_line": 602,
+   "end_line": 611,
+   "static": false,
+   "called_from": [
+    "NtUserInternalGetWindowText"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/class.c:444",
+    "dlls/win32u/defwnd.c:309",
+    "dlls/win32u/defwnd.c:355",
+    "dlls/win32u/defwnd.c:385",
+    "dlls/win32u/defwnd.c:1146"
+   ],
+   "signature": "WND *get_win_ptr( HWND hwnd )",
+   "code": "WND *get_win_ptr( HWND hwnd )\n{\n    WND *win;\n\n    if ((win = get_user_handle_ptr( hwnd, NTUSER_OBJ_WINDOW )) == WND_OTHER_PROCESS)\n    {\n        if (is_desktop_window( hwnd )) win = WND_DESKTOP;\n    }\n    return win;\n}"
+  },
+  {
+   "name": "get_server_window_text",
+   "file": "dlls/win32u/window.c",
+   "start_line": 3416,
+   "end_line": 3433,
+   "static": true,
+   "called_from": [
+    "NtUserInternalGetWindowText"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/window.c:6306"
+   ],
+   "signature": "static data_size_t get_server_window_text( HWND hwnd, WCHAR *text, data_size_t count )",
+   "code": "static data_size_t get_server_window_text( HWND hwnd, WCHAR *text, data_size_t count )\n{\n    data_size_t len = 0, needed = 0;\n\n    SERVER_START_REQ( get_window_text )\n    {\n        req->handle = wine_server_user_handle( hwnd );\n        if (count) wine_server_set_reply( req, text, (count - 1) * sizeof(WCHAR) );\n        if (!wine_server_call_err( req ))\n        {\n            needed = reply->length;\n            len = wine_server_reply_size(reply);\n        }\n    }\n    SERVER_END_REQ;\n    if (text) text[len / sizeof(WCHAR)] = 0;\n    return needed;\n}"
+  },
+  {
+   "name": "get_user_handle_ptr",
+   "file": "dlls/win32u/window.c",
+   "start_line": 212,
+   "end_line": 228,
+   "static": false,
+   "called_from": [
+    "get_win_ptr"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/window.c:279",
+    "dlls/win32u/window.c:4350",
+    "dlls/win32u/window.c:5443",
+    "dlls/win32u/imm.c:70",
+    "dlls/win32u/menu.c:181"
+   ],
+   "signature": "void *get_user_handle_ptr( HANDLE handle, unsigned short type )",
+   "code": "void *get_user_handle_ptr( HANDLE handle, unsigned short type )\n{\n    WORD index = USER_HANDLE_TO_INDEX( handle );\n    void *ptr = NULL;\n    struct user_entry entry;\n\n    if (index >= MAX_USER_HANDLES) return NULL;\n\n    user_lock();\n\n    if (!get_user_entry( handle, type, &entry, &handle )) ptr = NULL;\n    else if (entry.pid != GetCurrentProcessId()) ptr = OBJ_OTHER_PROCESS;\n    else ptr = client_objects[index];\n\n    if (!ptr || ptr == OBJ_OTHER_PROCESS) user_unlock();\n    return ptr;\n}"
+  },
+  {
+   "name": "is_desktop_window",
+   "file": "dlls/win32u/window.c",
+   "start_line": 579,
+   "end_line": 593,
+   "static": false,
+   "called_from": [
+    "get_win_ptr"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/window.c:1032",
+    "dlls/win32u/window.c:4336",
+    "dlls/win32u/window.c:5545",
+    "dlls/win32u/window.c:6103",
+    "dlls/win32u/message.c:2190"
+   ],
+   "signature": "BOOL is_desktop_window( HWND hwnd )",
+   "code": "BOOL is_desktop_window( HWND hwnd )\n{\n    struct user_thread_info *thread_info = get_user_thread_info();\n\n    if (!hwnd) return FALSE;\n    if (hwnd == thread_info->top_window) return TRUE;\n    if (hwnd == thread_info->msg_window) return TRUE;\n\n    if (!HIWORD(hwnd) || HIWORD(hwnd) == 0xffff)\n    {\n        if (LOWORD(thread_info->top_window) == LOWORD(hwnd)) return TRUE;\n        if (LOWORD(thread_info->msg_window) == LOWORD(hwnd)) return TRUE;\n    }\n    return FALSE;\n}"
+  },
+  {
+   "name": "get_user_entry",
+   "file": "dlls/win32u/window.c",
+   "start_line": 131,
+   "end_line": 140,
+   "static": true,
+   "called_from": [
+    "get_user_handle_ptr"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/window.c:156",
+    "dlls/win32u/window.c:570",
+    "dlls/win32u/window.c:623",
+    "dlls/win32u/window.c:638",
+    "dlls/win32u/window.c:661"
+   ],
+   "signature": "static BOOL get_user_entry( HANDLE handle, unsigned short type, struct user_entry *entry, HANDLE *full )",
+   "code": "static BOOL get_user_entry( HANDLE handle, unsigned short type, struct user_entry *entry, HANDLE *full )\n{\n    const volatile struct user_entry *entries = shared_session->user_entries;\n    WORD index = USER_HANDLE_TO_INDEX( handle );\n\n    if (index >= MAX_USER_HANDLES) return FALSE;\n    if (!read_acquire_user_entry( handle, type, entries + index, entry )) return FALSE;\n    *full = USER_HANDLE_FROM_INDEX( index, entry->generation );\n    return TRUE;\n}"
+  },
+  {
+   "name": "read_acquire_user_entry",
+   "file": "dlls/win32u/window.c",
+   "start_line": 118,
+   "end_line": 129,
+   "static": true,
+   "called_from": [
+    "get_user_entry"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/window.c:146"
+   ],
+   "signature": "static BOOL read_acquire_user_entry( HANDLE handle, unsigned short type, const volatile struct user_entry *src, struct user_entry *dst )",
+   "code": "static BOOL read_acquire_user_entry( HANDLE handle, unsigned short type, const volatile struct user_entry *src, struct user_entry *dst )\n{\n    UINT64 uniq = ReadAcquire64( (LONG64 *)&src->uniq );\n    if (!is_valid_entry_uniq( handle, type, uniq )) return FALSE;\n    dst->offset = src->offset;\n    dst->tid = src->tid;\n    dst->pid = src->pid;\n    dst->id = src->id;\n    __SHARED_READ_FENCE;\n    dst->uniq = ReadNoFence64( &src->uniq );\n    return dst->uniq == uniq;\n}"
+  },
+  {
+   "name": "is_valid_entry_uniq",
+   "file": "dlls/win32u/window.c",
+   "start_line": 104,
+   "end_line": 108,
+   "static": true,
+   "called_from": [
+    "read_acquire_user_entry"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/window.c:115"
+   ],
+   "signature": "static BOOL is_valid_entry_uniq( HANDLE handle, unsigned short type, UINT64 uniq )",
+   "code": "static BOOL is_valid_entry_uniq( HANDLE handle, unsigned short type, UINT64 uniq )\n{\n    if (!HIWORD(handle) || HIWORD(handle) == 0xffff) return LOWORD(uniq) == type;\n    return uniq == MAKELONG(type, HIWORD(handle));\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "client_objects",
+    "type": "void *[32744]",
+    "static": true,
+    "start_line": 42,
+    "end_line": 42,
+    "code": "static void *client_objects[MAX_USER_HANDLES];"
+   }
+  ],
+  "macros": [
+   {
+    "name": "USER_HANDLE_FROM_INDEX",
+    "start_line": 38,
+    "end_line": 38,
+    "code": "#define USER_HANDLE_FROM_INDEX(index, generation) UlongToHandle( (index << 1) + FIRST_USER_HANDLE + (generation << 16) )"
+   },
+   {
+    "name": "USER_HANDLE_TO_INDEX",
+    "start_line": 37,
+    "end_line": 37,
+    "code": "#define USER_HANDLE_TO_INDEX(hwnd) ((LOWORD(hwnd) - FIRST_USER_HANDLE) >> 1)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "get_user_thread_info",
+    "file": "dlls/win32u/syscall.c",
+    "start_line": 190
+   },
+   {
+    "name": "user_lock",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 334
+   },
+   {
+    "name": "user_unlock",
+    "file": "dlls/win32u/sysparams.c",
+    "start_line": 340
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "PsGetCurrentProcessId",
+    "module": "ntoskrnl.exe",
+    "impl": [
+     "dlls/ntoskrnl.exe/ntoskrnl.c:3438"
+    ]
+   }
+  ],
+  "header_inline": [
+   "HandleToULong",
+   "ReadAcquire64",
+   "ReadNoFence64",
+   "ULongToHandle",
+   "lstrcpynW",
+   "lstrlenW",
+   "wine_server_call_err",
+   "wine_server_reply_size",
+   "wine_server_set_reply",
+   "wine_server_user_handle"
+  ],
+  "system": [
+   "memset"
+  ],
+  "unresolved": [
+   "release_win_ptr"
+  ],
+  "server_requests": [
+   {
+    "request": "get_window_text",
+    "handler": "server/window.c:2840"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "win32u.NtUserInternalGetWindowText",
+  "category": {
+   "l1": "User input and messaging",
+   "l2": "Windows and messages",
+   "header": "winuser.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 19,
+   "body": 18,
+   "code": 11
+  },
+  "cyclomatic": 6,
+  "return_type": "INT",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 2,
+   "n_tests_other": 1,
+   "own_test_functions": [
+    "dlls/user32/tests/win.c::test_gettext"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-internalgetwindowtext",
+   "source": "win32",
+   "description": "Copies the text of the specified window's title bar (if it has one) into a buffer.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "User32.dll"
+  },
+  "exports": [
+   "user32.InternalGetWindowText",
+   "win32u.NtUserInternalGetWindowText"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2022-03-08",
+   "median_date": "2022-03-08",
+   "last_date": "2022-03-08",
+   "code_lines": 12,
+   "pair": "win32u.NtUserGetKeyboardState",
+   "rank": 1,
+   "distance": 0.884
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "win32u.NtUserGetKeyboardState",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-03-08",
+  "partner_rank": 1,
+  "distance": 0.884
+ }
+}

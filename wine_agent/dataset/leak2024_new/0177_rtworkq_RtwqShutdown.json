@@ -1,0 +1,336 @@
+{
+ "id": "0177",
+ "function": {
+  "name": "RtwqShutdown",
+  "export_name": "RtwqShutdown",
+  "module": "rtworkq",
+  "source_module": "rtworkq",
+  "exported_by": [
+   "rtworkq"
+  ],
+  "side": "PE",
+  "file": "dlls/rtworkq/queue.c",
+  "start_line": 1317,
+  "end_line": 1330,
+  "body_lines": 11,
+  "signature": "HRESULT WINAPI RtwqShutdown(void)",
+  "header_comment": null,
+  "code": "HRESULT WINAPI RtwqShutdown(void)\n{\n    if (startup_count <= 0)\n        return S_OK;\n\n    if (InterlockedExchangeAdd(&startup_count, -1) == 1)\n    {\n        shutdown_system_queues();\n        async_result_cache_clear();\n        RtwqUnlockPlatform();\n    }\n\n    return S_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"initguid.h\"",
+   "#include \"rtworkq.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\""
+  ],
+  "resolution": [
+   "rtworkq!RtwqShutdown [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/rtworkq/tests/rtworkq.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 5
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "rtworkq",
+   "path": "sdk-api-src/content/rtworkq/nf-rtworkq-rtwqshutdown.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/rtworkq/nf-rtworkq-rtwqshutdown",
+   "documented_name": "rtwqshutdown",
+   "file": "docs/0177_sdk-api_nf-rtworkq-rtwqshutdown.md",
+   "text": "---\nUID: NF:rtworkq.RtwqShutdown\ntitle: RtwqShutdown function (rtworkq.h)\ndescription: Shuts down the platform. Call this function once for every call to RtwqStartup. Do not call this function from work queue threads.\nhelpviewer_keywords: [\"RtwqShutdown\",\"RtwqShutdown function\",\"base.rtwqshutdown\",\"rtworkq/RtwqShutdown\"]\nold-location: base\\rtwqshutdown.htm\ntech.root: backup\nms.assetid: 806c4142-b628-4ea0-b5e2-d2b4ead73c04\nms.date: 12/05/2018\nms.keywords: RtwqShutdown, RtwqShutdown function, base.rtwqshutdown, rtworkq/RtwqShutdown\nreq.header: rtworkq.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 8.1 [desktop apps only]\nreq.target-min-winversvr: Windows Server 2012 R2 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Rtworkq.lib\nreq.dll: RTWorkQ.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - RtwqShutdown\n - rtworkq/RtwqShutdown\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - RTWorkQ.dll\napi_name:\n - RtwqShutdown\n---\n\n# RtwqShutdown function\n\n\n## -description\n\nShuts down the platform. Call this function once for every call to <a href=\"/windows/desktop/api/rtworkq/nf-rtworkq-rtwqstartup\">RtwqStartup</a>. Do not call this function from work queue threads.\n\n\n\n## -returns\n\nIf this function succeeds, it returns <b>S_OK</b>. Otherwise, it returns an <b>HRESULT</b> error code.\n\n## -remarks\n\nIn general, apps should not have pending work after they call this function.\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "shutdown_system_queues",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 1299,
+   "end_line": 1315,
+   "static": true,
+   "called_from": [
+    "RtwqShutdown"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void shutdown_system_queues(void)",
+   "code": "static void shutdown_system_queues(void)\n{\n    unsigned int i;\n    HRESULT hr;\n\n    EnterCriticalSection(&queues_section);\n\n    for (i = 0; i < ARRAY_SIZE(system_queues); ++i)\n    {\n        shutdown_queue(&system_queues[i]);\n    }\n\n    if (FAILED(hr = CoDecrementMTAUsage(mta_cookie)))\n        WARN(\"Failed to uninitialize MTA, hr %#lx.\\n\", hr);\n\n    LeaveCriticalSection(&queues_section);\n}"
+  },
+  {
+   "name": "async_result_cache_clear",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 1069,
+   "end_line": 1082,
+   "static": true,
+   "called_from": [
+    "RtwqShutdown"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void async_result_cache_clear(void)",
+   "code": "static void async_result_cache_clear(void)\n{\n    struct async_result *cur, *cur2;\n\n    EnterCriticalSection(&async_result_cache_section);\n\n    LIST_FOR_EACH_ENTRY_SAFE(cur, cur2, &async_result_cache, struct async_result, entry)\n    {\n        list_remove(&cur->entry);\n        free_async_result(cur);\n    }\n\n    LeaveCriticalSection(&async_result_cache_section);\n}"
+  },
+  {
+   "name": "shutdown_queue",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 687,
+   "end_line": 705,
+   "static": true,
+   "called_from": [
+    "shutdown_system_queues"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/rtworkq/queue.c:239"
+   ],
+   "signature": "static void shutdown_queue(struct queue *queue)",
+   "code": "static void shutdown_queue(struct queue *queue)\n{\n    struct work_item *item, *item2;\n\n    if (!queue->ops || !queue->ops->shutdown(queue))\n        return;\n\n    EnterCriticalSection(&queue->cs);\n    LIST_FOR_EACH_ENTRY_SAFE(item, item2, &queue->pending_items, struct work_item, entry)\n    {\n        list_remove(&item->entry);\n        IUnknown_Release(&item->IUnknown_iface);\n    }\n    LeaveCriticalSection(&queue->cs);\n\n    DeleteCriticalSection(&queue->cs);\n\n    memset(queue, 0, sizeof(*queue));\n}"
+  },
+  {
+   "name": "free_async_result",
+   "file": "dlls/rtworkq/queue.c",
+   "start_line": 1022,
+   "end_line": 1026,
+   "static": true,
+   "called_from": [
+    "async_result_cache_clear"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/rtworkq/queue.c:1130"
+   ],
+   "signature": "static void free_async_result(struct async_result *result)",
+   "code": "static void free_async_result(struct async_result *result)\n{\n    free(result);\n    RtwqUnlockPlatform();\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "async_result",
+    "kind": "struct_decl",
+    "start_line": 1008,
+    "end_line": 1015,
+    "code": "struct async_result\n{\n    RTWQASYNCRESULT result;\n    LONG refcount;\n    IUnknown *object;\n    IUnknown *state;\n    struct list entry;\n};"
+   },
+   {
+    "name": "queue",
+    "kind": "struct_decl",
+    "start_line": 189,
+    "end_line": 201,
+    "code": "struct queue\n{\n    IRtwqAsyncCallback IRtwqAsyncCallback_iface;\n    const struct queue_ops *ops;\n    TP_POOL *pool;\n    TP_CALLBACK_ENVIRON_V3 envs[ARRAY_SIZE(priorities)];\n    CRITICAL_SECTION cs;\n    struct list pending_items;\n    DWORD id;\n    /* Data used for serial queues only. */\n    PTP_SIMPLE_CALLBACK finalization_callback;\n    DWORD target_queue;\n};"
+   },
+   {
+    "name": "queue_ops",
+    "kind": "struct_decl",
+    "start_line": 175,
+    "end_line": 180,
+    "code": "struct queue_ops\n{\n    HRESULT (*init)(const struct queue_desc *desc, struct queue *queue);\n    BOOL (*shutdown)(struct queue *queue);\n    void (*submit)(struct queue *queue, struct work_item *item);\n};"
+   },
+   {
+    "name": "work_item",
+    "kind": "struct_decl",
+    "start_line": 139,
+    "end_line": 158,
+    "code": "struct work_item\n{\n    IUnknown IUnknown_iface;\n    LONG refcount;\n    struct list entry;\n    IRtwqAsyncResult *result;\n    IRtwqAsyncResult *reply_result;\n    struct queue *queue;\n    RTWQWORKITEM_KEY key;\n    LONG priority;\n    DWORD flags;\n    PTP_SIMPLE_CALLBACK finalization_callback;\n    enum work_item_type type;\n    union\n    {\n        TP_WORK *work_object;\n        TP_WAIT *wait_object;\n        TP_TIMER *timer_object;\n    } u;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 27,
+    "end_line": 27,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(mfplat);"
+   },
+   {
+    "name": "async_result_cache",
+    "type": "struct list",
+    "static": false,
+    "start_line": 77,
+    "end_line": 77,
+    "code": "struct list async_result_cache = LIST_INIT(async_result_cache);"
+   },
+   {
+    "name": "async_result_cache_section",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 76,
+    "end_line": 76,
+    "code": "static CRITICAL_SECTION async_result_cache_section = { &async_result_cache_critsect_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "mta_cookie",
+    "type": "CO_MTA_USAGE_COOKIE",
+    "static": true,
+    "start_line": 81,
+    "end_line": 81,
+    "code": "static CO_MTA_USAGE_COOKIE mta_cookie;"
+   },
+   {
+    "name": "queues_section",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 67,
+    "end_line": 67,
+    "code": "static CRITICAL_SECTION queues_section = { &queues_critsect_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "startup_count",
+    "type": "LONG",
+    "static": true,
+    "start_line": 79,
+    "end_line": 79,
+    "code": "static LONG startup_count;"
+   },
+   {
+    "name": "system_queues",
+    "type": "struct queue[7]",
+    "static": true,
+    "start_line": 306,
+    "end_line": 306,
+    "code": "static struct queue system_queues[SYS_QUEUE_COUNT];"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "RtwqUnlockPlatform",
+    "impl": [
+     "dlls/rtworkq/queue.c:1255"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CoDecrementMTAUsage",
+    "module": "ole32",
+    "impl": [
+     "dlls/combase/combase.c:3089"
+    ]
+   },
+   {
+    "name": "DeleteCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:271"
+    ]
+   },
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "_InterlockedExchangeAdd",
+   "list_remove",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "queue->ops->shutdown",
+    "in_function": "shutdown_queue",
+    "at": "dlls/rtworkq/queue.c:691",
+    "candidates": []
+   }
+  ]
+ },
+ "winebench": {
+  "id": "rtworkq.RtwqShutdown",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "Microsoft Media Foundation",
+   "header": "rtworkq.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 14,
+   "body": 13,
+   "code": 7
+  },
+  "cyclomatic": 3,
+  "return_type": "HRESULT",
+  "n_params": 0,
+  "tests": {
+   "n_tests_own": 5,
+   "n_tests": 6,
+   "n_tests_other": 1,
+   "own_test_functions": [
+    "dlls/rtworkq/tests/rtworkq.c::test_platform_init",
+    "dlls/rtworkq/tests/rtworkq.c::test_queue_shutdown",
+    "dlls/rtworkq/tests/rtworkq.c::test_scheduled_items",
+    "dlls/rtworkq/tests/rtworkq.c::test_undefined_queue_id",
+    "dlls/rtworkq/tests/rtworkq.c::test_work_queue"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/rtworkq/nf-rtworkq-rtwqshutdown",
+   "source": "win32",
+   "description": "Shuts down the platform. Call this function once for every call to RtwqStartup. Do not call this function from work queue threads.",
+   "min_windows": "Windows 8.1 [desktop apps only]",
+   "documented_dll": "RTWorkQ.dll"
+  },
+  "exports": [
+   "rtworkq.RtwqShutdown"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.5,
+   "first_date": "2020-02-05",
+   "median_date": "2020-02-05",
+   "last_date": "2025-02-21",
+   "code_lines": 8
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "gdi32.Ellipse",
+  "share_after_cutoff": 0.5,
+  "last_date": "2025-02-21"
+ }
+}

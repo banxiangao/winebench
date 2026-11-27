@@ -1,0 +1,64 @@
+---
+UID: NF:winsplp.InitializePrintMonitorUI
+title: InitializePrintMonitorUI function (winsplp.h)
+description: A port monitor UI DLL's InitializePrintMonitorUI function supplies the print spooler with addresses of DLL functions.
+old-location: print\initializeprintmonitorui.htm
+tech.root: print
+ms.date: 04/20/2018
+keywords: ["InitializePrintMonitorUI function"]
+ms.keywords: InitializePrintMonitorUI, InitializePrintMonitorUI function [Print Devices], print.initializeprintmonitorui, spoolfnc_927446a6-117a-4585-8ce0-9a4b543c4037.xml, winsplp/InitializePrintMonitorUI
+req.header: winsplp.h
+req.include-header: Winsplp.h
+req.target-type: Desktop
+req.target-min-winverclnt: 
+req.target-min-winversvr: 
+req.kmdf-ver: 
+req.umdf-ver: 
+req.ddi-compliance: 
+req.unicode-ansi: 
+req.idl: 
+req.max-support: 
+req.namespace: 
+req.assembly: 
+req.type-library: 
+req.lib: 
+req.dll: 
+req.irql: 
+targetos: Windows
+req.typenames: 
+f1_keywords:
+ - InitializePrintMonitorUI
+ - winsplp/InitializePrintMonitorUI
+topic_type:
+ - APIRef
+ - kbSyntax
+api_type:
+ - HeaderDef
+api_location:
+ - Winsplp.h
+api_name:
+ - InitializePrintMonitorUI
+---
+
+# InitializePrintMonitorUI function
+
+
+## -description
+
+A port monitor UI DLL's <b>InitializePrintMonitorUI</b> function supplies the print spooler with addresses of DLL functions.
+
+## -returns
+
+The function should return a pointer to an initialized <a href="/windows-hardware/drivers/ddi/winsplp/ns-winsplp-_monitorui">MONITORUI</a> structure.
+
+## -remarks
+
+Port monitor UI DLLs are required to export an <b>InitializePrintMonitorUI</b> function. The function is called immediately after the DLL is loaded, and is not called again until the DLL is reloaded. Its purposes are to allow the DLL to initialize itself, and to provide the spooler with pointers to internal functions.
+
+## -see-also
+
+<a href="/windows-hardware/drivers/ddi/winsplp/nf-winsplp-initializeprintmonitor">InitializePrintMonitor</a>
+
+
+
+<a href="/windows-hardware/drivers/ddi/winsplp/ns-winsplp-_monitorui">MONITORUI</a>

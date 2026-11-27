@@ -1,0 +1,263 @@
+{
+ "id": "0186",
+ "function": {
+  "name": "SetupDiGetDeviceRegistryPropertyA",
+  "export_name": "SetupDiGetDeviceRegistryPropertyA",
+  "module": "setupapi",
+  "source_module": "setupapi",
+  "exported_by": [
+   "setupapi"
+  ],
+  "side": "PE",
+  "file": "dlls/setupapi/devinst.c",
+  "start_line": 2951,
+  "end_line": 3049,
+  "body_lines": 96,
+  "signature": "BOOL WINAPI SetupDiGetDeviceRegistryPropertyA(HDEVINFO devinfo, SP_DEVINFO_DATA *device_data, DWORD Property, DWORD *PropertyRegDataType, BYTE *PropertyBuffer, DWORD PropertyBufferSize, DWORD *RequiredSize)",
+  "header_comment": "/***********************************************************************\n *\t\tSetupDiGetDeviceRegistryPropertyA (SETUPAPI.@)\n */",
+  "code": "BOOL WINAPI SetupDiGetDeviceRegistryPropertyA(HDEVINFO devinfo,\n        SP_DEVINFO_DATA *device_data, DWORD Property, DWORD *PropertyRegDataType,\n        BYTE *PropertyBuffer, DWORD PropertyBufferSize, DWORD *RequiredSize)\n{\n    BOOL ret = FALSE;\n    struct device *device;\n\n    TRACE(\"devinfo %p, device_data %p, property %ld, type %p, buffer %p, size %ld, required %p\\n\",\n            devinfo, device_data, Property, PropertyRegDataType, PropertyBuffer, PropertyBufferSize, RequiredSize);\n\n    if (!(device = get_device(devinfo, device_data)))\n        return FALSE;\n\n    if (PropertyBufferSize && PropertyBuffer == NULL)\n    {\n        SetLastError(ERROR_INVALID_DATA);\n        return FALSE;\n    }\n\n    if (Property == SPDRP_ENUMERATOR_NAME)\n    {\n        const WCHAR *backslash;\n        DWORD len;\n        int size_needed, size_written;\n\n        if (!device->instanceId || !*device->instanceId)\n        {\n            SetLastError(ERROR_INVALID_DATA);\n            return FALSE;\n        }\n\n        backslash = wcschr(device->instanceId, L'\\\\');\n        len = backslash ? (DWORD)(backslash - device->instanceId) : lstrlenW(device->instanceId);\n        if (len == 0)\n        {\n            SetLastError(ERROR_INVALID_DATA);\n            return FALSE;\n        }\n\n        size_needed = WideCharToMultiByte(CP_ACP, 0, device->instanceId, len, NULL, 0, NULL, NULL);\n        if (size_needed <= 0)\n        {\n            SetLastError(ERROR_INVALID_DATA);\n            return FALSE;\n        }\n\n        size_needed++;\n\n        if (RequiredSize)\n            *RequiredSize = size_needed;\n\n        if (PropertyRegDataType)\n            *PropertyRegDataType = REG_SZ;\n\n        if (!PropertyBuffer || (int)PropertyBufferSize < size_needed)\n        {\n            SetLastError(ERROR_INSUFFICIENT_BUFFER);\n            return FALSE;\n        }\n\n        size_written = WideCharToMultiByte(CP_ACP, 0,\n                                           device->instanceId, len,\n                                           (char *)PropertyBuffer,\n                                           PropertyBufferSize - 1,\n                                           NULL, NULL);\n\n        if (size_written <= 0)\n        {\n            SetLastError(ERROR_INVALID_DATA);\n            return FALSE;\n        }\n\n        ((char *)PropertyBuffer)[size_written] = 0;\n        return TRUE;\n    }\n\n    if (Property < ARRAY_SIZE(PropertyMap) && PropertyMap[Property].nameA)\n    {\n        DWORD size = PropertyBufferSize;\n        LONG l = RegQueryValueExA(device->key, PropertyMap[Property].nameA,\n                NULL, PropertyRegDataType, PropertyBuffer, &size);\n\n        if (l == ERROR_FILE_NOT_FOUND)\n            SetLastError(ERROR_INVALID_DATA);\n        else if (l == ERROR_MORE_DATA || !PropertyBufferSize)\n            SetLastError(ERROR_INSUFFICIENT_BUFFER);\n        else if (!l)\n            ret = TRUE;\n        else\n            SetLastError(l);\n        if (RequiredSize)\n            *RequiredSize = size;\n    }\n    else\n    {\n        SetLastError(ERROR_INVALID_DATA);\n    }\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdbool.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnt.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winternl.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winsvc.h\"",
+   "#include \"setupapi.h\"",
+   "#include \"softpub.h\"",
+   "#include \"mscat.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"cfgmgr32.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"rpc.h\"",
+   "#include \"rpcdce.h\"",
+   "#include \"cguid.h\"",
+   "#include \"setupapi_private.h\"",
+   "#include \"initguid.h\"",
+   "#include \"devpkey.h\""
+  ],
+  "resolution": [
+   "setupapi!SetupDiGetDeviceRegistryPropertyA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/setupapi/tests/devinst.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 3
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "setupapi",
+   "path": "sdk-api-src/content/setupapi/nf-setupapi-setupdigetdeviceregistrypropertya.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/setupapi/nf-setupapi-setupdigetdeviceregistrypropertya",
+   "documented_name": "setupdigetdeviceregistrypropertya",
+   "file": "docs/0186_sdk-api_nf-setupapi-setupdigetdeviceregistrypropertya.md",
+   "text": "---\nUID: NF:setupapi.SetupDiGetDeviceRegistryPropertyA\ntitle: SetupDiGetDeviceRegistryPropertyA function (setupapi.h)\ndescription: The SetupDiGetDeviceRegistryProperty function retrieves a specified Plug and Play device property. (ANSI)\nhelpviewer_keywords: [\"SetupDiGetDeviceRegistryPropertyA\", \"di-rtns_a60fa017-1c15-45bf-a178-37516bc0aea1.xml\"]\nold-location: devinst\\setupdigetdeviceregistryproperty.htm\ntech.root: devinst\nms.assetid: d42269dc-57b5-4303-94d9-02f6ee16a96f\nms.date: 12/05/2018\nms.keywords: SetupDiGetDeviceRegistryProperty, SetupDiGetDeviceRegistryProperty function [Device and Driver Installation], SetupDiGetDeviceRegistryPropertyA, SetupDiGetDeviceRegistryPropertyW, devinst.setupdigetdeviceregistryproperty, di-rtns_a60fa017-1c15-45bf-a178-37516bc0aea1.xml, setupapi/SetupDiGetDeviceRegistryProperty\nreq.header: setupapi.h\nreq.include-header: Setupapi.h\nreq.target-type: DesktopFor universal, call CM_Get_DevNode_Registry_Property\nreq.target-min-winverclnt: Available in Microsoft Windows 2000 and later versions of Windows.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Setupapi.lib\nreq.dll: \nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SetupDiGetDeviceRegistryPropertyA\n - setupapi/SetupDiGetDeviceRegistryPropertyA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - LibDef\napi_location:\n - ext-ms-win-setupapi-devobj-l1-1-0.dll\n - Setupapi.lib\n - Setupapi.dll\napi_name:\n - SetupDiGetDeviceRegistryProperty - SetupDiGetDeviceRegistryPropertyA\n---\n\n# SetupDiGetDeviceRegistryPropertyA function\n\n\n## -description\n\nThe <b>SetupDiGetDeviceRegistryProperty</b> function retrieves a specified Plug and Play device property.\n\n## -parameters\n\n### -param DeviceInfoSet [in]\n\nA handle to a <a href=\"/windows-hardware/drivers/install/device-information-sets\">device information set</a> that contains a device information element that represents the device for which to retrieve a Plug and Play property.\n\n### -param DeviceInfoData [in]\n\nA pointer to an <a href=\"/windows/desktop/api/setupapi/ns-setupapi-sp_devinfo_data\">SP_DEVINFO_DATA</a> structure that specifies the device information element in <i>DeviceInfoSet</i>.\n\n### -param Property [in]\n\nOne of the following values that specifies the property to be retrieved:\n\n\n\n\n\n#### SPDRP_ADDRESS\n\nThe function retrieves the device's address.\n\n\n\n#### SPDRP_BUSNUMBER\n\nThe function retrieves the device's bus number.\n\n\n\n#### SPDRP_BUSTYPEGUID\n\nThe function retrieves the GUID for the device's bus type.\n\n\n\n#### SPDRP_CAPABILITIES\n\nThe function retrieves a bitwise OR of the following CM_DEVCAP_<i>Xxx </i> flags in a DWORD. The device capabilities that are represented by these flags correspond to the device capabilities that are represented by the members of the <a href=\"/windows-hardware/drivers/ddi/content/wdm/ns-wdm-_device_capabilities\">DEVICE_CAPABILITIES</a> structure. The CM_DEVCAP_Xxx constants are defined in <i>Cfgmgr32.h.</i>\n\n<table>\n<tr>\n<th>CM_DEVCAP_Xxx flag</th>\n<th>Corresponding DEVICE_CAPABILITIES structure member</th>\n</tr>\n<tr>\n<td>\nCM_DEVCAP_LOCKSUPPORTED\n\n</td>\n<td>\n<b>LockSupported </b>\n\n</td>\n</tr>\n<tr>\n<td>\nCM_DEVCAP_EJECTSUPPORTED\n\n</td>\n<td>\n<b>EjectSupported </b>\n\n</td>\n</tr>\n<tr>\n<td>\nCM_DEVCAP_REMOVABLE\n\n</td>\n<td>\n<b>Removable </b>\n\n</td>\n</tr>\n<tr>\n<td>\nCM_DEVCAP_DOCKDEVICE\n\n</td>\n<td>\n<b>DockDevice </b>\n\n</td>\n</tr>\n<tr>\n<td>\nCM_DEVCAP_UNIQUEID\n\n</td>\n<td>\n<b>UniqueID </b>\n\n</td>\n</tr>\n<tr>\n<td>\nCM_DEVCAP_SILENTINSTALL\n\n</td>\n<td>\n<b>SilentInstall </b>\n\n</td>\n</tr>\n<tr>\n<td>\nCM_DEVCAP_RAWDEVICEOK\n\n</td>\n<td>\n<b>RawDeviceOK </b>\n\n</td>\n</tr>\n<tr>\n<td>\nCM_DEVCAP_SURPRISEREMOVALOK\n\n</td>\n<td>\n<b>SurpriseRemovalOK </b>\n\n</td>\n</tr>\n<tr>\n<td>\nCM_DEVCAP_HARDWAREDISABLED\n\n</td>\n<td>\n<b>HardwareDisabled </b>\n\n</td>\n</tr>\n<tr>\n<td>\nCM_DEVCAP_NONDYNAMIC\n\n</td>\n<td>\n<b>NonDynamic</b>\n\n</td>\n</tr>\n</table>\n \n\n\n\n#### SPDRP_CHARACTERISTICS\n\nThe function retrieves a bitwise OR of a device's characteristics flags in a DWORD. For a description of these flags, which are defined in <i>Wdm.h</i> and <i>Ntddk.h</i>, see the <i>DeviceCharacteristics</i> parameter of the <a href=\"/windows-hardware/drivers/ddi/content/wdm/nf-wdm-iocreatedevice\">IoCreateDevice</a> function.\n\n\n\n#### SPDRP_CLASS\n\nThe function retrieves a REG_SZ string that contains the <a href=\"/windows-hardware/drivers/install/overview-of-device-setup-classes\">device setup class</a> of a device.\n\n\n\n#### SPDRP_CLASSGUID\n\nThe function retrieves a REG_SZ string that contains the GUID that represents the device setup class of a device.\n\n\n\n#### SPDRP_COMPATIBLEIDS\n\nThe function retrieves a REG_MULTI_SZ string that contains the list of compatible IDs for a device. For information about compatible IDs, see <a href=\"/windows-hardware/drivers/install/device-identification-strings\">Device Identification Strings</a>.\n\n\n\n#### SPDRP_CONFIGFLAGS\n\nThe function retrieves a bitwise OR of a device's configuration flags in a DWORD value. The configuration flags are represented by the CONFIGFLAG_<i>Xxx</i> bitmasks that are defined in <i>Regstr.h</i>.\n\n\n\n#### SPDRP_DEVICE_POWER_DATA\n\n(Windows XP and later) The function retrieves a <a href=\"/windows-hardware/drivers/ddi/content/wdm/ns-wdm-cm_power_data_s\">CM_POWER_DATA</a> structure that contains the device's power management information.\n\n\n\n#### SPDRP_DEVICEDESC\n\nThe function retrieves a REG_SZ string that contains the description of a device. \n\n\n\n#### SPDRP_DEVTYPE\n\nThe function retrieves a DWORD value that represents the device's type. For more information, see <a href=\"/windows-hardware/drivers/kernel/specifying-device-types\">Specifying Device Types</a>.\n\n\n\n#### SPDRP_DRIVER\n\nThe function retrieves a string that identifies the device's <a href=\"/windows-hardware/drivers/\">software key</a> (sometimes called the <a href=\"/windows-hardware/drivers/\">driver key</a>). For more information about driver keys, see <a href=\"/windows-hardware/drivers/install/registry-trees-and-keys\">Registry Trees and Keys for Devices and Drivers</a>.\n\n\n\n#### SPDRP_ENUMERATOR_NAME\n\nThe function retrieves a REG_SZ string that contains the name of the device's <a href=\"/windows-hardware/drivers/\">enumerator</a>.\n\n\n\n#### SPDRP_EXCLUSIVE\n\nThe function retrieves a DWORD value that indicates whether a user can obtain exclusive use of the device. The returned value is one if exclusive use is allowed, or zero otherwise. For more information, see <a href=\"/windows-hardware/drivers/ddi/content/wdm/nf-wdm-iocreatedevice\">IoCreateDevice</a>.\n\n\n\n#### SPDRP_FRIENDLYNAME\n\nThe function retrieves a REG_SZ string that contains the friendly name of a device.\n\n\n\n#### SPDRP_HARDWAREID\n\nThe function retrieves a REG_MULTI_SZ string that contains the list of hardware IDs for a device. For information about hardware IDs, see <a href=\"/windows-hardware/drivers/install/device-identification-strings\">Device Identification Strings</a>.\n\n\n\n#### SPDRP_INSTALL_STATE\n\n(Windows XP and later) The function retrieves a DWORD value that indicates the installation state of a device. The installation state is represented by one of the CM_INSTALL_STATE_<i>Xxx</i> values that are defined in <i>Cfgmgr32.h</i>. The CM_INSTALL_STATE_<i>Xxx</i> values correspond to the <a href=\"/windows-hardware/drivers/ddi/content/wdm/ne-wdm-_device_install_state\">DEVICE_INSTALL_STATE</a> enumeration values. \n\n\n\n#### SPDRP_LEGACYBUSTYPE\n\nThe function retrieves the device's legacy bus type as an INTERFACE_TYPE value (defined in <i>Wdm.h</i> and <i>Ntddk.h</i>).\n\n\n\n#### SPDRP_LOCATION_INFORMATION\n\nThe function retrieves a REG_SZ string that contains the hardware location of a device. \n\n\n\n#### SPDRP_LOCATION_PATHS\n\n(Windows Server 2003 and later) The function retrieves a REG_MULTI_SZ string that represents the location of the device in the device tree.\n\n\n\n#### SPDRP_LOWERFILTERS\n\nThe function retrieves a REG_MULTI_SZ string that contains the names of a device's lower-filter drivers.\n\n\n\n#### SPDRP_MFG\n\nThe function retrieves a REG_SZ string that contains the name of the device manufacturer.\n\n\n\n#### SPDRP_PHYSICAL_DEVICE_OBJECT_NAME\n\nThe function retrieves a REG_SZ string that contains the name that is associated with the device's PDO. For more information, see <a href=\"/windows-hardware/drivers/ddi/content/wdm/nf-wdm-iocreatedevice\">IoCreateDevice</a>.\n\n\n\n#### SPDRP_REMOVAL_POLICY\n\n(Windows XP and later) The function retrieves the device's current removal policy as a DWORD that contains one of the CM_REMOVAL_POLICY_<i>Xxx</i> values that are defined in <i>Cfgmgr32.h</i>.\n\n\n\n#### SPDRP_REMOVAL_POLICY_HW_DEFAULT\n\n(Windows XP and later) The function retrieves the device's hardware-specified default removal policy as a DWORD that contains one of the CM_REMOVAL_POLICY_<i>Xxx</i> values that are defined in <i>Cfgmgr32.h</i>.\n\n\n\n#### SPDRP_REMOVAL_POLICY_OVERRIDE\n\n(Windows XP and later) The function retrieves the device's override removal policy (if it exists) from the registry, as a DWORD that contains one of the CM_REMOVAL_POLICY_<i>Xxx</i> values that are defined in <i>Cfgmgr32.h</i>.\n\n\n\n#### SPDRP_SECURITY\n\nThe function retrieves a <a href=\"/windows-hardware/drivers/ddi/content/ntifs/ns-ntifs-_security_descriptor\">SECURITY_DESCRIPTOR</a> structure for a device.\n\n\n\n#### SPDRP_SECURITY_SDS\n\nThe function retrieves a REG_SZ string that contains the device's security descriptor. For information about security descriptor strings, see <a href=\"/windows/desktop/SecAuthZ/security-descriptor-definition-language\">Security Descriptor Definition Language (Windows)</a>. For information about the format of security descriptor strings, see Security Descriptor Definition Language (Windows).\n\n\n\n#### SPDRP_SERVICE\n\nThe function retrieves a REG_SZ string that contains the service name for a device.\n\n\n\n#### SPDRP_UI_NUMBER\n\nThe function retrieves a DWORD value set to the value of the <b>UINumber</b> member of the device's <a href=\"/windows-hardware/drivers/ddi/content/wdm/ns-wdm-_device_capabilities\">DEVICE_CAPABILITIES</a> structure.\n\n\n\n#### SPDRP_UI_NUMBER_DESC_FORMAT\n\nThe function retrieves a format string (REG_SZ) used to display the <b>UINumber</b> value.\n\n\n\n#### SPDRP_UPPERFILTERS\n\nThe function retrieves a REG_MULTI_SZ string that contains the names of a device's upper filter drivers.\n\n### -param PropertyRegDataType [out, optional]\n\nA pointer to a variable that receives the data type of the property that is being retrieved. This is one of the standard registry data types. This parameter is optional and can be <b>NULL</b>.\n\n### -param PropertyBuffer [out, optional]\n\nA pointer to a buffer that receives the property that is being retrieved. If this parameter is set to <b>NULL</b>, and <i>PropertyBufferSize</i> is also set to zero, the function returns the required size for the buffer in <i>RequiredSize</i>.\n\n### -param PropertyBufferSize [in]\n\nThe size, in bytes, of the <i>PropertyBuffer </i> buffer.\n\n### -param RequiredSize [out, optional]\n\nA pointer to a variable of type DWORD that receives the required size, in bytes, of the <i>PropertyBuffer</i> buffer that is required to hold the data for the requested property. This parameter is optional and can be <b>NULL</b>.\n\n## -returns\n\n<b>SetupDiGetDeviceRegistryProperty</b> returns <b>TRUE</b> if the call was successful. Otherwise, it returns <b>FALSE</b> and the logged error can be retrieved by making a call to <a href=\"/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>. <b>SetupDiGetDeviceRegistryProperty</b> returns the ERROR_INVALID_DATA error code if the requested property does not exist for a device or if the property data is not valid.\n\n## -see-also\n\n<a href=\"/windows-hardware/drivers/ddi/content/wdm/nf-wdm-iogetdeviceproperty\">IoGetDeviceProperty</a>\n\n\n\n<a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupdigetclassregistrypropertya\">SetupDiGetClassRegistryProperty</a>\n\n\n\n<a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupdisetclassregistrypropertya\">SetupDiSetClassRegistryProperty</a>\n\n\n\n<a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupdisetdeviceregistrypropertya\">SetupDiSetDeviceRegistryProperty</a>\n\n## -remarks\n\n> [!NOTE]\n> The setupapi.h header defines SetupDiGetDeviceRegistryProperty as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_device",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 200,
+   "end_line": 229,
+   "static": true,
+   "called_from": [
+    "SetupDiGetDeviceRegistryPropertyA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:1261",
+    "dlls/setupapi/devinst.c:1457",
+    "dlls/setupapi/devinst.c:1480",
+    "dlls/setupapi/devinst.c:1520",
+    "dlls/setupapi/devinst.c:1636"
+   ],
+   "signature": "static struct device *get_device(HDEVINFO devinfo, const SP_DEVINFO_DATA *data)",
+   "code": "static struct device *get_device(HDEVINFO devinfo, const SP_DEVINFO_DATA *data)\n{\n    struct DeviceInfoSet *set;\n    struct device *device;\n\n    if (!(set = get_device_set(devinfo)))\n        return FALSE;\n\n    if (!data || data->cbSize != sizeof(*data) || !data->Reserved)\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return NULL;\n    }\n\n    device = (struct device *)data->Reserved;\n\n    if (device->set != set)\n    {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return NULL;\n    }\n\n    if (device->removed)\n    {\n        SetLastError(ERROR_NO_SUCH_DEVINST);\n        return NULL;\n    }\n\n    return device;\n}"
+  },
+  {
+   "name": "get_device_set",
+   "file": "dlls/setupapi/devinst.c",
+   "start_line": 187,
+   "end_line": 198,
+   "static": true,
+   "called_from": [
+    "get_device"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/setupapi/devinst.c:233",
+    "dlls/setupapi/devinst.c:1358",
+    "dlls/setupapi/devinst.c:1573",
+    "dlls/setupapi/devinst.c:2169",
+    "dlls/setupapi/devinst.c:2193"
+   ],
+   "signature": "static struct DeviceInfoSet *get_device_set(HDEVINFO devinfo)",
+   "code": "static struct DeviceInfoSet *get_device_set(HDEVINFO devinfo)\n{\n    struct DeviceInfoSet *set = devinfo;\n\n    if (!devinfo || devinfo == INVALID_HANDLE_VALUE || set->magic != SETUP_DEVICE_INFO_SET_MAGIC)\n    {\n        SetLastError(ERROR_INVALID_HANDLE);\n        return NULL;\n    }\n\n    return set;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "DeviceInfoSet",
+    "kind": "struct_decl",
+    "start_line": 86,
+    "end_line": 92,
+    "code": "struct DeviceInfoSet\n{\n    DWORD magic;        /* if is equal to SETUP_DEVICE_INFO_SET_MAGIC struct is okay */\n    GUID ClassGuid;\n    HWND hwndParent;\n    struct list devices;\n};"
+   },
+   {
+    "name": "PropertyMapEntry",
+    "kind": "struct_decl",
+    "start_line": 589,
+    "end_line": 595,
+    "code": "struct PropertyMapEntry\n{\n    DWORD   regType;\n    LPCSTR  nameA;\n    LPCWSTR nameW;\n    DEVPROPTYPE devPropType;\n};"
+   },
+   {
+    "name": "device",
+    "kind": "struct_decl",
+    "start_line": 94,
+    "end_line": 109,
+    "code": "struct device\n{\n    struct DeviceInfoSet *set;\n    HKEY                  key;\n    BOOL                  phantom;\n    WCHAR                *instanceId;\n    struct list           interfaces;\n    GUID                  class;\n    DEVINST               devnode;\n    struct list           entry;\n    BOOL                  removed;\n    SP_DEVINSTALL_PARAMS_W params;\n    struct driver        *drivers;\n    unsigned int          driver_count;\n    struct driver        *selected_driver;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "PropertyMap",
+    "type": "const struct PropertyMapEntry[37]",
+    "static": true,
+    "start_line": 598,
+    "end_line": 619,
+    "code": "static const struct PropertyMapEntry PropertyMap[] = {\n    PROPERTY_MAP_ENTRY(REG_SZ, \"DeviceDesc\", DEVPROP_TYPE_STRING),\n    PROPERTY_MAP_ENTRY(REG_MULTI_SZ, \"HardwareId\", DEVPROP_TYPE_STRING_LIST),\n    PROPERTY_MAP_ENTRY(REG_MULTI_SZ, \"CompatibleIDs\", DEVPROP_TYPE_STRING_LIST),\n    { 0, NULL, NULL }, /* SPDRP_UNUSED0 */\n    PROPERTY_MAP_ENTRY(REG_SZ, \"Service\", DEVPROP_TYPE_STRING),\n    { 0, NULL, NULL }, /* SPDRP_UNUSED1 */\n    { 0, NULL, NULL }, /* SPDRP_UNUSED2 */\n    PROPERTY_MAP_ENTRY(REG_SZ, \"Class\", DEVPROP_TYPE_STRING),\n    PROPERTY_MAP_ENTRY(REG_SZ, \"ClassGUID\", DEVPROP_TYPE_GUID),\n    PROPERTY_MAP_ENTRY(REG_SZ, \"Driver\", DEVPROP_TYPE_STRING),\n    PROPERTY_MAP_ENTRY(REG_DWORD, \"ConfigFlags\", DEVPROP_TYPE_UINT32),\n    PROPERTY_MAP_ENTRY(REG_SZ, \"Mfg\", DEVPROP_TYPE_STRING),\n    PROPERTY_MAP_ENTRY(REG_SZ, \"FriendlyName\", 0),\n    PROPERTY_MAP_ENTRY(REG_SZ, \"LocationInformation\", DEVPROP_TYPE_STRING),\n    { 0, NULL, NULL, DEVPROP_TYPE_STRING }, /* SPDRP_PHYSICAL_DEVICE_OBJECT_NAME */\n    PROPERTY_MAP_ENTRY(REG_DWORD, \"Capabilities\", DEVPROP_TYPE_INT32),\n    PROPERTY_MAP_ENTRY(REG_DWORD, \"UINumber\", DEVPROP_TYPE_INT32),\n    PROPERTY_MAP_ENTRY(REG_MULTI_SZ, \"UpperFilters\", DEVPROP_TYPE_STRING_LIST),\n    PROPERTY_MAP_ENTRY(REG_MULTI_SZ, \"LowerFilters\", DEVPROP_TYPE_STRING_LIST),\n    [SPDRP_BASE_CONTAINERID] = PROPERTY_MAP_ENTRY(REG_SZ, \"ContainerId\", DEVPROP_TYPE_GUID),\n};"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 52,
+    "end_line": 52,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(setupapi);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "SETUP_DEVICE_INFO_SET_MAGIC",
+    "start_line": 84,
+    "end_line": 84,
+    "code": "#define SETUP_DEVICE_INFO_SET_MAGIC 0xd00ff056"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "RegQueryValueExA",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1730"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   },
+   {
+    "name": "wcschr",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:256"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "lstrlenW",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "setupapi.SetupDiGetDeviceRegistryPropertyA",
+  "category": {
+   "l1": "Devices",
+   "l2": "Device management and installation",
+   "header": "setupapi.h",
+   "textbook": "Device management",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 99,
+   "body": 96,
+   "code": 60
+  },
+  "cyclomatic": 22,
+  "return_type": "BOOL",
+  "n_params": 7,
+  "tests": {
+   "n_tests_own": 3,
+   "n_tests": 6,
+   "n_tests_other": 3,
+   "own_test_functions": [
+    "dlls/setupapi/tests/devinst.c::test_device_key",
+    "dlls/setupapi/tests/devinst.c::test_driver_store",
+    "dlls/setupapi/tests/devinst.c::test_registry_property_a"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/setupapi/nf-setupapi-setupdigetdeviceregistrypropertya",
+   "source": "win32",
+   "description": "The SetupDiGetDeviceRegistryProperty function retrieves a specified Plug and Play device property. (ANSI)",
+   "min_windows": "Available in Microsoft Windows 2000 and later versions of Windows.",
+   "documented_dll": ""
+  },
+  "exports": [
+   "setupapi.SetupDiGetDeviceRegistryPropertyA"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.533,
+   "first_date": "2004-12-02",
+   "median_date": "2026-07-13",
+   "last_date": "2026-07-13",
+   "code_lines": 60
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "winspool.drv.AddMonitorA",
+  "share_after_cutoff": 0.533,
+  "last_date": "2026-07-13"
+ }
+}

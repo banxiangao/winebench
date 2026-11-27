@@ -1,0 +1,203 @@
+{
+ "id": "0073",
+ "function": {
+  "name": "EnumerateLoadedModulesW64",
+  "export_name": "EnumerateLoadedModulesW64",
+  "module": "dbghelp",
+  "source_module": "dbghelp",
+  "exported_by": [
+   "dbghelp"
+  ],
+  "side": "PE",
+  "file": "dlls/dbghelp/module.c",
+  "start_line": 1253,
+  "end_line": 1297,
+  "body_lines": 42,
+  "signature": "BOOL  WINAPI EnumerateLoadedModulesW64(HANDLE process, PENUMLOADED_MODULES_CALLBACKW64 enum_cb, PVOID user)",
+  "header_comment": "/******************************************************************\n *\t\tEnumerateLoadedModulesW64 (DBGHELP.@)\n *\n */",
+  "code": "BOOL  WINAPI EnumerateLoadedModulesW64(HANDLE process,\n                                       PENUMLOADED_MODULES_CALLBACKW64 enum_cb,\n                                       PVOID user)\n{\n    OBJECT_BASIC_INFORMATION obi;\n    DWORD               snapshot_flags;\n    DWORD               pid = GetProcessId( process );\n    HANDLE              snapshot;\n    MODULEENTRY32W      me;\n\n    if (!pid)\n    {\n        SetLastError(STATUS_INVALID_CID);\n        return FALSE;\n    }\n\n    if (process != GetCurrentProcess() &&\n        RtlIsCurrentProcess( process ) &&\n        !NtQueryObject(process, ObjectBasicInformation, &obi, sizeof(obi), NULL) &&\n        obi.GrantedAccess & PROCESS_VM_READ)\n    {\n        TRACE(\"same process.\\n\");\n        pid = 0;\n    }\n\n    snapshot_flags = TH32CS_SNAPMODULE;\n    if (dbghelp_options & SYMOPT_INCLUDE_32BIT_MODULES)\n        snapshot_flags |= TH32CS_SNAPMODULE32;\n\n    snapshot = CreateToolhelp32Snapshot( snapshot_flags, pid );\n    if (snapshot == INVALID_HANDLE_VALUE)\n        return FALSE;\n\n    me.dwSize = sizeof(me);\n    if (Module32FirstW( snapshot, &me ))\n    {\n        do\n        {\n            if (!enum_cb( me.szExePath, (DWORD_PTR)me.modBaseAddr, me.modBaseSize, user )) break;\n        } while (Module32NextW( snapshot, &me ));\n    }\n\n    CloseHandle( snapshot );\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdlib.h>",
+   "#include <stdio.h>",
+   "#include <string.h>",
+   "#include <assert.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"dbghelp_private.h\"",
+   "#include \"image_private.h\"",
+   "#include \"psapi.h\"",
+   "#include \"tlhelp32.h\"",
+   "#include \"winternl.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "dbghelp!EnumerateLoadedModulesW64 [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/dbghelp/tests/dbghelp.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "dbghelp",
+   "path": "sdk-api-src/content/dbghelp/nf-dbghelp-enumerateloadedmodulesw64.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/dbghelp/nf-dbghelp-enumerateloadedmodulesw64",
+   "documented_name": "enumerateloadedmodulesw64",
+   "file": "docs/0073_sdk-api_nf-dbghelp-enumerateloadedmodulesw64.md",
+   "text": "---\nUID: NF:dbghelp.EnumerateLoadedModulesW64\ntitle: EnumerateLoadedModulesW64 function (dbghelp.h)\ndescription: Enumerates the loaded modules for the specified process. (EnumerateLoadedModulesW64)\nhelpviewer_keywords: [\"EnumerateLoadedModules\",\"EnumerateLoadedModules function\",\"EnumerateLoadedModules64\",\"EnumerateLoadedModules64 function\",\"EnumerateLoadedModulesW64\",\"_win32_enumerateloadedmodules64\",\"base.enumerateloadedmodules64\",\"dbghelp/EnumerateLoadedModules\",\"dbghelp/EnumerateLoadedModules64\",\"dbghelp/EnumerateLoadedModulesW64\"]\nold-location: base\\enumerateloadedmodules64.htm\ntech.root: Debug\nms.assetid: 9bfa683f-2a0f-418f-8ac4-5c4224265f2e\nms.date: 12/05/2018\nms.keywords: EnumerateLoadedModules, EnumerateLoadedModules function, EnumerateLoadedModules64, EnumerateLoadedModules64 function, EnumerateLoadedModulesW64, _win32_enumerateloadedmodules64, base.enumerateloadedmodules64, dbghelp/EnumerateLoadedModules, dbghelp/EnumerateLoadedModules64, dbghelp/EnumerateLoadedModulesW64\nreq.header: dbghelp.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: EnumerateLoadedModulesW64 (Unicode) and EnumerateLoadedModules64 (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Dbghelp.lib\nreq.dll: Dbghelp.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: DbgHelp.dll 5.1 or later\nms.custom: 19H1\nf1_keywords:\n - EnumerateLoadedModulesW64\n - dbghelp/EnumerateLoadedModulesW64\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Dbghelp.dll\napi_name:\n - EnumerateLoadedModules64\n - EnumerateLoadedModules64\n - EnumerateLoadedModulesW64\n - EnumerateLoadedModules\n---\n\n# EnumerateLoadedModulesW64 function\n\n\n## -description\n\nEnumerates the loaded modules for the specified process.\n\n## -parameters\n\n### -param hProcess [in]\n\nA handle to the process whose modules will be enumerated.\n\n### -param EnumLoadedModulesCallback [in]\n\nAn application-defined callback function. For more information, see \n<a href=\"/windows/desktop/api/dbghelp/nc-dbghelp-penumloaded_modules_callback\">EnumerateLoadedModulesProc64</a>.\n\n### -param UserContext [in, optional]\n\nOptional user-defined data. This value is passed to the callback function.\n\n## -returns\n\nIf the function succeeds, the return value is <b>TRUE</b>.\n\nIf the function fails, the return value is <b>FALSE</b>. To retrieve extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nAll DbgHelp functions, such as this one, are single threaded. Therefore, calls from more than one thread to this function will likely result in unexpected behavior or memory corruption. To avoid this, you must synchronize all concurrent calls from more than one thread to this function.\n\nTo call the Unicode version of this function, <i>EnumerateLoadedModulesW64</i>, define <b>DBGHELP_TRANSLATE_TCHAR</b>. <i>EnumerateLoadedModulesW64</i> is defined as follows in DbgHelp.h. \n\n\n```cpp\nBOOL\nIMAGEAPI\nEnumerateLoadedModulesW64(\n    __in HANDLE hProcess,\n    __in PENUMLOADED_MODULES_CALLBACKW64 EnumLoadedModulesCallback,\n    __in PVOID UserContext\n    );\n\n#ifdef DBGHELP_TRANSLATE_TCHAR\n    #define EnumerateLoadedModules64      EnumerateLoadedModulesW64\n#endif\n```\n\n\nThis function supersedes the <i>EnumerateLoadedModules</i> function. For more information, see \n<a href=\"/windows/desktop/Debug/updated-platform-support\">Updated Platform Support</a>. <i>EnumerateLoadedModules</i> is defined as follows in DbgHelp.h. \n\n\n```cpp\n#if !defined(_IMAGEHLP_SOURCE_) && defined(_IMAGEHLP64)\n#define EnumerateLoadedModules EnumerateLoadedModules64\n#else\nBOOL\nIMAGEAPI\nEnumerateLoadedModules(\n    __in HANDLE hProcess,\n    __in PENUMLOADED_MODULES_CALLBACK EnumLoadedModulesCallback,\n    __in_opt PVOID UserContext\n    );\n#endif\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/Debug/dbghelp-functions\">DbgHelp Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/dbghelp/nc-dbghelp-penumloaded_modules_callback\">EnumerateLoadedModulesProc64</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 35,
+    "end_line": 35,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(dbghelp);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "CloseHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "CreateToolhelp32Snapshot",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernel32/toolhelp.c:447"
+    ]
+   },
+   {
+    "name": "GetProcessId",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:919"
+    ]
+   },
+   {
+    "name": "Module32FirstW",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernel32/toolhelp.c:682"
+    ]
+   },
+   {
+    "name": "Module32NextW",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernel32/toolhelp.c:692"
+    ]
+   },
+   {
+    "name": "NtQueryObject",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/file.c:7808"
+    ]
+   },
+   {
+    "name": "RtlIsCurrentProcess",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/process.c:52"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetCurrentProcess",
+   "SetLastError",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "enum_cb",
+    "in_function": "EnumerateLoadedModulesW64",
+    "at": "dlls/dbghelp/module.c:1291",
+    "candidates": []
+   }
+  ]
+ },
+ "winebench": {
+  "id": "dbghelp.EnumerateLoadedModulesW64",
+  "category": {
+   "l1": "Diagnostics",
+   "l2": "Debugging and error handling",
+   "header": "dbghelp.h",
+   "textbook": "Process control",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 45,
+   "body": 42,
+   "code": 27
+  },
+  "cyclomatic": 11,
+  "return_type": "BOOL",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/dbghelp/tests/dbghelp.c::wrapper_EnumerateLoadedModulesW64"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/dbghelp/nf-dbghelp-enumerateloadedmodulesw64",
+   "source": "win32",
+   "description": "Enumerates the loaded modules for the specified process. (EnumerateLoadedModulesW64)",
+   "min_windows": "",
+   "documented_dll": "Dbghelp.dll"
+  },
+  "exports": [
+   "dbghelp.EnumerateLoadedModulesExW",
+   "dbghelp.EnumerateLoadedModulesW64"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.867,
+   "first_date": "2021-11-22",
+   "median_date": "2026-02-03",
+   "last_date": "2026-02-03",
+   "code_lines": 30
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "imagehlp.ImageGetCertificateData",
+  "share_after_cutoff": 0.867,
+  "last_date": "2026-02-03"
+ }
+}

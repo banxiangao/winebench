@@ -1,0 +1,292 @@
+{
+ "id": "0190",
+ "function": {
+  "name": "GetPrinterDataExA",
+  "export_name": "GetPrinterDataExA",
+  "module": "winspool.drv",
+  "source_module": "winspool.drv",
+  "exported_by": [
+   "winspool.drv"
+  ],
+  "side": "PE",
+  "file": "dlls/winspool.drv/info.c",
+  "start_line": 5592,
+  "end_line": 5638,
+  "body_lines": 44,
+  "signature": "DWORD WINAPI GetPrinterDataExA(HANDLE hPrinter, LPCSTR pKeyName, LPCSTR pValueName, LPDWORD pType, LPBYTE pData, DWORD nSize, LPDWORD pcbNeeded)",
+  "header_comment": "/******************************************************************************\n *\t\tGetPrinterDataExA   (WINSPOOL.@)\n */",
+  "code": "DWORD WINAPI GetPrinterDataExA(HANDLE hPrinter, LPCSTR pKeyName,\n\t\t\t       LPCSTR pValueName, LPDWORD pType,\n\t\t\t       LPBYTE pData, DWORD nSize, LPDWORD pcbNeeded)\n{\n    opened_printer_t *printer;\n    HKEY printers_key, hkeyPrinter = 0, hkeySubkey = 0;\n    DWORD ret;\n\n    TRACE(\"(%p, %s, %s, %p, %p, %lu, %p)\\n\", hPrinter, debugstr_a(pKeyName),\n            debugstr_a(pValueName), pType, pData, nSize, pcbNeeded);\n\n    printer = get_opened_printer(hPrinter);\n    if(!printer) return ERROR_INVALID_HANDLE;\n\n    ret = create_printers_reg_key( system_printers_key, &printers_key );\n    if (ret) return ret;\n\n    TRACE(\"printer->name: %s\\n\", debugstr_w(printer->name));\n\n    if (printer->name) {\n\n        ret = RegOpenKeyW( printers_key, printer->name, &hkeyPrinter );\n        if (ret)\n        {\n            RegCloseKey( printers_key );\n            return ret;\n        }\n        if((ret = RegOpenKeyA(hkeyPrinter, pKeyName, &hkeySubkey)) != ERROR_SUCCESS) {\n            WARN(\"Can't open subkey %s: %ld\\n\", debugstr_a(pKeyName), ret);\n            RegCloseKey(hkeyPrinter);\n            RegCloseKey( printers_key );\n            return ret;\n        }\n    }\n    *pcbNeeded = nSize;\n    ret = RegQueryValueExA( printer->name ? hkeySubkey : printers_key, pValueName,\n                            0, pType, pData, pcbNeeded );\n\n    if (!ret && !pData) ret = ERROR_MORE_DATA;\n\n    RegCloseKey(hkeySubkey);\n    RegCloseKey(hkeyPrinter);\n    RegCloseKey( printers_key );\n\n    TRACE(\"--> %ld\\n\", ret);\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include <ctype.h>",
+   "#include <stddef.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winreg.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winspool.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wine/windef16.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/rbtree.h\"",
+   "#include <wine/unixlib.h>",
+   "#include \"ddk/compstui.h\"",
+   "#include \"ddk/winsplp.h\"",
+   "#include \"wspool.h\""
+  ],
+  "resolution": [
+   "winspool.drv!GetPrinterDataExA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/winspool.drv/tests/info.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "",
+   "path": "desktop-src/printdocs/getprinterdataex.md",
+   "url": "https://learn.microsoft.com/windows/win32/printdocs/getprinterdataex",
+   "documented_name": "getprinterdataexa",
+   "file": "docs/0190_win32_getprinterdataex.md",
+   "text": "---\ndescription: The GetPrinterDataEx function retrieves configuration data for the specified printer or print server.\nms.assetid: 5d9183a7-97cc-46de-848e-e37ce51396eb\ntitle: GetPrinterDataEx function (Winspool.h)\nms.topic: reference\nms.date: 05/31/2018\ntopic_type: \n- APIRef\n- kbSyntax\napi_name: \n- GetPrinterDataEx\n- GetPrinterDataExA\n- GetPrinterDataExW\napi_type: \n- DllExport\napi_location: \n- Winspool.drv\n- Ext-MS-Win-printer-Winspool-l1-1-1.dll\n- Ext-MS-Win-Printer-WinSpool-l1-1-2.dll\n- Ext-MS-Win-Printer-WinSpool-L1-1-3.dll\n---\n\n# GetPrinterDataEx function\n\nThe **GetPrinterDataEx** function retrieves configuration data for the specified printer or print server. **GetPrinterDataEx** can retrieve values that the [**SetPrinterData**](setprinterdata.md) function stored. In addition, **GetPrinterDataEx** can retrieve values that the [**SetPrinterDataEx**](setprinterdataex.md) function stored under a specified key.\n\n## Syntax\n\n\n```C++\nDWORD GetPrinterDataEx(\n  _In_  HANDLE  hPrinter,\n  _In_  LPCTSTR pKeyName,\n  _In_  LPCTSTR pValueName,\n  _Out_ LPDWORD pType,\n  _Out_ LPBYTE  pData,\n  _In_  DWORD   nSize,\n  _Out_ LPDWORD pcbNeeded\n);\n```\n\n\n\n## Parameters\n\n<dl> <dt>\n\n*hPrinter* \\[in\\]\n</dt> <dd>\n\nA handle to the printer or print server for which the function retrieves configuration data. Use the [**OpenPrinter**](openprinter.md), [**OpenPrinter2**](openprinter2.md), or [**AddPrinter**](addprinter.md) function to retrieve a printer handle.\n\n</dd> <dt>\n\n*pKeyName* \\[in\\]\n</dt> <dd>\n\nA pointer to a null-terminated string that specifies the key containing the value to be retrieved. Use the backslash ( \\\\ ) character as a delimiter to specify a path that has one or more subkeys.\n\nIf *hPrinter* is a handle to a printer and *pKeyName* is **NULL** or an empty string, **GetPrinterDataEx** returns **ERROR\\_INVALID\\_PARAMETER**.\n\nIf *hPrinter* is a handle to a print server, *pKeyName* is ignored.\n\n</dd> <dt>\n\n*pValueName* \\[in\\]\n</dt> <dd>\n\nA pointer to a null-terminated string that identifies the data to retrieve.\n\nFor printers, this string specifies the name of a value under the *pKeyName* key.\n\nFor print servers, this string is one of the predefined strings listed in the following Remarks section.\n\n</dd> <dt>\n\n*pType* \\[out\\]\n</dt> <dd>\n\nA pointer to a variable that receives the type of data stored in the value. The function returns the type specified in the [**SetPrinterDataEx**](setprinterdataex.md) call when the data was stored. This parameter can be **NULL** if you don't need the information. **GetPrinterDataEx** passes *pType* on as the *lpdwType* parameter of a [**RegQueryValueEx**](/windows/desktop/api/winreg/nf-winreg-regqueryvalueexa) function call.\n\n</dd> <dt>\n\n*pData* \\[out\\]\n</dt> <dd>\n\nA pointer to a buffer that receives the configuration data.\n\n</dd> <dt>\n\n*nSize* \\[in\\]\n</dt> <dd>\n\nThe size, in bytes, of the buffer pointed to by *pData*.\n\n</dd> <dt>\n\n*pcbNeeded* \\[out\\]\n</dt> <dd>\n\nA pointer to a variable that receives the size, in bytes, of the configuration data. If the buffer size specified by *nSize* is too small, the function returns **ERROR\\_MORE\\_DATA**, and *pcbNeeded* indicates the required buffer size.\n\n</dd> </dl>\n\n## Return value\n\nIf the function succeeds, the return value is **ERROR\\_SUCCESS**.\n\nIf the function fails, the return value is an error value.\n\n## Remarks\n\n> [!Note]  \n> This is a blocking or synchronous function and might not return immediately. How quickly this function returns depends on run-time factors such as network status, print server configuration, and printer driver implementation factors that are difficult to predict when writing an application. Calling this function from a thread that manages interaction with the user interface could make the application appear to be unresponsive.\n\n \n\n**GetPrinterDataEx** retrieves printer-configuration data that was set by the [**SetPrinterDataEx**](setprinterdataex.md) and [**SetPrinterData**](setprinterdata.md) functions.\n\nCalling **GetPrinterDataEx** with the *pKeyName* parameter set to \"PrinterDriverData\" is equivalent to calling the [**GetPrinterData**](getprinterdata.md) function.\n\nIf *hPrinter* is a handle to a print server, *pValueName* can specify one of the following predefined values.\n\n\n\n| Value                                                               | Comments                                                                                                                                                                                                                        |\n|---------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|\n| **SPLREG\\_ALLOW\\_USER\\_MANAGEFORMS**                                | Windows XP with Service Pack 2 (SP2) and later<br/> Windows Server 2003 with Service Pack 1 (SP1) and later<br/>                                                                                                    |\n| **SPLREG\\_ARCHITECTURE**                                            |                                                                                                                                                                                                                                 |\n| **SPLREG\\_BEEP\\_ENABLED**                                           |                                                                                                                                                                                                                                 |\n| **SPLREG\\_DEFAULT\\_SPOOL\\_DIRECTORY**                               |                                                                                                                                                                                                                                 |\n| **SPLREG\\_DNS\\_MACHINE\\_NAME**                                      |                                                                                                                                                                                                                                 |\n| **SPLREG\\_DS\\_PRESENT**                                             | On successful return, *pData* contains 0x0001 if the machine is on a DS domain, 0 otherwise.<br/>                                                                                                                         |\n| **SPLREG\\_DS\\_PRESENT\\_FOR\\_USER**                                  | On successful return, *pData* contains 0x0001 if the user is logged onto a DS domain, 0 otherwise.<br/>                                                                                                                   |\n| **SPLREG\\_EVENT\\_LOG**                                              |                                                                                                                                                                                                                                 |\n| **SPLREG\\_MAJOR\\_VERSION**                                          |                                                                                                                                                                                                                                 |\n| **SPLREG\\_MINOR\\_VERSION**                                          |                                                                                                                                                                                                                                 |\n| **SPLREG\\_NET\\_POPUP**                                              | Not supported in Windows Server 2003 and later<br/>                                                                                                                                                                       |\n| **SPLREG\\_NET\\_POPUP\\_TO\\_COMPUTER**                                | On successful return, *pData* contains 1 if job notifications should be sent to the client computer, or 0 if job notifications are to be sent to the user.<br/> Not supported in Windows Server 2003 and later<br/> |\n| **SPLREG\\_OS\\_VERSION**                                             | Windows XP and later<br/>                                                                                                                                                                                                 |\n| **SPLREG\\_OS\\_VERSIONEX**                                           |                                                                                                                                                                                                                                 |\n| **SPLREG\\_PORT\\_THREAD\\_PRIORITY\\_DEFAULT**                         |                                                                                                                                                                                                                                 |\n| **SPLREG\\_PORT\\_THREAD\\_PRIORITY**                                  |                                                                                                                                                                                                                                 |\n| **SPLREG\\_PRINT\\_DRIVER\\_ISOLATION\\_GROUPS**                        | Windows 7 and later<br/>                                                                                                                                                                                                  |\n| **SPLREG\\_PRINT\\_DRIVER\\_ISOLATION\\_TIME\\_BEFORE\\_RECYCLE**         | Windows 7 and later<br/>                                                                                                                                                                                                  |\n| **SPLREG\\_PRINT\\_DRIVER\\_ISOLATION\\_MAX\\_OBJECTS\\_BEFORE\\_RECYCLE** | Windows 7 and later<br/>                                                                                                                                                                                                  |\n| **SPLREG\\_PRINT\\_DRIVER\\_ISOLATION\\_IDLE\\_TIMEOUT**                 | Windows 7 and later<br/>                                                                                                                                                                                                  |\n| **SPLREG\\_PRINT\\_DRIVER\\_ISOLATION\\_EXECUTION\\_POLICY**             | Windows 7 and later<br/>                                                                                                                                                                                                  |\n| **SPLREG\\_PRINT\\_DRIVER\\_ISOLATION\\_OVERRIDE\\_POLICY**              | Windows 7 and later<br/>                                                                                                                                                                                                  |\n| **SPLREG\\_REMOTE\\_FAX**                                             | On successful return, *pData* contains 0x0001 if the FAX service supports remote clients, 0 otherwise.<br/>                                                                                                               |\n| **SPLREG\\_RETRY\\_POPUP**                                            | On successful return, *pData* contains 1 if server is set to retry pop-up windows for all jobs, or 0 if server does not retry pop-up windows for all jobs.<br/> Not supported in Windows Server 2003 and later<br/> |\n| **SPLREG\\_SCHEDULER\\_THREAD\\_PRIORITY**                             |                                                                                                                                                                                                                                 |\n| **SPLREG\\_SCHEDULER\\_THREAD\\_PRIORITY\\_DEFAULT**                    |                                                                                                                                                                                                                                 |\n| **SPLREG\\_WEBSHAREMGMT**                                            | Windows Server 2003 and later<br/>                                                                                                                                                                                        |\n\n\n\n \n\nThe following values of *pValueName* indicate the pool printing behavior when an error occurs.\n\n\n\n| Value                                       | Comments                                                                                                                                                                                              |\n|---------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|\n| **SPLREG\\_RESTART\\_JOB\\_ON\\_POOL\\_ERROR**   | The value of *pData* indicates the time, in seconds, when a job is restarted on another port after an error occurs. This setting is used with **SPLREG\\_RESTART\\_JOB\\_ON\\_POOL\\_ENABLED**.<br/> |\n| **SPLREG\\_RESTART\\_JOB\\_ON\\_POOL\\_ENABLED** | A nonzero value in *pData* indicates that **SPLREG\\_RESTART\\_JOB\\_ON\\_POOL\\_ERROR** is enabled.<br/>                                                                                            |\n\n\n\n \n\nThe time specified in **SPLREG\\_RESTART\\_JOB\\_ON\\_POOL\\_ERROR** is a minimum time. The actual time can be longer, depending on the following port monitor settings, which are registry values under this registry key:\n\n**HKLM\\\\SYSTEM\\\\CurrentControlSet\\\\Control\\\\Print\\\\Monitors\\\\<*MonitorName*>\\\\Ports**\n\nCall the [**RegQueryValueEx**](/windows/win32/api/winreg/nf-winreg-regqueryvalueexa) function to query these values.\n\n\n\n| Port monitor setting     | Data type      | Meaning                                                                                                        |\n|--------------------------|----------------|----------------------------------------------------------------------------------------------------------------|\n| **StatusUpdateEnabled**  | **REG\\_DWORD** | If a nonzero value, enables the port monitor to update the spooler with the port status.<br/>            |\n| **StatusUpdateInterval** | **REG\\_DWORD** | Specifies the interval, in minutes, when the port monitor updates the spooler with the port status.<br/> |\n\n\n\n \n\nIf *pKeyName* is one of the predefined Directory Service (DS) keys (see [**SetPrinter**](setprinter.md)) and *pValueName* contains a comma (','), then the portion of *pValueName* before the comma is the value name and the portion of *pValueName* to the right of the comma is the DS Property OID. A subkey called OID is created and a new value that consists of the value name and OID is entered under the OID key. [**SetPrinterDataEx**](setprinterdataex.md) also adds the value name and data under the DS key.\n\nIn Windows 7 and later versions of Windows, print jobs that are sent to a print server are rendered on the client by default. The configuration of client-side rendering for a printer can be read by setting *pKeyName* to \"PrinterDriverData\" and *pValueName* to the setting value in the following table.\n\n\n\n| Setting                      | Data type      | Description                                                                                                                                                                                                                                                                                                                                                                                                       |\n|------------------------------|----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|\n| **EMFDespoolingSetting**     | **REG\\_DWORD** | A value of 0, or if this value is not present in the registry, enables the default client-side rendering of print jobs.<br/> A value of 1 disables client-side rendering of print jobs.<br/>                                                                                                                                                                                                          |\n| **ForceClientSideRendering** | **REG\\_DWORD** | A value of 0, or if this value is not present in the registry, will cause the print jobs to be rendered on the client. If a print job cannot be rendered on the client, it will be rendered on the server. If a print job cannot be rendered on the server, it will fail.<br/> A value of 1 will render print jobs on the client. If a print job cannot be rendered on the client, it will fail.<br/> |\n\n\n\n \n\n## Requirements\n\n\n\n| Requirement | Value |\n|-------------------------------------|-----------------------------------------------------------------------------------------------------------|\n| Minimum supported client<br/> | Windows 2000 Professional \\[desktop apps only\\]<br/>                                                |\n| Minimum supported server<br/> | Windows 2000 Server \\[desktop apps only\\]<br/>                                                      |\n| Header<br/>                   | <dl> <dt>Winspool.h (include Windows.h)</dt> </dl> |\n| Library<br/>                  | <dl> <dt>Winspool.lib</dt> </dl>                   |\n| DLL<br/>                      | <dl> <dt>Winspool.drv</dt> </dl>                   |\n| Unicode and ANSI names<br/>   | **GetPrinterDataExW** (Unicode) and **GetPrinterDataExA** (ANSI)<br/>                               |\n\n\n\n## See also\n\n<dl> <dt>\n\n[Printing](printdocs-printing.md)\n</dt> <dt>\n\n[Print Spooler API Functions](printing-and-print-spooler-functions.md)\n</dt> <dt>\n\n[**OpenPrinter**](openprinter.md)\n</dt> <dt>\n\n[**SetPrinterDataEx**](setprinterdataex.md)\n</dt> </dl>\n\n \n\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_opened_printer",
+   "file": "dlls/winspool.drv/info.c",
+   "start_line": 530,
+   "end_line": 542,
+   "static": true,
+   "called_from": [
+    "GetPrinterDataExA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winspool.drv/info.c:550",
+    "dlls/winspool.drv/info.c:557",
+    "dlls/winspool.drv/info.c:5654",
+    "dlls/winspool.drv/info.c:6966"
+   ],
+   "signature": "static opened_printer_t *get_opened_printer(HANDLE hprn)",
+   "code": "static opened_printer_t *get_opened_printer(HANDLE hprn)\n{\n    UINT_PTR idx = (UINT_PTR)hprn;\n    opened_printer_t *ret = NULL;\n\n    EnterCriticalSection(&printer_handles_cs);\n\n    if ((idx > 0) && (idx <= nb_printer_handles)) {\n        ret = printer_handles[idx - 1];\n    }\n    LeaveCriticalSection(&printer_handles_cs);\n    return ret;\n}"
+  },
+  {
+   "name": "create_printers_reg_key",
+   "file": "dlls/winspool.drv/info.c",
+   "start_line": 353,
+   "end_line": 367,
+   "static": true,
+   "called_from": [
+    "GetPrinterDataExA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winspool.drv/info.c:413",
+    "dlls/winspool.drv/info.c:568",
+    "dlls/winspool.drv/info.c:722",
+    "dlls/winspool.drv/info.c:1111",
+    "dlls/winspool.drv/info.c:2543"
+   ],
+   "signature": "static DWORD create_printers_reg_key( enum printers_key type, HKEY *key )",
+   "code": "static DWORD create_printers_reg_key( enum printers_key type, HKEY *key )\n{\n    switch( type )\n    {\n    case system_printers_key:\n        return RegCreateKeyW( HKEY_LOCAL_MACHINE, L\"System\\\\CurrentControlSet\\\\Control\\\\Print\\\\Printers\", key );\n    case user_printers_key:\n        return RegCreateKeyW( HKEY_CURRENT_USER, L\"Software\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Devices\", key );\n    case user_ports_key:\n        return RegCreateKeyW( HKEY_CURRENT_USER, L\"Software\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\PrinterPorts\", key );\n    case user_default_key:\n        return RegCreateKeyW( HKEY_CURRENT_USER, L\"Software\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Windows\", key );\n    }\n    return ERROR_PATH_NOT_FOUND;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "opened_printer_t",
+    "kind": "typedef_decl",
+    "start_line": 68,
+    "end_line": 71,
+    "code": "typedef struct {\n    LPWSTR name;\n    HANDLE backend_printer;\n} opened_printer_t;"
+   },
+   {
+    "name": "printers_key",
+    "kind": "enum_decl",
+    "start_line": 345,
+    "end_line": 351,
+    "code": "enum printers_key\n{\n    system_printers_key,\n    user_printers_key,\n    user_ports_key,\n    user_default_key,\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 53,
+    "end_line": 53,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(winspool);"
+   },
+   {
+    "name": "nb_printer_handles",
+    "type": "UINT",
+    "static": true,
+    "start_line": 113,
+    "end_line": 113,
+    "code": "static UINT nb_printer_handles;"
+   },
+   {
+    "name": "printer_handles",
+    "type": "opened_printer_t **",
+    "static": true,
+    "start_line": 112,
+    "end_line": 112,
+    "code": "static opened_printer_t **printer_handles;"
+   },
+   {
+    "name": "printer_handles_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 64,
+    "end_line": 64,
+    "code": "static CRITICAL_SECTION printer_handles_cs = { &printer_handles_cs_debug, -1, 0, 0, 0, 0 };"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "RegCloseKey",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1129"
+    ]
+   },
+   {
+    "name": "RegCreateKeyW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/registry.c:70"
+    ]
+   },
+   {
+    "name": "RegOpenKeyA",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/registry.c:154"
+    ]
+   },
+   {
+    "name": "RegOpenKeyW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/registry.c:126"
+    ]
+   },
+   {
+    "name": "RegQueryValueExA",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1730"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_a",
+   "debugstr_w",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "winspool.drv.GetPrinterDataExA",
+  "category": {
+   "l1": "Devices",
+   "l2": "Printing",
+   "header": "",
+   "textbook": "Device management",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 47,
+   "body": 44,
+   "code": 29
+  },
+  "cyclomatic": 9,
+  "return_type": "DWORD",
+  "n_params": 7,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/winspool.drv/tests/info.c::test_GetPrinterDataEx"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/printdocs/getprinterdataex",
+   "source": "win32-conceptual",
+   "description": "The GetPrinterDataEx function retrieves configuration data for the specified printer or print server.",
+   "min_windows": "",
+   "documented_dll": "Ext-MS-Win-printer-Winspool-l1-1-1.dll"
+  },
+  "exports": [
+   "winspool.drv.GetPrinterDataExA"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "1999-05-22",
+   "median_date": "2010-06-15",
+   "last_date": "2022-05-13",
+   "code_lines": 31,
+   "pair": "setupapi.SetupDiSetDeviceInterfacePropertyW",
+   "rank": 1,
+   "distance": 0.3
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "setupapi.SetupDiSetDeviceInterfacePropertyW",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-05-13",
+  "partner_rank": 1,
+  "distance": 0.3
+ }
+}

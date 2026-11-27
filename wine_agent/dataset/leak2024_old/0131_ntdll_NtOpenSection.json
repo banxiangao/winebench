@@ -1,0 +1,209 @@
+{
+ "id": "0131",
+ "function": {
+  "name": "NtOpenSection",
+  "export_name": "NtOpenSection",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll"
+  ],
+  "side": "unix",
+  "file": "dlls/ntdll/unix/sync.c",
+  "start_line": 3045,
+  "end_line": 3064,
+  "body_lines": 17,
+  "signature": "NTSTATUS WINAPI NtOpenSection( HANDLE *handle, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr )",
+  "header_comment": "/***********************************************************************\n *             NtOpenSection (NTDLL.@)\n */",
+  "code": "NTSTATUS WINAPI NtOpenSection( HANDLE *handle, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr )\n{\n    unsigned int ret;\n\n    *handle = 0;\n    if ((ret = validate_open_object_attributes( attr ))) return ret;\n\n    SERVER_START_REQ( open_mapping )\n    {\n        req->access     = access;\n        req->attributes = attr->Attributes;\n        req->rootdir    = wine_server_obj_handle( attr->RootDirectory );\n        if (attr->ObjectName)\n            wine_server_add_data( req, attr->ObjectName->Buffer, attr->ObjectName->Length );\n        ret = wine_server_call( req );\n        *handle = wine_server_ptr_handle( reply->handle );\n    }\n    SERVER_END_REQ;\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"config.h\"",
+   "#include <assert.h>",
+   "#include <errno.h>",
+   "#include <fcntl.h>",
+   "#include <inttypes.h>",
+   "#include <limits.h>",
+   "#include <signal.h>",
+   "#include <sys/types.h>",
+   "#include <sys/ioctl.h>",
+   "#include <sys/mman.h>",
+   "#include <sys/syscall.h>",
+   "#include <sys/time.h>",
+   "#include <poll.h>",
+   "#include <unistd.h>",
+   "# include <sched.h>",
+   "# include <sys/resource.h>",
+   "#include <string.h>",
+   "#include <stdarg.h>",
+   "#include <stdint.h>",
+   "#include <stdio.h>",
+   "#include <stdlib.h>",
+   "#include <time.h>",
+   "# include <mach/mach_time.h>",
+   "# include <sys/event.h>",
+   "# include <linux/ntsync.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ddk/wdm.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"unix_private.h\"",
+   "#include <linux/futex.h>",
+   "#include <AvailabilityMacros.h>",
+   "#include <os/os_sync_wait_on_address.h>"
+  ],
+  "resolution": [
+   "ntdll!NtOpenSection [stdcall -syscall=0x0037]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntdll/tests/om.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 4
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "wdm",
+   "path": "wdk-ddi-src/content/wdm/nf-wdm-zwopensection.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-zwopensection",
+   "documented_name": "zwopensection",
+   "file": "docs/0131_windows-driver-docs-ddi_nf-wdm-zwopensection.md",
+   "text": "---\nUID: NF:wdm.ZwOpenSection\ntitle: ZwOpenSection function (wdm.h)\ndescription: The ZwOpenSection routine opens a handle for an existing section object.\ntech.root: kernel\nms.date: 12/14/2022\nkeywords: [\"ZwOpenSection function\"]\nms.keywords: NtOpenSection, ZwOpenSection, ZwOpenSection routine [Kernel-Mode Driver Architecture], k111_51851f81-8825-499b-9e7e-36faa8f53b23.xml, kernel.zwopensection, wdm/NtOpenSection, wdm/ZwOpenSection\nreq.header: wdm.h\nreq.include-header: Wdm.h, Ntddk.h, Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt: Available starting with Windows 2000.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: PowerIrpDDis, HwStorPortProhibitedDDIs\nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: PASSIVE_LEVEL\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - ZwOpenSection\n - wdm/ZwOpenSection\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - ZwOpenSection\n---\n\n## -description\n\nThe **ZwOpenSection** routine opens a handle for an existing [section object](/windows-hardware/drivers/).\n\n## -parameters\n\n### -param SectionHandle [out]\n\nPointer to a HANDLE variable that receives a handle to the section object.\n\n### -param DesiredAccess [in]\n\nSpecifies an [ACCESS_MASK](/windows-hardware/drivers/kernel/access-mask) value that determines the requested access to the object. For more information, see the *DesiredAccess* parameter of [ZwCreateSection](./nf-wdm-zwcreatesection.md).\n\n### -param ObjectAttributes [in]\n\nPointer to an [**OBJECT_ATTRIBUTES**](/windows/win32/api/ntdef/ns-ntdef-_object_attributes) structure that specifies the object name and other attributes. Use [InitializeObjectAttributes](/windows/win32/api/ntdef/nf-ntdef-initializeobjectattributes) to initialize this structure. If the caller is not running in a system thread context, it must set the OBJ_KERNEL_HANDLE attribute when it calls **InitializeObjectAttributes**.\n\n## -returns\n\n**ZwOpenSection** returns STATUS_SUCCESS on success, or the appropriate error code on failure. Possible return values include:\n\n## -remarks\n\nIf the section does not exist or the system did not grant the requested access, the operation fails.\n\nOnce the handle pointed to by *SectionHandle* is no longer in use, the driver must call [ZwClose](../ntifs/nf-ntifs-ntclose.md) to close it.\n\nIf the caller is not running in a system thread context, it must ensure that any handles it creates are private handles. Otherwise, the handle can be accessed by the process in whose context the driver is running. For more information, see [Object Handles](/windows-hardware/drivers/kernel/object-handles).\n\nIf the call to this function occurs in user mode, you should use the name \"**NtOpenSection**\" instead of \"**ZwOpenSection**\".\n\nFor calls from kernel-mode drivers, the **Nt*Xxx*** and **Zw*Xxx*** versions of a Windows Native System Services routine can behave differently in the way that they handle and interpret input parameters. For more information about the relationship between the **Nt*Xxx*** and **Zw*Xxx*** versions of a routine, see [Using Nt and Zw Versions of the Native System Services Routines](/windows-hardware/drivers/kernel/using-nt-and-zw-versions-of-the-native-system-services-routines).\n\n## -see-also\n\n[ACCESS_MASK](/windows-hardware/drivers/kernel/access-mask)\n\n[InitializeObjectAttributes](/windows/win32/api/ntdef/nf-ntdef-initializeobjectattributes)\n\n[Using Nt and Zw Versions of the Native System Services Routines](/windows-hardware/drivers/kernel/using-nt-and-zw-versions-of-the-native-system-services-routines)\n\n[ZwCreateSection](./nf-wdm-zwcreatesection.md)\n\n[ZwMapViewOfSection](./nf-wdm-zwmapviewofsection.md)\n\n[ZwUnmapViewOfSection](./nf-wdm-zwunmapviewofsection.md)"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "validate_open_object_attributes",
+   "file": "dlls/ntdll/unix/sync.c",
+   "start_line": 297,
+   "end_line": 309,
+   "static": true,
+   "called_from": [
+    "NtOpenSection"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/sync.c:1005",
+    "dlls/ntdll/unix/sync.c:1134",
+    "dlls/ntdll/unix/sync.c:1323",
+    "dlls/ntdll/unix/sync.c:1437",
+    "dlls/ntdll/unix/sync.c:1909"
+   ],
+   "signature": "static unsigned int validate_open_object_attributes( const OBJECT_ATTRIBUTES *attr )",
+   "code": "static unsigned int validate_open_object_attributes( const OBJECT_ATTRIBUTES *attr )\n{\n    if (!attr || attr->Length != sizeof(*attr)) return STATUS_INVALID_PARAMETER;\n\n    if (attr->ObjectName)\n    {\n        if ((ULONG_PTR)attr->ObjectName->Buffer & (sizeof(WCHAR) - 1)) return STATUS_DATATYPE_MISALIGNMENT;\n        if (attr->ObjectName->Length & (sizeof(WCHAR) - 1)) return STATUS_OBJECT_NAME_INVALID;\n    }\n    else if (attr->RootDirectory) return STATUS_OBJECT_NAME_INVALID;\n\n    return STATUS_SUCCESS;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "memset",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   },
+   {
+    "name": "wine_server_call",
+    "impl": [
+     "dlls/ntdll/loader.c:3436"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_server_add_data",
+   "wine_server_obj_handle",
+   "wine_server_ptr_handle"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [
+   {
+    "request": "open_mapping",
+    "handler": "server/mapping.c:1535"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ntdll.NtOpenSection",
+  "category": {
+   "l1": "System services",
+   "l2": "Memory management",
+   "header": "wdm.h",
+   "textbook": "Process control",
+   "basis": "name_rule"
+  },
+  "loc": {
+   "total": 20,
+   "body": 19,
+   "code": 13
+  },
+  "cyclomatic": 3,
+  "return_type": "NTSTATUS",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 4,
+   "n_tests": 4,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ntdll/tests/om.c::test_all_kernel_objects",
+    "dlls/ntdll/tests/om.c::test_name_limits",
+    "dlls/ntdll/tests/om.c::test_null_in_object_name",
+    "dlls/ntdll/tests/om.c::test_zero_access"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-zwopensection",
+   "source": "ddi",
+   "description": "The ZwOpenSection routine opens a handle for an existing section object.",
+   "min_windows": "Available starting with Windows 2000.",
+   "documented_dll": "NtosKrnl.exe"
+  },
+  "exports": [
+   "ntdll.NtOpenSection",
+   "ntdll.ZwOpenSection",
+   "ntoskrnl.exe.ZwOpenSection"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2001-11-30",
+   "median_date": "2013-08-21",
+   "last_date": "2022-11-21",
+   "code_lines": 12,
+   "pair": "ntdll.NtWaitForSingleObject",
+   "rank": 1,
+   "distance": 0.523
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "ntdll.NtWaitForSingleObject",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-11-21",
+  "partner_rank": 1,
+  "distance": 0.523
+ }
+}

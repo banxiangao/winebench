@@ -1,0 +1,79 @@
+---
+UID: NF:d3dkmthk.D3DKMTOpenKeyedMutex2
+title: D3DKMTOpenKeyedMutex2 function (d3dkmthk.h)
+description: The D3DKMTOpenKeyedMutex2 function opens a keyed mutex object that includes private data. The function returns STATUS_SUCCESS if the object was opened.
+old-location: display\d3dkmtopenkeyedmutex2.htm
+ms.date: 05/10/2018
+keywords: ["D3DKMTOpenKeyedMutex2 function"]
+ms.keywords: D3DKMTOpenKeyedMutex2, D3DKMTOpenKeyedMutex2 callback function [Display Devices], PFND3DKMT_OPENKEYEDMUTEX2, PFND3DKMT_OPENKEYEDMUTEX2 callback, d3dkmthk/D3DKMTOpenKeyedMutex2, display.d3dkmtopenkeyedmutex2
+req.header: d3dkmthk.h
+req.include-header: D3dkmthk.h
+req.target-type: Universal
+req.target-min-winverclnt: Windows 8
+req.target-min-winversvr: Windows Server 2012
+req.kmdf-ver: 
+req.umdf-ver: 
+req.ddi-compliance: 
+req.unicode-ansi: 
+req.idl: 
+req.max-support: 
+req.namespace: 
+req.assembly: 
+req.type-library: 
+req.lib: Gdi32.lib
+req.dll: Gdi32.dll
+req.irql: 
+targetos: Windows
+tech.root: display
+req.typenames: 
+f1_keywords:
+ - D3DKMTOpenKeyedMutex2
+ - d3dkmthk/D3DKMTOpenKeyedMutex2
+topic_type:
+ - APIRef
+ - kbSyntax
+api_type:
+ - DllExport
+api_location:
+ - Gdi32.dll
+api_name:
+ - D3DKMTOpenKeyedMutex2
+---
+
+# D3DKMTOpenKeyedMutex2 function
+
+
+## -description
+
+Opens a keyed mutex object that includes private data.
+
+## -parameters
+
+### -param unnamedParam1
+
+*pData* [in, out]
+
+A pointer to a <a href="/windows-hardware/drivers/ddi/d3dkmthk/ns-d3dkmthk-_d3dkmt_openkeyedmutex2">D3DKMT_OPENKEYEDMUTEX2</a> structure that describes a keyed mutex object that includes private data.
+
+## -returns
+
+Returns one of the following values:
+
+| **Return code** | **Description** | 
+|:--|:--|
+| **STATUS_SUCCESS** | The keyed mutex object was successfully opened. | 
+| **STATUS_DEVICE_REMOVED** | The graphics adapter was stopped or the display device was reset. | 
+| **STATUS_INVALID_PARAMETER** | Parameters were validated and determined to be incorrect. | 
+| **STATUS_NO_MEMORY** | [D3DKMTOpenKeyedMutex2]()  could not complete because of insufficient memory. | 
+
+This function might also return other NTSTATUS values.
+
+## -remarks
+
+<b>D3DKMTOpenKeyedMutex2</b> behaves like the <a href="/windows-hardware/drivers/ddi/d3dkmthk/nf-d3dkmthk-d3dkmtopenkeyedmutex">D3DKMTOpenKeyedMutex</a> function but lets the caller specify private data to associate with the keyed mutex.
+
+## -see-also
+
+<a href="/windows-hardware/drivers/ddi/d3dkmthk/nf-d3dkmthk-d3dkmtopenkeyedmutex">D3DKMTOpenKeyedMutex</a>
+
+<a href="/windows-hardware/drivers/ddi/d3dkmthk/ns-d3dkmthk-_d3dkmt_openkeyedmutex2">D3DKMT_OPENKEYEDMUTEX2</a>

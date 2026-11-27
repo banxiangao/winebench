@@ -1,0 +1,218 @@
+{
+ "id": "0082",
+ "function": {
+  "name": "GdipGetMetafileHeaderFromEmf",
+  "export_name": "GdipGetMetafileHeaderFromEmf",
+  "module": "gdiplus",
+  "source_module": "gdiplus",
+  "exported_by": [
+   "gdiplus"
+  ],
+  "side": "PE",
+  "file": "dlls/gdiplus/metafile.c",
+  "start_line": 4136,
+  "end_line": 4193,
+  "body_lines": 55,
+  "signature": "GpStatus WINGDIPAPI GdipGetMetafileHeaderFromEmf(HENHMETAFILE hemf, MetafileHeader *header)",
+  "header_comment": null,
+  "code": "GpStatus WINGDIPAPI GdipGetMetafileHeaderFromEmf(HENHMETAFILE hemf,\n    MetafileHeader *header)\n{\n    ENHMETAHEADER3 emfheader;\n    EmfPlusHeader emfplusheader;\n    MetafileType metafile_type;\n\n    TRACE(\"(%p,%p)\\n\", hemf, header);\n\n    if(!hemf || !header)\n        return InvalidParameter;\n\n    if (GetEnhMetaFileHeader(hemf, sizeof(emfheader), (ENHMETAHEADER*)&emfheader) == 0)\n        return GenericError;\n\n    emfplusheader.Header.Type = 0;\n\n    EnumEnhMetaFile(NULL, hemf, get_emfplus_header_proc, &emfplusheader, NULL);\n\n    if (emfplusheader.Header.Type == EmfPlusRecordTypeHeader)\n    {\n        if ((emfplusheader.Header.Flags & 1) == 1)\n            metafile_type = MetafileTypeEmfPlusDual;\n        else\n            metafile_type = MetafileTypeEmfPlusOnly;\n    }\n    else\n        metafile_type = MetafileTypeEmf;\n\n    header->Type = metafile_type;\n    header->Size = emfheader.nBytes;\n    header->DpiX = (REAL)emfheader.szlDevice.cx * 25.4 / emfheader.szlMillimeters.cx;\n    header->DpiY = (REAL)emfheader.szlDevice.cy * 25.4 / emfheader.szlMillimeters.cy;\n    header->X = gdip_round((REAL)emfheader.rclFrame.left / 2540.0 * header->DpiX);\n    header->Y = gdip_round((REAL)emfheader.rclFrame.top / 2540.0 * header->DpiY);\n    header->Width = gdip_round((REAL)(emfheader.rclFrame.right - emfheader.rclFrame.left) / 2540.0 * header->DpiX);\n    header->Height = gdip_round((REAL)(emfheader.rclFrame.bottom - emfheader.rclFrame.top) / 2540.0 * header->DpiY);\n    header->EmfHeader = emfheader;\n\n    if (metafile_type == MetafileTypeEmfPlusDual || metafile_type == MetafileTypeEmfPlusOnly)\n    {\n        header->Version = emfplusheader.Version;\n        header->EmfPlusFlags = emfplusheader.EmfPlusFlags;\n        header->EmfPlusHeaderSize = emfplusheader.Header.Size;\n        header->LogicalDpiX = emfplusheader.LogicalDpiX;\n        header->LogicalDpiY = emfplusheader.LogicalDpiY;\n    }\n    else\n    {\n        header->Version = emfheader.nVersion;\n        header->EmfPlusFlags = 0;\n        header->EmfPlusHeaderSize = 0;\n        header->LogicalDpiX = 0;\n        header->LogicalDpiY = 0;\n    }\n\n    return Ok;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <math.h>",
+   "#include <assert.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"objbase.h\"",
+   "#include \"ocidl.h\"",
+   "#include \"olectl.h\"",
+   "#include \"ole2.h\"",
+   "#include \"winreg.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"gdiplus.h\"",
+   "#include \"gdiplus_private.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\""
+  ],
+  "resolution": [
+   "gdiplus!GdipGetMetafileHeaderFromEmf [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdiplus/tests/metafile.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 2
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "gdiplusflat",
+   "path": "desktop-src/gdiplus/-gdiplus-graphics-flat.md",
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-graphics-flat",
+   "documented_name": "gdipgetmetafileheaderfromemf",
+   "excerpt": {
+    "note": "GDI+ flat API page: one table row per function; only the page introduction, the table header and this function's row are kept",
+    "full_page_chars": 212688
+   },
+   "file": "docs/0082_win32_-gdiplus-graphics-flat.md",
+   "text": "---\ndescription: Windows GDI+ exposes a flat API that consists of about 600 functions. These flat API functions are wrapped by the Graphics C++ class.\nms.assetid: 0d10b3cc-6d1d-4e14-80c9-fd3b8b3880d7\ntitle: Graphics Functions\nms.topic: reference\nms.date: 05/31/2018\n---\n\n# Graphics Functions\n\nWindows GDI+ exposes a flat API that consists of about 600 functions, which are implemented in Gdiplus.dll and declared in Gdiplusflat.h. The functions in the GDI+ flat API are wrapped by a collection of about 40 C++ classes. It is recommended that you do not directly call the functions in the flat API. Whenever you make calls to GDI+, you should do so by calling the methods and functions provided by the C++ wrappers. Microsoft Product Support Services will not provide support for code that calls the flat API directly. For more information on using these wrapper methods, see [GDI+ Flat API](-gdiplus-flatapi-flat.md).\n\nThe following flat API functions are wrapped by the [**Graphics**](/windows/win32/api/gdiplusgraphics/nl-gdiplusgraphics-graphics) C++ class.\n\n## Graphics Functions and Corresponding Wrapper Methods\n\n\n\n| Flat function                                                                                                                                                                                                                                                                                                               | Wrapper method                                                                                                                                                                                                                                                                                                                                                                                                              | Remarks                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |\n|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|\n| GpStatus WINGDIPAPI GdipGetMetafileHeaderFromEmf( HENHMETAFILE hEmf, MetafileHeader \\* header )<br/>                                                                                                                                                                                                                  | [**static Status Metafile::GetMetafileHeader( IN HENHMETAFILE hEmf, OUT MetafileHeader \\* header )**](/windows/win32/api/gdiplusheaders/nf-gdiplusheaders-metafile-getmetafileheader(inhenhmetafile_outmetafileheader))                                                                                                                                                                                                                                                           | Gets the header.                                                                                                                                                                                                                                                                                                                                                                                                                                                              |\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_emfplus_header_proc",
+   "file": "dlls/gdiplus/metafile.c",
+   "start_line": 4110,
+   "end_line": 4134,
+   "static": true,
+   "called_from": [
+    "GdipGetMetafileHeaderFromEmf"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static int CALLBACK get_emfplus_header_proc(HDC hDC, HANDLETABLE *lpHTable, const ENHMETARECORD *lpEMFR, int nObj, LPARAM lpData)",
+   "code": "static int CALLBACK get_emfplus_header_proc(HDC hDC, HANDLETABLE *lpHTable, const ENHMETARECORD *lpEMFR,\n    int nObj, LPARAM lpData)\n{\n    EmfPlusHeader *dst_header = (EmfPlusHeader*)lpData;\n\n    if (lpEMFR->iType == EMR_GDICOMMENT)\n    {\n        const EMRGDICOMMENT *comment = (const EMRGDICOMMENT*)lpEMFR;\n\n        if (comment->cbData >= 4 && memcmp(comment->Data, \"EMF+\", 4) == 0)\n        {\n            const EmfPlusRecordHeader *header = (const EmfPlusRecordHeader*)&comment->Data[4];\n\n            if (4 + sizeof(EmfPlusHeader) <= comment->cbData &&\n                header->Type == EmfPlusRecordTypeHeader)\n            {\n                memcpy(dst_header, header, sizeof(*dst_header));\n            }\n        }\n    }\n    else if (lpEMFR->iType == EMR_HEADER)\n        return TRUE;\n\n    return FALSE;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "EmfPlusHeader",
+    "kind": "typedef_decl",
+    "start_line": 61,
+    "end_line": 68,
+    "code": "typedef struct EmfPlusHeader\n{\n    EmfPlusRecordHeader Header;\n    DWORD Version;\n    DWORD EmfPlusFlags;\n    DWORD LogicalDpiX;\n    DWORD LogicalDpiY;\n} EmfPlusHeader;"
+   },
+   {
+    "name": "EmfPlusRecordHeader",
+    "kind": "struct_decl",
+    "start_line": 53,
+    "end_line": 59,
+    "code": "typedef struct EmfPlusRecordHeader\n{\n    WORD Type;\n    WORD Flags;\n    DWORD Size;\n    DWORD DataSize;\n} EmfPlusRecordHeader;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 41,
+    "end_line": 41,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(gdiplus);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnumEnhMetaFile",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/enhmetafile.c:2386"
+    ]
+   },
+   {
+    "name": "GetEnhMetaFileHeader",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/enhmetafile.c:425"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "gdip_round"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "gdiplus.GdipGetMetafileHeaderFromEmf",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI+",
+   "header": "gdiplusflat.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 58,
+   "body": 56,
+   "code": 39
+  },
+  "cyclomatic": 8,
+  "return_type": "GpStatus",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 2,
+   "n_tests": 2,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/gdiplus/tests/metafile.c::test_emfonly",
+    "dlls/gdiplus/tests/metafile.c::test_empty"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-graphics-flat",
+   "source": "win32-gdiplus-flat",
+   "description": "",
+   "min_windows": "",
+   "documented_dll": "gdiplus.dll"
+  },
+  "exports": [
+   "gdiplus.GdipGetMetafileHeaderFromEmf"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2011-05-23",
+   "median_date": "2015-11-01",
+   "last_date": "2023-07-13",
+   "code_lines": 41,
+   "pair": "gdiplus.GdipIsVisibleRegionPoint",
+   "rank": 1,
+   "distance": 0.274
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "gdiplus.GdipIsVisibleRegionPoint",
+  "share_after_cutoff": 0.0,
+  "last_date": "2023-07-13",
+  "partner_rank": 1,
+  "distance": 0.274
+ }
+}

@@ -1,0 +1,196 @@
+{
+ "id": "0138",
+ "function": {
+  "name": "RtlCreateRegistryKey",
+  "export_name": "RtlCreateRegistryKey",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll",
+   "ntoskrnl.exe"
+  ],
+  "side": "PE",
+  "file": "dlls/ntdll/reg.c",
+  "start_line": 686,
+  "end_line": 707,
+  "body_lines": 19,
+  "signature": "NTSTATUS WINAPI RtlCreateRegistryKey(ULONG RelativeTo, PWSTR path)",
+  "header_comment": "/*************************************************************************\n * RtlCreateRegistryKey   [NTDLL.@]\n *\n * Add a key to the registry given by absolute or relative path\n *\n * PARAMS\n *  RelativeTo  [I] Registry path that Path refers to\n *  path        [I] Path to key\n *\n * RETURNS\n *  STATUS_SUCCESS or an appropriate NTSTATUS error code.\n */",
+  "code": "NTSTATUS WINAPI RtlCreateRegistryKey(ULONG RelativeTo, PWSTR path)\n{\n    OBJECT_ATTRIBUTES regkey;\n    UNICODE_STRING string;\n    HANDLE handle;\n    NTSTATUS status;\n\n    RelativeTo &= ~RTL_REGISTRY_OPTIONAL;\n\n    if (!RelativeTo && (path == NULL || path[0] == 0))\n        return STATUS_OBJECT_PATH_SYNTAX_BAD;\n    if (RelativeTo <= RTL_REGISTRY_USER && (path == NULL || path[0] == 0))\n        return STATUS_SUCCESS;\n    status = RTL_KeyHandleCreateObject(RelativeTo, path, &regkey, &string);\n    if(status != STATUS_SUCCESS)\n\treturn status;\n\n    status = NtCreateKey(&handle, KEY_ALL_ACCESS, &regkey, 0, NULL, REG_OPTION_NON_VOLATILE, NULL);\n    if (handle) NtClose(handle);\n    RtlFreeUnicodeString( &string );\n    return status;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <string.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"ntdll_misc.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "ntdll!RtlCreateRegistryKey [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntdll/tests/reg.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "wdm",
+   "path": "wdk-ddi-src/content/wdm/nf-wdm-rtlcreateregistrykey.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlcreateregistrykey",
+   "documented_name": "rtlcreateregistrykey",
+   "file": "docs/0138_windows-driver-docs-ddi_nf-wdm-rtlcreateregistrykey.md",
+   "text": "---\nUID: NF:wdm.RtlCreateRegistryKey\ntitle: RtlCreateRegistryKey function (wdm.h)\ndescription: The RtlCreateRegistryKey routine adds a key object in the registry along a given relative path.\nold-location: kernel\\rtlcreateregistrykey.htm\ntech.root: kernel\nms.date: 04/30/2018\nkeywords: [\"RtlCreateRegistryKey function\"]\nms.keywords: RtlCreateRegistryKey, RtlCreateRegistryKey routine [Kernel-Mode Driver Architecture], k109_9a163bcc-501d-453b-b426-a4267d04135c.xml, kernel.rtlcreateregistrykey, wdm/RtlCreateRegistryKey\nreq.header: wdm.h\nreq.include-header: Wdm.h, Ntddk.h, Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt: Available in Windows 2000 and later versions of Windows.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: PASSIVE_LEVEL\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - RtlCreateRegistryKey\n - wdm/RtlCreateRegistryKey\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - RtlCreateRegistryKey\n---\n\n# RtlCreateRegistryKey function\n\n\n## -description\n\nThe <b>RtlCreateRegistryKey</b> routine adds a key object in the registry along a given relative path.\n\n## -parameters\n\n### -param RelativeTo [in]\n\n\nSpecifies whether <i>Path</i> is an absolute registry path or is relative to a predefined key path as one of the following.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td>\nRTL_REGISTRY_ABSOLUTE\n\n</td>\n<td>\nPath is an absolute registry path.\n\n</td>\n</tr>\n<tr>\n<td>\nRTL_REGISTRY_SERVICES\n\n</td>\n<td>\nPath is relative to <b>\\Registry\\Machine\\System\\CurrentControlSet\\Services</b>.\n\n</td>\n</tr>\n<tr>\n<td>\nRTL_REGISTRY_CONTROL\n\n</td>\n<td>\nPath is relative to <b>\\Registry\\Machine\\System\\CurrentControlSet\\Control</b>.\n\n</td>\n</tr>\n<tr>\n<td>\nRTL_REGISTRY_WINDOWS_NT\n\n</td>\n<td>\nPath is relative to <b>\\Registry\\Machine\\Software\\Microsoft\\Windows NT\\CurrentVersion</b>.\n\n</td>\n</tr>\n<tr>\n<td>\nRTL_REGISTRY_DEVICEMAP\n\n</td>\n<td>\nPath is relative to <b>\\Registry\\Machine\\Hardware\\DeviceMap</b>.\n\n</td>\n</tr>\n<tr>\n<td>\nRTL_REGISTRY_USER\n\n</td>\n<td>\nPath is relative to <b>\\Registry\\User\\CurrentUser</b>. (For a system process, this is <b>\\Users\\.Default</b>.)\n\n</td>\n</tr>\n</table>\n\n### -param Path [in]\n\n\nSpecifies the registry path according to the <i>RelativeTo</i> value.\n\n## -returns\n\n<b>RtlCreateRegistryKey</b> returns STATUS_SUCCESS if the key is created.\n\n## -remarks\n\n<b>RtlCreateRegistryKey</b> creates only the keys that you specify. It does not create missing keys in the path to the specified key. If any keys in the path are missing, the call will fail. To ensure that all keys in the path exist, you must call <b>RtlCreateRegistryKey</b> once for each key in the path.\n\n## -see-also\n\n<a href=\"/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlcheckregistrykey\">RtlCheckRegistryKey</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/wdm/nf-wdm-rtldeleteregistryvalue\">RtlDeleteRegistryValue</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlqueryregistryvalues\">RtlQueryRegistryValues</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlwriteregistryvalue\">RtlWriteRegistryValue</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/wdm/nf-wdm-zwenumeratekey\">ZwEnumerateKey</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/wdm/nf-wdm-zwopenkey\">ZwOpenKey</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "RTL_KeyHandleCreateObject",
+   "file": "dlls/ntdll/reg.c",
+   "start_line": 412,
+   "end_line": 458,
+   "static": true,
+   "called_from": [
+    "RtlCreateRegistryKey"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/reg.c:466"
+   ],
+   "signature": "static NTSTATUS RTL_KeyHandleCreateObject(ULONG RelativeTo, PCWSTR Path, POBJECT_ATTRIBUTES regkey, PUNICODE_STRING str)",
+   "code": "static NTSTATUS RTL_KeyHandleCreateObject(ULONG RelativeTo, PCWSTR Path, POBJECT_ATTRIBUTES regkey, PUNICODE_STRING str)\n{\n    PCWSTR base;\n    INT len;\n\n    switch (RelativeTo & 0xff)\n    {\n    case RTL_REGISTRY_ABSOLUTE:\n        base = L\"\";\n        break;\n\n    case RTL_REGISTRY_CONTROL:\n        base = L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Control\\\\\";\n        break;\n\n    case RTL_REGISTRY_DEVICEMAP:\n        base = L\"\\\\Registry\\\\Machine\\\\Hardware\\\\DeviceMap\\\\\";\n        break;\n\n    case RTL_REGISTRY_SERVICES:\n        base = L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Services\\\\\";\n        break;\n\n    case RTL_REGISTRY_USER:\n        base = L\"\\\\Registry\\\\User\\\\CurrentUser\\\\\";\n        break;\n\n    case RTL_REGISTRY_WINDOWS_NT:\n        base = L\"\\\\Registry\\\\Machine\\\\Software\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\\";\n        break;\n\n    default:\n        return STATUS_INVALID_PARAMETER;\n    }\n\n    len = (wcslen(base) + wcslen(Path) + 1) * sizeof(WCHAR);\n    str->Buffer = RtlAllocateHeap(GetProcessHeap(), 0, len);\n    if (str->Buffer == NULL)\n        return STATUS_NO_MEMORY;\n\n    wcscpy(str->Buffer, base);\n    wcscat(str->Buffer, Path);\n    str->Length = len - sizeof(WCHAR);\n    str->MaximumLength = len;\n    InitializeObjectAttributes(regkey, str, OBJ_CASE_INSENSITIVE, NULL, NULL);\n    return STATUS_SUCCESS;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "NtClose",
+    "impl": [
+     "dlls/ntdll/unix/server.c:1940"
+    ]
+   },
+   {
+    "name": "NtCreateKey",
+    "impl": [
+     "dlls/ntdll/unix/registry.c:74"
+    ]
+   },
+   {
+    "name": "RtlAllocateHeap",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "RtlFreeUnicodeString",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:272"
+    ]
+   },
+   {
+    "name": "wcscat",
+    "impl": [
+     "dlls/ntdll/wcstring.c:226"
+    ]
+   },
+   {
+    "name": "wcscpy",
+    "impl": [
+     "dlls/ntdll/wcstring.c:184"
+    ]
+   },
+   {
+    "name": "wcslen",
+    "impl": [
+     "dlls/ntdll/wcstring.c:215"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "GetProcessHeap"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ntdll.RtlCreateRegistryKey",
+  "category": {
+   "l1": "System services",
+   "l2": "Registry",
+   "header": "wdm.h",
+   "textbook": "Information maintenance",
+   "basis": "name_rule"
+  },
+  "loc": {
+   "total": 22,
+   "body": 21,
+   "code": 16
+  },
+  "cyclomatic": 9,
+  "return_type": "NTSTATUS",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ntdll/tests/reg.c::test_RtlCreateRegistryKey"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlcreateregistrykey",
+   "source": "ddi",
+   "description": "The RtlCreateRegistryKey routine adds a key object in the registry along a given relative path.",
+   "min_windows": "Available in Windows 2000 and later versions of Windows.",
+   "documented_dll": "NtosKrnl.exe"
+  },
+  "exports": [
+   "ntdll.RtlCreateRegistryKey",
+   "ntoskrnl.exe.RtlCreateRegistryKey"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2005-02-14",
+   "median_date": "2018-03-15",
+   "last_date": "2018-03-15",
+   "code_lines": 17,
+   "pair": "ntdll.RtlEnumerateGenericTableWithoutSplaying",
+   "rank": 1,
+   "distance": 0.267
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "ntdll.RtlEnumerateGenericTableWithoutSplaying",
+  "share_after_cutoff": 0.0,
+  "last_date": "2018-03-15",
+  "partner_rank": 1,
+  "distance": 0.267
+ }
+}

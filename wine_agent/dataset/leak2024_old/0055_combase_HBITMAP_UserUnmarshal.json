@@ -1,0 +1,209 @@
+{
+ "id": "0055",
+ "function": {
+  "name": "HBITMAP_UserUnmarshal",
+  "export_name": "HBITMAP_UserUnmarshal",
+  "module": "combase",
+  "source_module": "combase",
+  "exported_by": [
+   "combase",
+   "ole32"
+  ],
+  "side": "PE",
+  "file": "dlls/combase/usrmarshal.c",
+  "start_line": 466,
+  "end_line": 516,
+  "body_lines": 48,
+  "signature": "unsigned char * __RPC_USER HBITMAP_UserUnmarshal(ULONG *flags, unsigned char *buffer, HBITMAP *bmp)",
+  "header_comment": "/******************************************************************************\n *           HBITMAP_UserUnmarshal (combase.@)\n *\n * Unmarshals a bitmap from a buffer.\n *\n * PARAMS\n *  pFlags   [I] Flags. See notes.\n *  pBuffer  [I] Buffer to marshal the clip format from.\n *  phBmp    [O] Address that receive the unmarshaled bitmap.\n *\n * RETURNS\n *  The end of the marshaled data in the buffer.\n *\n * NOTES\n *  Even though the function is documented to take a pointer to an ULONG in\n *  pFlags, it actually takes a pointer to a USER_MARSHAL_CB structure, of which\n *  the first parameter is an ULONG.\n *  This function is only intended to be called by the RPC runtime.\n */",
+  "code": "unsigned char * __RPC_USER HBITMAP_UserUnmarshal(ULONG *flags, unsigned char *buffer, HBITMAP *bmp)\n{\n    ULONG context;\n\n    TRACE(\"(%s, %p, %p)\\n\", debugstr_user_flags(flags), buffer, bmp);\n\n    ALIGN_POINTER(buffer, 3);\n\n    context = *(ULONG *)buffer;\n    buffer += sizeof(ULONG);\n\n    if (context == WDT_INPROC_CALL)\n    {\n        *bmp = *(HBITMAP *)buffer;\n        buffer += sizeof(*bmp);\n    }\n    else if (context == WDT_REMOTE_CALL)\n    {\n        ULONG handle = *(ULONG *)buffer;\n        buffer += sizeof(ULONG);\n\n        if (handle)\n        {\n            static const ULONG header_size = FIELD_OFFSET(userBITMAP, cbSize);\n            BITMAP bitmap;\n            ULONG bitmap_size;\n            unsigned char *bits;\n\n            bitmap_size = *(ULONG *)buffer;\n            buffer += sizeof(ULONG);\n            bits = malloc(bitmap_size);\n\n            memcpy(&bitmap, buffer, header_size);\n            buffer += header_size;\n\n            memcpy(bits, buffer, bitmap_size);\n            buffer += bitmap_size;\n\n            bitmap.bmBits = bits;\n            *bmp = CreateBitmapIndirect(&bitmap);\n\n            free(bits);\n        }\n        else\n            *bmp = NULL;\n    }\n    else\n        RaiseException(RPC_S_INVALID_TAG, 0, 0, NULL);\n\n    return buffer;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ole2.h\"",
+   "#include \"winstring.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "ole32!HBITMAP_UserUnmarshal [stdcall] -> forward combase.HBITMAP_UserUnmarshal",
+   "combase!HBITMAP_UserUnmarshal [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ole32/tests/usrmarshal.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "objidl",
+   "path": "sdk-api-src/content/objidl/nf-objidl-hbitmap_userunmarshal.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/objidl/nf-objidl-hbitmap_userunmarshal",
+   "documented_name": "hbitmap_userunmarshal",
+   "file": "docs/0055_sdk-api_nf-objidl-hbitmap_userunmarshal.md",
+   "text": "---\nUID: NF:objidl.HBITMAP_UserUnmarshal\ntech.root: com\ntitle: HBITMAP_UserUnmarshal\nms.date: 11/04/2022\ntargetos: Windows\ndescription: Unmarshals an HBITMAP object from the RPC buffer.\nprerelease: false\nreq.assembly: \nreq.construct-type: function\nreq.ddi-compliance: \nreq.dll: ole32.dll\nreq.header: objidl.h\nreq.idl: \nreq.include-header: \nreq.irql: \nreq.kmdf-ver: \nreq.lib: \nreq.max-support: \nreq.namespace: \nreq.redist: \nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.target-type: \nreq.type-library: \nreq.umdf-ver: \nreq.unicode-ansi: \ntopic_type:\n - apiref\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-marshal-l1-1-0.dll\n - ole32.dll\napi_name:\n - HBITMAP_UserUnmarshal\nf1_keywords:\n - HBITMAP_UserUnmarshal\n - objidl/HBITMAP_UserUnmarshal\ndev_langs:\n - c++\nhelpviewer_keywords:\n - HBITMAP_UserUnmarshal\n---\n\n## -description\n\nUnmarshals an HBITMAP object from the RPC buffer.\n\n## -parameters\n\n### -param unnamedParam1\n\nThe data used by RPC.\n\n### -param unnamedParam2\n\nThe current buffer. This pointer may or may not be aligned on entry.\n\n### -param unnamedParam3\n\nThe object.\n\n## -returns\n\n## -remarks\n\n## -see-also\n\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "debugstr_user_flags",
+   "file": "dlls/combase/usrmarshal.c",
+   "start_line": 35,
+   "end_line": 62,
+   "static": true,
+   "called_from": [
+    "HBITMAP_UserUnmarshal"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/usrmarshal.c:114",
+    "dlls/combase/usrmarshal.c:120",
+    "dlls/combase/usrmarshal.c:126",
+    "dlls/combase/usrmarshal.c:132",
+    "dlls/combase/usrmarshal.c:165"
+   ],
+   "signature": "static const char* debugstr_user_flags(ULONG *pFlags)",
+   "code": "static const char* debugstr_user_flags(ULONG *pFlags)\n{\n    char buf[12];\n    const char* loword;\n    switch (LOWORD(*pFlags))\n    {\n    case MSHCTX_LOCAL:\n        loword = \"MSHCTX_LOCAL\";\n        break;\n    case MSHCTX_NOSHAREDMEM:\n        loword = \"MSHCTX_NOSHAREDMEM\";\n        break;\n    case MSHCTX_DIFFERENTMACHINE:\n        loword = \"MSHCTX_DIFFERENTMACHINE\";\n        break;\n    case MSHCTX_INPROC:\n        loword = \"MSHCTX_INPROC\";\n        break;\n    default:\n        sprintf(buf, \"%d\", LOWORD(*pFlags));\n        loword=buf;\n    }\n\n    if (HIWORD(*pFlags) == NDR_LOCAL_DATA_REPRESENTATION)\n        return wine_dbg_sprintf(\"MAKELONG(%s, NDR_LOCAL_DATA_REPRESENTATION)\", loword);\n    else\n        return wine_dbg_sprintf(\"MAKELONG(%s, 0x%04x)\", loword, HIWORD(*pFlags));\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 28,
+    "end_line": 28,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ole);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "ALIGN_POINTER",
+    "start_line": 33,
+    "end_line": 33,
+    "code": "#define ALIGN_POINTER(_Ptr, _Align) _Ptr = ALIGNED_POINTER(_Ptr, _Align)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "CreateBitmapIndirect",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:589"
+    ]
+   },
+   {
+    "name": "RaiseException",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/debug.c:318"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "sprintf",
+   "wine_dbg_log",
+   "wine_dbg_sprintf"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "combase.HBITMAP_UserUnmarshal",
+  "category": {
+   "l1": "System services",
+   "l2": "COM",
+   "header": "objidl.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 51,
+   "body": 50,
+   "code": 31
+  },
+  "cyclomatic": 4,
+  "return_type": "unsigned char *",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ole32/tests/usrmarshal.c::test_marshal_HBITMAP"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/objidl/nf-objidl-hbitmap_userunmarshal",
+   "source": "win32",
+   "description": "Unmarshals an HBITMAP object from the RPC buffer.",
+   "min_windows": "",
+   "documented_dll": "ole32.dll"
+  },
+  "exports": [
+   "combase.HBITMAP_UserUnmarshal",
+   "ole32.HBITMAP_UserUnmarshal"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2017-12-08",
+   "median_date": "2017-12-08",
+   "last_date": "2022-05-20",
+   "code_lines": 29,
+   "pair": "combase.CoTreatAsClass",
+   "rank": 1,
+   "distance": 0.0
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "combase.CoTreatAsClass",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-05-20",
+  "partner_rank": 1,
+  "distance": 0.0
+ }
+}

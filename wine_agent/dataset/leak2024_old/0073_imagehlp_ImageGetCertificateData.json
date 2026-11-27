@@ -1,0 +1,234 @@
+{
+ "id": "0073",
+ "function": {
+  "name": "ImageGetCertificateData",
+  "export_name": "ImageGetCertificateData",
+  "module": "imagehlp",
+  "source_module": "imagehlp",
+  "exported_by": [
+   "imagehlp"
+  ],
+  "side": "PE",
+  "file": "dlls/imagehlp/integrity.c",
+  "start_line": 554,
+  "end_line": 600,
+  "body_lines": 44,
+  "signature": "BOOL WINAPI ImageGetCertificateData( HANDLE handle, DWORD Index, LPWIN_CERTIFICATE Certificate, PDWORD RequiredLength)",
+  "header_comment": "/***********************************************************************\n *\t\tImageGetCertificateData (IMAGEHLP.@)\n *\n *  FIXME: not sure that I'm dealing with the Index the right way\n */",
+  "code": "BOOL WINAPI ImageGetCertificateData(\n                HANDLE handle, DWORD Index,\n                LPWIN_CERTIFICATE Certificate, PDWORD RequiredLength)\n{\n    DWORD r, offset, ofs, size, count;\n\n    TRACE(\"%p %ld %p %p\\n\", handle, Index, Certificate, RequiredLength);\n\n    if( !RequiredLength)\n    {\n        SetLastError( ERROR_INVALID_PARAMETER );\n        return FALSE;\n    }\n\n    if( !IMAGEHLP_GetCertificateOffset( handle, Index, &ofs, &size ) )\n        return FALSE;\n\n    if( *RequiredLength < size )\n    {\n        *RequiredLength = size;\n        SetLastError( ERROR_INSUFFICIENT_BUFFER );\n        return FALSE;\n    }\n\n    if( !Certificate )\n    {\n        SetLastError( ERROR_INVALID_PARAMETER );\n        return FALSE;\n    }\n\n    *RequiredLength = size;\n\n    offset = SetFilePointer( handle, ofs, NULL, FILE_BEGIN );\n    if( offset == INVALID_SET_FILE_POINTER )\n        return FALSE;\n\n    r = ReadFile( handle, Certificate, size, &count, NULL );\n    if( !r )\n        return FALSE;\n    if( count != size )\n        return FALSE;\n\n    TRACE(\"OK\\n\");\n    SetLastError( NO_ERROR );\n\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnt.h\"",
+   "#include \"winver.h\"",
+   "#include \"imagehlp.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "imagehlp!ImageGetCertificateData [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/imagehlp/tests/integrity.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "imagehlp",
+   "path": "sdk-api-src/content/imagehlp/nf-imagehlp-imagegetcertificatedata.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/imagehlp/nf-imagehlp-imagegetcertificatedata",
+   "documented_name": "imagegetcertificatedata",
+   "file": "docs/0073_sdk-api_nf-imagehlp-imagegetcertificatedata.md",
+   "text": "---\nUID: NF:imagehlp.ImageGetCertificateData\ntitle: ImageGetCertificateData function (imagehlp.h)\ndescription: Retrieves a complete certificate from a file.\nhelpviewer_keywords: [\"ImageGetCertificateData\",\"ImageGetCertificateData function\",\"_win32_imagegetcertificatedata\",\"base.imagegetcertificatedata\",\"imagehlp/ImageGetCertificateData\"]\nold-location: base\\imagegetcertificatedata.htm\ntech.root: Debug\nms.assetid: ca4cf3a3-9324-4784-a6d8-44692f4840eb\nms.date: 12/05/2018\nms.keywords: ImageGetCertificateData, ImageGetCertificateData function, _win32_imagegetcertificatedata, base.imagegetcertificatedata, imagehlp/ImageGetCertificateData\nreq.header: imagehlp.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Imagehlp.lib\nreq.dll: Imagehlp.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ImageGetCertificateData\n - imagehlp/ImageGetCertificateData\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Imagehlp.dll\napi_name:\n - ImageGetCertificateData\n---\n\n# ImageGetCertificateData function\n\n\n## -description\n\nRetrieves a complete certificate from a file.\n\n## -parameters\n\n### -param FileHandle [in]\n\nA handle to the image file. This handle must be opened for <b>FILE_READ_DATA</b> access.\n\n### -param CertificateIndex [in]\n\nThe index of the certificate to be returned.\n\n### -param Certificate [out]\n\nA pointer to a <b>WIN_CERTIFICATE</b> structure that receives the certificate data. If the buffer is not large enough to contain the structure, the function fails and the last error code is set to <b>ERROR_INSUFFICIENT_BUFFER</b>.\n\n### -param RequiredLength [in, out]\n\nOn input, this parameter specifies the length of the <i>Certificate</i> buffer in bytes. On success, it receives the length of the certificate.\n\n## -returns\n\nIf the function succeeds, the return value is <b>TRUE</b>.\n\nIf the function fails, the return value is <b>FALSE</b>. To retrieve extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThe    <b>WIN_CERTIFICATE</b> structure is defined as follows: \n\n\n```cpp\ntypedef struct _WIN_CERTIFICATE {\n    DWORD       dwLength;\n    WORD        wRevision;\n    WORD        wCertificateType;   // WIN_CERT_TYPE_xxx\n    BYTE        bCertificate[ANYSIZE_ARRAY];\n} WIN_CERTIFICATE, *LPWIN_CERTIFICATE;\n```\n\n\nAll ImageHlp functions, such as this one, are single threaded. Therefore, calls from more than one thread to this function will likely result in unexpected behavior or memory corruption. To avoid this, you must synchronize all concurrent calls from more than one thread to this function.\n\n## -see-also\n\n<a href=\"/windows/desktop/Debug/imagehlp-functions\">ImageHlp Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "IMAGEHLP_GetCertificateOffset",
+   "file": "dlls/imagehlp/integrity.c",
+   "start_line": 239,
+   "end_line": 289,
+   "static": true,
+   "called_from": [
+    "ImageGetCertificateData"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/imagehlp/integrity.c:613",
+    "dlls/imagehlp/integrity.c:902"
+   ],
+   "signature": "static BOOL IMAGEHLP_GetCertificateOffset( HANDLE handle, DWORD num, DWORD *pdwOfs, DWORD *pdwSize )",
+   "code": "static BOOL IMAGEHLP_GetCertificateOffset( HANDLE handle, DWORD num,\n                                           DWORD *pdwOfs, DWORD *pdwSize )\n{\n    DWORD size, count, offset, len, sd_VirtualAddr;\n    BOOL r;\n\n    r = IMAGEHLP_GetSecurityDirOffset( handle, &sd_VirtualAddr, &size );\n    if( !r )\n        return FALSE;\n\n    offset = 0;\n    /* take the n'th certificate */\n    while( 1 )\n    {\n        /* read the length of the current certificate */\n        count = SetFilePointer( handle, sd_VirtualAddr + offset,\n                                 NULL, FILE_BEGIN );\n        if( count == INVALID_SET_FILE_POINTER )\n            return FALSE;\n        r = ReadFile( handle, &len, sizeof len, &count, NULL );\n        if( !r )\n            return FALSE;\n        if( count != sizeof len )\n            return FALSE;\n\n        /* check the certificate is not too big or too small */\n        if( len < sizeof len )\n            return FALSE;\n        if( len > (size-offset) )\n            return FALSE;\n        if( !num-- )\n            break;\n\n        /* calculate the offset of the next certificate */\n        offset += len;\n\n        /* padded out to the nearest 8-byte boundary */\n        if( len % 8 )\n            offset += 8 - (len % 8);\n\n        if( offset >= size )\n            return FALSE;\n    }\n\n    *pdwOfs = sd_VirtualAddr + offset;\n    *pdwSize = len;\n\n    TRACE(\"len = %lx addr = %lx\\n\", len, sd_VirtualAddr + offset);\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "IMAGEHLP_GetSecurityDirOffset",
+   "file": "dlls/imagehlp/integrity.c",
+   "start_line": 147,
+   "end_line": 170,
+   "static": true,
+   "called_from": [
+    "IMAGEHLP_GetCertificateOffset"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/imagehlp/integrity.c:391",
+    "dlls/imagehlp/integrity.c:499",
+    "dlls/imagehlp/integrity.c:901"
+   ],
+   "signature": "static BOOL IMAGEHLP_GetSecurityDirOffset( HANDLE handle, DWORD *pdwOfs, DWORD *pdwSize )",
+   "code": "static BOOL IMAGEHLP_GetSecurityDirOffset( HANDLE handle,\n                                           DWORD *pdwOfs, DWORD *pdwSize )\n{\n    IMAGE_NT_HEADERS32 nt_hdr32;\n    IMAGE_NT_HEADERS64 nt_hdr64;\n    IMAGE_DATA_DIRECTORY *sd;\n    int ret;\n\n    ret = IMAGEHLP_GetNTHeaders(handle, NULL, &nt_hdr32, &nt_hdr64);\n\n    if (ret == HDR_NT32)\n        sd = &nt_hdr32.OptionalHeader.DataDirectory[IMAGE_FILE_SECURITY_DIRECTORY];\n    else if (ret == HDR_NT64)\n        sd = &nt_hdr64.OptionalHeader.DataDirectory[IMAGE_FILE_SECURITY_DIRECTORY];\n    else\n        return FALSE;\n\n    TRACE(\"ret = %d size = %lx addr = %lx\\n\", ret, sd->Size, sd->VirtualAddress);\n\n    *pdwSize = sd->Size;\n    *pdwOfs = sd->VirtualAddress;\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "IMAGEHLP_GetNTHeaders",
+   "file": "dlls/imagehlp/integrity.c",
+   "start_line": 53,
+   "end_line": 139,
+   "static": true,
+   "called_from": [
+    "IMAGEHLP_GetSecurityDirOffset"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/imagehlp/integrity.c:190",
+    "dlls/imagehlp/integrity.c:310"
+   ],
+   "signature": "static int IMAGEHLP_GetNTHeaders(HANDLE handle, DWORD *pe_offset, IMAGE_NT_HEADERS32 *nt32, IMAGE_NT_HEADERS64 *nt64)",
+   "code": "static int IMAGEHLP_GetNTHeaders(HANDLE handle, DWORD *pe_offset, IMAGE_NT_HEADERS32 *nt32, IMAGE_NT_HEADERS64 *nt64)\n{\n    IMAGE_DOS_HEADER dos_hdr;\n    DWORD count;\n    BOOL r;\n\n    TRACE(\"handle %p\\n\", handle);\n\n    if ((!nt32) || (!nt64))\n        return HDR_FAIL;\n\n    /* read the DOS header */\n    count = SetFilePointer(handle, 0, NULL, FILE_BEGIN);\n\n    if (count == INVALID_SET_FILE_POINTER)\n        return HDR_FAIL;\n\n    count = 0;\n\n    r = ReadFile(handle, &dos_hdr, sizeof dos_hdr, &count, NULL);\n\n    if (!r)\n        return HDR_FAIL;\n\n    if (count != sizeof dos_hdr)\n        return HDR_FAIL;\n\n    /* verify magic number of 'MZ' */\n    if (dos_hdr.e_magic != IMAGE_DOS_SIGNATURE)\n        return HDR_FAIL;\n\n    if (pe_offset != NULL)\n        *pe_offset = dos_hdr.e_lfanew;\n\n    /* read the PE header */\n    count = SetFilePointer(handle, dos_hdr.e_lfanew, NULL, FILE_BEGIN);\n\n    if (count == INVALID_SET_FILE_POINTER)\n        return HDR_FAIL;\n\n    count = 0;\n\n    r = ReadFile(handle, nt32, sizeof(IMAGE_NT_HEADERS32), &count, NULL);\n\n    if (!r)\n        return HDR_FAIL;\n\n    if (count != sizeof(IMAGE_NT_HEADERS32))\n        return HDR_FAIL;\n\n    /* verify NT signature */\n    if (nt32->Signature != IMAGE_NT_SIGNATURE)\n        return HDR_FAIL;\n\n    /* check if we have a 32-bit or 64-bit executable */\n    switch (nt32->OptionalHeader.Magic)\n    {\n        case IMAGE_NT_OPTIONAL_HDR32_MAGIC:\n            return HDR_NT32;\n\n        case IMAGE_NT_OPTIONAL_HDR64_MAGIC:\n            /* Re-read as 64-bit */\n\n            count = SetFilePointer(handle, dos_hdr.e_lfanew, NULL, FILE_BEGIN);\n\n            if (count == INVALID_SET_FILE_POINTER)\n                return HDR_FAIL;\n\n            count = 0;\n\n            r = ReadFile(handle, nt64, sizeof(IMAGE_NT_HEADERS64), &count, NULL);\n\n            if (!r)\n                return HDR_FAIL;\n\n            if (count != sizeof(IMAGE_NT_HEADERS64))\n                return HDR_FAIL;\n\n            /* verify NT signature */\n            if (nt64->Signature != IMAGE_NT_SIGNATURE)\n                return HDR_FAIL;\n\n            return HDR_NT64;\n    }\n\n    return HDR_FAIL;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(imagehlp);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "HDR_FAIL",
+    "start_line": 43,
+    "end_line": 43,
+    "code": "#define HDR_FAIL   -1"
+   },
+   {
+    "name": "HDR_NT32",
+    "start_line": 44,
+    "end_line": 44,
+    "code": "#define HDR_NT32    0"
+   },
+   {
+    "name": "HDR_NT64",
+    "start_line": 45,
+    "end_line": 45,
+    "code": "#define HDR_NT64    1"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "ReadFile",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:3624"
+    ]
+   },
+   {
+    "name": "SetFilePointer",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:3878"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "imagehlp.ImageGetCertificateData",
+  "category": {
+   "l1": "Diagnostics",
+   "l2": "Debugging and error handling",
+   "header": "imagehlp.h",
+   "textbook": "Process control",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 47,
+   "body": 44,
+   "code": 26
+  },
+  "cyclomatic": 8,
+  "return_type": "BOOL",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/imagehlp/tests/integrity.c::test_get_certificate"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/imagehlp/nf-imagehlp-imagegetcertificatedata",
+   "source": "win32",
+   "description": "Retrieves a complete certificate from a file.",
+   "min_windows": "Windows XP [desktop apps only]",
+   "documented_dll": "Imagehlp.dll"
+  },
+  "exports": [
+   "imagehlp.ImageGetCertificateData"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "1998-10-11",
+   "median_date": "2003-09-16",
+   "last_date": "2022-02-11",
+   "code_lines": 27,
+   "pair": "dbghelp.EnumerateLoadedModulesW64",
+   "rank": 1,
+   "distance": 0.375
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "dbghelp.EnumerateLoadedModulesW64",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-02-11",
+  "partner_rank": 1,
+  "distance": 0.375
+ }
+}

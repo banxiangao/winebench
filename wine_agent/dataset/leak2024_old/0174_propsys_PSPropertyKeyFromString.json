@@ -1,0 +1,190 @@
+{
+ "id": "0174",
+ "function": {
+  "name": "PSPropertyKeyFromString",
+  "export_name": "PSPropertyKeyFromString",
+  "module": "propsys",
+  "source_module": "propsys",
+  "exported_by": [
+   "propsys"
+  ],
+  "side": "PE",
+  "file": "dlls/propsys/propsys_main.c",
+  "start_line": 501,
+  "end_line": 581,
+  "body_lines": 78,
+  "signature": "HRESULT WINAPI PSPropertyKeyFromString(LPCWSTR pszString, PROPERTYKEY *pkey)",
+  "header_comment": null,
+  "code": "HRESULT WINAPI PSPropertyKeyFromString(LPCWSTR pszString, PROPERTYKEY *pkey)\n{\n    BOOL has_minus = FALSE, has_comma = FALSE;\n\n    TRACE(\"(%s, %p)\\n\", debugstr_w(pszString), pkey);\n\n    if (!pszString || !pkey)\n        return E_POINTER;\n\n    memset(pkey, 0, sizeof(PROPERTYKEY));\n\n    if (!string_to_guid(pszString, &pkey->fmtid))\n        return E_INVALIDARG;\n\n    pszString += GUIDSTRING_MAX - 1;\n\n    if (!*pszString)\n        return E_INVALIDARG;\n\n    /* Only the space seems to be recognized as whitespace. The comma is only\n     * recognized once and processing terminates if another comma is found. */\n    while (*pszString == ' ' || *pszString == ',')\n    {\n        if (*pszString == ',')\n        {\n            if (has_comma)\n                return S_OK;\n            else\n                has_comma = TRUE;\n        }\n        pszString++;\n    }\n\n    if (!*pszString)\n        return E_INVALIDARG;\n\n    /* Only two minus signs are recognized if no comma is detected. The first\n     * sign is ignored, and the second is interpreted. If a comma is detected\n     * before the minus sign, then only one minus sign counts, and property ID\n     * interpretation begins with the next character. */\n    if (has_comma)\n    {\n        if (*pszString == '-')\n        {\n            has_minus = TRUE;\n            pszString++;\n        }\n    }\n    else\n    {\n        if (*pszString == '-')\n            pszString++;\n\n        /* Skip any intermediate spaces after the first minus sign. */\n        while (*pszString == ' ')\n            pszString++;\n\n        if (*pszString == '-')\n        {\n            has_minus = TRUE;\n            pszString++;\n        }\n\n        /* Skip any remaining spaces after minus sign. */\n        while (*pszString == ' ')\n            pszString++;\n    }\n\n    /* Overflow is not checked. */\n    while ('0' <= *pszString && *pszString <= '9')\n    {\n        pkey->pid *= 10;\n        pkey->pid += (*pszString - '0');\n        pszString++;\n    }\n\n    if (has_minus)\n        pkey->pid = ~pkey->pid + 1;\n\n    return S_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"objbase.h\"",
+   "#include \"rpcproxy.h\"",
+   "#include \"propsys.h\"",
+   "#include \"propkey.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"propsys_private.h\""
+  ],
+  "resolution": [
+   "propsys!PSPropertyKeyFromString [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/propsys/tests/propsys.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "propsys",
+   "path": "sdk-api-src/content/propsys/nf-propsys-pspropertykeyfromstring.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/propsys/nf-propsys-pspropertykeyfromstring",
+   "documented_name": "pspropertykeyfromstring",
+   "file": "docs/0174_sdk-api_nf-propsys-pspropertykeyfromstring.md",
+   "text": "---\nUID: NF:propsys.PSPropertyKeyFromString\ntitle: PSPropertyKeyFromString function (propsys.h)\ndescription: Converts a string to a PROPERTYKEY structure.\nhelpviewer_keywords: [\"PSPropertyKeyFromString\",\"PSPropertyKeyFromString function [Windows Properties]\",\"_shell_PSPropertyKeyFromString\",\"properties.PSPropertyKeyFromString\",\"propsys/PSPropertyKeyFromString\",\"shell.PSPropertyKeyFromString\"]\nold-location: properties\\PSPropertyKeyFromString.htm\ntech.root: properties\nms.assetid: 9096912a-14ad-4a45-a564-08f98fce3f96\nms.date: 12/05/2018\nms.keywords: PSPropertyKeyFromString, PSPropertyKeyFromString function [Windows Properties], _shell_PSPropertyKeyFromString, properties.PSPropertyKeyFromString, propsys/PSPropertyKeyFromString, shell.PSPropertyKeyFromString\nreq.header: propsys.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP with SP2, Windows Vista [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 with SP1 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Propsys.lib\nreq.dll: Propsys.dll (version 6.0 or later)\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: Windows Desktop Search (WDS) 3.0\nms.custom: 19H1\nf1_keywords:\n - PSPropertyKeyFromString\n - propsys/PSPropertyKeyFromString\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Propsys.dll\napi_name:\n - PSPropertyKeyFromString\n---\n\n# PSPropertyKeyFromString function\n\n\n## -description\n\nConverts a string to a <a href=\"/windows/desktop/api/wtypes/ns-wtypes-propertykey\">PROPERTYKEY</a> structure.\n\n## -parameters\n\n### -param pszString [in]\n\nType: <b>LPCWSTR</b>\n\nPointer to a null-terminated, Unicode string to be converted.\n\n### -param pkey [out]\n\nType: <b><a href=\"/windows/desktop/api/wtypes/ns-wtypes-propertykey\">PROPERTYKEY</a>*</b>\n\nWhen this function returns, contains a pointer to a <a href=\"/windows/desktop/api/wtypes/ns-wtypes-propertykey\">PROPERTYKEY</a> structure.\n\n## -returns\n\nType: <b>HRESULT</b>\n\nIf this function succeeds, it returns <b>S_OK</b>. Otherwise, it returns an <b>HRESULT</b> error code.\n\n## -remarks\n\nThe string to be converted must be formatted as <code>\"{fmtid} pid\"</code>. For instance, the string that corresponds to <code>PKEY_Title</code> is: <code>\"{F29F85E0-4FF9-1068-AB91-08002B27B3D9} 2\"</code>. <a href=\"/windows/desktop/api/propsys/nf-propsys-psstringfrompropertykey\">PSStringFromPropertyKey</a> outputs strings in this format.\n\nThis function succeeds for any valid property key string, even if the property does not exist in the property schema.\n\n\n#### Examples\n\nThe following example, to be included as part of a larger program, demonstrates how to use <a href=\"/windows/desktop/api/propsys/nf-propsys-pspropertykeyfromstring\">PSPropertyKeyFromString</a>.\n\n\n```cpp\nPROPERTYKEY key;\n\nHRESULT hr = PSPropertyKeyFromString(L\"{F29F85E0-4FF9-1068-AB91-08002B27B3D9} 2\", &key);\n\nif (SUCCEEDED(hr))\n{\n    // The key variable is now valid.\n}\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/api/propsys/nf-propsys-psgetpropertykeyfromname\">PSGetPropertyKeyFromName</a>\n\n\n\n<a href=\"/windows/desktop/api/propsys/nf-propsys-psstringfrompropertykey\">PSStringFromPropertyKey</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "string_to_guid",
+   "file": "dlls/propsys/propsys_main.c",
+   "start_line": 466,
+   "end_line": 499,
+   "static": true,
+   "called_from": [
+    "PSPropertyKeyFromString"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL string_to_guid(LPCWSTR s, LPGUID id)",
+   "code": "static BOOL string_to_guid(LPCWSTR s, LPGUID id)\n{\n    /* in form {XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX} */\n\n    if (!validate_indices(s, 0, 8)) return FALSE;\n    id->Data1 = (hex2bin[s[1]] << 28 | hex2bin[s[2]] << 24 | hex2bin[s[3]] << 20 | hex2bin[s[4]] << 16 |\n                 hex2bin[s[5]] << 12 | hex2bin[s[6]] << 8  | hex2bin[s[7]] << 4  | hex2bin[s[8]]);\n    if (!validate_indices(s, 9, 14)) return FALSE;\n    id->Data2 = hex2bin[s[10]] << 12 | hex2bin[s[11]] << 8 | hex2bin[s[12]] << 4 | hex2bin[s[13]];\n    if (!validate_indices(s, 15, 19)) return FALSE;\n    id->Data3 = hex2bin[s[15]] << 12 | hex2bin[s[16]] << 8 | hex2bin[s[17]] << 4 | hex2bin[s[18]];\n\n    /* these are just sequential bytes */\n\n    if (!validate_indices(s, 20, 21)) return FALSE;\n    id->Data4[0] = hex2bin[s[20]] << 4 | hex2bin[s[21]];\n    if (!validate_indices(s, 22, 24)) return FALSE;\n    id->Data4[1] = hex2bin[s[22]] << 4 | hex2bin[s[23]];\n\n    if (!validate_indices(s, 25, 26)) return FALSE;\n    id->Data4[2] = hex2bin[s[25]] << 4 | hex2bin[s[26]];\n    if (!validate_indices(s, 27, 28)) return FALSE;\n    id->Data4[3] = hex2bin[s[27]] << 4 | hex2bin[s[28]];\n    if (!validate_indices(s, 29, 30)) return FALSE;\n    id->Data4[4] = hex2bin[s[29]] << 4 | hex2bin[s[30]];\n    if (!validate_indices(s, 31, 32)) return FALSE;\n    id->Data4[5] = hex2bin[s[31]] << 4 | hex2bin[s[32]];\n    if (!validate_indices(s, 33, 34)) return FALSE;\n    id->Data4[6] = hex2bin[s[33]] << 4 | hex2bin[s[34]];\n    if (!validate_indices(s, 35, 37)) return FALSE;\n    id->Data4[7] = hex2bin[s[35]] << 4 | hex2bin[s[36]];\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "validate_indices",
+   "file": "dlls/propsys/propsys_main.c",
+   "start_line": 430,
+   "end_line": 462,
+   "static": true,
+   "called_from": [
+    "string_to_guid"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL validate_indices(LPCWSTR s, int min, int max)",
+   "code": "static BOOL validate_indices(LPCWSTR s, int min, int max)\n{\n    int i;\n\n    for (i = min; i <= max; i++)\n    {\n        if (!s[i])\n            return FALSE;\n\n        if (i == 0)\n        {\n            if (s[i] != '{')\n                return FALSE;\n        }\n        else if (i == 9 || i == 14 || i == 19 || i == 24)\n        {\n            if (s[i] != '-')\n                return FALSE;\n        }\n        else if (i == 37)\n        {\n            if (s[i] != '}')\n                return FALSE;\n        }\n        else\n        {\n            if (s[i] > 'f' || (!hex2bin[s[i]] && s[i] != '0'))\n                return FALSE;\n        }\n    }\n\n    return TRUE;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(propsys);"
+   },
+   {
+    "name": "hex2bin",
+    "type": "const BYTE[103]",
+    "static": true,
+    "start_line": 419,
+    "end_line": 428,
+    "code": "static const BYTE hex2bin[] =\n{\n    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,        /* 0x00 */\n    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,        /* 0x10 */\n    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,        /* 0x20 */\n    0,1,2,3,4,5,6,7,8,9,0,0,0,0,0,0,        /* 0x30 */\n    0,10,11,12,13,14,15,0,0,0,0,0,0,0,0,0,  /* 0x40 */\n    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,        /* 0x50 */\n    0,10,11,12,13,14,15                     /* 0x60 */\n};"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_w",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "propsys.PSPropertyKeyFromString",
+  "category": {
+   "l1": "Windows environment (Shell)",
+   "l2": "Windows Property System",
+   "header": "propsys.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 81,
+   "body": 80,
+   "code": 40
+  },
+  "cyclomatic": 19,
+  "return_type": "HRESULT",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/propsys/tests/propsys.c::test_PSPropertyKeyFromString"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/propsys/nf-propsys-pspropertykeyfromstring",
+   "source": "win32",
+   "description": "Converts a string to a PROPERTYKEY structure.",
+   "min_windows": "Windows XP with SP2, Windows Vista [desktop apps only]",
+   "documented_dll": "Propsys.dll (version 6.0 or later)"
+  },
+  "exports": [
+   "propsys.PSPropertyKeyFromString"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2010-07-26",
+   "median_date": "2010-07-26",
+   "last_date": "2020-02-06",
+   "code_lines": 41,
+   "pair": "propsys.PropVariantGetStringElem",
+   "rank": 1,
+   "distance": 0.211
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "propsys.PropVariantGetStringElem",
+  "share_after_cutoff": 0.0,
+  "last_date": "2020-02-06",
+  "partner_rank": 1,
+  "distance": 0.211
+ }
+}

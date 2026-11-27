@@ -1,0 +1,227 @@
+{
+ "id": "0140",
+ "function": {
+  "name": "RtlInsertElementGenericTable",
+  "export_name": "RtlInsertElementGenericTable",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll",
+   "ntoskrnl.exe"
+  ],
+  "side": "PE",
+  "file": "dlls/ntdll/rtl.c",
+  "start_line": 557,
+  "end_line": 609,
+  "body_lines": 50,
+  "signature": "void * WINAPI RtlInsertElementGenericTable(RTL_GENERIC_TABLE *table, void *value, CLONG size, BOOLEAN *new_element)",
+  "header_comment": "/***********************************************************************\n *           RtlInsertElementGenericTable  (NTDLL.@)\n */",
+  "code": "void * WINAPI RtlInsertElementGenericTable(RTL_GENERIC_TABLE *table, void *value, CLONG size, BOOLEAN *new_element)\n{\n    RTL_SPLAY_LINKS *child, *parent = NULL;\n    RTL_GENERIC_COMPARE_RESULTS result;\n    void *buffer;\n\n    TRACE(\"(%p, %p, %lu, %p)\\n\", table, value, size, new_element);\n\n    child = table->TableRoot;\n    while (child)\n    {\n        buffer = get_data_from_splay_links(child);\n        result = table->CompareRoutine(table, buffer, value);\n        parent = child;\n        if (result == GenericLessThan)\n        {\n            child = child->RightChild;\n        }\n        else if (result == GenericGreaterThan)\n        {\n            child = child->LeftChild;\n        }\n        else\n        {\n            if (new_element)\n                *new_element = FALSE;\n            return buffer;\n        }\n    }\n\n    /* data should be stored on a 8 byte boundary */\n    child = (RTL_SPLAY_LINKS *)table->AllocateRoutine(table, size + FIELD_OFFSET(struct rtl_generic_table_entry, data));\n    RtlInitializeSplayLinks(child);\n    InsertTailList(&table->InsertOrderList, get_list_entry_from_splay_links(child));\n    buffer = get_data_from_splay_links(child);\n    memcpy(buffer, value, size);\n\n    if (parent)\n    {\n        buffer = get_data_from_splay_links(parent);\n        result = table->CompareRoutine(table, buffer, value);\n        if (result == GenericLessThan)\n            RtlInsertAsRightChild(parent, child);\n        else\n            RtlInsertAsLeftChild(parent, child);\n    }\n\n    if (new_element)\n        *new_element = TRUE;\n    table->TableRoot = RtlSplay(child);\n    table->NumberGenericTableElements++;\n    return get_data_from_splay_links(child);\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ntuser.h\"",
+   "#include \"zlib.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"ntdll_misc.h\"",
+   "#include \"ddk/ntifs.h\""
+  ],
+  "resolution": [
+   "ntdll!RtlInsertElementGenericTable [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntdll/tests/rtl.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 6
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "ntddk",
+   "path": "wdk-ddi-src/content/ntddk/nf-ntddk-rtlinsertelementgenerictable.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlinsertelementgenerictable",
+   "documented_name": "rtlinsertelementgenerictable",
+   "file": "docs/0140_windows-driver-docs-ddi_nf-ntddk-rtlinsertelementgenerictable.md",
+   "text": "---\nUID: NF:ntddk.RtlInsertElementGenericTable\ntitle: RtlInsertElementGenericTable function (ntddk.h)\ndescription: The RtlInsertElementGenericTable routine adds a new element to a generic table.\nold-location: ifsk\\rtlinsertelementgenerictable.htm\ntech.root: ifsk\nms.date: 04/16/2018\nkeywords: [\"RtlInsertElementGenericTable function\"]\nms.keywords: RtlInsertElementGenericTable, RtlInsertElementGenericTable routine [Installable File System Drivers], ifsk.rtlinsertelementgenerictable, ntddk/RtlInsertElementGenericTable, rtlref_62ab1129-906f-4ef7-b0d1-bec4bf6fce62.xml\nreq.header: ntddk.h\nreq.include-header: Ntddk.h, Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: < DISPATCH_LEVEL (see Remarks section)\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - RtlInsertElementGenericTable\n - ntddk/RtlInsertElementGenericTable\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - RtlInsertElementGenericTable\n---\n\n# RtlInsertElementGenericTable function\n\n\n## -description\n\nThe <b>RtlInsertElementGenericTable</b> routine adds a new element to a generic table.\n\n## -parameters\n\n### -param Table [in]\n\n\nPointer to the generic table (<a href=\"/windows-hardware/drivers/ddi/ntddk/ns-ntddk-_rtl_generic_table\">RTL_GENERIC_TABLE</a>). The table must have been initialized by calling <a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlinitializegenerictable\">RtlInitializeGenericTable</a>.\n\n### -param Buffer [in]\n\n\nPointer to a caller-allocated buffer containing data to be copied into the new element. For more information, see the description of <a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlinitializegenerictable\">RtlInitializeGenericTable</a>.\n\n### -param BufferSize [in]\n\n\nNumber of bytes to be allocated for caller-supplied data when the new element is inserted.\n\n### -param NewElement [out, optional]\n\n\nPointer to a variable that receives <b>TRUE</b> if a new element with the data at <i>Buffer</i> was inserted in the generic table; or <b>FALSE</b> if the new element was not inserted.\n\n## -returns\n\n<b>RtlInsertElementGenericTable</b> returns a pointer to the newly inserted element's associated data, or it returns a pointer to the existing element's data if a matching element already exists in the generic table. If no matching element is found, but the new element cannot be inserted (for example, because the <i>AllocateRoutine</i> fails), <b>RtlInsertElementGenericTable</b> returns <b>NULL</b>.\n\n## -remarks\n\nTo insert an element, <b>RtlInsertElementGenericTable</b> calls the <i>CompareRoutine</i> and <i>AllocateRoutine</i> that were registered when the generic table was initialized by <a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlinitializegenerictable\">RtlInitializeGenericTable</a>. After inserting the new element, <b>RtlInsertElementGenericTable</b> rebalances the splay link tree.\n\nWhen a new element is inserted into the table, its data is copied from <i>Buffer</i> into the new element. Thus the pointer returned by <b>RtlInsertElementGenericTable</b> is never equal to <i>Buffer</i>. \n\nIf the caller's <i>CompareRoutine</i> returns <b>GenericEqual</b>, the data at <i>Buffer</i> is assumed to duplicate the data for an existing element in the generic table. In this case, <b>RtlInsertElementGenericTable</b> does not add the new element (and thus does not call the <i>AllocateRoutine</i>), because a generic table cannot have duplicate elements.\n\nIf a matching element already exists in the generic table, <b>RtlInsertElementGenericTable</b> returns a pointer to the existing element's data and sets <i>NewElement</i> to <b>FALSE</b>. \n\nCallers of the Rtl..GenericTable routines are responsible for exclusively synchronizing access to the generic table. An exclusive fast mutex is the most efficient synchronization mechanism to use for this purpose. \n\nBy default, the operating system uses splay trees to implement generic tables. Under some circumstances, operations on a splay tree will make the tree deep and narrow and might even turn it into a straight line. Very deep trees degrade the performance of searches. You can ensure a more balanced, shallower tree implementation of generic tables by using Adelson-Velsky/Landis (AVL) trees. If you want to configure the generic table routines to use AVL trees instead of splay trees in your driver, insert the following define statement in a common header file before including <i>Ntddk.h</i>:\n\n`#define RTL_USE_AVL_TABLES 0`\n\nIf RTL_USE_AVL_TABLES is not defined, you must use the AVL form of the generic table routines. For example, use the <a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlinsertelementgenerictableavl\">RtlInsertElementGenericTableAvl</a> routine instead of <b>RtlInsertElementGenericTable</b>. In the call to <b>RtlInsertElementGenericTableAvl</b>, the caller must pass a <a href=\"/windows-hardware/drivers/ddi/ntddk/ns-ntddk-_rtl_avl_table\">RTL_AVL_TABLE</a> table structure rather than <a href=\"/windows-hardware/drivers/ddi/ntddk/ns-ntddk-_rtl_generic_table\">RTL_GENERIC_TABLE</a>.\n\nCallers of <b>RtlInsertElementGenericTable</b> must be running at IRQL < DISPATCH_LEVEL if either of the following conditions holds:\n\n<ul>\n<li>\nThe caller-allocated memory at <i>Table</i> or at <i>Buffer</i> is pageable.\n\n</li>\n<li>\nThe caller-supplied <i>CompareRoutine</i> or <i>AllocateRoutine</i> contains pageable code. \n\n</li>\n</ul>\n\n## -see-also\n\n<a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtldeleteelementgenerictable\">RtlDeleteElementGenericTable</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlinitializegenerictable\">RtlInitializeGenericTable</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_data_from_splay_links",
+   "file": "dlls/ntdll/rtl.c",
+   "start_line": 199,
+   "end_line": 202,
+   "static": true,
+   "called_from": [
+    "RtlInsertElementGenericTable"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/rtl.c:223",
+    "dlls/ntdll/rtl.c:658",
+    "dlls/ntdll/rtl.c:694",
+    "dlls/ntdll/rtl.c:851"
+   ],
+   "signature": "static void *get_data_from_splay_links(RTL_SPLAY_LINKS *links)",
+   "code": "static void *get_data_from_splay_links(RTL_SPLAY_LINKS *links)\n{\n    return (unsigned char *)links + FIELD_OFFSET(struct rtl_generic_table_entry, data);\n}"
+  },
+  {
+   "name": "get_list_entry_from_splay_links",
+   "file": "dlls/ntdll/rtl.c",
+   "start_line": 210,
+   "end_line": 213,
+   "static": true,
+   "called_from": [
+    "RtlInsertElementGenericTable"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/rtl.c:622"
+   ],
+   "signature": "static LIST_ENTRY *get_list_entry_from_splay_links(RTL_SPLAY_LINKS *links)",
+   "code": "static LIST_ENTRY *get_list_entry_from_splay_links(RTL_SPLAY_LINKS *links)\n{\n    return (LIST_ENTRY *)((unsigned char *)links + FIELD_OFFSET(struct rtl_generic_table_entry, list_entry));\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "rtl_generic_table_entry",
+    "kind": "struct_decl",
+    "start_line": 192,
+    "end_line": 197,
+    "code": "struct rtl_generic_table_entry\n{\n    RTL_SPLAY_LINKS splay_links;\n    LIST_ENTRY list_entry;\n    LONGLONG data;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ntdll);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "RtlSplay",
+    "impl": [
+     "dlls/ntdll/rtl.c:394"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "RtlInitializeSplayLinks",
+   "RtlInsertAsLeftChild",
+   "RtlInsertAsRightChild",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "table->CompareRoutine",
+    "in_function": "RtlInsertElementGenericTable",
+    "at": "dlls/ntdll/rtl.c:569",
+    "candidates": [
+     "compare @ dlls/ntdll/rtl.c:539"
+    ]
+   },
+   {
+    "expr": "table->AllocateRoutine",
+    "in_function": "RtlInsertElementGenericTable",
+    "at": "dlls/ntdll/rtl.c:588",
+    "candidates": [
+     "allocate @ dlls/ntdll/rtl.c:540"
+    ]
+   }
+  ]
+ },
+ "winebench": {
+  "id": "ntdll.RtlInsertElementGenericTable",
+  "category": {
+   "l1": "System services",
+   "l2": "Run-time library (strings, bitmaps, utilities)",
+   "header": "ntddk.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "name_rule"
+  },
+  "loc": {
+   "total": 53,
+   "body": 52,
+   "code": 34
+  },
+  "cyclomatic": 8,
+  "return_type": "void *",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 6,
+   "n_tests": 6,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ntdll/tests/rtl.c::test_RtlDeleteElementGenericTable",
+    "dlls/ntdll/tests/rtl.c::test_RtlEnumerateGenericTable",
+    "dlls/ntdll/tests/rtl.c::test_RtlEnumerateGenericTableWithoutSplaying",
+    "dlls/ntdll/tests/rtl.c::test_RtlGetElementGenericTable",
+    "dlls/ntdll/tests/rtl.c::test_RtlInsertElementGenericTable",
+    "dlls/ntdll/tests/rtl.c::test_RtlLookupElementGenericTable"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlinsertelementgenerictable",
+   "source": "ddi",
+   "description": "The RtlInsertElementGenericTable routine adds a new element to a generic table.",
+   "min_windows": "",
+   "documented_dll": "NtosKrnl.exe"
+  },
+  "exports": [
+   "ntdll.RtlInsertElementGenericTable",
+   "ntoskrnl.exe.RtlInsertElementGenericTable"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 1.0,
+   "first_date": "2025-02-07",
+   "median_date": "2025-02-07",
+   "last_date": "2025-02-07",
+   "code_lines": 33
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "ntdll.TpReleaseCleanupGroupMembers",
+  "share_after_cutoff": 1.0,
+  "last_date": "2025-02-07"
+ }
+}

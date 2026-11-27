@@ -1,0 +1,83 @@
+---
+UID: NF:ntddk.RtlSubtreeSuccessor
+title: RtlSubtreeSuccessor function (ntddk.h)
+description: The RtlSubtreeSuccessor routine returns a pointer to the successor of the specified node within the subtree that is rooted at that node.
+old-location: ifsk\rtlsubtreesuccessor.htm
+tech.root: ifsk
+ms.date: 04/16/2018
+keywords: ["RtlSubtreeSuccessor function"]
+ms.keywords: RtlSubtreeSuccessor, RtlSubtreeSuccessor routine [Installable File System Drivers], ifsk.rtlsubtreesuccessor, ntddk/RtlSubtreeSuccessor, rtlref_65e50284-427f-47d9-92c7-719b8bc1bab5.xml
+req.header: ntddk.h
+req.include-header: Ntddk.h, Ntifs.h
+req.target-type: Universal
+req.target-min-winverclnt: This routine is available on Microsoft Windows 2000 and later.
+req.target-min-winversvr: 
+req.kmdf-ver: 
+req.umdf-ver: 
+req.ddi-compliance: 
+req.unicode-ansi: 
+req.idl: 
+req.max-support: 
+req.namespace: 
+req.assembly: 
+req.type-library: 
+req.lib: NtosKrnl.lib
+req.dll: NtosKrnl.exe
+req.irql: See Remarks section.
+targetos: Windows
+req.typenames: 
+f1_keywords:
+ - RtlSubtreeSuccessor
+ - ntddk/RtlSubtreeSuccessor
+topic_type:
+ - APIRef
+ - kbSyntax
+api_type:
+ - DllExport
+api_location:
+ - NtosKrnl.exe
+api_name:
+ - RtlSubtreeSuccessor
+---
+
+# RtlSubtreeSuccessor function
+
+
+## -description
+
+The <b>RtlSubtreeSuccessor</b> routine returns a pointer to the successor of the specified node within the subtree that is rooted at that node.
+
+## -parameters
+
+### -param Links [in]
+
+
+A pointer to the node. The node must have been initialized by calling <b>RtlInitializeSplayLinks</b>.
+
+## -returns
+
+<b>RtlSubtreeSuccessor</b> returns a pointer to the subtree successor of the node at <i>Links</i>, or <b>NULL</b> if the given node has no subtree successor.
+
+## -remarks
+
+If the node at <i>Links</i> has a right subtree, the leftmost node of that subtree is the subtree successor. 
+
+Callers of the <b>Rtl</b> splay link routines are responsible for synchronizing access to the splay link tree. A fast mutex is the most efficient synchronization mechanism to use for this purpose. 
+
+Callers of <b>RtlSubtreeSuccessor</b> must be running at IRQL <= DISPATCH_LEVEL if the tree is nonpaged. If the tree is paged, callers must be running at IRQL < DISPATCH_LEVEL. Usually callers are running at IRQL PASSIVE_LEVEL.
+
+## -see-also
+
+<a href="/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlinitializesplaylinks">RtlInitializeSplayLinks</a>
+
+
+
+<a href="/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlrealsuccessor">RtlRealSuccessor</a>
+
+
+
+<a href="/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlsplay">RtlSplay</a>
+
+
+
+<a href="/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlsubtreepredecessor">RtlSubtreePredecessor</a>

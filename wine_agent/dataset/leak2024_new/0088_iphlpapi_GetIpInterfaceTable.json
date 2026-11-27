@@ -1,0 +1,226 @@
+{
+ "id": "0088",
+ "function": {
+  "name": "GetIpInterfaceTable",
+  "export_name": "GetIpInterfaceTable",
+  "module": "iphlpapi",
+  "source_module": "iphlpapi",
+  "exported_by": [
+   "iphlpapi"
+  ],
+  "side": "PE",
+  "file": "dlls/iphlpapi/iphlpapi_main.c",
+  "start_line": 4668,
+  "end_line": 4723,
+  "body_lines": 53,
+  "signature": "DWORD WINAPI GetIpInterfaceTable( ADDRESS_FAMILY family, MIB_IPINTERFACE_TABLE **table )",
+  "header_comment": "/******************************************************************\n *    GetIpInterfaceTable (IPHLPAPI.@)\n */",
+  "code": "DWORD WINAPI GetIpInterfaceTable( ADDRESS_FAMILY family, MIB_IPINTERFACE_TABLE **table )\n{\n    struct nsi_ip_interface_dynamic *dyn;\n    struct nsi_ip_interface_key *keys;\n    DWORD err, count, total_count = 0;\n    MIB_IPINTERFACE_TABLE *new_alloc;\n    struct nsi_ip_interface_rw *rw;\n    ADDRESS_FAMILY fam[3] = { 0 };\n    unsigned int i, family_idx;\n\n    TRACE( \"(%u %p).\\n\", family, table );\n\n    if (!table) return ERROR_INVALID_PARAMETER;\n\n    if (family == AF_UNSPEC)\n    {\n        fam[0] = AF_INET;\n        fam[1] = AF_INET6;\n    }\n    else fam[0] = family;\n\n    *table = NULL;\n    for (family_idx = 0; fam[family_idx]; ++family_idx)\n    {\n        err = NsiAllocateAndGetTable( 1, ip_module_id( fam[family_idx] ), NSI_IP_INTERFACE_TABLE,\n                                      (void **)&keys, sizeof(*keys), (void **)&rw, sizeof(*rw),\n                                      (void **)&dyn, sizeof(*dyn), NULL, 0, &count, 0 );\n        if (err)\n        {\n            HeapFree( GetProcessHeap(), 0, *table );\n            return err;\n        }\n        total_count += count;\n        new_alloc = HeapAlloc( GetProcessHeap(), HEAP_ZERO_MEMORY, offsetof(MIB_IPINTERFACE_TABLE, Table[total_count]) );\n        if (!new_alloc)\n        {\n            HeapFree( GetProcessHeap(), 0, *table );\n            NsiFreeTable( keys, rw, dyn, NULL );\n            return ERROR_NOT_ENOUGH_MEMORY;\n        }\n        if (*table)\n        {\n            memcpy( new_alloc, *table, offsetof(MIB_IPINTERFACE_TABLE, Table[(*table)->NumEntries]) );\n            HeapFree( GetProcessHeap(), 0, *table );\n        }\n        *table = new_alloc;\n        for (i = 0; i < count; ++i)\n        {\n            fill_ip_interface_table_row( fam[family_idx], &(*table)->Table[(*table)->NumEntries],\n                                         &keys[i], &rw[i], &dyn[i] );\n            ++(*table)->NumEntries;\n        }\n        NsiFreeTable( keys, rw, dyn, NULL );\n    }\n    return ERROR_SUCCESS;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winsock2.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ws2ipdef.h\"",
+   "#include \"windns.h\"",
+   "#include \"iphlpapi.h\"",
+   "#include \"ipifcons.h\"",
+   "#include \"fltdefs.h\"",
+   "#include \"ifdef.h\"",
+   "#include \"netioapi.h\"",
+   "#include \"ip2string.h\"",
+   "#include \"netiodef.h\"",
+   "#include \"icmpapi.h\"",
+   "#include \"psapi.h\"",
+   "#include \"wine/nsi.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "iphlpapi!GetIpInterfaceTable [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/iphlpapi/tests/iphlpapi.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "netioapi",
+   "path": "sdk-api-src/content/netioapi/nf-netioapi-getipinterfacetable.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/netioapi/nf-netioapi-getipinterfacetable",
+   "documented_name": "getipinterfacetable",
+   "file": "docs/0088_sdk-api_nf-netioapi-getipinterfacetable.md",
+   "text": "---\nUID: NF:netioapi.GetIpInterfaceTable\ntitle: GetIpInterfaceTable function (netioapi.h)\ndescription: Retrieves the IP interface entries on the local computer.\nhelpviewer_keywords: [\"AF_INET\",\"AF_INET6\",\"AF_UNSPEC\",\"GetIpInterfaceTable\",\"GetIpInterfaceTable function [IP Helper]\",\"iphlp.getipinterfacetable\",\"netioapi/GetIpInterfaceTable\"]\nold-location: iphlp\\getipinterfacetable.htm\ntech.root: IpHlp\nms.assetid: 09f2bbff-3281-41ae-878f-61c5afa20ec5\nms.date: 12/05/2018\nms.keywords: AF_INET, AF_INET6, AF_UNSPEC, GetIpInterfaceTable, GetIpInterfaceTable function [IP Helper], iphlp.getipinterfacetable, netioapi/GetIpInterfaceTable\nreq.header: netioapi.h\nreq.include-header: Iphlpapi.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps only]\nreq.target-min-winversvr: Windows Server 2008 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Iphlpapi.lib\nreq.dll: Iphlpapi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetIpInterfaceTable\n - netioapi/GetIpInterfaceTable\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Iphlpapi.dll\napi_name:\n - GetIpInterfaceTable\n---\n\n# GetIpInterfaceTable function\n\n\n## -description\n\nThe \n<b>GetIpInterfaceTable</b> function  retrieves the IP interface entries on the local computer.\n\n## -parameters\n\n### -param Family [in]\n\nThe address family of IP interfaces to retrieve. \n\nPossible values for the address family are listed in the <i>Winsock2.h</i> header file. Note that the values for the AF_ address family and PF_ protocol family constants  are identical (for example, <b>AF_INET</b> and <b>PF_INET</b>), so either constant can be used.\n\nOn Windows Vista and later as well as on the Windows SDK, the organization of header files has changed and possible values for this member are defined in the <i>Ws2def.h</i> header file. Note that the <i>Ws2def.h</i> header file is automatically included in <i>Winsock2.h</i>, and should never be used directly.\n\nThe values currently supported are <b>AF_INET</b>, <b>AF_INET6</b>, and <b>AF_UNSPEC</b>.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"AF_UNSPEC\"></a><a id=\"af_unspec\"></a><dl>\n<dt><b>AF_UNSPEC</b></dt>\n<dt>0</dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe address family is unspecified. When this parameter is specified,  the <b>GetIpInterfaceTable</b> function  returns the IP interface table containing both IPv4 and IPv6 entries. \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"AF_INET\"></a><a id=\"af_inet\"></a><dl>\n<dt><b>AF_INET</b></dt>\n<dt>2</dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe Internet Protocol version 4 (IPv4) address family.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"AF_INET6\"></a><a id=\"af_inet6\"></a><dl>\n<dt><b>AF_INET6</b></dt>\n<dt>23</dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe Internet Protocol version 6 (IPv6) address family.\n\n</td>\n</tr>\n</table>\n\n### -param Table [out]\n\nA pointer to a buffer that receives the table of IP interface entries in a <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_ipinterface_table\">MIB_IPINTERFACE_TABLE</a> structure.\n\n## -returns\n\nIf the function succeeds, the return value is NO_ERROR.\n\nIf the function fails, the return value is one of the following error codes.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn invalid parameter was passed to the function. This error is returned if a <b>NULL</b> pointer is passed in the <i>Table</i> parameter or the <i>Family</i> parameter was not specified as <b>AF_INET</b>, <b>AF_INET6</b>, or <b>AF_UNSPEC</b>.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOT_ENOUGH_MEMORY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nInsufficient memory resources are available to complete the operation.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOT_FOUND</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nNo IP interface entries as specified in the <i>Family</i> parameter were found. \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOT_SUPPORTED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe function is not supported. This error is returned when the IP transport specified in the <i>Address</i> parameter is not configured on the local computer. This error is also returned on versions of Windows where this function is not supported.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>Other</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nUse \nthe <a href=\"/windows/desktop/api/winbase/nf-winbase-formatmessage\">FormatMessage</a> function to obtain the message string for the returned error.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe <b>GetIpInterfaceTable</b> function is defined on Windows Vista and later. \n\nThe  \n<b>GetIpInterfaceTable</b> function enumerates the IP interfaces on a local system and returns this information in an <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_ipinterface_table\">MIB_IPINTERFACE_TABLE</a> structure. \n\nIP interface entries are returned in a <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_ipinterface_table\">MIB_IPINTERFACE_TABLE</a> structure in the buffer pointed to by the <i>Table</i> parameter. The <b>MIB_IPINTERFACE_TABLE</b> structure contains an IP interface entry count and an array of <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_ipinterface_row\">MIB_IPINTERFACE_ROW</a> structures for each IP interface entry. When these returned structures are no longer required, free the memory by calling the <a href=\"/windows/desktop/api/netioapi/nf-netioapi-freemibtable\">FreeMibTable</a>.\n\nThe <i>Family</i> parameter must be initialized to either <b>AF_INET</b> or <b>AF_INET6</b>. \n\nNote that the returned <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_ipinterface_table\">MIB_IPINTERFACE_TABLE</a> structure pointed to by the <i>Table</i> parameter may contain padding for alignment between the <b>NumEntries</b> member and the first <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_ipinterface_row\">MIB_IPINTERFACE_ROW</a> array entry in the <b>Table</b> member of the <b>MIB_IPINTERFACE_TABLE</b> structure. Padding for alignment may also be present between the <b>MIB_IPINTERFACE_ROW</b> array entries. Any access to a <b>MIB_IPINTERFACE_ROW</b> array entry should assume  padding may exist. \n\n\n\n\n#### Examples\n\nThe following example retrieves the IP interface table, then prints the values of a few members of the IP interface entries in the table.\n\n\n```cpp\n#ifndef WIN32_LEAN_AND_MEAN\n#define WIN32_LEAN_AND_MEAN\n#endif\n\n#include <windows.h>\n#include <winsock2.h>\n#include <ws2ipdef.h>\n#include <iphlpapi.h>\n#include <stdio.h>\n#include <stdlib.h>\n\n#pragma comment(lib, \"iphlpapi.lib\")\n\nint main()\n{\n    // Declare and initialize variables\n\n    int i;\n\n    DWORD dwRetVal = 0;\n\n    PMIB_IPINTERFACE_TABLE pipTable = NULL;\n\n    dwRetVal = GetIpInterfaceTable(AF_UNSPEC, &pipTable);\n    if (dwRetVal != NO_ERROR) {\n        printf(\"GetIpInterfaceTable returned error: %ld\\n\", dwRetVal);\n        exit(1);\n    }\n    // Print some variables from the rows in the table\n    printf(\"Number of table entries: %d\\n\\n\", pipTable->NumEntries);\n\n    for (i = 0; i < (int) pipTable->NumEntries; i++) {\n        printf(\"Address Family[%d]:\\t\\t\", i);\n        switch (pipTable->Table[i].Family) {\n        case AF_INET:\n            printf(\"IPv4\\n\");\n            break;\n        case AF_INET6:\n            printf(\"IPv6\\n\");\n            break;\n        default:\n            printf(\"Other: %d\\n\", pipTable->Table[i].Family);\n            break;\n        }\n\n        printf(\"Interface LUID NetLuidIndex[%d]:\\t %lu\\n\",\n               i, pipTable->Table[i].InterfaceLuid.Info.NetLuidIndex);\n\n        printf(\"Interface LUID IfType[%d]:\\t \", i);\n        switch (pipTable->Table[i].InterfaceLuid.Info.IfType) {\n        case IF_TYPE_OTHER:\n            printf(\"Other\\n\");\n            break;\n        case IF_TYPE_ETHERNET_CSMACD:\n            printf(\"Ethernet\\n\");\n            break;\n        case IF_TYPE_ISO88025_TOKENRING:\n            printf(\"Token ring\\n\");\n            break;\n        case IF_TYPE_PPP:\n            printf(\"PPP\\n\");\n            break;\n        case IF_TYPE_SOFTWARE_LOOPBACK:\n            printf(\"Software loopback\\n\");\n            break;\n        case IF_TYPE_ATM:\n            printf(\"ATM\\n\");\n            break;\n        case IF_TYPE_IEEE80211:\n            printf(\"802.11 wireless\\n\");\n            break;\n        case IF_TYPE_TUNNEL:\n            printf(\"Tunnel encapsulation\\n\");\n            break;\n        case IF_TYPE_IEEE1394:\n            printf(\"IEEE 1394 (Firewire)\\n\");\n            break;\n        default:\n            printf(\"Unknown: %d\\n\",\n                   pipTable->Table[i].InterfaceLuid.Info.IfType);\n            break;\n        }\n        printf(\"Interface Index[%d]:\\t\\t %lu\\n\",\n               i, pipTable->Table[i].InterfaceIndex);\n        printf(\"Maximum reassembly size[%d]:\\t %lu\\n\", i,\n               pipTable->Table[i].MaxReassemblySize);\n\n        printf(\"Advertising enabled[%d]:\\t\\t \", i);\n        if (pipTable->Table[i].AdvertisingEnabled)\n            printf(\"Yes\\n\");\n        else\n            printf(\"No\\n\");\n\n        printf(\"Forwarding enabled[%d]:\\t\\t \", i);\n        if (pipTable->Table[i].ForwardingEnabled)\n            printf(\"Yes\\n\");\n        else\n            printf(\"No\\n\");\n\n        printf(\"Network layer MTU[%d]:\\t\\t %lu\\n\", i, pipTable->Table[i].NlMtu);\n\n        printf(\"Connected[%d]:\\t\\t\\t \", i);\n        if (pipTable->Table[i].Connected)\n            printf(\"Yes\\n\");\n        else\n            printf(\"No\\n\");\n\n        printf(\"Supports wakeup patterns[%d]:\\t \", i);\n        if (pipTable->Table[i].SupportsWakeUpPatterns)\n            printf(\"Yes\\n\");\n        else\n            printf(\"No\\n\");\n\n        printf(\"Supports neighbor discovery[%d]:\\t \", i);\n        if (pipTable->Table[i].SupportsNeighborDiscovery)\n            printf(\"Yes\\n\");\n        else\n            printf(\"No\\n\");\n\n        printf(\"Supports router discovery[%d]:\\t \", i);\n        if (pipTable->Table[i].SupportsRouterDiscovery)\n            printf(\"Yes\\n\");\n        else\n            printf(\"No\\n\");\n\n        printf(\"\\n\");\n    }\n\n    FreeMibTable(pipTable);\n    pipTable = NULL;\n\n    exit(0);\n}\n\n\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-freemibtable\">FreeMibTable</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-getifentry2\">GetIfEntry2</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-getifstacktable\">GetIfStackTable</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-getiftable2\">GetIfTable2</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-getinvertedifstacktable\">GetInvertedIfStackTable</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-getipinterfaceentry\">GetIpInterfaceEntry</a>\n\n\n\n<a href=\"/windows/desktop/IpHlp/ip-helper-function-reference\">IP Helper Function Reference</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-initializeipinterfaceentry\">InitializeIpInterfaceEntry</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_if_row2\">MIB_IF_ROW2</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_if_table2\">MIB_IF_TABLE2</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_ipinterface_row\">MIB_IPINTERFACE_ROW</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_ipinterface_table\">MIB_IPINTERFACE_TABLE</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-notifyipinterfacechange\">NotifyIpInterfaceChange</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "ip_module_id",
+   "file": "dlls/iphlpapi/iphlpapi_main.c",
+   "start_line": 53,
+   "end_line": 58,
+   "static": true,
+   "called_from": [
+    "GetIpInterfaceTable"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/iphlpapi/iphlpapi_main.c:960",
+    "dlls/iphlpapi/iphlpapi_main.c:1033",
+    "dlls/iphlpapi/iphlpapi_main.c:1560",
+    "dlls/iphlpapi/iphlpapi_main.c:2300",
+    "dlls/iphlpapi/iphlpapi_main.c:2517"
+   ],
+   "signature": "static const NPI_MODULEID *ip_module_id( USHORT family )",
+   "code": "static const NPI_MODULEID *ip_module_id( USHORT family )\n{\n    if (family == AF_INET) return &NPI_MS_IPV4_MODULEID;\n    if (family == AF_INET6) return &NPI_MS_IPV6_MODULEID;\n    return NULL;\n}"
+  },
+  {
+   "name": "fill_ip_interface_table_row",
+   "file": "dlls/iphlpapi/iphlpapi_main.c",
+   "start_line": 4630,
+   "end_line": 4663,
+   "static": true,
+   "called_from": [
+    "GetIpInterfaceTable"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/iphlpapi/iphlpapi_main.c:4747"
+   ],
+   "signature": "static void fill_ip_interface_table_row( ADDRESS_FAMILY fam, MIB_IPINTERFACE_ROW *row, struct nsi_ip_interface_key *key, struct nsi_ip_interface_rw *rw, struct nsi_ip_interface_dynamic *dyn )",
+   "code": "static void fill_ip_interface_table_row( ADDRESS_FAMILY fam, MIB_IPINTERFACE_ROW *row, struct nsi_ip_interface_key *key,\n                                         struct nsi_ip_interface_rw *rw, struct nsi_ip_interface_dynamic *dyn )\n{\n    row->Family = fam;\n    row->InterfaceLuid = key->luid;\n    row->InterfaceIndex = dyn->if_index;\n    row->RouterDiscoveryBehavior = rw->router_discovery_behaviour;\n    row->DadTransmits = rw->dad_transmits;\n    row->BaseReachableTime = rw->base_reachable_time;\n    row->RetransmitTime = rw->retransmit_time;\n    row->PathMtuDiscoveryTimeout = rw->path_mtu_discovery_timeout;\n    row->LinkLocalAddressBehavior = rw->link_local_address_behavior;\n    row->LinkLocalAddressTimeout = rw->link_local_address_timeout;\n    memcpy( row->ZoneIndices, rw->zone_indices, sizeof(row->ZoneIndices) );\n    row->SitePrefixLength = rw->site_prefix_len;\n    row->Metric = rw->metric;\n    row->NlMtu = rw->mtu;\n    row->Connected = dyn->connected;\n    row->SupportsWakeUpPatterns = dyn->supports_wakeup_patterns;\n    row->ReachableTime = dyn->reachable_time;\n    row->TransmitOffload = dyn->transmit_offload;\n\n    /* MinRouterAdvertisementInterval / MaxRouterAdvertisementInterval don't seem to have an\n     * entry in NSI interface table, or maybe these fields are usually default and NSI tables have 0 in that case\n     * and thus weren't discovered. */\n    row->MinRouterAdvertisementInterval = 200;\n    row->MaxRouterAdvertisementInterval = 600;\n\n    /* Flags exact locations were not yet discovered in NSI table. */\n    row->UseAutomaticMetric = 1;\n    row->UseNeighborUnreachabilityDetection = 1;\n    row->SupportsNeighborDiscovery = 1;\n    row->SupportsRouterDiscovery = 1;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(iphlpapi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "HeapAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "NsiAllocateAndGetTable",
+    "module": "nsi",
+    "impl": [
+     "dlls/nsi/nsi.c:66"
+    ]
+   },
+   {
+    "name": "NsiFreeTable",
+    "module": "nsi",
+    "impl": [
+     "dlls/nsi/nsi.c:209"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "iphlpapi.GetIpInterfaceTable",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "IP Helper",
+   "header": "netioapi.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 56,
+   "body": 55,
+   "code": 37
+  },
+  "cyclomatic": 8,
+  "return_type": "DWORD",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 2,
+   "n_tests_other": 1,
+   "own_test_functions": [
+    "dlls/iphlpapi/tests/iphlpapi.c::test_GetIpInterface"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/netioapi/nf-netioapi-getipinterfacetable",
+   "source": "win32",
+   "description": "Retrieves the IP interface entries on the local computer.",
+   "min_windows": "Windows Vista [desktop apps only]",
+   "documented_dll": "Iphlpapi.dll"
+  },
+  "exports": [
+   "iphlpapi.GetIpInterfaceTable"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 1.0,
+   "first_date": "2025-08-13",
+   "median_date": "2025-08-13",
+   "last_date": "2025-11-05",
+   "code_lines": 36
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "iphlpapi.GetIpStatisticsEx",
+  "share_after_cutoff": 1.0,
+  "last_date": "2025-11-05"
+ }
+}

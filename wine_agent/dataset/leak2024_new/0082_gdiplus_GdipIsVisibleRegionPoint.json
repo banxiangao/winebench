@@ -1,0 +1,218 @@
+{
+ "id": "0082",
+ "function": {
+  "name": "GdipIsVisibleRegionPoint",
+  "export_name": "GdipIsVisibleRegionPoint",
+  "module": "gdiplus",
+  "source_module": "gdiplus",
+  "exported_by": [
+   "gdiplus"
+  ],
+  "side": "PE",
+  "file": "dlls/gdiplus/region.c",
+  "start_line": 1824,
+  "end_line": 1878,
+  "body_lines": 52,
+  "signature": "GpStatus WINGDIPAPI GdipIsVisibleRegionPoint(GpRegion* region, REAL x, REAL y, GpGraphics *graphics, BOOL *res)",
+  "header_comment": "/*****************************************************************************\n * GdipIsVisibleRegionPoint [GDIPLUS.@]\n */",
+  "code": "GpStatus WINGDIPAPI GdipIsVisibleRegionPoint(GpRegion* region, REAL x, REAL y, GpGraphics *graphics, BOOL *res)\n{\n    GpStatus stat;\n    GpMatrix transform;\n    BOOL identity;\n    GpRegion* tmp_region = NULL;\n\n    TRACE(\"(%p, %.2f, %.2f, %p, %p)\\n\", region, x, y, graphics, res);\n\n    if(!region || !res)\n        return InvalidParameter;\n\n    if (graphics)\n    {\n        stat = get_graphics_transform(graphics, WineCoordinateSpaceGdiDevice, CoordinateSpaceWorld, &transform);\n        if (stat != Ok)\n            return stat;\n\n        stat = GdipIsMatrixIdentity(&transform, &identity);\n        if (stat != Ok)\n            return stat;\n    }\n    else\n        identity = TRUE;\n\n    if (!identity)\n    {\n        GpPointF pt = {x, y};\n\n        stat = GdipTransformMatrixPoints(&transform, &pt, 1);\n        if (stat != Ok)\n            return stat;\n\n        x = pt.X;\n        y = pt.Y;\n\n        stat = GdipCloneRegion(region, &tmp_region);\n        if (stat != Ok)\n            return stat;\n\n        stat = GdipTransformRegion(tmp_region, &transform);\n        if (stat != Ok)\n        {\n            GdipDeleteRegion(tmp_region);\n            return stat;\n        }\n\n        region = tmp_region;\n    }\n\n    x = gdip_round(x);\n    y = gdip_round(y);\n\n    return point_in_region(&region->node, x, y, res);\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"objbase.h\"",
+   "#include \"gdiplus.h\"",
+   "#include \"gdiplus_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "gdiplus!GdipIsVisibleRegionPoint [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdiplus/tests/region.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 2
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "gdiplusflat",
+   "path": "desktop-src/gdiplus/-gdiplus-region-flat.md",
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-region-flat",
+   "documented_name": "gdipisvisibleregionpoint",
+   "excerpt": {
+    "note": "GDI+ flat API page: one table row per function; only the page introduction, the table header and this function's row are kept",
+    "full_page_chars": 24326
+   },
+   "file": "docs/0082_win32_-gdiplus-region-flat.md",
+   "text": "---\ndescription: Windows GDI+ exposes a flat API that consists of about 600 functions. These flat API functions are wrapped by the Region C++ class.\nms.assetid: 2f1d3631-7104-421a-a577-ef764bffe034\ntitle: Region Functions (GDI+)\nms.topic: reference\nms.date: 05/31/2018\n---\n\n# Region Functions (GDI+)\n\nWindows GDI+ exposes a flat API that consists of about 600 functions, which are implemented in Gdiplus.dll and declared in Gdiplusflat.h. The functions in the GDI+ flat API are wrapped by a collection of about 40 C++ classes. It is recommended that you do not directly call the functions in the flat API. Whenever you make calls to GDI+, you should do so by calling the methods and functions provided by the C++ wrappers. Microsoft Product Support Services will not provide support for code that calls the flat API directly. For more information on using these wrapper methods, see [GDI+ Flat API](-gdiplus-flatapi-flat.md).\n\nThe following flat API functions are wrapped by the [**Region**](/windows/desktop/api/gdiplusheaders/nl-gdiplusheaders-region) C++ class.\n\n## Region Functions and Corresponding Wrapper Methods\n\n\n\n| Flat function                                                                                                                                            | Wrapper method                                                                                                                                                                                       | Remarks                                                                                                                                                                                                                                                                                                           |\n|----------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|\n| GpStatus WINGDIPAPI GdipIsVisibleRegionPoint(GpRegion \\*region, REAL x, REAL y, GpGraphics \\*graphics, BOOL \\*result)<br/>                         | [**BOOL Region::IsVisible(IN const PointF& point, IN const Graphics\\* g) const**](/windows/win32/api/gdiplusheaders/nf-gdiplusheaders-region-isvisible(inconstpointf__inconstgraphics))<br/>                                           | Determines whether a point is inside this region.<br/> The *x* and *y* parameters in the flat function specify the x and y coordinates of a point that corresponds to the *point* parameter in the wrapper method.<br/>                                                                               |\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "point_in_region",
+   "file": "dlls/gdiplus/region.c",
+   "start_line": 1744,
+   "end_line": 1819,
+   "static": false,
+   "called_from": [
+    "GdipIsVisibleRegionPoint"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "server/region.c (other module)",
+    "server/user.h (other module)",
+    "server/window.c (other module)"
+   ],
+   "signature": "GpStatus point_in_region(struct region_element *element, REAL x, REAL y, BOOL *res)",
+   "code": "GpStatus point_in_region(struct region_element *element, REAL x, REAL y, BOOL *res)\n{\n    switch (element->type)\n    {\n        case RegionDataInfiniteRect:\n            *res = TRUE;\n            return Ok;\n        case RegionDataEmptyRect:\n            *res = FALSE;\n            return Ok;\n        case RegionDataPath:\n            return GdipIsVisiblePathPoint(element->elementdata.path, x, y, NULL, res);\n        case RegionDataRect:\n        {\n            REAL xadj = x + RGN_ROUND_OFS;\n            REAL yadj = y + RGN_ROUND_OFS;\n            GpRectF* rc = &element->elementdata.rect;\n\n            *res = (xadj >= rc->X && yadj >= rc->Y &&\n                xadj < rc->X + rc->Width && yadj < rc->Y + rc->Height);\n\n            return Ok;\n        }\n        case CombineModeIntersect:\n        case CombineModeUnion:\n        case CombineModeXor:\n        case CombineModeExclude:\n        case CombineModeComplement:\n        {\n            BOOL left, right;\n            GpStatus stat;\n\n            stat = point_in_region(element->elementdata.combine.left, x, y, &left);\n\n            if (stat != Ok)\n                return stat;\n\n            switch (element->type)\n            {\n                case CombineModeIntersect:\n                    if (left)\n                        return point_in_region(element->elementdata.combine.right, x, y, res);\n                    *res = FALSE;\n                    return Ok;\n                case CombineModeUnion:\n                    if (!left)\n                        return point_in_region(element->elementdata.combine.right, x, y, res);\n                    *res = TRUE;\n                    return Ok;\n                case CombineModeXor:\n                    stat = point_in_region(element->elementdata.combine.right, x, y, &right);\n                    if (stat == Ok)\n                        *res = left ^ right;\n                    return stat;\n                case CombineModeExclude:\n                    if (left)\n                    {\n                        stat = point_in_region(element->elementdata.combine.right, x, y, &right);\n                        if (stat == Ok)\n                            *res = !right;\n                    }\n                    else\n                        *res = FALSE;\n                    return stat;\n                case CombineModeComplement:\n                    if (!left)\n                        return point_in_region(element->elementdata.combine.right, x, y, res);\n                    *res = FALSE;\n                    return Ok;\n            }\n        }\n        default:\n            FIXME(\"point_in_region unimplemented for region type=%lx\\n\", element->type);\n            return NotImplemented;\n    }\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "RGN_ROUND_OFS",
+    "type": "const REAL",
+    "static": true,
+    "start_line": 1040,
+    "end_line": 1045,
+    "code": "static const REAL RGN_ROUND_OFS = 0.03; /* arbitrary constant found by experiment to be close to native */\n\nstatic inline INT rgn_round(REAL x)\n{\n    return (INT) ceilf(x - RGN_ROUND_OFS);\n}"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 33,
+    "end_line": 33,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(gdiplus);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "get_graphics_transform",
+    "file": "dlls/gdiplus/graphics.c",
+    "start_line": 7771
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "GdipCloneRegion",
+    "impl": [
+     "dlls/gdiplus/region.c:230"
+    ]
+   },
+   {
+    "name": "GdipDeleteRegion",
+    "impl": [
+     "dlls/gdiplus/region.c:582"
+    ]
+   },
+   {
+    "name": "GdipIsMatrixIdentity",
+    "impl": [
+     "dlls/gdiplus/matrix.c:513"
+    ]
+   },
+   {
+    "name": "GdipIsVisiblePathPoint",
+    "impl": [
+     "dlls/gdiplus/graphicspath.c:1882"
+    ]
+   },
+   {
+    "name": "GdipTransformMatrixPoints",
+    "impl": [
+     "dlls/gdiplus/matrix.c:365"
+    ]
+   },
+   {
+    "name": "GdipTransformRegion",
+    "impl": [
+     "dlls/gdiplus/region.c:2014"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "gdip_round"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "gdiplus.GdipIsVisibleRegionPoint",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI+",
+   "header": "gdiplusflat.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 55,
+   "body": 54,
+   "code": 34
+  },
+  "cyclomatic": 10,
+  "return_type": "GpStatus",
+  "n_params": 5,
+  "tests": {
+   "n_tests_own": 2,
+   "n_tests": 2,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/gdiplus/tests/region.c::test_incombinedregion",
+    "dlls/gdiplus/tests/region.c::test_isvisiblepoint"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-region-flat",
+   "source": "win32-gdiplus-flat",
+   "description": "",
+   "min_windows": "",
+   "documented_dll": "gdiplus.dll"
+  },
+  "exports": [
+   "gdiplus.GdipIsVisibleRegionPoint"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.8,
+   "first_date": "2008-07-25",
+   "median_date": "2025-06-18",
+   "last_date": "2025-06-18",
+   "code_lines": 35
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "gdiplus.GdipGetMetafileHeaderFromEmf",
+  "share_after_cutoff": 0.8,
+  "last_date": "2025-06-18"
+ }
+}

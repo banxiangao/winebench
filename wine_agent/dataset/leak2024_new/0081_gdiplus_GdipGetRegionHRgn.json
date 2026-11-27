@@ -1,0 +1,464 @@
+{
+ "id": "0081",
+ "function": {
+  "name": "GdipGetRegionHRgn",
+  "export_name": "GdipGetRegionHRgn",
+  "module": "gdiplus",
+  "source_module": "gdiplus",
+  "exported_by": [
+   "gdiplus"
+  ],
+  "side": "PE",
+  "file": "dlls/gdiplus/region.c",
+  "start_line": 1378,
+  "end_line": 1427,
+  "body_lines": 47,
+  "signature": "GpStatus WINGDIPAPI GdipGetRegionHRgn(GpRegion *region, GpGraphics *graphics, HRGN *hrgn)",
+  "header_comment": "/*****************************************************************************\n * GdipGetRegionHRgn [GDIPLUS.@]\n */",
+  "code": "GpStatus WINGDIPAPI GdipGetRegionHRgn(GpRegion *region, GpGraphics *graphics, HRGN *hrgn)\n{\n    GpStatus stat=Ok;\n    REAL min_x, min_y, max_x, max_y;\n    BOOL empty, infinite;\n    RECT bounds;\n    GpRegion *tmp_region = NULL;\n    GpMatrix transform;\n\n    TRACE(\"(%p, %p, %p)\\n\", region, graphics, hrgn);\n\n    if (!region || !hrgn)\n        return InvalidParameter;\n\n    if (graphics) {\n        stat = GdipCloneRegion(region, &tmp_region);\n        region = tmp_region;\n\n        if (stat == Ok)\n            stat = get_graphics_transform(graphics, WineCoordinateSpaceGdiDevice, CoordinateSpaceWorld, &transform);\n\n        if (stat == Ok)\n            stat = GdipTransformRegion(region, &transform);\n    }\n\n    if (stat == Ok)\n    {\n        get_region_bounding_box(&region->node, &min_x, &min_y, &max_x, &max_y, &empty, &infinite);\n\n        if (empty)\n        {\n            if (infinite)\n                *hrgn = NULL;\n            else\n                *hrgn = CreateRectRgn(0, 0, 0, 0);\n        }\n        else\n        {\n            bounds.left = floorf(min_x);\n            bounds.top = floorf(min_y);\n            bounds.right = ceilf(max_x) + 1;\n            bounds.bottom = ceilf(max_y) + 1;\n            stat = get_region_hrgn(&region->node, &bounds, hrgn);\n        }\n    }\n\n    GdipDeleteRegion(tmp_region);\n\n    return stat;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"objbase.h\"",
+   "#include \"gdiplus.h\"",
+   "#include \"gdiplus_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "gdiplus!GdipGetRegionHRgn [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdiplus/tests/graphics.c",
+   "dlls/gdiplus/tests/region.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 4
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "gdiplusflat",
+   "path": "desktop-src/gdiplus/-gdiplus-region-flat.md",
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-region-flat",
+   "documented_name": "gdipgetregionhrgn",
+   "excerpt": {
+    "note": "GDI+ flat API page: one table row per function; only the page introduction, the table header and this function's row are kept",
+    "full_page_chars": 24326
+   },
+   "file": "docs/0081_win32_-gdiplus-region-flat.md",
+   "text": "---\ndescription: Windows GDI+ exposes a flat API that consists of about 600 functions. These flat API functions are wrapped by the Region C++ class.\nms.assetid: 2f1d3631-7104-421a-a577-ef764bffe034\ntitle: Region Functions (GDI+)\nms.topic: reference\nms.date: 05/31/2018\n---\n\n# Region Functions (GDI+)\n\nWindows GDI+ exposes a flat API that consists of about 600 functions, which are implemented in Gdiplus.dll and declared in Gdiplusflat.h. The functions in the GDI+ flat API are wrapped by a collection of about 40 C++ classes. It is recommended that you do not directly call the functions in the flat API. Whenever you make calls to GDI+, you should do so by calling the methods and functions provided by the C++ wrappers. Microsoft Product Support Services will not provide support for code that calls the flat API directly. For more information on using these wrapper methods, see [GDI+ Flat API](-gdiplus-flatapi-flat.md).\n\nThe following flat API functions are wrapped by the [**Region**](/windows/desktop/api/gdiplusheaders/nl-gdiplusheaders-region) C++ class.\n\n## Region Functions and Corresponding Wrapper Methods\n\n\n\n| Flat function                                                                                                                                            | Wrapper method                                                                                                                                                                                       | Remarks                                                                                                                                                                                                                                                                                                           |\n|----------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|\n| GpStatus WINGDIPAPI GdipGetRegionHRgn(GpRegion \\*region, GpGraphics \\*graphics, HRGN \\*hRgn)<br/>                                                  | [**HRGN Region::GetHRGN(IN const Graphics\\* g) const**](/windows/desktop/api/Gdiplusheaders/nf-gdiplusheaders-region-gethrgn)<br/>                                                                                             | Creates a GDI region from this region.                                                                                                                                                                                                                                                                            |\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_region_bounding_box",
+   "file": "dlls/gdiplus/region.c",
+   "start_line": 1548,
+   "end_line": 1742,
+   "static": true,
+   "called_from": [
+    "GdipGetRegionHRgn"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/region.c:122",
+    "dlls/gdiplus/region.c:609"
+   ],
+   "signature": "static void get_region_bounding_box(struct region_element *element, REAL *min_x, REAL *min_y, REAL *max_x, REAL *max_y, BOOL *empty, BOOL *infinite)",
+   "code": "static void get_region_bounding_box(struct region_element *element,\n    REAL *min_x, REAL *min_y, REAL *max_x, REAL *max_y, BOOL *empty, BOOL *infinite)\n{\n    REAL left_min_x, left_min_y, left_max_x, left_max_y;\n    BOOL left_empty, left_infinite;\n    REAL right_min_x, right_min_y, right_max_x, right_max_y;\n    BOOL right_empty, right_infinite;\n    /* For combine modes, we convert the mode to flags as follows to simplify the logic:\n     * 0x8 = point in combined region if it's in both\n     * 0x4 = point in combined region if it's in left and not right\n     * 0x2 = point in combined region if it's not in left and is in right\n     * 0x1 = point in combined region if it's in neither region */\n    int flags;\n    const int combine_mode_flags[] = {\n        0xa, /* CombineModeReplace - shouldn't be used */\n        0x8, /* CombineModeIntersect */\n        0xe, /* CombineModeUnion */\n        0x6, /* CombineModeXor */\n        0x4, /* CombineModeExclude */\n        0x2, /* CombineModeComplement */\n    };\n\n    /* handle unit elements first */\n    switch (element->type)\n    {\n        case RegionDataInfiniteRect:\n            *min_x = *min_y = *max_x = *max_y = 0.0;\n            *empty = TRUE;\n            *infinite = TRUE;\n            return;\n        case RegionDataEmptyRect:\n            *min_x = *min_y = *max_x = *max_y = 0.0;\n            *empty = TRUE;\n            *infinite = FALSE;\n            return;\n        case RegionDataPath:\n        {\n            GpPath *path = element->elementdata.path;\n            int i;\n\n            if (path->pathdata.Count <= 1) {\n                *min_x = *min_y = *max_x = *max_y = 0.0;\n                *empty = TRUE;\n                *infinite = FALSE;\n                return;\n            }\n\n            *min_x = *max_x = path->pathdata.Points[0].X;\n            *min_y = *max_y = path->pathdata.Points[0].Y;\n            *empty = FALSE;\n            *infinite = FALSE;\n\n            for (i=1; i < path->pathdata.Count; i++)\n            {\n                if (path->pathdata.Points[i].X < *min_x)\n                    *min_x = path->pathdata.Points[i].X;\n                else if (path->pathdata.Points[i].X > *max_x)\n                    *max_x = path->pathdata.Points[i].X;\n                if (path->pathdata.Points[i].Y < *min_y)\n                    *min_y = path->pathdata.Points[i].Y;\n                else if (path->pathdata.Points[i].Y > *max_y)\n                    *max_y = path->pathdata.Points[i].Y;\n            }\n\n            return;\n        }\n        case RegionDataRect:\n            *min_x = element->elementdata.rect.X;\n            *min_y = element->elementdata.rect.Y;\n            *max_x = element->elementdata.rect.X + element->elementdata.rect.Width;\n            *max_y = element->elementdata.rect.Y + element->elementdata.rect.Height;\n            *empty = FALSE;\n            *infinite = FALSE;\n            return;\n    }\n\n    /* Should be only combine modes left */\n    assert(element->type < ARRAY_SIZE(combine_mode_flags));\n\n    flags = combine_mode_flags[element->type];\n\n    get_region_bounding_box(element->elementdata.combine.left,\n        &left_min_x, &left_min_y, &left_max_x, &left_max_y, &left_empty, &left_infinite);\n\n    if (left_infinite)\n    {\n        /* change our function so we can ignore the infinity */\n        flags = ((flags & 0x3) << 2) | ((flags & 0xc) >> 2);\n    }\n\n    if (left_empty && (flags & 0x3) == 0) {\n        /* no points in region regardless of right region, return empty */\n        *empty = TRUE;\n        *infinite = FALSE;\n        return;\n    }\n\n    if (left_empty && (flags & 0x3) == 0x3) {\n        /* all points in region regardless of right region, return infinite */\n        *empty = TRUE;\n        *infinite = TRUE;\n        return;\n    }\n\n    get_region_bounding_box(element->elementdata.combine.right,\n        &right_min_x, &right_min_y, &right_max_x, &right_max_y, &right_empty, &right_infinite);\n\n    if (right_infinite)\n    {\n        /* change our function so we can ignore the infinity */\n        flags = ((flags & 0x5) << 1) | ((flags & 0xa) >> 1);\n    }\n\n    /* result is infinite if points in neither region are in the result */\n    *infinite = (flags & 0x1);\n\n    if (*infinite)\n    {\n        /* Again, we modify our function to ignore the infinity.\n         * The points we care about are the ones that are different from the outside of our box,\n         * not the points inside the region, so we invert the whole thing.\n         * From here we can assume 0x1 is not set. */\n        flags ^= 0xf;\n    }\n\n    if (left_empty)\n    {\n        /* We already took care of the cases where the right region doesn't matter,\n         * so we can just use the right bounding box. */\n        *min_x = right_min_x;\n        *min_y = right_min_y;\n        *max_x = right_max_x;\n        *max_y = right_max_y;\n        *empty = right_empty;\n        return;\n    }\n\n    if (right_empty)\n    {\n        /* With no points in right region, and infinities eliminated, we only care\n         * about flag 0x4, the case where a point is in left region and not right. */\n        if (flags & 0x4)\n        {\n            /* We have a copy of the left region. */\n            *min_x = left_min_x;\n            *min_y = left_min_y;\n            *max_x = left_max_x;\n            *max_y = left_max_y;\n            *empty = left_empty;\n            return;\n        }\n        /* otherwise, it's an empty (or infinite) region */\n        *empty = TRUE;\n        return;\n    }\n\n    /* From here we know 0x1 isn't set, and we know at least one flag is set.\n     * We can ignore flag 0x8 because we must assume that any point within the\n     * intersection of the bounding boxes might be within the region. */\n    switch (flags & 0x6)\n    {\n    case 0x0:\n        /* intersection */\n        *min_x = fmaxf(left_min_x, right_min_x);\n        *min_y = fmaxf(left_min_y, right_min_y);\n        *max_x = fminf(left_max_x, right_max_x);\n        *max_y = fminf(left_max_y, right_max_y);\n        *empty = *min_x > *max_x || *min_y > *max_y;\n        return;\n    case 0x2:\n        /* right (or complement) */\n        *min_x = right_min_x;\n        *min_y = right_min_y;\n        *max_x = right_max_x;\n        *max_y = right_max_y;\n        *empty = right_empty;\n        return;\n    case 0x4:\n        /* left (or exclude) */\n        *min_x = left_min_x;\n        *min_y = left_min_y;\n        *max_x = left_max_x;\n        *max_y = left_max_y;\n        *empty = left_empty;\n        return;\n    case 0x6:\n        /* union (or xor) */\n        *min_x = fminf(left_min_x, right_min_x);\n        *min_y = fminf(left_min_y, right_min_y);\n        *max_x = fmaxf(left_max_x, right_max_x);\n        *max_y = fmaxf(left_max_y, right_max_y);\n        *empty = FALSE;\n        return;\n    }\n}"
+  },
+  {
+   "name": "get_region_hrgn",
+   "file": "dlls/gdiplus/region.c",
+   "start_line": 1246,
+   "end_line": 1373,
+   "static": false,
+   "called_from": [
+    "GdipGetRegionHRgn"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:495"
+   ],
+   "signature": "GpStatus get_region_hrgn(struct region_element *element, const RECT *bounds, HRGN *hrgn)",
+   "code": "GpStatus get_region_hrgn(struct region_element *element, const RECT *bounds, HRGN *hrgn)\n{\n    switch (element->type)\n    {\n        case RegionDataInfiniteRect:\n            *hrgn = NULL;\n            return Ok;\n        case RegionDataEmptyRect:\n            *hrgn = CreateRectRgn(0, 0, 0, 0);\n            return *hrgn ? Ok : OutOfMemory;\n        case RegionDataPath:\n            return get_path_hrgn(element->elementdata.path, bounds, hrgn);\n        case RegionDataRect:\n        {\n            GpRectF* rc = &element->elementdata.rect;\n\n            if (rc->Width <= 0.0 || rc->Height <= 0.0)\n                *hrgn = CreateRectRgn(0, 0, 0, 0);\n            else\n                *hrgn = CreateRectRgn(rgn_round(rc->X), rgn_round(rc->Y),\n                    rgn_round(rc->X + rc->Width), rgn_round(rc->Y + rc->Height));\n            return *hrgn ? Ok : OutOfMemory;\n        }\n        case CombineModeIntersect:\n        case CombineModeUnion:\n        case CombineModeXor:\n        case CombineModeExclude:\n        case CombineModeComplement:\n        {\n            HRGN left, right;\n            GpStatus stat;\n            int ret;\n\n            stat = get_region_hrgn(element->elementdata.combine.left, bounds, &left);\n            if (stat != Ok)\n            {\n                *hrgn = NULL;\n                return stat;\n            }\n\n            if (left == NULL)\n            {\n                /* existing region is infinite */\n                switch (element->type)\n                {\n                    case CombineModeIntersect:\n                        return get_region_hrgn(element->elementdata.combine.right, bounds, hrgn);\n                    case CombineModeXor: case CombineModeExclude:\n                        left = CreateRectRgn(-(1 << 22), -(1 << 22), 1 << 22, 1 << 22);\n                        break;\n                    case CombineModeComplement:\n                        *hrgn = CreateRectRgn(0, 0, 0, 0);\n                        return *hrgn ? Ok : OutOfMemory;\n                    case CombineModeUnion:\n                        *hrgn = NULL;\n                        return Ok;\n                }\n            }\n\n            stat = get_region_hrgn(element->elementdata.combine.right, bounds, &right);\n            if (stat != Ok)\n            {\n                DeleteObject(left);\n                *hrgn = NULL;\n                return stat;\n            }\n\n            if (right == NULL)\n            {\n                /* new region is infinite */\n                switch (element->type)\n                {\n                    case CombineModeIntersect:\n                        *hrgn = left;\n                        return Ok;\n                    case CombineModeXor: case CombineModeComplement:\n                        right = CreateRectRgn(-(1 << 22), -(1 << 22), 1 << 22, 1 << 22);\n                        break;\n                    case CombineModeExclude:\n                        DeleteObject(left);\n                        *hrgn = CreateRectRgn(0, 0, 0, 0);\n                        return *hrgn ? Ok : OutOfMemory;\n                    case CombineModeUnion:\n                        DeleteObject(left);\n                        *hrgn = NULL;\n                        return Ok;\n                }\n            }\n\n            switch (element->type)\n            {\n                case CombineModeIntersect:\n                    ret = CombineRgn(left, left, right, RGN_AND);\n                    break;\n                case CombineModeUnion:\n                    ret = CombineRgn(left, left, right, RGN_OR);\n                    break;\n                case CombineModeXor:\n                    ret = CombineRgn(left, left, right, RGN_XOR);\n                    break;\n                case CombineModeExclude:\n                    ret = CombineRgn(left, left, right, RGN_DIFF);\n                    break;\n                case CombineModeComplement:\n                    ret = CombineRgn(left, right, left, RGN_DIFF);\n                    break;\n                default:\n                    ret = ERROR;\n            }\n\n            DeleteObject(right);\n\n            if (ret == ERROR)\n            {\n                DeleteObject(left);\n                *hrgn = NULL;\n                return GenericError;\n            }\n\n            *hrgn = left;\n            return Ok;\n        }\n        default:\n            FIXME(\"GdipGetRegionHRgn unimplemented for region type=%lx\\n\", element->type);\n            *hrgn = NULL;\n            return NotImplemented;\n    }\n}"
+  },
+  {
+   "name": "get_path_hrgn",
+   "file": "dlls/gdiplus/region.c",
+   "start_line": 1203,
+   "end_line": 1244,
+   "static": true,
+   "called_from": [
+    "get_region_hrgn"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static GpStatus get_path_hrgn(GpPath *path, const RECT *bounds, HRGN *hrgn)",
+   "code": "static GpStatus get_path_hrgn(GpPath *path, const RECT *bounds, HRGN *hrgn)\n{\n    GpStatus stat = Ok;\n    GpPath *flat_path = NULL;\n    struct edge_list edge_list = { 0 };\n    RGNDATA *rgndata = NULL;\n\n    if (!path->pathdata.Count)\n    {\n        *hrgn = CreateRectRgn( 0, 0, 0, 0 );\n        return *hrgn ? Ok : OutOfMemory;\n    }\n\n    if (stat == Ok)\n        stat = GdipClonePath(path, &flat_path);\n\n    if (stat == Ok)\n        stat = GdipFlattenPath(flat_path, NULL, FlatnessDefault);\n\n    /* build edge list */\n    if (stat == Ok)\n        stat = flat_path_to_edge_list(flat_path, bounds, &edge_list);\n\n    /* transform edge list into scans list */\n    if (stat == Ok)\n        stat = edge_list_to_rgndata(&edge_list, path->fill, &rgndata);\n\n    /* transform scans list into hrgn */\n    if (stat == Ok)\n    {\n        *hrgn = ExtCreateRegion(NULL, rgndata->rdh.dwSize + rgndata->rdh.nRgnSize, rgndata);\n        stat = *hrgn ? Ok : OutOfMemory;\n    }\n\n    free(edge_list.edges);\n    free(rgndata);\n\n    if (flat_path != NULL)\n        GdipDeletePath(flat_path);\n\n    return stat;\n}"
+  },
+  {
+   "name": "rgn_round",
+   "file": "dlls/gdiplus/region.c",
+   "start_line": 1042,
+   "end_line": 1045,
+   "static": true,
+   "called_from": [
+    "get_region_hrgn",
+    "line_to_edge_list"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/region.c:1049",
+    "dlls/gdiplus/region.c:1050",
+    "dlls/gdiplus/region.c:1051",
+    "dlls/gdiplus/region.c:1052"
+   ],
+   "signature": "static inline INT rgn_round(REAL x)",
+   "code": "static inline INT rgn_round(REAL x)\n{\n    return (INT) ceilf(x - RGN_ROUND_OFS);\n}"
+  },
+  {
+   "name": "flat_path_to_edge_list",
+   "file": "dlls/gdiplus/region.c",
+   "start_line": 1106,
+   "end_line": 1128,
+   "static": true,
+   "called_from": [
+    "get_path_hrgn"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/region.c:2486"
+   ],
+   "signature": "static GpStatus flat_path_to_edge_list(GpPath *path, const RECT *bounds, struct edge_list *edges)",
+   "code": "static GpStatus flat_path_to_edge_list(GpPath *path, const RECT *bounds, struct edge_list *edges)\n{\n    GpStatus stat=Ok;\n    int i, subpath_start=0;\n\n    for (i=1; i < path->pathdata.Count && stat == Ok; i++)\n    {\n        BYTE type = path->pathdata.Types[i];\n\n        if ((type&PathPointTypePathTypeMask) == PathPointTypeStart)\n            subpath_start = i;\n\n        if ((type&PathPointTypePathTypeMask) == PathPointTypeLine)\n        {\n            stat = line_to_edge_list(path->pathdata.Points[i-1], path->pathdata.Points[i], bounds, edges);\n\n            if (stat == Ok && ((type & PathPointTypeCloseSubpath) || i == path->pathdata.Count - 1))\n                stat = line_to_edge_list(path->pathdata.Points[i], path->pathdata.Points[subpath_start], bounds, edges);\n        }\n    }\n\n    return stat;\n}"
+  },
+  {
+   "name": "edge_list_to_rgndata",
+   "file": "dlls/gdiplus/region.c",
+   "start_line": 1143,
+   "end_line": 1201,
+   "static": true,
+   "called_from": [
+    "get_path_hrgn"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static GpStatus edge_list_to_rgndata(struct edge_list *edges, FillMode fill_mode, RGNDATA **rgndata)",
+   "code": "static GpStatus edge_list_to_rgndata(struct edge_list *edges, FillMode fill_mode, RGNDATA **rgndata)\n{\n    int i, start_x = 0, winding_count = 0;\n    BOOL in_shape = FALSE;\n    INT scan_count = 0;\n    RECT *scans, bound = {0};\n\n    /* sort edges */\n    qsort(edges->edges, edges->length, sizeof(edges->edges[0]), cmp_edges);\n\n    /* allocate rgndata */\n    *rgndata = malloc(sizeof(RGNDATAHEADER) + sizeof(RECT) * edges->length / 2);\n    if (!*rgndata)\n        return OutOfMemory;\n\n    scans = (RECT*)&(*rgndata)->Buffer;\n\n    /* translate edges into scans based on winding mode */\n    for (i=0; i < edges->length; i++)\n    {\n        BOOL new_in_shape;\n\n        winding_count += edges->edges[i].rising ? 1 : -1;\n\n        /* check all edges at this point before starting/ending a scan */\n        if (i + 1 < edges->length &&\n            edges->edges[i+1].x == edges->edges[i].x && edges->edges[i+1].y == edges->edges[i].y)\n            continue;\n\n        new_in_shape = (fill_mode == FillModeWinding) ? (winding_count != 0) : ((winding_count & 1) == 1);\n\n        if (new_in_shape == in_shape)\n            continue;\n\n        in_shape = new_in_shape;\n\n        if (in_shape)\n        {\n            start_x = edges->edges[i].x;\n        }\n        else\n        {\n            scans[scan_count].left = start_x;\n            scans[scan_count].right = edges->edges[i].x;\n            scans[scan_count].top = edges->edges[i].y;\n            scans[scan_count].bottom = edges->edges[i].y+1;\n            UnionRect(&bound, &bound, &scans[scan_count]);\n            scan_count++;\n        }\n    }\n\n    (*rgndata)->rdh.dwSize = sizeof(RGNDATAHEADER);\n    (*rgndata)->rdh.iType = RDH_RECTANGLES;\n    (*rgndata)->rdh.nCount = scan_count;\n    (*rgndata)->rdh.nRgnSize = scan_count * sizeof(RECT);\n    (*rgndata)->rdh.rcBound = bound;\n\n    return Ok;\n}"
+  },
+  {
+   "name": "line_to_edge_list",
+   "file": "dlls/gdiplus/region.c",
+   "start_line": 1055,
+   "end_line": 1104,
+   "static": true,
+   "called_from": [
+    "flat_path_to_edge_list"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static GpStatus line_to_edge_list(GpPointF p1, GpPointF p2, const RECT *bounds, struct edge_list *edges)",
+   "code": "static GpStatus line_to_edge_list(GpPointF p1, GpPointF p2, const RECT *bounds, struct edge_list *edges)\n{\n    GpStatus stat = Ok;\n    int y, top_y, bottom_y;\n    BOOL rising = (p2.Y < p1.Y);\n    GpPointF top_pt, bottom_pt;\n    REAL dx, dy;\n\n    top_pt = rising ? p2 : p1;\n    bottom_pt = rising ? p1 : p2;\n\n    top_y = rgn_round(top_pt.Y);\n    bottom_y = rgn_round(bottom_pt.Y);\n\n    if (top_y < bounds->top)\n        top_y = bounds->top;\n\n    if (bottom_y > bounds->bottom)\n        bottom_y = bounds->bottom;\n\n    if (bottom_y <= top_y)\n        /* No scanlines intersect this segment */\n        return Ok;\n\n    dx = bottom_pt.X - top_pt.X;\n    dy = bottom_pt.Y - top_pt.Y;\n\n    stat = edge_list_reserve(edges, edges->length + (bottom_y - top_y));\n    if (stat != Ok)\n        return stat;\n\n    for (y = top_y; y < bottom_y && stat == Ok; y++)\n    {\n        REAL x = top_pt.X + (y + RGN_ROUND_OFS - top_pt.Y) * dx / dy;\n\n        int rounded_x = rgn_round(x);\n\n        if (rounded_x < bounds->left)\n            rounded_x = bounds->left;\n        else if (rounded_x > bounds->right)\n            rounded_x = bounds->right;\n\n        edges->edges[edges->length].x = rounded_x;\n        edges->edges[edges->length].y = y;\n        edges->edges[edges->length].rising = rising;\n        edges->length++;\n    }\n\n    return stat;\n}"
+  },
+  {
+   "name": "cmp_edges",
+   "file": "dlls/gdiplus/region.c",
+   "start_line": 1130,
+   "end_line": 1141,
+   "static": true,
+   "called_from": [
+    "edge_list_to_rgndata"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/region.c:2490"
+   ],
+   "signature": "static int cmp_edges(const void *a, const void *b)",
+   "code": "static int cmp_edges(const void *a, const void *b)\n{\n    const struct edge *edge1 = (struct edge*)a;\n    const struct edge *edge2 = (struct edge*)b;\n\n    if (edge1->y != edge2->y)\n    {\n        return (edge1->y > edge2->y) - (edge1->y < edge2->y);\n    }\n\n    return (edge1->x > edge2->x) - (edge1->x < edge2->x);\n}"
+  },
+  {
+   "name": "edge_list_reserve",
+   "file": "dlls/gdiplus/region.c",
+   "start_line": 1016,
+   "end_line": 1038,
+   "static": true,
+   "called_from": [
+    "line_to_edge_list"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static GpStatus edge_list_reserve(struct edge_list *edges, size_t count)",
+   "code": "static GpStatus edge_list_reserve(struct edge_list *edges, size_t count)\n{\n    size_t new_capacity, max_capacity;\n    struct edge *new_edges;\n\n    if (count <= edges->capacity)\n        return Ok;\n\n    max_capacity = ~(SIZE_T)0 / sizeof(edges->edges[0]);\n    if (count > max_capacity)\n        return OutOfMemory;\n\n    new_capacity = grow_capacity_geometric(edges->capacity, max_capacity, count);\n\n    new_edges = realloc(edges->edges, new_capacity * sizeof(edges->edges[0]));\n    if (!new_edges)\n        return OutOfMemory;\n\n    edges->edges = new_edges;\n    edges->capacity = new_capacity;\n\n    return Ok;\n}"
+  },
+  {
+   "name": "grow_capacity_geometric",
+   "file": "dlls/gdiplus/region.c",
+   "start_line": 1006,
+   "end_line": 1014,
+   "static": true,
+   "called_from": [
+    "edge_list_reserve"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/region.c:2236"
+   ],
+   "signature": "static size_t grow_capacity_geometric(size_t capacity, size_t max_capacity, size_t count)",
+   "code": "static size_t grow_capacity_geometric(size_t capacity, size_t max_capacity, size_t count)\n{\n    size_t new_capacity = max(4, capacity);\n    while (new_capacity < count && new_capacity <= max_capacity / 2)\n        new_capacity *= 2;\n    if (new_capacity < count)\n        return max_capacity;\n    return new_capacity;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "edge",
+    "kind": "struct_decl",
+    "start_line": 107,
+    "end_line": 113,
+    "code": "struct edge\n{\n    /* Represents an intersection of a path segment with a scanline */\n    int x;\n    int y;\n    BOOL rising;\n};"
+   },
+   {
+    "name": "edge_list",
+    "kind": "struct_decl",
+    "start_line": 115,
+    "end_line": 120,
+    "code": "struct edge_list\n{\n    struct edge *edges;\n    size_t capacity;\n    size_t length;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "RGN_ROUND_OFS",
+    "type": "const REAL",
+    "static": true,
+    "start_line": 1040,
+    "end_line": 1045,
+    "code": "static const REAL RGN_ROUND_OFS = 0.03; /* arbitrary constant found by experiment to be close to native */\n\nstatic inline INT rgn_round(REAL x)\n{\n    return (INT) ceilf(x - RGN_ROUND_OFS);\n}"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 33,
+    "end_line": 33,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(gdiplus);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "get_graphics_transform",
+    "file": "dlls/gdiplus/graphics.c",
+    "start_line": 7771
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "GdipClonePath",
+    "impl": [
+     "dlls/gdiplus/graphicspath.c:1297"
+    ]
+   },
+   {
+    "name": "GdipCloneRegion",
+    "impl": [
+     "dlls/gdiplus/region.c:230"
+    ]
+   },
+   {
+    "name": "GdipDeletePath",
+    "impl": [
+     "dlls/gdiplus/graphicspath.c:1446"
+    ]
+   },
+   {
+    "name": "GdipDeleteRegion",
+    "impl": [
+     "dlls/gdiplus/region.c:582"
+    ]
+   },
+   {
+    "name": "GdipFlattenPath",
+    "impl": [
+     "dlls/gdiplus/graphicspath.c:1460"
+    ]
+   },
+   {
+    "name": "GdipTransformRegion",
+    "impl": [
+     "dlls/gdiplus/region.c:2014"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CombineRgn",
+    "module": "gdi32",
+    "impl": [
+     "dlls/win32u/region.c:1179"
+    ]
+   },
+   {
+    "name": "CreateRectRgn",
+    "module": "gdi32",
+    "impl": [
+     "dlls/win32u/region.c:606"
+    ]
+   },
+   {
+    "name": "DeleteObject",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:194"
+    ]
+   },
+   {
+    "name": "ExtCreateRegion",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:643"
+    ]
+   },
+   {
+    "name": "UnionRect",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/uitools.c:1354"
+    ]
+   },
+   {
+    "name": "_assert",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/exit.c:319"
+    ]
+   },
+   {
+    "name": "ceilf",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/mathf.c:58"
+    ]
+   },
+   {
+    "name": "floorf",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/mathf.c:57"
+    ]
+   },
+   {
+    "name": "fmaxf",
+    "module": "ucrtbase",
+    "impl": []
+   },
+   {
+    "name": "fminf",
+    "module": "ucrtbase",
+    "impl": []
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "qsort",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/misc.c:173"
+    ]
+   },
+   {
+    "name": "realloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:459"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "gdiplus.GdipGetRegionHRgn",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI+",
+   "header": "gdiplusflat.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 50,
+   "body": 49,
+   "code": 31
+  },
+  "cyclomatic": 9,
+  "return_type": "GpStatus",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 4,
+   "n_tests": 4,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/gdiplus/tests/graphics.c::test_clipping",
+    "dlls/gdiplus/tests/graphics.c::test_clipping_2",
+    "dlls/gdiplus/tests/region.c::test_gethrgn",
+    "dlls/gdiplus/tests/region.c::test_rounding"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-region-flat",
+   "source": "win32-gdiplus-flat",
+   "description": "",
+   "min_windows": "",
+   "documented_dll": "gdiplus.dll"
+  },
+  "exports": [
+   "gdiplus.GdipGetRegionHRgn"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.8,
+   "first_date": "2008-05-12",
+   "median_date": "2025-04-16",
+   "last_date": "2025-04-16",
+   "code_lines": 30
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "gdiplus.GdipCreateMetafileFromEmf",
+  "share_after_cutoff": 0.8,
+  "last_date": "2025-04-16"
+ }
+}

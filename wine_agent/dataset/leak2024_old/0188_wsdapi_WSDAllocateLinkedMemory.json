@@ -1,0 +1,194 @@
+{
+ "id": "0188",
+ "function": {
+  "name": "WSDAllocateLinkedMemory",
+  "export_name": "WSDAllocateLinkedMemory",
+  "module": "wsdapi",
+  "source_module": "wsdapi",
+  "exported_by": [
+   "wsdapi"
+  ],
+  "side": "PE",
+  "file": "dlls/wsdapi/memory.c",
+  "start_line": 81,
+  "end_line": 113,
+  "body_lines": 30,
+  "signature": "void * WINAPI WSDAllocateLinkedMemory(void *pParent, SIZE_T cbSize)",
+  "header_comment": null,
+  "code": "void * WINAPI WSDAllocateLinkedMemory(void *pParent, SIZE_T cbSize)\n{\n    struct memory_allocation *allocation, *parent;\n    void *ptr;\n\n    TRACE(\"(%p, %Iu)\\n\", pParent, cbSize);\n\n    ptr = malloc(MEMORY_ALLOCATION_SIZE + cbSize);\n\n    if (ptr == NULL)\n    {\n        return NULL;\n    }\n\n    allocation = ptr;\n    allocation->magic = MEMORY_ALLOCATION_MAGIC;\n\n    list_init(&allocation->children);\n\n    /* See if we have a parent */\n    parent = find_allocation(pParent);\n\n    if (parent != NULL)\n    {\n        list_add_tail(&parent->children, &allocation->entry);\n    }\n    else\n    {\n        list_init(&allocation->entry);\n    }\n\n    return (char *)ptr + MEMORY_ALLOCATION_SIZE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wsdapi.h\""
+  ],
+  "resolution": [
+   "wsdapi!WSDAllocateLinkedMemory [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/wsdapi/tests/memory.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wsdutil",
+   "path": "sdk-api-src/content/wsdutil/nf-wsdutil-wsdallocatelinkedmemory.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wsdutil/nf-wsdutil-wsdallocatelinkedmemory",
+   "documented_name": "wsdallocatelinkedmemory",
+   "file": "docs/0188_sdk-api_nf-wsdutil-wsdallocatelinkedmemory.md",
+   "text": "---\nUID: NF:wsdutil.WSDAllocateLinkedMemory\ntitle: WSDAllocateLinkedMemory function (wsdutil.h)\ndescription: Allocates a linked memory block.\nhelpviewer_keywords: [\"WSDAllocateLinkedMemory\",\"WSDAllocateLinkedMemory function\",\"ncd.wsdallocatelinkedmemory_func\",\"wsdutil/WSDAllocateLinkedMemory\"]\nold-location: ncd\\wsdallocatelinkedmemory_func.htm\ntech.root: ncd\nms.assetid: 2608985f-56aa-4223-b76d-85ebe3b080fb\nms.date: 12/05/2018\nms.keywords: WSDAllocateLinkedMemory, WSDAllocateLinkedMemory function, ncd.wsdallocatelinkedmemory_func, wsdutil/WSDAllocateLinkedMemory\nreq.header: wsdutil.h\nreq.include-header: Wsdapi.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps only]\nreq.target-min-winversvr: Windows Server 2008 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Wsdapi.lib\nreq.dll: Wsdapi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - WSDAllocateLinkedMemory\n - wsdutil/WSDAllocateLinkedMemory\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Wsdapi.dll\napi_name:\n - WSDAllocateLinkedMemory\n---\n\n# WSDAllocateLinkedMemory function\n\n\n## -description\n\nAllocates a linked memory block.\n\n## -parameters\n\n### -param pParent\n\n Pointer to the parent memory block.\n\n### -param cbSize\n\nSize of the memory block to be allocated.\n\n## -returns\n\nPointer to the newly allocated memory block.\n\n## -remarks\n\nThe memory \nblock allocated by <b>WSDAllocateLinkedMemory</b> is linked to a parent memory block and is freed when \nthe parent memory block is freed.\n\n If <i>pParent</i> is <b>NULL</b> the allocated memory block must be explicitly freed by calling \n<a href=\"/windows/desktop/api/wsdutil/nf-wsdutil-wsdfreelinkedmemory\">WSDFreeLinkedMemory</a>."
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "find_allocation",
+   "file": "dlls/wsdapi/memory.c",
+   "start_line": 47,
+   "end_line": 64,
+   "static": true,
+   "called_from": [
+    "WSDAllocateLinkedMemory"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/wsdapi/memory.c:121",
+    "dlls/wsdapi/memory.c:122",
+    "dlls/wsdapi/memory.c:141",
+    "dlls/wsdapi/memory.c:158"
+   ],
+   "signature": "static struct memory_allocation *find_allocation(void *ptr)",
+   "code": "static struct memory_allocation *find_allocation(void *ptr)\n{\n    struct memory_allocation *allocation;\n\n    if (ptr == NULL)\n    {\n        return NULL;\n    }\n\n    allocation = (struct memory_allocation *)((char *)ptr - MEMORY_ALLOCATION_SIZE);\n\n    if (allocation->magic != MEMORY_ALLOCATION_MAGIC)\n    {\n        return NULL;\n    }\n\n    return allocation;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "memory_allocation",
+    "kind": "struct_decl",
+    "start_line": 39,
+    "end_line": 45,
+    "code": "struct memory_allocation\n{\n    int magic;\n    struct list entry;\n\n    struct list children;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 31,
+    "end_line": 31,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(wsdapi);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "MEMORY_ALLOCATION_MAGIC",
+    "start_line": 33,
+    "end_line": 33,
+    "code": "#define MEMORY_ALLOCATION_MAGIC     0xB10C5EED"
+   },
+   {
+    "name": "MEMORY_ALLOCATION_SIZE",
+    "start_line": 37,
+    "end_line": 37,
+    "code": "#define MEMORY_ALLOCATION_SIZE      ROUND_TO_ALIGNMENT(sizeof(struct memory_allocation))"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   }
+  ],
+  "header_inline": [
+   "list_add_tail",
+   "list_init",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "wsdapi.WSDAllocateLinkedMemory",
+  "category": {
+   "l1": "Devices",
+   "l2": "Web Services on Devices",
+   "header": "wsdutil.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 33,
+   "body": 32,
+   "code": 15
+  },
+  "cyclomatic": 3,
+  "return_type": "void *",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/wsdapi/tests/memory.c::AllocateLinkedMemory_tests"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/wsdutil/nf-wsdutil-wsdallocatelinkedmemory",
+   "source": "win32",
+   "description": "Allocates a linked memory block.",
+   "min_windows": "Windows Vista [desktop apps only]",
+   "documented_dll": "Wsdapi.dll"
+  },
+  "exports": [
+   "wsdapi.WSDAllocateLinkedMemory"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2017-05-04",
+   "median_date": "2017-05-04",
+   "last_date": "2023-09-07",
+   "code_lines": 16,
+   "pair": "setupapi.SetupDiOpenClassRegKeyExA",
+   "rank": 1,
+   "distance": 1.824
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "setupapi.SetupDiOpenClassRegKeyExA",
+  "share_after_cutoff": 0.0,
+  "last_date": "2023-09-07",
+  "partner_rank": 1,
+  "distance": 1.824
+ }
+}

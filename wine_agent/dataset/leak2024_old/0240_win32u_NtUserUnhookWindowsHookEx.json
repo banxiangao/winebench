@@ -1,0 +1,182 @@
+{
+ "id": "0240",
+ "function": {
+  "name": "NtUserUnhookWindowsHookEx",
+  "export_name": "UnhookWindowsHookEx",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "user.exe16",
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/hook.c",
+  "start_line": 147,
+  "end_line": 160,
+  "body_lines": 11,
+  "signature": "BOOL WINAPI NtUserUnhookWindowsHookEx( HHOOK handle )",
+  "header_comment": "/***********************************************************************\n *\t     NtUserUnhookWindowsHookEx   (win32u.@)\n */",
+  "code": "BOOL WINAPI NtUserUnhookWindowsHookEx( HHOOK handle )\n{\n    NTSTATUS status;\n\n    SERVER_START_REQ( remove_hook )\n    {\n        req->handle = wine_server_user_handle( handle );\n        req->id     = 0;\n        status = wine_server_call_err( req );\n    }\n    SERVER_END_REQ;\n    if (status == STATUS_INVALID_HANDLE) RtlSetLastWin32Error( ERROR_INVALID_HOOK_HANDLE );\n    return !status;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"win32u_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "user32!UnhookWindowsHookEx [stdcall] -> NtUserUnhookWindowsHookEx implicitly imported from win32u",
+   "win32u!NtUserUnhookWindowsHookEx [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/dialog.c",
+   "dlls/user32/tests/msg.c",
+   "dlls/user32/tests/win.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 11
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "user.exe16",
+   "source_module": "user.exe16",
+   "exported_by": [
+    "user.exe16"
+   ],
+   "file": "dlls/user.exe16/hook.c",
+   "start_line": 460,
+   "resolution": [
+    "user.exe16!UnhookWindowsHookEx [pascal -ret16] -> internal symbol UnhookWindowsHookEx16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 476,
+   "signature": "BOOL16 WINAPI UnhookWindowsHookEx16( HHOOK hhook )",
+   "code": "BOOL16 WINAPI UnhookWindowsHookEx16( HHOOK hhook )\n{\n    struct hook16_queue_info *info;\n    int index;\n\n    if (!(info = get_hook_info( FALSE ))) return FALSE;\n    for (index = 0; index < NB_HOOKS16; index++)\n    {\n        if (info->hook[index] == hhook)\n        {\n            info->hook[index] = 0;\n            info->proc[index] = 0;\n            return UnhookWindowsHookEx( hhook );\n        }\n    }\n    return FALSE;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-unhookwindowshookex.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-unhookwindowshookex",
+   "documented_name": "unhookwindowshookex",
+   "file": "docs/0240_sdk-api_nf-winuser-unhookwindowshookex.md",
+   "text": "---\nUID: NF:winuser.UnhookWindowsHookEx\ntitle: UnhookWindowsHookEx function (winuser.h)\ndescription: Removes a hook procedure installed in a hook chain by the SetWindowsHookEx function.\nhelpviewer_keywords: [\"UnhookWindowsHookEx\",\"UnhookWindowsHookEx function [Windows and Messages]\",\"_win32_UnhookWindowsHookEx\",\"_win32_unhookwindowshookex_cpp\",\"winmsg.unhookwindowshookex\",\"winui._win32_unhookwindowshookex\",\"winuser/UnhookWindowsHookEx\"]\nold-location: winmsg\\unhookwindowshookex.htm\ntech.root: winmsg\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\windowing\\hooks\\hookreference\\hookfunctions\\unhookwindowshookex.htm\nms.date: 12/05/2018\nms.keywords: UnhookWindowsHookEx, UnhookWindowsHookEx function [Windows and Messages], _win32_UnhookWindowsHookEx, _win32_unhookwindowshookex_cpp, winmsg.unhookwindowshookex, winui._win32_unhookwindowshookex, winuser/UnhookWindowsHookEx\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - UnhookWindowsHookEx\n - winuser/UnhookWindowsHookEx\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-rtcore-ntuser-window-ext-l1-1-1.dll\n - ext-ms-win-ntuser-window-l1-1-6.dll\n - ext-ms-win-ntuser-window-l1-1-5.dll\n - User32.dll\n - Ext-MS-Win-NTUser-Window-l1-1-0.dll\n - Ext-MS-Win-NTUser-Window-l1-1-1.dll\n - Ext-MS-Win-NTUser-Window-l1-1-2.dll\n - Ext-MS-Win-RTCore-NTUser-Window-Ext-l1-1-0.dll\n - minuser.dll\n - ext-ms-win-ntuser-window-l1-1-3.dll\n - Ext-MS-Win-NTUser-Window-L1-1-4.dll\napi_name:\n - UnhookWindowsHookEx\nreq.apiset: ext-ms-win-ntuser-window-l1-1-0 (introduced in Windows 8)\n---\n\n# UnhookWindowsHookEx function\n\n\n## -description\n\nRemoves a hook procedure installed in a hook chain by the <a href=\"/windows/desktop/api/winuser/nf-winuser-setwindowshookexa\">SetWindowsHookEx</a> function.\n\n## -parameters\n\n### -param hhk [in]\n\nType: <b>HHOOK</b>\n\nA handle to the hook to be removed. This parameter is a hook handle obtained by a previous call to <a href=\"/windows/desktop/api/winuser/nf-winuser-setwindowshookexa\">SetWindowsHookEx</a>.\n\n## -returns\n\nType: <b>BOOL</b>\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero. To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThe hook procedure can be in the state of being called by another thread even after <b>UnhookWindowsHookEx</b> returns. If the hook procedure is not being called concurrently, the hook procedure is removed immediately before <b>UnhookWindowsHookEx</b> returns. \n\n\n#### Examples\n\nFor an example, see <a href=\"/windows/desktop/winmsg/using-hooks\">Monitoring System Events</a>.\n\n<div class=\"code\"></div>\n\n## -see-also\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/winmsg/hooks\">Hooks</a>\n\n\n\n<b>Reference</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-setwindowshookexa\">SetWindowsHookEx</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "RtlSetLastWin32Error",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_server_call_err",
+   "wine_server_user_handle"
+  ],
+  "system": [
+   "memset"
+  ],
+  "unresolved": [],
+  "server_requests": [
+   {
+    "request": "remove_hook",
+    "handler": "server/hook.c:455"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "win32u.NtUserUnhookWindowsHookEx",
+  "category": {
+   "l1": "User input and messaging",
+   "l2": "Windows and messages",
+   "header": "winuser.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 14,
+   "body": 13,
+   "code": 8
+  },
+  "cyclomatic": 2,
+  "return_type": "BOOL",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 11,
+   "n_tests": 17,
+   "n_tests_other": 6,
+   "own_test_functions": [
+    "dlls/user32/tests/dialog.c::test_IsDialogMessage",
+    "dlls/user32/tests/dialog.c::test_MessageBox",
+    "dlls/user32/tests/dialog.c::test_message_box_startup_info",
+    "dlls/user32/tests/msg.c::START_TEST(msg)",
+    "dlls/user32/tests/msg.c::test_hook_changing_window_proc",
+    "dlls/user32/tests/msg.c::test_hotkey",
+    "dlls/user32/tests/msg.c::test_recursive_hook",
+    "dlls/user32/tests/msg.c::test_set_hook",
+    "dlls/user32/tests/msg.c::test_winevents",
+    "dlls/user32/tests/win.c::START_TEST(win)",
+    "dlls/user32/tests/win.c::check_window_style"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-unhookwindowshookex",
+   "source": "win32",
+   "description": "Removes a hook procedure installed in a hook chain by the SetWindowsHookEx function.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "User32.dll"
+  },
+  "exports": [
+   "user32.UnhookWindowsHookEx",
+   "win32u.NtUserUnhookWindowsHookEx"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2022-02-16",
+   "median_date": "2022-02-16",
+   "last_date": "2022-08-10",
+   "code_lines": 9,
+   "pair": "win32u.NtUserGetForegroundWindow",
+   "rank": 1,
+   "distance": 0.3
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "win32u.NtUserGetForegroundWindow",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-08-10",
+  "partner_rank": 1,
+  "distance": 0.3
+ }
+}

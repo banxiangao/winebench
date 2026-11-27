@@ -1,0 +1,73 @@
+---
+UID: NF:d3dkmthk.D3DKMTOpenSyncObjectNtHandleFromName
+title: D3DKMTOpenSyncObjectNtHandleFromName function (d3dkmthk.h)
+description: D3DKMTOpenSyncObjectNtHandleFromName opens an NT handle for a named shared monitored fence object, similar to what D3DKMTOpenNtHandleFromName does for shared allocations.
+old-location: display\d3dkmtopensyncobjectnthandlefromname.htm
+ms.date: 05/10/2018
+keywords: ["D3DKMTOpenSyncObjectNtHandleFromName function"]
+ms.keywords: D3DKMTOpenSyncObjectNtHandleFromName, D3DKMTOpenSyncObjectNtHandleFromName function [Display Devices], d3dkmthk/D3DKMTOpenSyncObjectNtHandleFromName, display.d3dkmtopensyncobjectnthandlefromname
+req.header: d3dkmthk.h
+req.include-header: D3dkmthk.h
+req.target-type: Universal
+req.target-min-winverclnt: Windows 10
+req.target-min-winversvr: Windows Server 2016
+req.kmdf-ver: 
+req.umdf-ver: 
+req.ddi-compliance: 
+req.unicode-ansi: 
+req.idl: 
+req.max-support: 
+req.namespace: 
+req.assembly: 
+req.type-library: 
+req.lib: Gdi32.lib
+req.dll: Gdi32.dll
+req.irql: 
+targetos: Windows
+tech.root: display
+req.typenames: 
+f1_keywords:
+ - D3DKMTOpenSyncObjectNtHandleFromName
+ - d3dkmthk/D3DKMTOpenSyncObjectNtHandleFromName
+topic_type:
+ - APIRef
+ - kbSyntax
+api_type:
+ - DllExport
+api_location:
+ - GDI32.dll
+ - API-MS-Win-DX-D3DKMT-L1-1-1.dll
+ - API-MS-Win-DX-D3DKMT-L1-1-2.dll
+api_name:
+ - D3DKMTOpenSyncObjectNtHandleFromName
+---
+
+# D3DKMTOpenSyncObjectNtHandleFromName function
+
+
+## -description
+
+<b>D3DKMTOpenSyncObjectNtHandleFromName</b> opens an NT handle for a named shared monitored fence object, similar to what <a href="/windows-hardware/drivers/ddi/d3dkmthk/nf-d3dkmthk-d3dkmtopennthandlefromname">D3DKMTOpenNtHandleFromName</a> does for shared allocations.
+
+## -parameters
+
+### -param unnamedParam1
+
+*pData* [in, out]
+
+A pointer to a <a href="/windows-hardware/drivers/ddi/d3dkmthk/ns-d3dkmthk-_d3dkmt_opensyncobjectnthandlefromname">D3DKMT_OPENSYNCOBJECTNTHANDLEFROMNAME</a> structure that describes the operation.
+
+## -returns
+
+Returns one of the following values:
+
+|Return code|Description|
+|--- |--- |
+|STATUS_SUCCESS|The operation was performed successfully.|
+|STATUS_INVALID_PARAMETER|Parameters were validated and determined to be incorrect.|
+
+This function might also return other <b>NTSTATUS</b> values.
+
+## -see-also
+
+<a href="/windows-hardware/drivers/ddi/d3dkmthk/nf-d3dkmthk-d3dkmtopennthandlefromname">D3DKMTOpenNtHandleFromName</a>

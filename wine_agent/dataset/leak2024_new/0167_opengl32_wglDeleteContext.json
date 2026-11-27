@@ -1,0 +1,594 @@
+{
+ "id": "0167",
+ "function": {
+  "name": "wglDeleteContext",
+  "export_name": "wglDeleteContext",
+  "module": "opengl32",
+  "source_module": "opengl32",
+  "exported_by": [
+   "opengl32"
+  ],
+  "side": "PE",
+  "file": "dlls/opengl32/wgl.c",
+  "start_line": 1103,
+  "end_line": 1131,
+  "body_lines": 26,
+  "signature": "BOOL WINAPI wglDeleteContext( HGLRC handle )",
+  "header_comment": null,
+  "code": "BOOL WINAPI wglDeleteContext( HGLRC handle )\n{\n    TEB *teb = NtCurrentTeb();\n    struct wglDeleteContext_params args = {.teb = teb};\n    struct handle_entry *ptr;\n    NTSTATUS status;\n\n    TRACE( \"handle %p\\n\", handle );\n\n    if (!(ptr = get_handle_ptr( &contexts, handle )))\n    {\n        SetLastError( ERROR_INVALID_HANDLE );\n        return FALSE;\n    }\n    args.oldContext = &ptr->context->obj;\n\n    if (handle == teb->glCurrentRC) wglMakeCurrent( NULL, NULL );\n    if (ptr->context->current_tid)\n    {\n        SetLastError( ERROR_BUSY );\n        return FALSE;\n    }\n\n    if ((status = UNIX_CALL( wglDeleteContext, &args ))) WARN( \"wglDeleteContext returned %#lx\\n\", status );\n    if (status || !args.ret) return FALSE;\n\n    free_client_context( ptr );\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <math.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"ntuser.h\"",
+   "#include \"ntgdi.h\"",
+   "#include \"malloc.h\"",
+   "#include \"unixlib.h\"",
+   "#include \"private.h\"",
+   "#include \"wine/glu.h\"",
+   "#include \"wine/rbtree.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "opengl32!wglDeleteContext [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/opengl32/tests/opengl.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 20
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-wgldeletecontext.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-wgldeletecontext",
+   "documented_name": "wgldeletecontext",
+   "file": "docs/0167_sdk-api_nf-wingdi-wgldeletecontext.md",
+   "text": "---\nUID: NF:wingdi.wglDeleteContext\ntitle: wglDeleteContext function (wingdi.h)\ndescription: The wglDeleteContext function deletes a specified OpenGL rendering context.\nhelpviewer_keywords: [\"_ogl_wglDeleteContext\",\"opengl.wgldeletecontext\",\"wglDeleteContext\",\"wglDeleteContext function [OpenGL]\",\"wingdi/wglDeleteContext\"]\nold-location: opengl\\wgldeletecontext.htm\ntech.root: OpenGL\nms.assetid: 51d4cce1-fd2d-436e-816b-b89d3cd66f3a\nms.date: 12/05/2018\nms.keywords: _ogl_wglDeleteContext, opengl.wgldeletecontext, wglDeleteContext, wglDeleteContext function [OpenGL], wingdi/wglDeleteContext\nreq.header: wingdi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Opengl32.lib\nreq.dll: Opengl32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - wglDeleteContext\n - wingdi/wglDeleteContext\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - opengl32.dll\napi_name:\n - wglDeleteContext\n---\n\n# wglDeleteContext function\n\n\n## -description\n\nThe <b>wglDeleteContext</b> function deletes a specified OpenGL rendering context.\n\n## -parameters\n\n### -param unnamedParam1\n\nHandle to an OpenGL rendering context that the function will delete.\n\n## -returns\n\nIf the function succeeds, the return value is <b>TRUE</b>.\n\nIf the function fails, the return value is <b>FALSE</b>. To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nIt is an error to delete an OpenGL rendering context that is the current context of another thread. However, if a rendering context is the calling thread's current context, the <b>wglDeleteContext</b> function changes the rendering context to being not current before deleting it.\n\nThe <b>wglDeleteContext</b> function does not delete the device context associated with the OpenGL rendering context when you call the <b>wglMakeCurrent</b> function. After calling <b>wglDeleteContext</b>, you must call <a href=\"/windows/desktop/api/wingdi/nf-wingdi-deletedc\">DeleteDC</a> to delete the associated device context.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-deletedc\">DeleteDC</a>\n\n\n\n<a href=\"/windows/desktop/OpenGL/opengl-on-windows-nt--windows-2000--and-windows-95-98\">OpenGL on Windows</a>\n\n\n\n<a href=\"/windows/desktop/OpenGL/wgl-functions\">WGL Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-wglcreatecontext\">wglCreateContext</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-wglgetcurrentcontext\">wglGetCurrentContext</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-wglgetcurrentdc\">wglGetCurrentDC</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-wglmakecurrent\">wglMakeCurrent</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_handle_ptr",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 207,
+   "end_line": 224,
+   "static": true,
+   "called_from": [
+    "wglDeleteContext"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:230",
+    "dlls/opengl32/wgl.c:284",
+    "dlls/opengl32/wgl.c:651",
+    "dlls/opengl32/wgl.c:2967",
+    "dlls/opengl32/wgl.c:3029"
+   ],
+   "signature": "static struct handle_entry *get_handle_ptr( struct handle_table *table, HANDLE handle )",
+   "code": "static struct handle_entry *get_handle_ptr( struct handle_table *table, HANDLE handle )\n{\n    UINT index = ((UINT_PTR)handle & 0xffff) - 1;\n    struct handle_entry *ptr;\n\n    if (index >= ARRAY_SIZE(table->handles)) return NULL;\n    ptr = table->handles + index;\n\n    AcquireSRWLockShared( &table->lock );\n    if (index >= table->count || ULongToHandle( ptr->handle ) != handle)\n    {\n        RtlSetLastWin32Error( ERROR_INVALID_HANDLE );\n        ptr = NULL;\n    }\n    ReleaseSRWLockShared( &table->lock );\n\n    return ptr;\n}"
+  },
+  {
+   "name": "free_client_context",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 684,
+   "end_line": 697,
+   "static": true,
+   "called_from": [
+    "wglDeleteContext"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:1099"
+   ],
+   "signature": "static void free_client_context( struct handle_entry *ptr )",
+   "code": "static void free_client_context( struct handle_entry *ptr )\n{\n    struct context *context = context_from_opengl_client_context( ptr->context );\n    struct string_entry *str, *next;\n\n    RB_FOR_EACH_ENTRY_DESTRUCTOR( str, next, &context->wow64_strings, struct string_entry, entry )\n        free( str );\n\n    display_lists_release( context->lists, context->base.root_context );\n    free( context->extensions );\n\n    free_handle( &contexts, ptr );\n    free( context );\n}"
+  },
+  {
+   "name": "context_from_opengl_client_context",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 643,
+   "end_line": 646,
+   "static": true,
+   "called_from": [
+    "free_client_context"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:657"
+   ],
+   "signature": "static struct context *context_from_opengl_client_context( struct opengl_client_context *base )",
+   "code": "static struct context *context_from_opengl_client_context( struct opengl_client_context *base )\n{\n    return CONTAINING_RECORD( base, struct context, base );\n}"
+  },
+  {
+   "name": "display_lists_release",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 519,
+   "end_line": 553,
+   "static": true,
+   "called_from": [
+    "free_client_context"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:678",
+    "dlls/opengl32/wgl.c:1195"
+   ],
+   "signature": "static void display_lists_release( struct display_lists *lists, UINT64 root_context )",
+   "code": "static void display_lists_release( struct display_lists *lists, UINT64 root_context )\n{\n    BOOL destroy = !!root_context;\n\n    if (InterlockedDecrement( &lists->refcount )) return;\n\n    if (destroy)\n    {\n        /* select the correct root context before destroying display list objects */\n        struct set_root_context_params params = { .teb = NtCurrentTeb(), .root_context = root_context };\n        UNIX_CALL( set_root_context, &params );\n    }\n\n    for (UINT i = 0; i < OBJ_TYPE_COUNT; i++)\n        free_object_table( lists->tables + i, destroy );\n\n    for (int i = 0; i < lists->syncs.count; i++)\n    {\n        struct handle_entry *entry = lists->syncs.handles + i;\n        struct glDeleteSync_params delete_sync = { .teb = NtCurrentTeb(), .sync = entry->user_data };\n        if (LOWORD(entry->handle) == 0xffff) continue;\n        WARN( \"Leaking sync client %#x, host %p\\n\", entry->handle, entry->user_data );\n        if (destroy) UNIX_CALL( glDeleteSync, &delete_sync );\n        free( entry->user_data );\n    }\n\n    if (destroy)\n    {\n        /* restore the client context and drawables, or default root context */\n        struct set_root_context_params params = { .teb = NtCurrentTeb() };\n        UNIX_CALL( set_root_context, &params );\n    }\n\n    free( lists );\n}"
+  },
+  {
+   "name": "free_handle",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 198,
+   "end_line": 205,
+   "static": true,
+   "called_from": [
+    "free_client_context"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:253",
+    "dlls/opengl32/wgl.c:2992"
+   ],
+   "signature": "static void free_handle( struct handle_table *table, struct handle_entry *ptr )",
+   "code": "static void free_handle( struct handle_table *table, struct handle_entry *ptr )\n{\n    AcquireSRWLockExclusive( &table->lock );\n    ptr->handle |= 0xffff;\n    ptr->next_free = table->next_free;\n    table->next_free = ptr;\n    ReleaseSRWLockExclusive( &table->lock );\n}"
+  },
+  {
+   "name": "free_object_table",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 475,
+   "end_line": 480,
+   "static": true,
+   "called_from": [
+    "display_lists_release"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void free_object_table( struct object_table *table, BOOL destroy )",
+   "code": "static void free_object_table( struct object_table *table, BOOL destroy )\n{\n    if (table->type == OBJ_TYPE_SHADER) free_object_ids( table, table->host_ids, destroy ? destroy_host_shader : NULL );\n    else free_object_ids( table, table->host_ids, destroy ? destroy_host_object : NULL );\n    free_object_ids( table, table->client_ids, NULL );\n}"
+  },
+  {
+   "name": "free_object_ids",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 327,
+   "end_line": 347,
+   "static": true,
+   "called_from": [
+    "free_object_table"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void free_object_ids( struct object_table *table, GLuint **ids[L1_COUNT], void (*callback)(struct object_table *, GLuint, GLuint) )",
+   "code": "static void free_object_ids( struct object_table *table, GLuint **ids[L1_COUNT],\n                             void (*callback)(struct object_table *, GLuint, GLuint) )\n{\n    GLuint id, **l1_block, *l2_block;\n\n    for (int i = 0; i < L1_COUNT; i++)\n    {\n        if (!(l1_block = ids[i])) continue;\n        for (int j = 0; j < L2_COUNT; j++)\n        {\n            if (!(l2_block = l1_block[j])) continue;\n            for (int k = 0; callback && k < L3_COUNT; k++)\n            {\n                if (!(id = l2_block[k])) continue;\n                callback( table, id, (i * L2_COUNT + j) * L3_COUNT + k );\n            }\n            free( l2_block );\n        }\n        free( l1_block );\n    }\n}"
+  },
+  {
+   "name": "destroy_host_shader",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 467,
+   "end_line": 473,
+   "static": true,
+   "called_from": [
+    "free_object_table"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void destroy_host_shader( struct object_table *table, GLuint host_id, GLuint client_id )",
+   "code": "static void destroy_host_shader( struct object_table *table, GLuint host_id, GLuint client_id )\n{\n    GLuint *object;\n    if (!(object = find_object_id( table->client_ids, host_id )) || !(client_id = *object)) return;\n    WARN( \"Destroying %s client %#x, host %#x\\n\", debugstr_object_type( table->type ), client_id, host_id );\n    destroy_object( table->type, host_id );\n}"
+  },
+  {
+   "name": "destroy_host_object",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 461,
+   "end_line": 465,
+   "static": true,
+   "called_from": [
+    "free_object_table"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void destroy_host_object( struct object_table *table, GLuint host_id, GLuint client_id )",
+   "code": "static void destroy_host_object( struct object_table *table, GLuint host_id, GLuint client_id )\n{\n    WARN( \"Destroying %s client %#x, host %#x\\n\", debugstr_object_type( table->type ), client_id, host_id );\n    destroy_object( table->type, host_id );\n}"
+  },
+  {
+   "name": "find_object_id",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 311,
+   "end_line": 315,
+   "static": true,
+   "called_from": [
+    "destroy_host_shader"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:390",
+    "dlls/opengl32/wgl.c:394",
+    "dlls/opengl32/wgl.c:402",
+    "dlls/opengl32/wgl.c:993",
+    "dlls/opengl32/wgl.c:2897"
+   ],
+   "signature": "static GLuint *find_object_id( GLuint **ids[L1_COUNT], GLuint client_id )",
+   "code": "static GLuint *find_object_id( GLuint **ids[L1_COUNT], GLuint client_id )\n{\n    GLuint i = client_id / L3_COUNT / L2_COUNT, j = (client_id / L3_COUNT) % L2_COUNT, k = client_id % L3_COUNT;\n    return ids[i] ? ids[i][j] ? ids[i][j] + k : NULL : NULL;\n}"
+  },
+  {
+   "name": "debugstr_object_type",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 114,
+   "end_line": 134,
+   "static": true,
+   "called_from": [
+    "destroy_host_object",
+    "destroy_host_shader"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:378",
+    "dlls/opengl32/wgl.c:396",
+    "dlls/opengl32/wgl.c:405",
+    "dlls/opengl32/wgl.c:802"
+   ],
+   "signature": "static const char *debugstr_object_type( enum object_type type )",
+   "code": "static const char *debugstr_object_type( enum object_type type )\n{\n    switch (type)\n    {\n    case OBJ_TYPE_BUFFER: return \"buffer\";\n    case OBJ_TYPE_DISPLAY_LIST: return \"display list\";\n    case OBJ_TYPE_FRAMEBUFFER: return \"framebuffer\";\n    case OBJ_TYPE_MEMORY: return \"memory\";\n    case OBJ_TYPE_PATH: return \"path\";\n    case OBJ_TYPE_PROGRAM: return \"program\";\n    case OBJ_TYPE_RENDERBUFFER: return \"renderbuffer\";\n    case OBJ_TYPE_SEMAPHORE: return \"semaphore\";\n    case OBJ_TYPE_SHADER: return \"shader\";\n    case OBJ_TYPE_SAMPLER: return \"sampler\";\n    case OBJ_TYPE_SHADER_ATI: return \"fragment shader\";\n    case OBJ_TYPE_SHADER_EXT: return \"vertex shader\";\n    case OBJ_TYPE_TEXTURE: return \"texture\";\n    case OBJ_TYPE_COUNT: break;\n    }\n    return wine_dbg_sprintf( \"object (type %u)\", type );\n}"
+  },
+  {
+   "name": "destroy_object",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 438,
+   "end_line": 457,
+   "static": true,
+   "called_from": [
+    "destroy_host_object",
+    "destroy_host_shader"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void destroy_object( enum object_type type, GLuint object )",
+   "code": "static void destroy_object( enum object_type type, GLuint object )\n{\n    switch (type)\n    {\n    case OBJ_TYPE_BUFFER: { MAKE_OBJECT_CALL( glDeleteBuffers, .n = 1, .buffers = &object ); return; }\n    case OBJ_TYPE_DISPLAY_LIST: { MAKE_OBJECT_CALL( glDeleteLists, .range = 1, .list = object ); return; }\n    case OBJ_TYPE_FRAMEBUFFER: { MAKE_OBJECT_CALL( glDeleteFramebuffers, .n = 1, .framebuffers = &object ); return; }\n    case OBJ_TYPE_MEMORY: { MAKE_OBJECT_CALL( glDeleteMemoryObjectsEXT, .n = 1, .memoryObjects = &object ); return; }\n    case OBJ_TYPE_PATH: { MAKE_OBJECT_CALL( glDeletePathsNV, .range = 1, .path = object ); return; }\n    case OBJ_TYPE_PROGRAM: { MAKE_OBJECT_CALL( glDeleteProgramsARB, .n = 1, .programs = &object ); return; }\n    case OBJ_TYPE_RENDERBUFFER: { MAKE_OBJECT_CALL( glDeleteRenderbuffers, .n = 1, .renderbuffers = &object ); return; }\n    case OBJ_TYPE_SAMPLER: { MAKE_OBJECT_CALL( glDeleteSamplers, .count = 1, .samplers = &object ); return; }\n    case OBJ_TYPE_SEMAPHORE: { MAKE_OBJECT_CALL( glDeleteSemaphoresEXT, .n = 1, .semaphores = &object ); return; }\n    case OBJ_TYPE_SHADER: { MAKE_OBJECT_CALL( glDeleteObjectARB, .obj = object ); return; }\n    case OBJ_TYPE_SHADER_ATI: { MAKE_OBJECT_CALL( glDeleteFragmentShaderATI, .id = object ); return; }\n    case OBJ_TYPE_SHADER_EXT: { MAKE_OBJECT_CALL( glDeleteVertexShaderEXT, .id = object ); return; }\n    case OBJ_TYPE_TEXTURE: { MAKE_OBJECT_CALL( glDeleteTextures, .n = 1, .textures = &object ); return; }\n    case OBJ_TYPE_COUNT: return;\n    }\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "context",
+    "kind": "struct_decl",
+    "start_line": 626,
+    "end_line": 641,
+    "code": "struct context\n{\n    struct opengl_client_context base;\n    struct display_lists *lists;\n    GLubyte *extensions; /* compat extension string */\n    struct rb_tree wow64_strings;\n\n    /* semi-stub state tracker for wglCopyContext */\n    GLbitfield used;                            /* context state used bits */\n    struct lighting_state lighting;             /* GL_LIGHTING_BIT */\n    struct depth_buffer_state depth_buffer;     /* GL_DEPTH_BUFFER_BIT */\n    struct viewport_state viewport;             /* GL_VIEWPORT_BIT */\n    struct enable_state enable;                 /* GL_ENABLE_BIT */\n    struct color_buffer_state color_buffer;     /* GL_COLOR_BUFFER_BIT */\n    struct hint_state hint;                     /* GL_HINT_BIT */\n};"
+   },
+   {
+    "name": "display_lists",
+    "kind": "struct_decl",
+    "start_line": 491,
+    "end_line": 497,
+    "code": "struct display_lists\n{\n    LONG                refcount;\n    LONG                modified;\n    struct object_table tables[OBJ_TYPE_COUNT];\n    struct handle_table syncs;\n};"
+   },
+   {
+    "name": "handle_entry",
+    "kind": "struct_decl",
+    "start_line": 153,
+    "end_line": 163,
+    "code": "struct handle_entry\n{\n    UINT handle;\n    union\n    {\n        struct opengl_client_context *context;\n        struct opengl_client_pbuffer *pbuffer;\n        struct handle_entry *next_free;\n        void *user_data;\n    };\n};"
+   },
+   {
+    "name": "handle_table",
+    "kind": "struct_decl",
+    "start_line": 165,
+    "end_line": 171,
+    "code": "struct handle_table\n{\n    SRWLOCK              lock;\n    struct handle_entry  handles[1024];\n    struct handle_entry *next_free;\n    UINT                 count;\n};"
+   },
+   {
+    "name": "object_table",
+    "kind": "struct_decl",
+    "start_line": 301,
+    "end_line": 309,
+    "code": "struct object_table\n{\n    enum object_type    type;                   /* object type of the id table */\n    SRWLOCK             lock;                   /* lock for accessing the table */\n    GLuint            **host_ids[L1_COUNT];     /* client -> host id mapping sparse array */\n    GLuint            **client_ids[L1_COUNT];   /* host -> client id mapping sparse array */\n    GLuint              min_free;               /* id to start looking for a free slot */\n    BOOL                implicit;               /* table allows implicit allocation */\n};"
+   },
+   {
+    "name": "string_entry",
+    "kind": "struct_decl",
+    "start_line": 607,
+    "end_line": 614,
+    "code": "struct string_entry\n{\n    struct rb_entry         entry;\n    enum unix_funcs         func;\n    GLenum                  pname;\n    UINT                    index;\n    struct opengl_wow64_str str;\n};"
+   },
+   {
+    "name": "union (anonymous at /w/wine/dlls/opengl32/wgl.c:156:5)",
+    "kind": "union_decl",
+    "start_line": 156,
+    "end_line": 162,
+    "code": "    union\n    {\n        struct opengl_client_context *context;\n        struct opengl_client_pbuffer *pbuffer;\n        struct handle_entry *next_free;\n        void *user_data;\n    };"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 41,
+    "end_line": 41,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(opengl);"
+   },
+   {
+    "name": "contexts",
+    "type": "struct handle_table",
+    "static": true,
+    "start_line": 174,
+    "end_line": 174,
+    "code": "static struct handle_table contexts;"
+   }
+  ],
+  "macros": [
+   {
+    "name": "L1_COUNT",
+    "start_line": 297,
+    "end_line": 297,
+    "code": "#define L1_COUNT   0x80"
+   },
+   {
+    "name": "L2_COUNT",
+    "start_line": 298,
+    "end_line": 298,
+    "code": "#define L2_COUNT  0x400"
+   },
+   {
+    "name": "L3_COUNT",
+    "start_line": 299,
+    "end_line": 299,
+    "code": "#define L3_COUNT 0x8000"
+   },
+   {
+    "name": "MAKE_OBJECT_CALL",
+    "start_line": 409,
+    "end_line": 411,
+    "code": "#define MAKE_OBJECT_CALL( func, ... )                                                              \\\n    struct func##_params args = { .teb = NtCurrentTeb(), __VA_ARGS__ };                            \\\n    UNIX_CALL( func, &args )"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "wglMakeCurrent",
+    "impl": [
+     "dlls/opengl32/wgl.c:1133"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "AcquireSRWLockExclusive",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:514"
+    ]
+   },
+   {
+    "name": "AcquireSRWLockShared",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:556"
+    ]
+   },
+   {
+    "name": "ReleaseSRWLockExclusive",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:591"
+    ]
+   },
+   {
+    "name": "ReleaseSRWLockShared",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:616"
+    ]
+   },
+   {
+    "name": "RtlSetLastWin32Error",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   }
+  ],
+  "header_inline": [
+   "NtCurrentTeb",
+   "SetLastError",
+   "ULongToHandle",
+   "_InterlockedDecrement",
+   "__wine_unix_call",
+   "rb_postorder_head",
+   "rb_postorder_next",
+   "wine_dbg_log",
+   "wine_dbg_sprintf"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [
+   {
+    "code": "unix_glDeleteBuffers",
+    "function": "ext_glDeleteBuffers",
+    "impl": "dlls/opengl32/unix_thunks.c:6351"
+   },
+   {
+    "code": "unix_glDeleteFragmentShaderATI",
+    "function": "ext_glDeleteFragmentShaderATI",
+    "impl": "dlls/opengl32/unix_thunks.c:6396"
+   },
+   {
+    "code": "unix_glDeleteFramebuffers",
+    "function": "ext_glDeleteFramebuffers",
+    "impl": "dlls/opengl32/unix_thunks.c:6405"
+   },
+   {
+    "code": "unix_glDeleteLists",
+    "function": "gl_glDeleteLists",
+    "impl": "dlls/opengl32/unix_thunks.c:581"
+   },
+   {
+    "code": "unix_glDeleteMemoryObjectsEXT",
+    "function": "ext_glDeleteMemoryObjectsEXT",
+    "impl": "dlls/opengl32/unix_thunks.c:6423"
+   },
+   {
+    "code": "unix_glDeleteObjectARB",
+    "function": "ext_glDeleteObjectARB",
+    "impl": "dlls/opengl32/unix_thunks.c:6450"
+   },
+   {
+    "code": "unix_glDeletePathsNV",
+    "function": "ext_glDeletePathsNV",
+    "impl": "dlls/opengl32/unix_thunks.c:6477"
+   },
+   {
+    "code": "unix_glDeleteProgramsARB",
+    "function": "ext_glDeleteProgramsARB",
+    "impl": "dlls/opengl32/unix_thunks.c:6522"
+   },
+   {
+    "code": "unix_glDeleteRenderbuffers",
+    "function": "ext_glDeleteRenderbuffers",
+    "impl": "dlls/opengl32/unix_thunks.c:6567"
+   },
+   {
+    "code": "unix_glDeleteSamplers",
+    "function": "ext_glDeleteSamplers",
+    "impl": "dlls/opengl32/unix_thunks.c:6585"
+   },
+   {
+    "code": "unix_glDeleteSemaphoresEXT",
+    "function": "ext_glDeleteSemaphoresEXT",
+    "impl": "dlls/opengl32/unix_thunks.c:6594"
+   },
+   {
+    "code": "unix_glDeleteSync",
+    "function": "ext_glDeleteSync",
+    "impl": "dlls/opengl32/unix_thunks.c:6621"
+   },
+   {
+    "code": "unix_glDeleteTextures",
+    "function": "gl_glDeleteTextures",
+    "impl": "dlls/opengl32/unix_thunks.c:590"
+   },
+   {
+    "code": "unix_glDeleteVertexShaderEXT",
+    "function": "ext_glDeleteVertexShaderEXT",
+    "impl": "dlls/opengl32/unix_thunks.c:6675"
+   },
+   {
+    "code": "unix_set_root_context",
+    "function": "set_root_context",
+    "impl": "dlls/opengl32/unix_wgl.c:691"
+   },
+   {
+    "code": "unix_wglDeleteContext",
+    "function": "wgl_wglDeleteContext",
+    "impl": "dlls/opengl32/unix_thunks.c:22"
+   }
+  ],
+  "indirect_calls": [
+   {
+    "expr": "callback",
+    "in_function": "free_object_ids",
+    "at": "dlls/opengl32/wgl.c:341",
+    "candidates": [
+     "call_gl_debug_message_callback @ dlls/opengl32/unix_wgl.c:758",
+     "callback @ dlls/opengl32/thunks.c:6383",
+     "callback @ dlls/opengl32/thunks.c:6392",
+     "callback @ dlls/opengl32/thunks.c:6401"
+    ]
+   }
+  ]
+ },
+ "winebench": {
+  "id": "opengl32.wglDeleteContext",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "OpenGL",
+   "header": "wingdi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 29,
+   "body": 28,
+   "code": 17
+  },
+  "cyclomatic": 7,
+  "return_type": "BOOL",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 20,
+   "n_tests": 22,
+   "n_tests_other": 2,
+   "own_test_functions": [
+    "dlls/opengl32/tests/opengl.c::test_16bit_bitmap_rendering",
+    "dlls/opengl32/tests/opengl.c::test_bitmap_rendering",
+    "dlls/opengl32/tests/opengl.c::test_child_window",
+    "dlls/opengl32/tests/opengl.c::test_copy_context",
+    "dlls/opengl32/tests/opengl.c::test_d3dkmt_rendering",
+    "dlls/opengl32/tests/opengl.c::test_deletecontext",
+    "dlls/opengl32/tests/opengl.c::test_destroy",
+    "dlls/opengl32/tests/opengl.c::test_destroy_read",
+    "dlls/opengl32/tests/opengl.c::test_framebuffer",
+    "dlls/opengl32/tests/opengl.c::test_make_current_read",
+    "dlls/opengl32/tests/opengl.c::test_message_window",
+    "dlls/opengl32/tests/opengl.c::test_minimized",
+    "dlls/opengl32/tests/opengl.c::test_object_creation",
+    "dlls/opengl32/tests/opengl.c::test_pbuffers",
+    "dlls/opengl32/tests/opengl.c::test_sharelists",
+    "dlls/opengl32/tests/opengl.c::test_swap_control",
+    "dlls/opengl32/tests/opengl.c::test_wglCreateContextAttribsARB",
+    "dlls/opengl32/tests/opengl.c::test_window_dc",
+    "dlls/opengl32/tests/opengl.c::test_window_dc_thread",
+    "dlls/opengl32/tests/opengl.c::wgl_thread"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-wgldeletecontext",
+   "source": "win32",
+   "description": "The wglDeleteContext function deletes a specified OpenGL rendering context.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Opengl32.dll"
+  },
+  "exports": [
+   "opengl32.wglDeleteContext"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.944,
+   "first_date": "2022-11-17",
+   "median_date": "2026-01-26",
+   "last_date": "2026-07-30",
+   "code_lines": 18
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "gdi32.CreateEnhMetaFileA",
+  "share_after_cutoff": 0.944,
+  "last_date": "2026-07-30"
+ }
+}

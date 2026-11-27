@@ -1,0 +1,388 @@
+{
+ "id": "0225",
+ "function": {
+  "name": "NtGdiPathToRegion",
+  "export_name": "PathToRegion",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "gdi.exe16",
+   "gdi32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/path.c",
+  "start_line": 672,
+  "end_line": 695,
+  "body_lines": 21,
+  "signature": "HRGN WINAPI NtGdiPathToRegion( HDC hdc )",
+  "header_comment": "/***********************************************************************\n *           NtGdiPathToRegion    (win32u.@)\n */",
+  "code": "HRGN WINAPI NtGdiPathToRegion( HDC hdc )\n{\n    HRGN ret = 0;\n    DC *dc = get_dc_ptr( hdc );\n\n    if (!dc) return 0;\n\n    if (dc->path)\n    {\n        struct gdi_path *path = PATH_FlattenPath( dc->path );\n\n        free_gdi_path( dc->path );\n        dc->path = NULL;\n        if (path)\n        {\n            ret = path_to_region( path, dc->attr->poly_fill_mode );\n            free_gdi_path( path );\n        }\n    }\n    else RtlSetLastWin32Error( ERROR_CAN_NOT_COMPLETE );\n\n    release_dc_ptr( dc );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <math.h>",
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include <stdlib.h>",
+   "#include <float.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winerror.h\"",
+   "#include \"ntgdi_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "gdi32!PathToRegion [stdcall] -> NtGdiPathToRegion implicitly imported from win32u",
+   "win32u!NtGdiPathToRegion [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdi32/tests/path.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "gdi.exe16",
+   "source_module": "gdi.exe16",
+   "exported_by": [
+    "gdi.exe16"
+   ],
+   "file": "dlls/gdi.exe16/gdi.c",
+   "start_line": 3429,
+   "resolution": [
+    "gdi.exe16!PathToRegion [pascal -ret16] -> internal symbol PathToRegion16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 3432,
+   "signature": "HRGN16 WINAPI PathToRegion16(HDC16 hdc)",
+   "code": "HRGN16 WINAPI PathToRegion16(HDC16 hdc)\n{\n    return HRGN_16( PathToRegion( HDC_32(hdc) ));\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-pathtoregion.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-pathtoregion",
+   "documented_name": "pathtoregion",
+   "file": "docs/0225_sdk-api_nf-wingdi-pathtoregion.md",
+   "text": "---\nUID: NF:wingdi.PathToRegion\ntitle: PathToRegion function (wingdi.h)\ndescription: The PathToRegion function creates a region from the path that is selected into the specified device context. The resulting region uses device coordinates.\nhelpviewer_keywords: [\"PathToRegion\",\"PathToRegion function [Windows GDI]\",\"_win32_PathToRegion\",\"gdi.pathtoregion\",\"wingdi/PathToRegion\"]\nold-location: gdi\\pathtoregion.htm\ntech.root: gdi\nms.assetid: 9fe31925-3d5d-42e5-aa9b-405610f13de4\nms.date: 12/05/2018\nms.keywords: PathToRegion, PathToRegion function [Windows GDI], _win32_PathToRegion, gdi.pathtoregion, wingdi/PathToRegion\nreq.header: wingdi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - PathToRegion\n - wingdi/PathToRegion\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - gdi32.dll\n - Ext-MS-Win-GDI-Path-l1-1-0.dll\n - GDI32Full.dll\napi_name:\n - PathToRegion\n---\n\n# PathToRegion function\n\n\n## -description\n\nThe <b>PathToRegion</b> function creates a region from the path that is selected into the specified device context. The resulting region uses device coordinates.\n\n## -parameters\n\n### -param hdc [in]\n\nHandle to a device context that contains a closed path.\n\n## -returns\n\nIf the function succeeds, the return value identifies a valid region.\n\nIf the function fails, the return value is zero.\n\n## -remarks\n\nWhen you no longer need the <b>HRGN</b> object call the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-deleteobject\">DeleteObject</a> function to delete it.\n\nThe device context identified by the <i>hdc</i> parameter must contain a closed path.\n\nAfter <b>PathToRegion</b> converts a path into a region, the system discards the closed path from the specified device context."
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "PATH_FlattenPath",
+   "file": "dlls/win32u/path.c",
+   "start_line": 421,
+   "end_line": 450,
+   "static": true,
+   "called_from": [
+    "NtGdiPathToRegion"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/path.c:539",
+    "dlls/win32u/path.c:1601",
+    "dlls/win32u/path.c:1660"
+   ],
+   "signature": "static struct gdi_path *PATH_FlattenPath(const struct gdi_path *pPath)",
+   "code": "static struct gdi_path *PATH_FlattenPath(const struct gdi_path *pPath)\n{\n    struct gdi_path *new_path;\n    INT srcpt;\n\n    if (!(new_path = alloc_gdi_path( pPath->count ))) return NULL;\n\n    for(srcpt = 0; srcpt < pPath->count; srcpt++) {\n        switch(pPath->flags[srcpt] & ~PT_CLOSEFIGURE) {\n\tcase PT_MOVETO:\n\tcase PT_LINETO:\n\t    if (!PATH_AddEntry(new_path, &pPath->points[srcpt], pPath->flags[srcpt]))\n            {\n                free_gdi_path( new_path );\n                return NULL;\n            }\n\t    break;\n\tcase PT_BEZIERTO:\n            if (!PATH_AddFlatBezier(new_path, &pPath->points[srcpt-1],\n                                    pPath->flags[srcpt+2] & PT_CLOSEFIGURE))\n            {\n                free_gdi_path( new_path );\n                return NULL;\n            }\n\t    srcpt += 2;\n\t    break;\n\t}\n    }\n    return new_path;\n}"
+  },
+  {
+   "name": "free_gdi_path",
+   "file": "dlls/win32u/path.c",
+   "start_line": 106,
+   "end_line": 111,
+   "static": false,
+   "called_from": [
+    "NtGdiPathToRegion",
+    "PATH_FlattenPath"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/path.c:541",
+    "dlls/win32u/path.c:790",
+    "dlls/win32u/path.c:822",
+    "dlls/win32u/path.c:835",
+    "dlls/win32u/path.c:1603"
+   ],
+   "signature": "void free_gdi_path( struct gdi_path *path )",
+   "code": "void free_gdi_path( struct gdi_path *path )\n{\n    if (path->points != path->points_buf)\n        free( path->points );\n    free( path );\n}"
+  },
+  {
+   "name": "path_to_region",
+   "file": "dlls/win32u/path.c",
+   "start_line": 334,
+   "end_line": 357,
+   "static": true,
+   "called_from": [
+    "NtGdiPathToRegion"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/path.c:543"
+   ],
+   "signature": "static HRGN path_to_region( const struct gdi_path *path, int mode )",
+   "code": "static HRGN path_to_region( const struct gdi_path *path, int mode )\n{\n    int i, pos, polygons, *counts;\n    HRGN hrgn;\n\n    if (!path->count) return 0;\n\n    if (!(counts = malloc( (path->count / 2) * sizeof(*counts) ))) return 0;\n\n    pos = polygons = 0;\n    assert( path->flags[0] == PT_MOVETO );\n    for (i = 1; i < path->count; i++)\n    {\n        if (path->flags[i] != PT_MOVETO) continue;\n        counts[polygons++] = i - pos;\n        pos = i;\n    }\n    if (i > pos + 1) counts[polygons++] = i - pos;\n\n    assert( polygons <= path->count / 2 );\n    hrgn = create_polypolygon_region( path->points, counts, polygons, mode, NULL );\n    free( counts );\n    return hrgn;\n}"
+  },
+  {
+   "name": "alloc_gdi_path",
+   "file": "dlls/win32u/path.c",
+   "start_line": 113,
+   "end_line": 144,
+   "static": true,
+   "called_from": [
+    "PATH_FlattenPath"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/path.c:148",
+    "dlls/win32u/path.c:1691",
+    "dlls/win32u/path.c:1712",
+    "dlls/win32u/path.c:1715",
+    "dlls/win32u/path.c:1716"
+   ],
+   "signature": "static struct gdi_path *alloc_gdi_path( int count )",
+   "code": "static struct gdi_path *alloc_gdi_path( int count )\n{\n    struct gdi_path *path = malloc( sizeof(*path) );\n\n    if (!path)\n    {\n        RtlSetLastWin32Error( ERROR_NOT_ENOUGH_MEMORY );\n        return NULL;\n    }\n    count = max( NUM_ENTRIES_INITIAL, count );\n    if (count > NUM_ENTRIES_INITIAL)\n    {\n        path->points = malloc( count * (sizeof(path->points[0]) + sizeof(path->flags[0])) );\n        if (!path->points)\n        {\n            free( path );\n            RtlSetLastWin32Error( ERROR_NOT_ENOUGH_MEMORY );\n            return NULL;\n        }\n        path->flags = (BYTE *)(path->points + count);\n    }\n    else\n    {\n        path->points = path->points_buf;\n        path->flags = path->flags_buf;\n    }\n    path->count = 0;\n    path->allocated = count;\n    path->newStroke = TRUE;\n    path->pos.x = path->pos.y = 0;\n    return path;\n}"
+  },
+  {
+   "name": "PATH_AddEntry",
+   "file": "dlls/win32u/path.c",
+   "start_line": 232,
+   "end_line": 250,
+   "static": true,
+   "called_from": [
+    "PATH_FlattenPath"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/path.c:1174",
+    "dlls/win32u/path.c:1404",
+    "dlls/win32u/path.c:1456",
+    "dlls/win32u/path.c:1474",
+    "dlls/win32u/path.c:1697"
+   ],
+   "signature": "static BOOL PATH_AddEntry(struct gdi_path *pPath, const POINT *pPoint, BYTE flags)",
+   "code": "static BOOL PATH_AddEntry(struct gdi_path *pPath, const POINT *pPoint, BYTE flags)\n{\n    /* FIXME: If newStroke is true, perhaps we want to check that we're\n     * getting a PT_MOVETO\n     */\n    TRACE(\"(%d,%d) - %d\\n\", pPoint->x, pPoint->y, flags);\n\n    /* Reserve enough memory for an extra path entry */\n    if(!PATH_ReserveEntries(pPath, pPath->count+1))\n        return FALSE;\n\n    /* Store information in path entry */\n    pPath->points[pPath->count]=*pPoint;\n    pPath->flags[pPath->count]=flags;\n\n    pPath->count++;\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "PATH_AddFlatBezier",
+   "file": "dlls/win32u/path.c",
+   "start_line": 401,
+   "end_line": 414,
+   "static": true,
+   "called_from": [
+    "PATH_FlattenPath"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL PATH_AddFlatBezier(struct gdi_path *pPath, POINT *pt, BOOL closed)",
+   "code": "static BOOL PATH_AddFlatBezier(struct gdi_path *pPath, POINT *pt, BOOL closed)\n{\n    POINT *pts;\n    BOOL ret;\n    INT no;\n\n    pts = GDI_Bezier( pt, 4, &no );\n    if(!pts) return FALSE;\n\n    ret = (add_points( pPath, pts + 1, no - 1, PT_LINETO ) != NULL);\n    if (ret && closed) close_figure( pPath );\n    free( pts );\n    return ret;\n}"
+  },
+  {
+   "name": "PATH_ReserveEntries",
+   "file": "dlls/win32u/path.c",
+   "start_line": 189,
+   "end_line": 224,
+   "static": true,
+   "called_from": [
+    "PATH_AddEntry",
+    "add_points"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/path.c:259"
+   ],
+   "signature": "static BOOL PATH_ReserveEntries(struct gdi_path *path, INT count)",
+   "code": "static BOOL PATH_ReserveEntries(struct gdi_path *path, INT count)\n{\n    POINT *pts_new;\n    int size;\n\n    assert(count>=0);\n\n    /* Do we have to allocate more memory? */\n    if (count > path->allocated)\n    {\n        /* Find number of entries to allocate. We let the size of the array\n         * grow exponentially, since that will guarantee linear time\n         * complexity. */\n        count = max( path->allocated * 2, count );\n        size = count * (sizeof(path->points[0]) + sizeof(path->flags[0]));\n\n        if (path->points == path->points_buf)\n        {\n            pts_new = malloc( size );\n            if (!pts_new) return FALSE;\n            memcpy( pts_new, path->points, path->count * sizeof(path->points[0]) );\n            memcpy( pts_new + count, path->flags, path->count * sizeof(path->flags[0]) );\n        }\n        else\n        {\n            pts_new = realloc( path->points, size );\n            if (!pts_new) return FALSE;\n            memmove( pts_new + count, pts_new + path->allocated, path->count * sizeof(path->flags[0]) );\n        }\n\n        path->points = pts_new;\n        path->flags = (BYTE *)(pts_new + count);\n        path->allocated = count;\n    }\n    return TRUE;\n}"
+  },
+  {
+   "name": "add_points",
+   "file": "dlls/win32u/path.c",
+   "start_line": 271,
+   "end_line": 282,
+   "static": true,
+   "called_from": [
+    "PATH_AddFlatBezier"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/path.c:306",
+    "dlls/win32u/path.c:525",
+    "dlls/win32u/path.c:893",
+    "dlls/win32u/path.c:967",
+    "dlls/win32u/path.c:1025"
+   ],
+   "signature": "static BYTE *add_points( struct gdi_path *path, const POINT *points, DWORD count, BYTE type )",
+   "code": "static BYTE *add_points( struct gdi_path *path, const POINT *points, DWORD count, BYTE type )\n{\n    BYTE *ret;\n\n    if (!PATH_ReserveEntries( path, path->count + count )) return NULL;\n\n    ret = &path->flags[path->count];\n    memcpy( &path->points[path->count], points, count * sizeof(*points) );\n    memset( ret, type, count );\n    path->count += count;\n    return ret;\n}"
+  },
+  {
+   "name": "close_figure",
+   "file": "dlls/win32u/path.c",
+   "start_line": 317,
+   "end_line": 321,
+   "static": true,
+   "called_from": [
+    "PATH_AddFlatBezier"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/path.c:895",
+    "dlls/win32u/path.c:970",
+    "dlls/win32u/path.c:1027",
+    "dlls/win32u/path.c:1169",
+    "dlls/win32u/path.c:1316"
+   ],
+   "signature": "static void close_figure( struct gdi_path *path )",
+   "code": "static void close_figure( struct gdi_path *path )\n{\n    assert( path->count );\n    path->flags[path->count - 1] |= PT_CLOSEFIGURE;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "gdi_path",
+    "kind": "struct_decl",
+    "start_line": 83,
+    "end_line": 93,
+    "code": "struct gdi_path\n{\n    POINT       *points;\n    BYTE        *flags;\n    int          count;\n    int          allocated;\n    BOOL         newStroke;\n    POINT        pos;         /* current cursor position */\n    POINT        points_buf[NUM_ENTRIES_INITIAL];\n    BYTE         flags_buf[NUM_ENTRIES_INITIAL];\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 43,
+    "end_line": 43,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(gdi);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "NUM_ENTRIES_INITIAL",
+    "start_line": 75,
+    "end_line": 75,
+    "code": "#define NUM_ENTRIES_INITIAL 16  /* Initial size of points / flags arrays  */"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "GDI_Bezier",
+    "file": "dlls/win32u/painting.c",
+    "start_line": 869
+   },
+   {
+    "name": "create_polypolygon_region",
+    "file": "dlls/win32u/region.c",
+    "start_line": 2640
+   },
+   {
+    "name": "get_dc_ptr",
+    "file": "dlls/win32u/dc.c",
+    "start_line": 289
+   },
+   {
+    "name": "release_dc_ptr",
+    "file": "dlls/win32u/dc.c",
+    "start_line": 319
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "RtlSetLastWin32Error",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [
+   "__assert_fail",
+   "free",
+   "malloc",
+   "memcpy",
+   "memmove",
+   "memset",
+   "realloc"
+  ],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "win32u.NtGdiPathToRegion",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI",
+   "header": "wingdi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 24,
+   "body": 23,
+   "code": 13
+  },
+  "cyclomatic": 4,
+  "return_type": "HRGN",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/gdi32/tests/path.c::test_path_state"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-pathtoregion",
+   "source": "win32",
+   "description": "The PathToRegion function creates a region from the path that is selected into the specified device context. The resulting region uses device coordinates.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Gdi32.dll"
+  },
+  "exports": [
+   "gdi32.PathToRegion",
+   "win32u.NtGdiPathToRegion"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2002-08-16",
+   "median_date": "2016-06-16",
+   "last_date": "2022-08-10",
+   "code_lines": 14,
+   "pair": "win32u.NtGdiDdDDIOpenKeyedMutex2",
+   "rank": 1,
+   "distance": 0.286
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "win32u.NtGdiDdDDIOpenKeyedMutex2",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-08-10",
+  "partner_rank": 1,
+  "distance": 0.286
+ }
+}

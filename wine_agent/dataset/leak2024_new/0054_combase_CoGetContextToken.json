@@ -1,0 +1,281 @@
+{
+ "id": "0054",
+ "function": {
+  "name": "CoGetContextToken",
+  "export_name": "CoGetContextToken",
+  "module": "combase",
+  "source_module": "combase",
+  "exported_by": [
+   "combase",
+   "ole32"
+  ],
+  "side": "PE",
+  "file": "dlls/combase/combase.c",
+  "start_line": 2799,
+  "end_line": 2881,
+  "body_lines": 80,
+  "signature": "HRESULT WINAPI CoGetContextToken(ULONG_PTR *token)",
+  "header_comment": "/***********************************************************************\n *           CoGetContextToken    (combase.@)\n */",
+  "code": "HRESULT WINAPI CoGetContextToken(ULONG_PTR *token)\n{\n    struct tlsdata *tlsdata;\n    struct apartment *apt;\n    HRESULT hr;\n\n    TRACE(\"%p\\n\", token);\n\n    if (FAILED(hr = com_get_tlsdata(&tlsdata)))\n        return hr;\n\n    if (!token)\n        return E_POINTER;\n\n    if (!(apt = apartment_get_current_or_mta()))\n    {\n        ERR(\"apartment not initialised\\n\");\n        return CO_E_NOTINITIALIZED;\n    }\n\n    if (tlsdata->context_token)\n    {\n        struct thread_context *context = impl_from_IObjContext(tlsdata->context_token);\n        if ((apt->multi_threaded && context != mta_context) ||\n            (!apt->multi_threaded && context == mta_context))\n        {\n            context_token_release(tlsdata->context_token);\n            tlsdata->context_token = NULL;\n        }\n    }\n\n    if (!tlsdata->context_token && apt->multi_threaded && mta_context)\n    {\n        EnterCriticalSection(&context_cs);\n        if (mta_context)\n        {\n            tlsdata->context_token = &mta_context->IObjContext_iface;\n            InterlockedIncrement(&mta_context->ref);\n        }\n        LeaveCriticalSection(&context_cs);\n    }\n\n    if (!tlsdata->context_token)\n    {\n        struct thread_context *context;\n\n        context = calloc(1, sizeof(*context));\n        if (!context)\n        {\n            apartment_release(apt);\n            return E_OUTOFMEMORY;\n        }\n\n        context->IComThreadingInfo_iface.lpVtbl = &thread_context_info_vtbl;\n        context->IContextCallback_iface.lpVtbl = &thread_context_callback_vtbl;\n        context->IObjContext_iface.lpVtbl = &thread_object_context_vtbl;\n        context->ref = 1;\n        context->reported_ref = 0;\n        context->oxid = apt->oxid;\n\n        if (apt->multi_threaded)\n        {\n            EnterCriticalSection(&context_cs);\n            if (!mta_context)\n                mta_context = context;\n            else\n            {\n                context_token_release(&context->IObjContext_iface);\n                context = mta_context;\n                InterlockedIncrement(&context->ref);\n            }\n            LeaveCriticalSection(&context_cs);\n        }\n\n        tlsdata->context_token = &context->IObjContext_iface;\n    }\n\n    *token = (ULONG_PTR)tlsdata->context_token;\n    TRACE(\"context_token %p\\n\", tlsdata->context_token);\n\n    apartment_release(apt);\n    return S_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"objbase.h\"",
+   "#include \"comsvcs.h\"",
+   "#include \"ctxtcall.h\"",
+   "#include \"oleauto.h\"",
+   "#include \"dde.h\"",
+   "#include \"winternl.h\"",
+   "#include \"dcom.h\"",
+   "#include \"combase_private.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\""
+  ],
+  "resolution": [
+   "ole32!CoGetContextToken [stdcall] -> forward combase.CoGetContextToken",
+   "combase!CoGetContextToken [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/combase/tests/roapi.c",
+   "dlls/ole32/tests/compobj.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 6
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "combaseapi",
+   "path": "sdk-api-src/content/combaseapi/nf-combaseapi-cogetcontexttoken.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/combaseapi/nf-combaseapi-cogetcontexttoken",
+   "documented_name": "cogetcontexttoken",
+   "file": "docs/0054_sdk-api_nf-combaseapi-cogetcontexttoken.md",
+   "text": "---\nUID: NF:combaseapi.CoGetContextToken\ntitle: CoGetContextToken function (combaseapi.h)\ndescription: Returns a pointer to an implementation of IObjContext for the current context.\nhelpviewer_keywords: [\"CoGetContextToken\",\"CoGetContextToken function [COM]\",\"_com_CoGetContextToken\",\"com.cogetcontexttoken\",\"combaseapi/CoGetContextToken\"]\nold-location: com\\cogetcontexttoken.htm\ntech.root: com\nms.assetid: 1218d928-ca3f-4bdc-9a00-ea4c214175a9\nms.date: 12/05/2018\nms.keywords: CoGetContextToken, CoGetContextToken function [COM], _com_CoGetContextToken, com.cogetcontexttoken, combaseapi/CoGetContextToken\nreq.header: combaseapi.h\nreq.include-header: Objbase.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ole32.lib\nreq.dll: Ole32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CoGetContextToken\n - combaseapi/CoGetContextToken\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-downlevel-ole32-l1-1-0.dll\n - api-ms-win-core-com-l1-1-3.dll\n - api-ms-win-core-com-l1-1-2.dll\n - Ole32.dll\n - API-MS-Win-Core-Com-l1-1-0.dll\n - ComBase.dll\n - API-MS-Win-Core-Com-l1-1-1.dll\n - API-MS-Win-DownLevel-Ole32-l1-1-1.dll\napi_name:\n - CoGetContextToken\n---\n\n# CoGetContextToken function\n\n\n## -description\n\nReturns a pointer to an implementation of <a href=\"/windows/desktop/api/objidl/nn-objidl-iobjcontext\">IObjContext</a> for the current context.\n\n## -parameters\n\n### -param pToken [out]\n\nA pointer to an implementation of <a href=\"/windows/desktop/api/objidl/nn-objidl-iobjcontext\">IObjContext</a> for the current context.\n\n## -returns\n\nThis function can return the following values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>S_OK</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe token was retrieved successfully.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_POINTER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe caller did not pass a valid token pointer variable.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>CO_E_NOTINITIALIZED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe caller is not in an initialized apartment.\n\n\n</td>\n</tr>\n</table>\n\n## -see-also\n\n<a href=\"/windows/desktop/api/objidl/nn-objidl-icontext\">IContext</a>\n\n\n\n<a href=\"/windows/desktop/api/objidl/nn-objidl-iobjcontext\">IObjContext</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "impl_from_IObjContext",
+   "file": "dlls/combase/combase.c",
+   "start_line": 2442,
+   "end_line": 2445,
+   "static": true,
+   "called_from": [
+    "CoGetContextToken",
+    "context_token_release"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/combase.c:2699",
+    "dlls/combase/combase.c:2705",
+    "dlls/combase/combase.c:2711"
+   ],
+   "signature": "static inline struct thread_context *impl_from_IObjContext(IObjContext *iface)",
+   "code": "static inline struct thread_context *impl_from_IObjContext(IObjContext *iface)\n{\n    return CONTAINING_RECORD(iface, struct thread_context, IObjContext_iface);\n}"
+  },
+  {
+   "name": "context_token_release",
+   "file": "dlls/combase/combase.c",
+   "start_line": 2484,
+   "end_line": 2501,
+   "static": true,
+   "called_from": [
+    "CoGetContextToken"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/combase.c:2508",
+    "dlls/combase/combase.c:3597"
+   ],
+   "signature": "static void context_token_release(IObjContext *iface)",
+   "code": "static void context_token_release(IObjContext *iface)\n{\n    struct thread_context *context = impl_from_IObjContext(iface);\n\n    if (!InterlockedDecrement(&context->ref))\n    {\n        EnterCriticalSection(&context_cs);\n        if (context->ref)\n        {\n            LeaveCriticalSection(&context_cs);\n            return;\n        }\n        if (context == mta_context) mta_context = NULL;\n        LeaveCriticalSection(&context_cs);\n\n        free(context);\n    }\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "thread_context",
+    "kind": "struct_decl",
+    "start_line": 2422,
+    "end_line": 2430,
+    "code": "static struct thread_context\n{\n    IComThreadingInfo IComThreadingInfo_iface;\n    IContextCallback IContextCallback_iface;\n    IObjContext IObjContext_iface;\n    LONG ref;\n    LONG reported_ref;\n    OXID oxid;\n} *mta_context;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ole);"
+   },
+   {
+    "name": "context_cs",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 2419,
+    "end_line": 2419,
+    "code": "static CRITICAL_SECTION context_cs = { &context_cs_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "mta_context",
+    "type": "struct thread_context *",
+    "static": true,
+    "start_line": 2430,
+    "end_line": 2430,
+    "code": "{\n    IComThreadingInfo IComThreadingInfo_iface;\n    IContextCallback IContextCallback_iface;\n    IObjContext IObjContext_iface;\n    LONG ref;\n    LONG reported_ref;\n    OXID oxid;\n} *mta_context;"
+   },
+   {
+    "name": "thread_context_callback_vtbl",
+    "type": "const IContextCallbackVtbl",
+    "static": true,
+    "start_line": 2689,
+    "end_line": 2695,
+    "code": "static const IContextCallbackVtbl thread_context_callback_vtbl =\n{\n    thread_context_callback_QueryInterface,\n    thread_context_callback_AddRef,\n    thread_context_callback_Release,\n    thread_context_callback_ContextCallback\n};"
+   },
+   {
+    "name": "thread_context_info_vtbl",
+    "type": "const IComThreadingInfoVtbl",
+    "static": true,
+    "start_line": 2568,
+    "end_line": 2577,
+    "code": "static const IComThreadingInfoVtbl thread_context_info_vtbl =\n{\n    thread_context_info_QueryInterface,\n    thread_context_info_AddRef,\n    thread_context_info_Release,\n    thread_context_info_GetCurrentApartmentType,\n    thread_context_info_GetCurrentThreadType,\n    thread_context_info_GetCurrentLogicalThreadId,\n    thread_context_info_SetCurrentLogicalThreadId\n};"
+   },
+   {
+    "name": "thread_object_context_vtbl",
+    "type": "const IObjContextVtbl",
+    "static": true,
+    "start_line": 2778,
+    "end_line": 2794,
+    "code": "static const IObjContextVtbl thread_object_context_vtbl =\n{\n    thread_object_context_QueryInterface,\n    thread_object_context_AddRef,\n    thread_object_context_Release,\n    thread_object_context_SetProperty,\n    thread_object_context_RemoveProperty,\n    thread_object_context_GetProperty,\n    thread_object_context_EnumContextProps,\n    thread_object_context_Reserved1,\n    thread_object_context_Reserved2,\n    thread_object_context_Reserved3,\n    thread_object_context_Reserved4,\n    thread_object_context_Reserved5,\n    thread_object_context_Reserved6,\n    thread_object_context_Reserved7\n};"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "apartment_get_current_or_mta",
+    "file": "dlls/combase/apartment.c",
+    "start_line": 623
+   },
+   {
+    "name": "apartment_release",
+    "file": "dlls/combase/apartment.c",
+    "start_line": 444
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "calloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   }
+  ],
+  "header_inline": [
+   "_InterlockedDecrement",
+   "_InterlockedIncrement",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "com_get_tlsdata"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "combase.CoGetContextToken",
+  "category": {
+   "l1": "System services",
+   "l2": "COM",
+   "header": "combaseapi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 83,
+   "body": 82,
+   "code": 49
+  },
+  "cyclomatic": 17,
+  "return_type": "HRESULT",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 6,
+   "n_tests": 6,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/combase/tests/roapi.c::test_apartment_context_",
+    "dlls/combase/tests/roapi.c::unk_ctx_impl_create",
+    "dlls/ole32/tests/compobj.c::context_callback_func",
+    "dlls/ole32/tests/compobj.c::get_context_token_thread",
+    "dlls/ole32/tests/compobj.c::implicit_mta_proc",
+    "dlls/ole32/tests/compobj.c::test_CoGetContextToken"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/combaseapi/nf-combaseapi-cogetcontexttoken",
+   "source": "win32",
+   "description": "Returns a pointer to an implementation of IObjContext for the current context.",
+   "min_windows": "Windows 2000 Professional [desktop apps \\| UWP apps]",
+   "documented_dll": "Ole32.dll"
+  },
+  "exports": [
+   "combase.CoGetContextToken",
+   "ole32.CoGetContextToken"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.531,
+   "first_date": "2004-12-27",
+   "median_date": "2026-05-25",
+   "last_date": "2026-05-26",
+   "code_lines": 49
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "combase.CoGetPSClsid",
+  "share_after_cutoff": 0.531,
+  "last_date": "2026-05-26"
+ }
+}

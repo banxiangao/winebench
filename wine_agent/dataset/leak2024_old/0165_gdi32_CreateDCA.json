@@ -1,0 +1,177 @@
+{
+ "id": "0165",
+ "function": {
+  "name": "CreateDCA",
+  "export_name": "CreateDCA",
+  "module": "gdi32",
+  "source_module": "gdi32",
+  "exported_by": [
+   "gdi32"
+  ],
+  "side": "PE",
+  "file": "dlls/gdi32/dc.c",
+  "start_line": 404,
+  "end_line": 434,
+  "body_lines": 28,
+  "signature": "HDC WINAPI CreateDCA( const char *driver, const char *device, const char *output, const DEVMODEA *init_data )",
+  "header_comment": "/***********************************************************************\n *           CreateDCA  (GDI32.@)\n */",
+  "code": "HDC WINAPI CreateDCA( const char *driver, const char *device, const char *output,\n                      const DEVMODEA *init_data )\n{\n    UNICODE_STRING driverW, deviceW, outputW;\n    DEVMODEW *init_dataW = NULL;\n    HDC ret;\n\n    if (driver) RtlCreateUnicodeStringFromAsciiz( &driverW, driver );\n    else driverW.Buffer = NULL;\n\n    if (device) RtlCreateUnicodeStringFromAsciiz( &deviceW, device );\n    else deviceW.Buffer = NULL;\n\n    if (output) RtlCreateUnicodeStringFromAsciiz( &outputW, output );\n    else outputW.Buffer = NULL;\n\n    if (init_data)\n    {\n        /* don't convert init_data for DISPLAY driver, it's not used */\n        if (!driverW.Buffer || wcsicmp( driverW.Buffer, L\"display\" ))\n            init_dataW = GdiConvertToDevmodeW( init_data );\n    }\n\n    ret = CreateDCW( driverW.Buffer, deviceW.Buffer, outputW.Buffer, init_dataW );\n\n    RtlFreeUnicodeString( &driverW );\n    RtlFreeUnicodeString( &deviceW );\n    RtlFreeUnicodeString( &outputW );\n    HeapFree( GetProcessHeap(), 0, init_dataW );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"gdi_private.h\"",
+   "#include \"ntuser.h\"",
+   "#include \"ddrawgdi.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winppi.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "gdi32!CreateDCA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdi32/tests/dc.c",
+   "dlls/gdi32/tests/gdiobj.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 6
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-createdca.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-createdca",
+   "documented_name": "createdca",
+   "file": "docs/0165_sdk-api_nf-wingdi-createdca.md",
+   "text": "---\nUID: NF:wingdi.CreateDCA\ntitle: CreateDCA function (wingdi.h)\ndescription: The CreateDC function creates a device context (DC) for a device using the specified name. (ANSI)\nhelpviewer_keywords: [\"CreateDCA\", \"wingdi/CreateDCA\"]\nold-location: gdi\\createdc.htm\ntech.root: gdi\nms.assetid: 6fc443c8-da97-4196-a9ed-179a4e583849\nms.date: 12/05/2018\nms.keywords: CreateDC, CreateDC function [Windows GDI], CreateDCA, CreateDCW, _win32_CreateDC, gdi.createdc, wingdi/CreateDC, wingdi/CreateDCA, wingdi/CreateDCW\nreq.header: wingdi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: CreateDCW (Unicode) and CreateDCA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CreateDCA\n - wingdi/CreateDCA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - gdi32.dll\n - Ext-MS-Win-GDI-DC-Create-l1-1-0.dll\n - Ext-MS-Win-GDI-DC-Create-l1-1-1.dll\n - ext-ms-win-gdi-dc-create-l1-1-2.dll\n - GDI32Full.dll\napi_name:\n - CreateDC\n - CreateDCA\n - CreateDCW\n---\n\n# CreateDCA function\n\n\n## -description\n\nThe <b>CreateDC</b> function creates a device context (DC) for a device using the specified name.\n\n## -parameters\n\n### -param pwszDriver\n\nA pointer to a null-terminated character string that specifies either DISPLAY or the name of a specific display device. For printing, we recommend that you pass <b>NULL</b> to <i>lpszDriver</i> because GDI ignores <i>lpszDriver</i> for printer devices.\n\n### -param pwszDevice [in]\n\nA pointer to a null-terminated character string that specifies the name of the specific output device being used, as shown by the Print Manager (for example, Epson FX-80). It is not the printer model name. The <i>lpszDevice</i> parameter must be used.\n\nTo obtain valid names for displays, call <a href=\"/windows/desktop/api/winuser/nf-winuser-enumdisplaydevicesa\">EnumDisplayDevices</a>.\n\nIf <i>lpszDriver</i> is DISPLAY or the device name of a specific display device, then <i>lpszDevice</i> must be <b>NULL</b> or that same device name. If <i>lpszDevice</i> is <b>NULL</b>, then a DC is created for the primary display device.\n\nIf there are multiple monitors on the system, calling <code>CreateDC(TEXT(\"DISPLAY\"),NULL,NULL,NULL)</code> will create a DC covering all the monitors.\n\n### -param pszPort\n\nThis parameter is ignored and should be set to <b>NULL</b>. It is provided only for compatibility with 16-bit Windows.\n\n### -param pdm [in]\n\nA pointer to a <a href=\"/windows/win32/api/wingdi/ns-wingdi-devmodea\">DEVMODE</a> structure containing device-specific initialization data for the device driver. The <a href=\"/windows/desktop/printdocs/documentproperties\">DocumentProperties</a> function retrieves this structure filled in for a specified device. The <i>pdm</i> parameter must be <b>NULL</b> if the device driver is to use the default initialization (if any) specified by the user.\n\nIf <i>lpszDriver</i> is DISPLAY, <i>pdm</i> must be <b>NULL</b>; GDI then uses the display device's current <a href=\"/windows/win32/api/wingdi/ns-wingdi-devmodea\">DEVMODE</a>.\n\n## -returns\n\nIf the function succeeds, the return value is the handle to a DC for the specified device.\n\nIf the function fails, the return value is <b>NULL</b>.\n\n## -remarks\n\nNote that the handle to the DC can only be used by a single thread at any one time.\n\nFor parameters <i>lpszDriver</i> and <i>lpszDevice</i>, call <a href=\"/windows/desktop/api/winuser/nf-winuser-enumdisplaydevicesa\">EnumDisplayDevices</a> to obtain valid names for displays.\n\nWhen you no longer need the DC, call the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-deletedc\">DeleteDC</a> function.\n\nIf <i>lpszDriver</i> or <i>lpszDevice</i> is DISPLAY, the thread that calls <b>CreateDC</b> owns the <b>HDC</b> that is created. When this thread is destroyed, the <b>HDC</b> is no longer valid. Thus, if you create the <b>HDC</b> and pass it to another thread, then exit the first thread, the second thread will not be able to use the <b>HDC</b>.\n\nWhen you call <b>CreateDC</b> to create the <b>HDC</b> for a display device, you must pass to <i>pdm</i> either <b>NULL</b> or a pointer to <a href=\"/windows/win32/api/wingdi/ns-wingdi-devmodea\">DEVMODE</a> that matches the current <b>DEVMODE</b> of the display device that <i>lpszDevice</i> specifies. We recommend to pass <b>NULL</b> and not to try to exactly match the <b>DEVMODE</b> for the current display device.\n\nWhen you call <b>CreateDC</b> to create the <b>HDC</b> for a printer device, the printer driver validates the <a href=\"/windows/win32/api/wingdi/ns-wingdi-devmodea\">DEVMODE</a>. If the printer driver determines that the <b>DEVMODE</b> is invalid (that is, printer driver can’t convert or consume the DEVMODE), the printer driver provides a default <b>DEVMODE</b> to create the HDC for the printer device.\n\n<b>ICM:</b> To enable ICM, set the <b>dmICMMethod</b> member of the <a href=\"/windows/win32/api/wingdi/ns-wingdi-devmodea\">DEVMODE</a> structure (pointed to by the <i>pInitData</i> parameter) to the appropriate value.\n\n\n#### Examples\n\nFor an example, see <a href=\"/windows/desktop/gdi/capturing-an-image\">Capturing an Image</a>.\n\n<div class=\"code\"></div>\n\n\n\n\n> [!NOTE]\n> The wingdi.h header defines CreateDC as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/win32/api/wingdi/ns-wingdi-devmodea\">DEVMODE</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/ns-wingdi-docinfoa\">DOCINFO</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-deletedc\">DeleteDC</a>\n\n\n\n<a href=\"/windows/desktop/gdi/device-context-functions\">Device Context Functions</a>\n\n\n\n<a href=\"/windows/desktop/gdi/device-contexts\">Device Contexts Overview</a>\n\n\n\n<a href=\"/windows/desktop/printdocs/documentproperties\">DocumentProperties</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-enumdisplaydevicesa\">EnumDisplayDevices</a>\n\n\n\n<a href=\"/windows/desktop/gdi/multiple-display-monitors\">Multiple Display Monitors</a>\n\n\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-startdoca\">StartDoc</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "CreateDCW",
+    "impl": [
+     "dlls/gdi32/dc.c:285"
+    ]
+   },
+   {
+    "name": "GdiConvertToDevmodeW",
+    "impl": [
+     "dlls/gdi32/dc.c:460"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "RtlCreateUnicodeStringFromAsciiz",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:255"
+    ]
+   },
+   {
+    "name": "RtlFreeUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:272"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetProcessHeap",
+   "wcsicmp"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "gdi32.CreateDCA",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI",
+   "header": "wingdi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 31,
+   "body": 29,
+   "code": 18
+  },
+  "cyclomatic": 7,
+  "return_type": "HDC",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 6,
+   "n_tests": 9,
+   "n_tests_other": 3,
+   "own_test_functions": [
+    "dlls/gdi32/tests/dc.c::create_printer_dc",
+    "dlls/gdi32/tests/dc.c::test_CreateCompatibleDC",
+    "dlls/gdi32/tests/dc.c::test_clip_box",
+    "dlls/gdi32/tests/dc.c::test_dc_values",
+    "dlls/gdi32/tests/dc.c::test_savedc",
+    "dlls/gdi32/tests/gdiobj.c::thread_proc"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-createdca",
+   "source": "win32",
+   "description": "The CreateDC function creates a device context (DC) for a device using the specified name. (ANSI)",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Gdi32.dll"
+  },
+  "exports": [
+   "gdi32.CreateDCA"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2003-08-12",
+   "median_date": "2003-08-12",
+   "last_date": "2021-07-30",
+   "code_lines": 20,
+   "pair": "opengl32.glGetString",
+   "rank": 1,
+   "distance": 0.3
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "opengl32.glGetString",
+  "share_after_cutoff": 0.0,
+  "last_date": "2021-07-30",
+  "partner_rank": 1,
+  "distance": 0.3
+ }
+}

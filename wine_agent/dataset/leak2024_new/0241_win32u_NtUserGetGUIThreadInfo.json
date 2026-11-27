@@ -1,0 +1,155 @@
+{
+ "id": "0241",
+ "function": {
+  "name": "NtUserGetGUIThreadInfo",
+  "export_name": "GetGUIThreadInfo",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "user32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/message.c",
+  "start_line": 2292,
+  "end_line": 2332,
+  "body_lines": 38,
+  "signature": "BOOL WINAPI NtUserGetGUIThreadInfo( DWORD id, GUITHREADINFO *info )",
+  "header_comment": "/**********************************************************************\n *           NtUserGetGUIThreadInfo  (win32u.@)\n */",
+  "code": "BOOL WINAPI NtUserGetGUIThreadInfo( DWORD id, GUITHREADINFO *info )\n{\n    struct object_lock lock = OBJECT_LOCK_INIT;\n    const input_shm_t *input_shm;\n    NTSTATUS status;\n\n    if (info->cbSize != sizeof(*info))\n    {\n        RtlSetLastWin32Error( ERROR_INVALID_PARAMETER );\n        return FALSE;\n    }\n\n    while ((status = get_shared_input( id, &lock, &input_shm )) == STATUS_PENDING)\n    {\n        info->flags          = 0;\n        info->hwndActive     = wine_server_ptr_handle( input_shm->active );\n        info->hwndFocus      = wine_server_ptr_handle( input_shm->focus );\n        info->hwndCapture    = wine_server_ptr_handle( input_shm->capture );\n        info->hwndMenuOwner  = wine_server_ptr_handle( input_shm->menu_owner );\n        info->hwndMoveSize   = wine_server_ptr_handle( input_shm->move_size );\n        info->hwndCaret      = wine_server_ptr_handle( input_shm->caret );\n        info->rcCaret        = wine_server_get_rect( input_shm->caret_rect );\n        if (input_shm->menu_owner) info->flags |= GUI_INMENUMODE;\n        if (input_shm->move_size) info->flags |= GUI_INMOVESIZE;\n        if (input_shm->caret) info->flags |= GUI_CARETBLINKING;\n    }\n\n    if (status)\n    {\n        info->flags = 0;\n        info->hwndActive = 0;\n        info->hwndFocus = 0;\n        info->hwndCapture = 0;\n        info->hwndMenuOwner = 0;\n        info->hwndMoveSize = 0;\n        info->hwndCaret = 0;\n        memset( &info->rcCaret, 0, sizeof(info->rcCaret) );\n    }\n\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ddk/wdm.h\"",
+   "#include \"win32u_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"winnls.h\"",
+   "#include \"hidusage.h\"",
+   "#include \"dbt.h\"",
+   "#include \"dde.h\"",
+   "#include \"immdev.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "user32!GetGUIThreadInfo [stdcall] -> NtUserGetGUIThreadInfo implicitly imported from win32u",
+   "win32u!NtUserGetGUIThreadInfo [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/user32/tests/win.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 2
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winuser",
+   "path": "sdk-api-src/content/winuser/nf-winuser-getguithreadinfo.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getguithreadinfo",
+   "documented_name": "getguithreadinfo",
+   "file": "docs/0241_sdk-api_nf-winuser-getguithreadinfo.md",
+   "text": "---\nUID: NF:winuser.GetGUIThreadInfo\ntitle: GetGUIThreadInfo function (winuser.h)\ndescription: Retrieves information about the active window or a specified GUI thread.\nhelpviewer_keywords: [\"GetGUIThreadInfo\",\"GetGUIThreadInfo function [Windows and Messages]\",\"_win32_GetGUIThreadInfo\",\"_win32_getguithreadinfo_cpp\",\"winmsg.getguithreadinfo\",\"winui._win32_getguithreadinfo\",\"winuser/GetGUIThreadInfo\"]\nold-location: winmsg\\getguithreadinfo.htm\ntech.root: winmsg\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\windowing\\windows\\windowreference\\windowfunctions\\getguithreadinfo.htm\nms.date: 12/05/2018\nms.keywords: GetGUIThreadInfo, GetGUIThreadInfo function [Windows and Messages], _win32_GetGUIThreadInfo, _win32_getguithreadinfo_cpp, winmsg.getguithreadinfo, winui._win32_getguithreadinfo, winuser/GetGUIThreadInfo\nreq.header: winuser.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: User32.lib\nreq.dll: User32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetGUIThreadInfo\n - winuser/GetGUIThreadInfo\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-rtcore-ntuser-window-ext-l1-1-1.dll\n - ext-ms-win-ntuser-window-l1-1-6.dll\n - ext-ms-win-ntuser-window-l1-1-5.dll\n - User32.dll\n - Ext-MS-Win-NTUser-Window-l1-1-1.dll\n - Ext-MS-Win-NTUser-Window-l1-1-2.dll\n - Ext-MS-Win-RTCore-NTUser-Window-Ext-l1-1-0.dll\n - minuser.dll\n - ext-ms-win-ntuser-window-l1-1-3.dll\n - Ext-MS-Win-NTUser-Window-L1-1-4.dll\napi_name:\n - GetGUIThreadInfo\nreq.apiset: ext-ms-win-ntuser-window-l1-1-1 (introduced in Windows 8.1)\n---\n\n# GetGUIThreadInfo function\n\n\n## -description\n\nRetrieves information about the active window or a specified GUI thread.\n\n## -parameters\n\n### -param idThread [in]\n\nType: <b>DWORD</b>\n\nThe identifier for the thread for which information is to be retrieved. To retrieve this value, use the <a href=\"/windows/desktop/api/winuser/nf-winuser-getwindowthreadprocessid\">GetWindowThreadProcessId</a> function. If this parameter is <b>0</b>, the function returns information for the foreground thread.\n\n### -param pgui [in, out]\n\nType: <b>LPGUITHREADINFO</b>\n\nA pointer to a <a href=\"/windows/desktop/api/winuser/ns-winuser-guithreadinfo\">GUITHREADINFO</a> structure that receives information describing the thread. Note that you must set the <b>cbSize</b> member to <code>sizeof(GUITHREADINFO)</code> before calling this function.\n\n## -returns\n\nType: <b>BOOL</b>\n\nIf the function succeeds, the return value is nonzero.\n\nIf the function fails, the return value is zero. To get extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThis function succeeds even if the active window is not owned by the calling process. If the specified thread does not exist or have an input queue, the function will fail. \n\nThis function is useful for retrieving out-of-context information about a thread. The information retrieved is the same as if an application retrieved the information about itself. \n\nFor an edit control, the returned <b>rcCaret</b> rectangle contains the caret plus information on text direction and padding. Thus, it may not give the correct position of the cursor. The Sans Serif font uses four characters for the cursor: \n\t\t\t\t\n\n<table class=\"clsStd\">\n<tr>\n<th>Cursor character</th>\n<th>Unicode code point</th>\n</tr>\n<tr>\n<td><b>CURSOR_LTR</b></td>\n<td>0xf00c</td>\n</tr>\n<tr>\n<td><b>CURSOR_RTL</b></td>\n<td>0xf00d</td>\n</tr>\n<tr>\n<td><b>CURSOR_THAI</b></td>\n<td>0xf00e</td>\n</tr>\n<tr>\n<td><b>CURSOR_USA</b></td>\n<td>0xfff (this is a marker value with no associated glyph)</td>\n</tr>\n</table>\n \n\n To get the actual insertion point in the <b>rcCaret</b> rectangle, perform the following steps.\n\t\t\t\t<ol>\n<li>Call <a href=\"/windows/desktop/api/winuser/nf-winuser-getkeyboardlayout\">GetKeyboardLayout</a> to retrieve the current input language. </li>\n<li>Determine the character used for the cursor, based on the current input language.</li>\n<li>Call <a href=\"/windows/desktop/api/wingdi/nf-wingdi-createfonta\">CreateFont</a> using Sans Serif for the font, the height given by <b>rcCaret</b>, and a width of <code>zero</code>. For <i>fnWeight</i>, call <code>SystemParametersInfo(SPI_GETCARETWIDTH, 0, pvParam, 0)</code>. If <i>pvParam</i> is greater than 1, set <i>fnWeight</i> to 700, otherwise set <i>fnWeight</i> to 400.</li>\n<li>Select the font into a device context (DC) and use <a href=\"/windows/desktop/api/wingdi/nf-wingdi-getcharabcwidthsa\">GetCharABCWidths</a> to get the <code>B</code> width of the appropriate cursor character.</li>\n<li>Add the <code>B</code> width to <b>rcCaret</b>.<b>left</b> to obtain the actual insertion point.</li>\n</ol>\n\n\nThe function may not return valid window handles in the <a href=\"/windows/desktop/api/winuser/ns-winuser-guithreadinfo\">GUITHREADINFO</a> structure when called to retrieve information for the foreground thread, such as when a window is losing activation.\n\n\n\n\n\n<h3><a id=\"DPI_Virtualization\"></a><a id=\"dpi_virtualization\"></a><a id=\"DPI_VIRTUALIZATION\"></a>DPI Virtualization</h3>\nThe coordinates returned in the <b>rcCaret</b> rect of the <a href=\"/windows/desktop/api/winuser/ns-winuser-guithreadinfo\">GUITHREADINFO</a> struct are logical coordinates in terms of the window associated with the caret. They are not virtualized into the mode of the calling thread.\n\n## -see-also\n\n<b>Conceptual</b>\n\n\n\n<a href=\"/windows/desktop/api/winuser/ns-winuser-guithreadinfo\">GUITHREADINFO</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-getcursorinfo\">GetCursorInfo</a>\n\n\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-getwindowthreadprocessid\">GetWindowThreadProcessId</a>\n\n\n\n<b>Reference</b>\n\n\n\n<a href=\"/windows/desktop/winmsg/windows\">Windows</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "get_shared_input",
+    "file": "dlls/win32u/winstation.c",
+    "start_line": 316
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "RtlSetLastWin32Error",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_server_get_rect",
+   "wine_server_ptr_handle"
+  ],
+  "system": [
+   "memset"
+  ],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "win32u.NtUserGetGUIThreadInfo",
+  "category": {
+   "l1": "User input and messaging",
+   "l2": "Windows and messages",
+   "header": "winuser.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 41,
+   "body": 40,
+   "code": 28
+  },
+  "cyclomatic": 7,
+  "return_type": "BOOL",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 2,
+   "n_tests": 2,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/user32/tests/win.c::enum_thread",
+    "dlls/user32/tests/win.c::test_capture_4_proc"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getguithreadinfo",
+   "source": "win32",
+   "description": "Retrieves information about the active window or a specified GUI thread.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "User32.dll"
+  },
+  "exports": [
+   "user32.GetGUIThreadInfo",
+   "win32u.NtUserGetGUIThreadInfo"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.828,
+   "first_date": "2022-02-24",
+   "median_date": "2024-07-04",
+   "last_date": "2024-07-09",
+   "code_lines": 29
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "win32u.NtUserRegisterHotKey",
+  "share_after_cutoff": 0.828,
+  "last_date": "2024-07-09"
+ }
+}

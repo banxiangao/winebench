@@ -1,0 +1,285 @@
+{
+ "id": "0221",
+ "function": {
+  "name": "GdipEndContainer",
+  "export_name": "GdipEndContainer",
+  "module": "gdiplus",
+  "source_module": "gdiplus",
+  "exported_by": [
+   "gdiplus"
+  ],
+  "side": "PE",
+  "file": "dlls/gdiplus/graphics.c",
+  "start_line": 6899,
+  "end_line": 6903,
+  "body_lines": 2,
+  "signature": "GpStatus WINGDIPAPI GdipEndContainer(GpGraphics *graphics, GraphicsContainer state)",
+  "header_comment": null,
+  "code": "GpStatus WINGDIPAPI GdipEndContainer(GpGraphics *graphics, GraphicsContainer state)\n{\n    TRACE(\"(%p, %x)\\n\", graphics, state);\n    return end_container(graphics, BEGIN_CONTAINER, state);\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <math.h>",
+   "#include <limits.h>",
+   "#include <assert.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winuser.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"objbase.h\"",
+   "#include \"ocidl.h\"",
+   "#include \"olectl.h\"",
+   "#include \"ole2.h\"",
+   "#include \"winreg.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"mlang.h\"",
+   "#include \"gdiplus.h\"",
+   "#include \"gdiplus_private.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\""
+  ],
+  "resolution": [
+   "gdiplus!GdipEndContainer [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdiplus/tests/graphics.c",
+   "dlls/gdiplus/tests/metafile.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 4
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "gdiplusflat",
+   "path": "desktop-src/gdiplus/-gdiplus-graphics-flat.md",
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-graphics-flat",
+   "documented_name": "gdipendcontainer",
+   "excerpt": {
+    "note": "GDI+ flat API page: one table row per function; only the page introduction, the table header and this function's row are kept",
+    "full_page_chars": 212688
+   },
+   "file": "docs/0221_win32_-gdiplus-graphics-flat.md",
+   "text": "---\ndescription: Windows GDI+ exposes a flat API that consists of about 600 functions. These flat API functions are wrapped by the Graphics C++ class.\nms.assetid: 0d10b3cc-6d1d-4e14-80c9-fd3b8b3880d7\ntitle: Graphics Functions\nms.topic: reference\nms.date: 05/31/2018\n---\n\n# Graphics Functions\n\nWindows GDI+ exposes a flat API that consists of about 600 functions, which are implemented in Gdiplus.dll and declared in Gdiplusflat.h. The functions in the GDI+ flat API are wrapped by a collection of about 40 C++ classes. It is recommended that you do not directly call the functions in the flat API. Whenever you make calls to GDI+, you should do so by calling the methods and functions provided by the C++ wrappers. Microsoft Product Support Services will not provide support for code that calls the flat API directly. For more information on using these wrapper methods, see [GDI+ Flat API](-gdiplus-flatapi-flat.md).\n\nThe following flat API functions are wrapped by the [**Graphics**](/windows/win32/api/gdiplusgraphics/nl-gdiplusgraphics-graphics) C++ class.\n\n## Graphics Functions and Corresponding Wrapper Methods\n\n\n\n| Flat function                                                                                                                                                                                                                                                                                                               | Wrapper method                                                                                                                                                                                                                                                                                                                                                                                                              | Remarks                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |\n|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|\n| GpStatus WINGDIPAPI GdipEndContainer(GpGraphics \\*graphics, GraphicsContainer state)<br/>                                                                                                                                                                                                                             | [**Status Graphics::EndContainer(IN GraphicsContainer state)**](/windows/win32/api/Gdiplusgraphics/nf-gdiplusgraphics-graphics-endcontainer)                                                                                                                                                                                                                                                                                                            | Closes a graphics container that was previously opened by the [**Graphics::BeginContainer**](/windows/win32/api/gdiplusgraphics/nf-gdiplusgraphics-graphics-begincontainer(inconstrectf__inconstrectf__inunit)) method.                                                                                                                                                                                                                                                                                                                             |\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "end_container",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 6856,
+   "end_line": 6897,
+   "static": true,
+   "called_from": [
+    "GdipEndContainer"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:6908"
+   ],
+   "signature": "static GpStatus end_container(GpGraphics *graphics, GraphicsContainerType type, GraphicsContainer state)",
+   "code": "static GpStatus end_container(GpGraphics *graphics, GraphicsContainerType type,\n    GraphicsContainer state)\n{\n    GpStatus sts;\n    GraphicsContainerItem *container, *container2;\n\n    if(!graphics)\n        return InvalidParameter;\n\n    LIST_FOR_EACH_ENTRY(container, &graphics->containers, GraphicsContainerItem, entry){\n        if(container->contid == state && container->type == type)\n            break;\n    }\n\n    /* did not find a matching container */\n    if(&container->entry == &graphics->containers)\n        return Ok;\n\n    sts = restore_container(graphics, container);\n    if(sts != Ok)\n        return sts;\n\n    /* remove all of the containers on top of the found container */\n    LIST_FOR_EACH_ENTRY_SAFE(container, container2, &graphics->containers, GraphicsContainerItem, entry){\n        if(container->contid == state)\n            break;\n        list_remove(&container->entry);\n        delete_container(container);\n    }\n\n    list_remove(&container->entry);\n    delete_container(container);\n\n    if (is_metafile_graphics(graphics)) {\n        if (type == BEGIN_CONTAINER)\n            METAFILE_EndContainer((GpMetafile*)graphics->image, state);\n        else\n            METAFILE_RestoreGraphics((GpMetafile*)graphics->image, state);\n    }\n\n    return Ok;\n}"
+  },
+  {
+   "name": "restore_container",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 2293,
+   "end_line": 2321,
+   "static": true,
+   "called_from": [
+    "end_container"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static GpStatus restore_container(GpGraphics* graphics, GDIPCONST GraphicsContainerItem* container){ GpStatus sts; GpRegion *newClip;  sts = GdipCloneRegion(container->clip, &newClip); if(sts != Ok) return sts;  graphics->worldtrans = container->worldtrans;  GdipDeleteRegion(graphics->clip); graphics->clip = newClip;  graphics->contid = container->contid - 1;  graphics->smoothing = container->smoothing; graphics->compqual = container->compqual; graphics->interpolation = container->interpolation; graphics->compmode = container->compmode; graphics->texthint = container->texthint; graphics->scale = container->scale;",
+   "code": "static GpStatus restore_container(GpGraphics* graphics,\n        GDIPCONST GraphicsContainerItem* container){\n    GpStatus sts;\n    GpRegion *newClip;\n\n    sts = GdipCloneRegion(container->clip, &newClip);\n    if(sts != Ok) return sts;\n\n    graphics->worldtrans = container->worldtrans;\n\n    GdipDeleteRegion(graphics->clip);\n    graphics->clip = newClip;\n\n    graphics->contid = container->contid - 1;\n\n    graphics->smoothing = container->smoothing;\n    graphics->compqual = container->compqual;\n    graphics->interpolation = container->interpolation;\n    graphics->compmode = container->compmode;\n    graphics->texthint = container->texthint;\n    graphics->scale = container->scale;\n    graphics->unit = container->unit;\n    graphics->textcontrast = container->textcontrast;\n    graphics->pixeloffset = container->pixeloffset;\n    graphics->origin_x = container->origin_x;\n    graphics->origin_y = container->origin_y;\n\n    return Ok;\n}"
+  },
+  {
+   "name": "delete_container",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 2287,
+   "end_line": 2291,
+   "static": true,
+   "called_from": [
+    "end_container"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:2697"
+   ],
+   "signature": "static void delete_container(GraphicsContainerItem* container)",
+   "code": "static void delete_container(GraphicsContainerItem* container)\n{\n    GdipDeleteRegion(container->clip);\n    free(container);\n}"
+  },
+  {
+   "name": "is_metafile_graphics",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 153,
+   "end_line": 156,
+   "static": true,
+   "called_from": [
+    "end_container"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:687",
+    "dlls/gdiplus/graphics.c:2367",
+    "dlls/gdiplus/graphics.c:2679",
+    "dlls/gdiplus/graphics.c:2730",
+    "dlls/gdiplus/graphics.c:3052"
+   ],
+   "signature": "static BOOL is_metafile_graphics(const GpGraphics *graphics)",
+   "code": "static BOOL is_metafile_graphics(const GpGraphics *graphics)\n{\n    return graphics->image && graphics->image_type == ImageTypeMetafile;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "GraphicsContainerItem",
+    "kind": "typedef_decl",
+    "start_line": 2234,
+    "end_line": 2251,
+    "code": "typedef struct _GraphicsContainerItem {\n    struct list entry;\n    GraphicsContainer contid;\n    GraphicsContainerType type;\n\n    SmoothingMode smoothing;\n    CompositingQuality compqual;\n    InterpolationMode interpolation;\n    CompositingMode compmode;\n    TextRenderingHint texthint;\n    REAL scale;\n    GpUnit unit;\n    PixelOffsetMode pixeloffset;\n    UINT textcontrast;\n    GpMatrix worldtrans;\n    GpRegion* clip;\n    INT origin_x, origin_y;\n} GraphicsContainerItem;"
+   },
+   {
+    "name": "GraphicsContainerType",
+    "kind": "enum_decl",
+    "start_line": 2229,
+    "end_line": 2232,
+    "code": "typedef enum GraphicsContainerType {\n    BEGIN_CONTAINER,\n    SAVE_GRAPHICS\n} GraphicsContainerType;"
+   },
+   {
+    "name": "_GraphicsContainerItem",
+    "kind": "struct_decl",
+    "start_line": 2234,
+    "end_line": 2251,
+    "code": "typedef struct _GraphicsContainerItem {\n    struct list entry;\n    GraphicsContainer contid;\n    GraphicsContainerType type;\n\n    SmoothingMode smoothing;\n    CompositingQuality compqual;\n    InterpolationMode interpolation;\n    CompositingMode compmode;\n    TextRenderingHint texthint;\n    REAL scale;\n    GpUnit unit;\n    PixelOffsetMode pixeloffset;\n    UINT textcontrast;\n    GpMatrix worldtrans;\n    GpRegion* clip;\n    INT origin_x, origin_y;\n} GraphicsContainerItem;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 44,
+    "end_line": 44,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(gdiplus);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "METAFILE_EndContainer",
+    "file": "dlls/gdiplus/metafile.c",
+    "start_line": 1609
+   },
+   {
+    "name": "METAFILE_RestoreGraphics",
+    "file": "dlls/gdiplus/metafile.c",
+    "start_line": 1649
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "GdipCloneRegion",
+    "impl": [
+     "dlls/gdiplus/region.c:230"
+    ]
+   },
+   {
+    "name": "GdipDeleteRegion",
+    "impl": [
+     "dlls/gdiplus/region.c:582"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   }
+  ],
+  "header_inline": [
+   "list_remove",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "gdiplus.GdipEndContainer",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI+",
+   "header": "gdiplusflat.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 5,
+   "body": 4,
+   "code": 2
+  },
+  "cyclomatic": 1,
+  "return_type": "GpStatus",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 4,
+   "n_tests": 4,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/gdiplus/tests/graphics.c::test_BeginContainer2",
+    "dlls/gdiplus/tests/graphics.c::test_container_rects",
+    "dlls/gdiplus/tests/graphics.c::test_save_restore",
+    "dlls/gdiplus/tests/metafile.c::test_containers"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-graphics-flat",
+   "source": "win32-gdiplus-flat",
+   "description": "",
+   "min_windows": "",
+   "documented_dll": "gdiplus.dll"
+  },
+  "exports": [
+   "gdiplus.GdipEndContainer"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2016-08-15",
+   "median_date": "2016-08-15",
+   "last_date": "2016-08-15",
+   "code_lines": 3,
+   "pair": "win32u.NtGdiDdDDIDestroySynchronizationObject",
+   "rank": 1,
+   "distance": 0.8
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "win32u.NtGdiDdDDIDestroySynchronizationObject",
+  "share_after_cutoff": 0.0,
+  "last_date": "2016-08-15",
+  "partner_rank": 1,
+  "distance": 0.8
+ }
+}

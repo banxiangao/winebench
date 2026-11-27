@@ -1,0 +1,295 @@
+{
+ "id": "0086",
+ "function": {
+  "name": "WinHttpCrackUrl",
+  "export_name": "WinHttpCrackUrl",
+  "module": "winhttp",
+  "source_module": "winhttp",
+  "exported_by": [
+   "winhttp"
+  ],
+  "side": "PE",
+  "file": "dlls/winhttp/url.c",
+  "start_line": 173,
+  "end_line": 348,
+  "body_lines": 173,
+  "signature": "BOOL WINAPI WinHttpCrackUrl( const WCHAR *url, DWORD len, DWORD flags, URL_COMPONENTSW *uc )",
+  "header_comment": "/***********************************************************************\n *          WinHttpCrackUrl (winhttp.@)\n */",
+  "code": "BOOL WINAPI WinHttpCrackUrl( const WCHAR *url, DWORD len, DWORD flags, URL_COMPONENTSW *uc )\n{\n    WCHAR *p, *q, *r, *url_transformed = NULL;\n    INTERNET_SCHEME scheme_number = 0;\n    struct url_component scheme, username, password, hostname, path, extra;\n    BOOL overflow = FALSE;\n    DWORD err;\n\n    TRACE( \"%s, %lu, %#lx, %p\\n\", debugstr_wn(url, len), len, flags, uc );\n\n    if (!url || !uc || uc->dwStructSize != sizeof(*uc))\n    {\n        SetLastError( ERROR_INVALID_PARAMETER );\n        return FALSE;\n    }\n    if (!len) len = lstrlenW( url );\n\n    if (flags & ICU_ESCAPE)\n    {\n        if ((err = escape_url( url, &len, &url_transformed )))\n        {\n            SetLastError( err );\n            return FALSE;\n        }\n        url = url_transformed;\n    }\n    else if (flags & ICU_DECODE)\n    {\n        if (!(url_transformed = decode_url( url, &len )))\n        {\n            SetLastError( ERROR_OUTOFMEMORY );\n            return FALSE;\n        }\n        url = url_transformed;\n    }\n    if (!(p = wcschr( url, ':' )))\n    {\n        SetLastError( ERROR_WINHTTP_UNRECOGNIZED_SCHEME );\n        free( url_transformed );\n        return FALSE;\n    }\n    if (p - url == 4 && !wcsnicmp( url, L\"http\", 4 )) scheme_number = INTERNET_SCHEME_HTTP;\n    else if (p - url == 5 && !wcsnicmp( url, L\"https\", 5 )) scheme_number = INTERNET_SCHEME_HTTPS;\n    else\n    {\n        err = ERROR_WINHTTP_UNRECOGNIZED_SCHEME;\n        goto exit;\n    }\n\n    scheme.str = &uc->lpszScheme;\n    scheme.len = &uc->dwSchemeLength;\n\n    if ((err = set_component( &scheme, (WCHAR *)url, p - url, flags, &overflow ))) goto exit;\n\n    p++; /* skip ':' */\n    if (!p[0] || p[0] != '/' || p[1] != '/')\n    {\n        err = ERROR_WINHTTP_INVALID_URL;\n        goto exit;\n    }\n    p += 2;\n    if (!p[0])\n    {\n        err = ERROR_WINHTTP_INVALID_URL;\n        goto exit;\n    }\n\n    username.str = &uc->lpszUserName;\n    username.len = &uc->dwUserNameLength;\n\n    password.str = &uc->lpszPassword;\n    password.len = &uc->dwPasswordLength;\n\n    if ((q = wmemchr( p, '@', len - (p - url) )) && !(wmemchr( p, '/', q - p )))\n    {\n\n        if ((r = wmemchr( p, ':', q - p )))\n        {\n            if ((err = set_component( &username, p, r - p, flags, &overflow ))) goto exit;\n            r++;\n            if ((err = set_component( &password, r, q - r, flags, &overflow ))) goto exit;\n        }\n        else\n        {\n            if ((err = set_component( &username, p, q - p, flags, &overflow ))) goto exit;\n            if ((err = set_component( &password, NULL, 0, flags, &overflow ))) goto exit;\n        }\n        p = q + 1;\n    }\n    else\n    {\n        if ((err = set_component( &username, NULL, 0, flags, &overflow ))) goto exit;\n        if ((err = set_component( &password, NULL, 0, flags, &overflow ))) goto exit;\n    }\n\n    hostname.str = &uc->lpszHostName;\n    hostname.len = &uc->dwHostNameLength;\n\n    path.str = &uc->lpszUrlPath;\n    path.len = &uc->dwUrlPathLength;\n\n    extra.str = &uc->lpszExtraInfo;\n    extra.len = &uc->dwExtraInfoLength;\n\n    if ((q = wmemchr( p, '/', len - (p - url) )))\n    {\n        if ((r = wmemchr( p, ':', q - p )))\n        {\n            if ((err = set_component( &hostname, p, r - p, flags, &overflow ))) goto exit;\n            r++;\n            if (!(q - r))\n            {\n                if (scheme_number == INTERNET_SCHEME_HTTP) uc->nPort = INTERNET_DEFAULT_HTTP_PORT;\n                else if (scheme_number == INTERNET_SCHEME_HTTPS) uc->nPort = INTERNET_DEFAULT_HTTPS_PORT;\n            }\n            else if ((err = parse_port( r, q - r, &uc->nPort ))) goto exit;\n        }\n        else\n        {\n            if ((err = set_component( &hostname, p, q - p, flags, &overflow ))) goto exit;\n            if (scheme_number == INTERNET_SCHEME_HTTP) uc->nPort = INTERNET_DEFAULT_HTTP_PORT;\n            else if (scheme_number == INTERNET_SCHEME_HTTPS) uc->nPort = INTERNET_DEFAULT_HTTPS_PORT;\n        }\n\n        if ((r = wmemchr( q, '?', len - (q - url) )))\n        {\n            if (*extra.len)\n            {\n                if ((err = set_component( &path, q, r - q, flags, &overflow ))) goto exit;\n                if ((err = set_component( &extra, r, len - (r - url), flags, &overflow ))) goto exit;\n            }\n            else if ((err = set_component( &path, q, len - (q - url), flags, &overflow ))) goto exit;\n        }\n        else\n        {\n            if ((err = set_component( &path, q, len - (q - url), flags, &overflow ))) goto exit;\n            if ((err = set_component( &extra, (WCHAR *)url + len, 0, flags, &overflow ))) goto exit;\n        }\n    }\n    else\n    {\n        if ((r = wmemchr( p, ':', len - (p - url) )))\n        {\n            if ((err = set_component( &hostname, p, r - p, flags, &overflow ))) goto exit;\n            r++;\n            if (!*r)\n            {\n                if (scheme_number == INTERNET_SCHEME_HTTP) uc->nPort = INTERNET_DEFAULT_HTTP_PORT;\n                else if (scheme_number == INTERNET_SCHEME_HTTPS) uc->nPort = INTERNET_DEFAULT_HTTPS_PORT;\n            }\n            else if ((err = parse_port( r, len - (r - url), &uc->nPort ))) goto exit;\n        }\n        else\n        {\n            if ((err = set_component( &hostname, p, len - (p - url), flags, &overflow ))) goto exit;\n            if (scheme_number == INTERNET_SCHEME_HTTP) uc->nPort = INTERNET_DEFAULT_HTTP_PORT;\n            else if (scheme_number == INTERNET_SCHEME_HTTPS) uc->nPort = INTERNET_DEFAULT_HTTPS_PORT;\n        }\n        if ((err = set_component( &path, (WCHAR *)url + len, 0, flags, &overflow ))) goto exit;\n        if ((err = set_component( &extra, (WCHAR *)url + len, 0, flags, &overflow ))) goto exit;\n    }\n\n    TRACE(\"scheme(%s) host(%s) port(%d) path(%s) extra(%s)\\n\", debugstr_wn(*scheme.str, *scheme.len),\n          debugstr_wn(*hostname.str, *hostname.len ), uc->nPort, debugstr_wn(*path.str, *path.len),\n          debugstr_wn(*extra.str, *extra.len));\n\nexit:\n    if (!err)\n    {\n        if (overflow) err = ERROR_INSUFFICIENT_BUFFER;\n        uc->nScheme = scheme_number;\n    }\n    free( url_transformed );\n    SetLastError( err );\n    return !err;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <wchar.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"ws2tcpip.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winhttp.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"winhttp_private.h\""
+  ],
+  "resolution": [
+   "winhttp!WinHttpCrackUrl [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/winhttp/tests/url.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winhttp",
+   "path": "sdk-api-src/content/winhttp/nf-winhttp-winhttpcrackurl.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winhttp/nf-winhttp-winhttpcrackurl",
+   "documented_name": "winhttpcrackurl",
+   "file": "docs/0086_sdk-api_nf-winhttp-winhttpcrackurl.md",
+   "text": "---\nUID: NF:winhttp.WinHttpCrackUrl\ntitle: WinHttpCrackUrl function (winhttp.h)\ndescription: The WinHttpCrackUrl function separates a URL into its component parts such as host name and path.\nhelpviewer_keywords: [\"ICU_DECODE\",\"ICU_ESCAPE\",\"ICU_REJECT_USERPWD\",\"WinHttpCrackUrl\",\"WinHttpCrackUrl function [WinHTTP]\",\"http.winhttpcrackurl\",\"winhttp.winhttpcrackurl_function\",\"winhttp/WinHttpCrackUrl\"]\nold-location: http\\winhttpcrackurl.htm\ntech.root: http\nms.assetid: 656dfe11-2242-4587-aa53-87a280f5df81\nms.date: 12/05/2018\nms.keywords: ICU_DECODE, ICU_ESCAPE, ICU_REJECT_USERPWD, WinHttpCrackUrl, WinHttpCrackUrl function [WinHTTP], http.winhttpcrackurl, winhttp.winhttpcrackurl_function, winhttp/WinHttpCrackUrl\nreq.header: winhttp.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP, Windows 2000 Professional with SP3 [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003, Windows 2000 Server with SP3 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Winhttp.lib\nreq.dll: Winhttp.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: WinHTTP 5.0 and Internet Explorer 5.01 or later on Windows XP and Windows 2000.\nms.custom: 19H1\nf1_keywords:\n - WinHttpCrackUrl\n - winhttp/WinHttpCrackUrl\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Winhttp.dll\napi_name:\n - WinHttpCrackUrl\n---\n\n# WinHttpCrackUrl function\n\n\n## -description\n\nThe <b>WinHttpCrackUrl</b> function separates a URL into its component parts such as host name and path.\n\n## -parameters\n\n### -param pwszUrl [in]\n\nPointer to a string that contains the canonical URL to separate. <b>WinHttpCrackUrl</b> does not check this URL for validity or correct format before attempting to crack it.\n\n### -param dwUrlLength [in]\n\nThe length of the \n<i>pwszUrl</i> string, in characters. If \n<i>dwUrlLength</i> is set to zero, \n<b>WinHttpCrackUrl</b> assumes that the \n<i>pwszUrl</i> string is <b>null</b> terminated and  determines the length of the \n<i>pwszUrl</i> string based on that assumption.\n\n### -param dwFlags [in]\n\nThe flags that control the operation. This parameter can be a combination of one or more of the following flags (values can be bitwise OR'd together). Or, the parameter can be 0, which performs no special operations.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"ICU_DECODE\"></a><a id=\"icu_decode\"></a><dl>\n<dt><b>ICU_DECODE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nConverts characters that are \"escape encoded\" (%xx) to their non-escaped form.  This does not decode other encodings, such as UTF-8. This feature can be used only if the user provides buffers in the <a href=\"/windows/win32/api/winhttp/ns-winhttp-url_components\">URL_COMPONENTS</a> structure to copy the components into.\n\n\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"ICU_ESCAPE\"></a><a id=\"icu_escape\"></a><dl>\n<dt><b>ICU_ESCAPE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nEscapes certain characters to their escape sequences (%xx). Characters to be escaped are non-ASCII characters or those ASCII characters that must be escaped to be represented in an HTTP request.  This feature can be used only if the user provides buffers in the \n<a href=\"/windows/win32/api/winhttp/ns-winhttp-url_components\">URL_COMPONENTS</a> structure to copy the components into. \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"ICU_REJECT_USERPWD\"></a><a id=\"icu_reject_userpwd\"></a><dl>\n<dt><b>ICU_REJECT_USERPWD</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nRejects URLs as input that contain embedded credentials (either a username, a password, or both). If the function fails because of an invalid URL, then subsequent calls to GetLastError return <b>ERROR_WINHTTP_INVALID_URL</b>.\n</td>\n</tr>\n</table>\n\n### -param lpUrlComponents [in, out]\n\nPointer to a \n<a href=\"/windows/win32/api/winhttp/ns-winhttp-url_components\">URL_COMPONENTS</a> structure that receives the URL components.\n\n## -returns\n\nReturns <b>TRUE</b> if the function succeeds, or <b>FALSE</b> otherwise. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>. Among the error codes returned are the following.\n\n<table>\n<tr>\n<th>Error Codes</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_INTERNAL_ERROR</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn internal error has occurred.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_INVALID_URL</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe URL is invalid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_WINHTTP_UNRECOGNIZED_SCHEME</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe URL scheme could not be recognized, or is not supported.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOT_ENOUGH_MEMORY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nNot enough memory was available to complete the requested operation. (Windows error code)\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nEven when  WinHTTP is used in asynchronous mode (that is, when <b>WINHTTP_FLAG_ASYNC</b> has been set in <a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpopen\">WinHttpOpen</a>), this function operates synchronously. The return value indicates success or failure.  To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\nThe required components are indicated by members of the \n<a href=\"/windows/win32/api/winhttp/ns-winhttp-url_components\">URL_COMPONENTS</a> structure. Each component has a pointer to the value and has a member that stores the length of the stored value. If both the value and the length for a component are equal to zero, that component is not returned. If the pointer to the value of the component is <b>NULL</b> and the value of its corresponding length member is nonzero, the address of the first character of the corresponding component in the \n<i>pwszUrl</i> string is stored in the pointer, and the length of the component is stored in the length member.\n\nIf the pointer contains the address of the user-supplied buffer, the length member must contain the size of the buffer. The \n<b>WinHttpCrackUrl</b> function copies the component into the buffer, and the length member is set to the length of the copied component, minus 1 for the trailing string terminator. If a user-supplied buffer is not large enough, <b>WinHttpCrackUrl</b> returns <b>FALSE</b>, and <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> returns <b>ERROR_INSUFFICIENT_BUFFER</b>.\n\nWhen _lpszExtraInfo_ is not set or _dwExtraInfoLength_ is left as 0 in _lpUrlComponents_, if _lpszUrlPath_ is set the query and/or fragment component of the URL will be included in that field.\n\nFor \n<b>WinHttpCrackUrl</b> to work properly, the size of the \n<a href=\"/windows/win32/api/winhttp/ns-winhttp-url_components\">URL_COMPONENTS</a> structure must be stored in the \n<a href=\"/windows/win32/api/winhttp/ns-winhttp-url_components\">dwStructSize</a> member of that structure.\n\nIf the Internet protocol of the URL passed in for \n<i>pwszUrl</i> is not HTTP or HTTPS, then \n<b>WinHttpCrackUrl</b>  returns  <b>FALSE</b> and \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>  indicates  \n<a href=\"/windows/desktop/WinHttp/error-messages\">ERROR_WINHTTP_UNRECOGNIZED_SCHEME</a>.\n\n<b>WinHttpCrackUrl</b> does not check the validity or format of a URL before attempting to crack it. As a result, if a string such as \"\"http://server?Bad=URL\"\" is passed in, the function returns incorrect results.\n\n<div class=\"alert\"><b>Note</b>  For Windows XP and Windows 2000, see the <a href=\"/windows/desktop/WinHttp/winhttp-start-page\">Run-Time Requirements</a> section of the WinHttp start page.</div>\n<div> </div>\n\n#### Examples\n\nThis example shows how to break a URL into its components, update a component, then reconstruct the URL.\n\n\n```cpp\n    URL_COMPONENTS urlComp;\n    LPCWSTR pwszUrl1 = \n      L\"http://search.msn.com/results.asp?RS=CHECKED&FORM=MSNH&v=1&q=wininet\";\n    DWORD dwUrlLen = 0;\n\n    // Initialize the URL_COMPONENTS structure.\n    ZeroMemory(&urlComp, sizeof(urlComp));\n    urlComp.dwStructSize = sizeof(urlComp);\n\n    // Set required component lengths to non-zero \n    // so that they are cracked.\n    urlComp.dwSchemeLength    = (DWORD)-1;\n    urlComp.dwHostNameLength  = (DWORD)-1;\n    urlComp.dwUrlPathLength   = (DWORD)-1;\n    urlComp.dwExtraInfoLength = (DWORD)-1;\n\n    // Crack the URL.\n    if (!WinHttpCrackUrl( pwszUrl1, (DWORD)wcslen(pwszUrl1), 0, &urlComp))\n    {\n        printf(\"Error %u in WinHttpCrackUrl.\\n\", GetLastError());\n    }\n    else\n    {\n        // Change the search information.  \n        // New info is the same length.\n        urlComp.lpszExtraInfo = L\"?RS=CHECKED&FORM=MSNH&v=1&q=winhttp\";\n\n        // Obtain the size of the new URL and allocate memory.\n        WinHttpCreateUrl( &urlComp, 0, NULL, &dwUrlLen);\n        LPWSTR pwszUrl2 = new WCHAR[dwUrlLen];\n\n        // Create a new URL.\n        if(!WinHttpCreateUrl( &urlComp, 0, pwszUrl2, &dwUrlLen))\n        {\n            printf(\"Error %u in WinHttpCreateUrl.\\n\", GetLastError());\n        }\n        else\n        {\n            // Show both URLs.\n            printf(\"Old URL:  %S\\nNew URL:  %S\\n\", pwszUrl1, pwszUrl2);\n        }\n\n        // Free allocated memory.\n        delete [] pwszUrl2;\n    }\n\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/WinHttp/about-winhttp\">About Microsoft Windows HTTP Services (WinHTTP)</a>\n\n\n\n<a href=\"/windows/desktop/WinHttp/uniform-resource-locators--urls--in-winhttp\">Handling Uniform Resource Locators</a>\n\n\n\n<a href=\"/windows/desktop/WinHttp/winhttp-versions\">WinHTTP Versions</a>\n\n\n\n<a href=\"/windows/desktop/api/winhttp/nf-winhttp-winhttpcreateurl\">WinHttpCreateUrl</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "escape_url",
+   "file": "dlls/winhttp/url.c",
+   "start_line": 131,
+   "end_line": 155,
+   "static": true,
+   "called_from": [
+    "WinHttpCrackUrl"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static DWORD escape_url( const WCHAR *url, DWORD *len, WCHAR **ret )",
+   "code": "static DWORD escape_url( const WCHAR *url, DWORD *len, WCHAR **ret )\n{\n    const WCHAR *p;\n    DWORD len_base, len_path;\n\n    if ((p = wcsrchr( url, '/' )))\n    {\n        len_base = p - url;\n        if (!escape_string( p, *len - len_base, NULL, &len_path )) return ERROR_INVALID_PARAMETER;\n    }\n    else\n    {\n        len_base = *len;\n        len_path = 0;\n    }\n\n    if (!(*ret = malloc( (len_base + len_path + 1) * sizeof(WCHAR) ))) return ERROR_OUTOFMEMORY;\n    memcpy( *ret, url, len_base * sizeof(WCHAR) );\n\n    if (p) escape_string( p, *len - (p - url), *ret + len_base, &len_path );\n    (*ret)[len_base + len_path] = 0;\n\n    *len = len_base + len_path;\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "decode_url",
+   "file": "dlls/winhttp/url.c",
+   "start_line": 63,
+   "end_line": 89,
+   "static": true,
+   "called_from": [
+    "WinHttpCrackUrl"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static WCHAR *decode_url( LPCWSTR url, DWORD *len )",
+   "code": "static WCHAR *decode_url( LPCWSTR url, DWORD *len )\n{\n    const WCHAR *p = url;\n    WCHAR hex[3], *q, *ret;\n\n    if (!(ret = malloc( *len * sizeof(WCHAR) ))) return NULL;\n    q = ret;\n    while (*len > 0)\n    {\n        if (p[0] == '%' && iswxdigit( p[1] ) && iswxdigit( p[2] ))\n        {\n            hex[0] = p[1];\n            hex[1] = p[2];\n            hex[2] = 0;\n            *q++ = wcstol( hex, NULL, 16 );\n            p += 3;\n            *len -= 3;\n        }\n        else\n        {\n            *q++ = *p++;\n            *len -= 1;\n        }\n    }\n    *len = q - ret;\n    return ret;\n}"
+  },
+  {
+   "name": "set_component",
+   "file": "dlls/winhttp/url.c",
+   "start_line": 38,
+   "end_line": 61,
+   "static": true,
+   "called_from": [
+    "WinHttpCrackUrl"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static DWORD set_component( struct url_component *comp, WCHAR *value, DWORD len, DWORD flags, BOOL *overflow )",
+   "code": "static DWORD set_component( struct url_component *comp, WCHAR *value, DWORD len, DWORD flags, BOOL *overflow )\n{\n    if (*comp->str && !*comp->len) return ERROR_INVALID_PARAMETER;\n    if (!*comp->len) return ERROR_SUCCESS;\n    if (!*comp->str)\n    {\n        if (len && *comp->len && (flags & (ICU_DECODE|ICU_ESCAPE))) return ERROR_INVALID_PARAMETER;\n        *comp->str = value;\n        *comp->len = len;\n    }\n    else\n    {\n        if (len >= *comp->len)\n        {\n            *comp->len = len + 1;\n            *overflow = TRUE;\n            return ERROR_SUCCESS;\n        }\n        memcpy( *comp->str, value, len * sizeof(WCHAR) );\n        (*comp->str)[len] = 0;\n        *comp->len = len;\n    }\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "parse_port",
+   "file": "dlls/winhttp/url.c",
+   "start_line": 157,
+   "end_line": 168,
+   "static": true,
+   "called_from": [
+    "WinHttpCrackUrl"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static DWORD parse_port( const WCHAR *str, DWORD len, INTERNET_PORT *ret )",
+   "code": "static DWORD parse_port( const WCHAR *str, DWORD len, INTERNET_PORT *ret )\n{\n    const WCHAR *p = str;\n    DWORD port = 0;\n    while (len && '0' <= *p && *p <= '9')\n    {\n        if ((port = port * 10 + *p - '0') > 65535) return ERROR_WINHTTP_INVALID_URL;\n        p++; len--;\n    }\n    *ret = port;\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "escape_string",
+   "file": "dlls/winhttp/url.c",
+   "start_line": 103,
+   "end_line": 129,
+   "static": true,
+   "called_from": [
+    "escape_url"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/url.c:533",
+    "dlls/winhttp/url.c:551"
+   ],
+   "signature": "static BOOL escape_string( const WCHAR *src, DWORD src_len, WCHAR *dst, DWORD *dst_len )",
+   "code": "static BOOL escape_string( const WCHAR *src, DWORD src_len, WCHAR *dst, DWORD *dst_len )\n{\n    static const WCHAR hex[] = L\"0123456789ABCDEF\";\n    WCHAR *p = dst;\n    DWORD i;\n\n    *dst_len = src_len;\n    for (i = 0; i < src_len; i++)\n    {\n        if (src[i] > 0xff) return FALSE;\n        if (need_escape( src[i] ))\n        {\n            if (dst)\n            {\n                p[0] = '%';\n                p[1] = hex[(src[i] >> 4) & 0xf];\n                p[2] = hex[src[i] & 0xf];\n                p += 3;\n            }\n            *dst_len += 2;\n        }\n        else if (dst) *p++ = src[i];\n    }\n\n    if (dst) dst[*dst_len] = 0;\n    return TRUE;\n}"
+  },
+  {
+   "name": "need_escape",
+   "file": "dlls/winhttp/url.c",
+   "start_line": 91,
+   "end_line": 101,
+   "static": true,
+   "called_from": [
+    "escape_string"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winhttp/url.c:379"
+   ],
+   "signature": "static inline BOOL need_escape( WCHAR ch )",
+   "code": "static inline BOOL need_escape( WCHAR ch )\n{\n    const WCHAR *p = L\" \\\"#%<>[\\\\]^`{|}~\";\n\n    if (ch <= 31 || ch >= 127) return TRUE;\n    while (*p)\n    {\n        if (ch == *p++) return TRUE;\n    }\n    return FALSE;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "url_component",
+    "kind": "struct_decl",
+    "start_line": 32,
+    "end_line": 36,
+    "code": "struct url_component\n{\n    WCHAR **str;\n    DWORD  *len;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 30,
+    "end_line": 30,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(winhttp);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "iswxdigit",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:640"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "wcschr",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:256"
+    ]
+   },
+   {
+    "name": "wcsrchr",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:429"
+    ]
+   },
+   {
+    "name": "wcstol",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:669"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "debugstr_wn",
+   "lstrlenW",
+   "wcsnicmp",
+   "wine_dbg_log",
+   "wmemchr"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "winhttp.WinHttpCrackUrl",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "WinHTTP",
+   "header": "winhttp.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 176,
+   "body": 175,
+   "code": 106
+  },
+  "cyclomatic": 58,
+  "return_type": "BOOL",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/winhttp/tests/url.c::WinHttpCrackUrl_test"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winhttp/nf-winhttp-winhttpcrackurl",
+   "source": "win32",
+   "description": "The WinHttpCrackUrl function separates a URL into its component parts such as host name and path.",
+   "min_windows": "Windows XP, Windows 2000 Professional with SP3 [desktop apps only]",
+   "documented_dll": "Winhttp.dll"
+  },
+  "exports": [
+   "winhttp.WinHttpCrackUrl"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2008-11-18",
+   "median_date": "2019-02-20",
+   "last_date": "2022-06-14",
+   "code_lines": 106,
+   "pair": "iphlpapi.GetBestRoute2",
+   "rank": 1,
+   "distance": 0.374
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "iphlpapi.GetBestRoute2",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-06-14",
+  "partner_rank": 1,
+  "distance": 0.374
+ }
+}

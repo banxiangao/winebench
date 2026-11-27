@@ -1,0 +1,251 @@
+{
+ "id": "0011",
+ "function": {
+  "name": "WSAGetOverlappedResult",
+  "export_name": "WSAGetOverlappedResult",
+  "module": "ws2_32",
+  "source_module": "ws2_32",
+  "exported_by": [
+   "ws2_32"
+  ],
+  "side": "PE",
+  "file": "dlls/ws2_32/socket.c",
+  "start_line": 3910,
+  "end_line": 3960,
+  "body_lines": 48,
+  "signature": "BOOL WINAPI WSAGetOverlappedResult( SOCKET s, LPWSAOVERLAPPED lpOverlapped, LPDWORD lpcbTransfer, BOOL fWait, LPDWORD lpdwFlags )",
+  "header_comment": "/**********************************************************************\n *      WSAGetOverlappedResult (WS2_32.40)\n */",
+  "code": "BOOL WINAPI WSAGetOverlappedResult( SOCKET s, LPWSAOVERLAPPED lpOverlapped,\n                                    LPDWORD lpcbTransfer, BOOL fWait,\n                                    LPDWORD lpdwFlags )\n{\n    NTSTATUS status;\n\n    TRACE( \"socket %#Ix, overlapped %p, transfer %p, wait %d, flags %p\\n\",\n           s, lpOverlapped, lpcbTransfer, fWait, lpdwFlags );\n\n    if ( lpOverlapped == NULL )\n    {\n        ERR( \"Invalid pointer\\n\" );\n        SetLastError(WSA_INVALID_PARAMETER);\n        return FALSE;\n    }\n\n    if (!socket_list_find( s ))\n    {\n        SetLastError( WSAENOTSOCK );\n        return FALSE;\n    }\n\n    /* Paired with the write-release in set_async_iosb() in ntdll; see the\n     * latter for details. */\n    status = ReadAcquire( (LONG *)&lpOverlapped->Internal );\n    if (status == STATUS_PENDING)\n    {\n        if (!fWait)\n        {\n            SetLastError( WSA_IO_INCOMPLETE );\n            return FALSE;\n        }\n\n        if (WaitForSingleObject( lpOverlapped->hEvent ? lpOverlapped->hEvent : SOCKET2HANDLE(s),\n                                 INFINITE ) == WAIT_FAILED)\n            return FALSE;\n        /* We don't need to give this load acquire semantics; the wait above\n         * already guarantees that the IOSB and output buffer are filled. */\n        status = lpOverlapped->Internal;\n    }\n\n    if ( lpcbTransfer )\n        *lpcbTransfer = lpOverlapped->InternalHigh;\n\n    if ( lpdwFlags )\n        *lpdwFlags = lpOverlapped->Offset;\n\n    SetLastError( NtStatusToWSAError(status) );\n    TRACE( \"status %#lx.\\n\", status );\n    return NT_SUCCESS( status );\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ws2_32_private.h\""
+  ],
+  "resolution": [
+   "ws2_32!WSAGetOverlappedResult [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ws2_32/tests/sock.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 4
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winsock2",
+   "path": "sdk-api-src/content/winsock2/nf-winsock2-wsagetoverlappedresult.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winsock2/nf-winsock2-wsagetoverlappedresult",
+   "documented_name": "wsagetoverlappedresult",
+   "file": "docs/0011_sdk-api_nf-winsock2-wsagetoverlappedresult.md",
+   "text": "---\nUID: NF:winsock2.WSAGetOverlappedResult\ntitle: WSAGetOverlappedResult function (winsock2.h)\ndescription: The WSAGetOverlappedResult function retrieves the results of an overlapped operation on the specified socket.\nhelpviewer_keywords: [\"WSAGetOverlappedResult\",\"WSAGetOverlappedResult function [Winsock]\",\"_win32_wsagetoverlappedresult_2\",\"winsock.wsagetoverlappedresult_2\",\"winsock2/WSAGetOverlappedResult\"]\nold-location: winsock\\wsagetoverlappedresult_2.htm\ntech.root: WinSock\nms.assetid: 3c43ccfd-0fe7-4ecc-9517-e0a1c448f7e4\nms.date: 12/05/2018\nms.keywords: WSAGetOverlappedResult, WSAGetOverlappedResult function [Winsock], _win32_wsagetoverlappedresult_2, winsock.wsagetoverlappedresult_2, winsock2/WSAGetOverlappedResult\nreq.header: winsock2.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 8.1, Windows Vista [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ws2_32.lib\nreq.dll: Ws2_32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - WSAGetOverlappedResult\n - winsock2/WSAGetOverlappedResult\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Ws2_32.dll\napi_name:\n - WSAGetOverlappedResult\n---\n\n# WSAGetOverlappedResult function\n\n\n## -description\n\nThe \n<b>WSAGetOverlappedResult</b> function retrieves the results of an overlapped operation on the specified socket.\n\n## -parameters\n\n### -param s [in]\n\nA descriptor identifying the socket. \n\nThis is the same socket that was specified when the overlapped operation was started by a call to \nany of the Winsock functions that supports overlapped operations. These functions include <a href=\"/windows/desktop/api/mswsock/nf-mswsock-acceptex\">AcceptEx</a>, <a href=\"/windows/desktop/api/mswsock/nc-mswsock-lpfn_connectex\">ConnectEx</a>, <a href=\"/previous-versions/windows/desktop/legacy/ms737757(v=vs.85)\">DisconnectEx</a>, <a href=\"/windows/desktop/api/mswsock/nf-mswsock-transmitfile\">TransmitFile</a>, <a href=\"/windows/desktop/api/mswsock/nc-mswsock-lpfn_transmitpackets\">TransmitPackets</a>, <a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsarecv\">WSARecv</a>, \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsarecvfrom\">WSARecvFrom</a>, \n<a href=\"/windows/win32/api/mswsock/nc-mswsock-lpfn_wsarecvmsg\">LPFN_WSARECVMSG (WSARecvMsg)</a>, <a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsasend\">WSASend</a>, \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsasendmsg\">WSASendMsg</a>, <a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsasendto\">WSASendTo</a>, and \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsaioctl\">WSAIoctl</a>.\n\n### -param lpOverlapped [in]\n\nA pointer to a \n<a href=\"/windows/desktop/api/winsock2/ns-winsock2-wsaoverlapped\">WSAOVERLAPPED</a> structure that was specified when the overlapped operation was started. This parameter must not be a <b>NULL</b> pointer.\n\n### -param lpcbTransfer [out]\n\nA pointer to a 32-bit variable that receives the number of bytes that were actually transferred by a send or receive operation, or by \nthe <a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsaioctl\">WSAIoctl</a> function. This parameter must not be a <b>NULL</b> pointer.\n\n### -param fWait [in]\n\nA flag that specifies whether the function should wait for the pending overlapped operation to complete. If <b>TRUE</b>, the function does not return until the operation has been completed. If <b>FALSE</b> and the operation is still pending, the function returns <b>FALSE</b> and the \n<a href=\"/windows/desktop/api/winsock/nf-winsock-wsagetlasterror\">WSAGetLastError</a> function returns WSA_IO_INCOMPLETE. The <i>fWait</i> parameter may be set to <b>TRUE</b> only if the overlapped operation selected the event-based completion notification.\n\n### -param lpdwFlags [out]\n\nA pointer to a 32-bit variable that will receive one or more flags that supplement the completion status. If the overlapped operation was initiated through \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsarecv\">WSARecv</a> or \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsarecvfrom\">WSARecvFrom</a>, this parameter will contain the results value for <i>lpFlags</i> parameter. This parameter must not be a <b>NULL</b> pointer.\n\n## -returns\n\nIf \n<b>WSAGetOverlappedResult</b> succeeds, the return value is <b>TRUE</b>. This means that the overlapped operation has completed successfully and that the value pointed to by <i>lpcbTransfer</i> has been updated. \n\nIf \n<b>WSAGetOverlappedResult</b> returns <b>FALSE</b>, this means that either the overlapped operation has not completed, the overlapped operation completed but with errors, or the overlapped operation's completion status could not be determined due to errors in one or more parameters to \n<b>WSAGetOverlappedResult</b>. On failure, the value pointed to by <i>lpcbTransfer</i> will not be updated. Use \n<a href=\"/windows/desktop/api/winsock/nf-winsock-wsagetlasterror\">WSAGetLastError</a> to determine the cause of the failure (either by the <b>WSAGetOverlappedResult</b> function or by the associated overlapped operation).\n\n<table>\n<tr>\n<th>Error code</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSANOTINITIALISED</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA successful \n<a href=\"/windows/desktop/api/winsock/nf-winsock-wsastartup\">WSAStartup</a> call must occur before using this function.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAENETDOWN</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe network subsystem has failed.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAENOTSOCK</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe descriptor is not a socket.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSA_INVALID_HANDLE</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <i>hEvent</i> parameter of the \n<a href=\"/windows/desktop/api/winsock2/ns-winsock2-wsaoverlapped\">WSAOVERLAPPED</a> structure does not contain a valid event object handle.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSA_INVALID_PARAMETER</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOne of the parameters is unacceptable.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSA_IO_INCOMPLETE</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <i>fWait</i> parameter is <b>FALSE</b> and the I/O operation has not yet completed.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b><a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAEFAULT</a></b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOne or more of the <i>lpOverlapped</i>, <i>lpcbTransfer</i>, or <i>lpdwFlags</i> parameters are not in a valid part of the user address space. This error is returned if the <i>lpOverlapped</i>, <i>lpcbTransfer</i>, or <i>lpdwFlags</i> parameter  was a <b>NULL</b> pointer on Windows Server 2003 and earlier.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe \n<b>WSAGetOverlappedResult</b> function reports the results of the overlapped operation specified in the <i>lpOverlapped</i> parameter for the socket specified in the <i>s</i> parameter. The \n<b>WSAGetOverlappedResult</b> function is passed the socket descriptor and the \n<a href=\"/windows/desktop/api/winsock2/ns-winsock2-wsaoverlapped\">WSAOVERLAPPED</a> structure that was specified when the overlapped function was called. A pending operation is indicated when the function that started the operation returns <b>FALSE</b> and the \n<a href=\"/windows/desktop/api/winsock/nf-winsock-wsagetlasterror\">WSAGetLastError</a> function returns <a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSA_IO_PENDING</a>. When an I/O operation such as \n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsarecv\">WSARecv</a> is pending, the function that started the operation resets the <i>hEvent</i> member of the \n<b>WSAOVERLAPPED</b> structure to the nonsignaled state. Then, when the pending operation has completed, the system sets the event object to the signaled state.\n\nIf the <i>fWait</i> parameter is <b>TRUE</b>, \n<b>WSAGetOverlappedResult</b> determines whether the pending operation has been completed by waiting for the event object to be in the signaled state. A client may set the <i>fWait</i> parameter to <b>TRUE</b>, but only if it selected event-based completion notification when the I/O operation was requested. If another form of notification was selected, the usage of the <i>hEvent</i> parameter of the \n<a href=\"/windows/desktop/api/winsock2/ns-winsock2-wsaoverlapped\">WSAOVERLAPPED</a> structure is different, and setting <i>fWait</i> to <b>TRUE</b> causes unpredictable results.\n\nIf the <b>WSAGetOverlappedResult</b> function is called with the <i>lpOverlapped</i>, <i>lpcbTransfer</i>, or <i>lpdwFlags</i> parameter  set to a <b>NULL</b> pointer on Windows Vista, this will result in an access violation. If the <b>WSAGetOverlappedResult</b> function is called with the <i>lpOverlapped</i>, <i>lpcbTransfer</i>, or <i>lpdwFlags</i> parameter  set to a <b>NULL</b> pointer on Windows Server 2003 and earlier, this will result in the <a href=\"/windows/desktop/WinSock/windows-sockets-error-codes-2\">WSAEFAULT</a> error code being returned.  \n\n<div class=\"alert\"><b>Note</b>   All I/O is canceled when a thread exits. For overlapped sockets, pending asynchronous operations can fail if the thread is closed before the  operations complete. See <a href=\"/windows/desktop/api/processthreadsapi/nf-processthreadsapi-exitthread\">ExitThread</a> for more information.</div>\n<div> </div>\n<b>Windows Phone 8:</b> This function is supported for Windows Phone Store apps on Windows Phone 8 and later.\n\n<b>Windows 8.1</b> and <b>Windows Server 2012 R2</b>: This function is supported for Windows Store apps on Windows 8.1, Windows Server 2012 R2, and later.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsaaccept\">WSAAccept</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsaconnect\">WSAConnect</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsacreateevent\">WSACreateEvent</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsaioctl\">WSAIoctl</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsarecv\">WSARecv</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsarecvfrom\">WSARecvFrom</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsasend\">WSASend</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsasendto\">WSASendTo</a>\n\n\n\n<a href=\"/windows/desktop/api/winsock2/nf-winsock2-wsawaitformultipleevents\">WSAWaitForMultipleEvents</a>\n\n\n\n<a href=\"/windows/desktop/WinSock/winsock-functions\">Winsock Functions</a>\n\n\n\n<a href=\"/windows/desktop/WinSock/winsock-reference\">Winsock Reference</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "socket_list_find",
+   "file": "dlls/ws2_32/socket.c",
+   "start_line": 526,
+   "end_line": 543,
+   "static": true,
+   "called_from": [
+    "WSAGetOverlappedResult"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ws2_32/socket.c:572",
+    "dlls/ws2_32/socket.c:1673",
+    "dlls/ws2_32/socket.c:1745",
+    "dlls/ws2_32/socket.c:3151"
+   ],
+   "signature": "static BOOL socket_list_find( SOCKET socket )",
+   "code": "static BOOL socket_list_find( SOCKET socket )\n{\n    unsigned int i;\n\n    if (!socket) return FALSE;\n\n    EnterCriticalSection( &cs_socket_list );\n    for (i = 0; i < socket_list_size; ++i)\n    {\n        if (socket_list[i] == socket)\n        {\n            LeaveCriticalSection( &cs_socket_list );\n            return TRUE;\n        }\n    }\n    LeaveCriticalSection( &cs_socket_list );\n    return FALSE;\n}"
+  },
+  {
+   "name": "NtStatusToWSAError",
+   "file": "dlls/ws2_32/socket.c",
+   "start_line": 593,
+   "end_line": 675,
+   "static": true,
+   "called_from": [
+    "WSAGetOverlappedResult"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ws2_32/socket.c:864",
+    "dlls/ws2_32/socket.c:921",
+    "dlls/ws2_32/socket.c:986",
+    "dlls/ws2_32/socket.c:1040",
+    "dlls/ws2_32/socket.c:1075"
+   ],
+   "signature": "static DWORD NtStatusToWSAError( NTSTATUS status )",
+   "code": "static DWORD NtStatusToWSAError( NTSTATUS status )\n{\n    static const struct\n    {\n        NTSTATUS status;\n        DWORD error;\n    }\n    errors[] =\n    {\n        {STATUS_PENDING,                    ERROR_IO_PENDING},\n\n        {STATUS_BUFFER_OVERFLOW,            WSAEMSGSIZE},\n\n        {STATUS_NOT_IMPLEMENTED,            WSAEOPNOTSUPP},\n        {STATUS_ACCESS_VIOLATION,           WSAEFAULT},\n        {STATUS_PAGEFILE_QUOTA,             WSAENOBUFS},\n        {STATUS_INVALID_HANDLE,             WSAENOTSOCK},\n        {STATUS_NO_SUCH_DEVICE,             WSAENETDOWN},\n        {STATUS_NO_SUCH_FILE,               WSAENETDOWN},\n        {STATUS_NO_MEMORY,                  WSAENOBUFS},\n        {STATUS_CONFLICTING_ADDRESSES,      WSAENOBUFS},\n        {STATUS_ACCESS_DENIED,              WSAEACCES},\n        {STATUS_BUFFER_TOO_SMALL,           WSAEFAULT},\n        {STATUS_OBJECT_TYPE_MISMATCH,       WSAENOTSOCK},\n        {STATUS_OBJECT_NAME_NOT_FOUND,      WSAENETDOWN},\n        {STATUS_OBJECT_PATH_NOT_FOUND,      WSAENETDOWN},\n        {STATUS_SHARING_VIOLATION,          WSAEADDRINUSE},\n        {STATUS_QUOTA_EXCEEDED,             WSAENOBUFS},\n        {STATUS_TOO_MANY_PAGING_FILES,      WSAENOBUFS},\n        {STATUS_INSUFFICIENT_RESOURCES,     WSAENOBUFS},\n        {STATUS_WORKING_SET_QUOTA,          WSAENOBUFS},\n        {STATUS_DEVICE_NOT_READY,           WSAEWOULDBLOCK},\n        {STATUS_PIPE_DISCONNECTED,          WSAESHUTDOWN},\n        {STATUS_IO_TIMEOUT,                 WSAETIMEDOUT},\n        {STATUS_NOT_SUPPORTED,              WSAEOPNOTSUPP},\n        {STATUS_REMOTE_NOT_LISTENING,       WSAECONNREFUSED},\n        {STATUS_BAD_NETWORK_PATH,           WSAENETUNREACH},\n        {STATUS_NETWORK_BUSY,               WSAENETDOWN},\n        {STATUS_INVALID_NETWORK_RESPONSE,   WSAENETDOWN},\n        {STATUS_UNEXPECTED_NETWORK_ERROR,   WSAENETDOWN},\n        {STATUS_REQUEST_NOT_ACCEPTED,       WSAEWOULDBLOCK},\n        {STATUS_CANCELLED,                  ERROR_OPERATION_ABORTED},\n        {STATUS_COMMITMENT_LIMIT,           WSAENOBUFS},\n        {STATUS_LOCAL_DISCONNECT,           WSAECONNABORTED},\n        {STATUS_REMOTE_DISCONNECT,          WSAECONNRESET},\n        {STATUS_REMOTE_RESOURCES,           WSAENOBUFS},\n        {STATUS_LINK_FAILED,                WSAECONNRESET},\n        {STATUS_LINK_TIMEOUT,               WSAETIMEDOUT},\n        {STATUS_INVALID_CONNECTION,         WSAENOTCONN},\n        {STATUS_INVALID_ADDRESS,            WSAEADDRNOTAVAIL},\n        {STATUS_INVALID_BUFFER_SIZE,        WSAEMSGSIZE},\n        {STATUS_INVALID_ADDRESS_COMPONENT,  WSAEADDRNOTAVAIL},\n        {STATUS_TOO_MANY_ADDRESSES,         WSAENOBUFS},\n        {STATUS_ADDRESS_ALREADY_EXISTS,     WSAEADDRINUSE},\n        {STATUS_CONNECTION_DISCONNECTED,    WSAECONNRESET},\n        {STATUS_CONNECTION_RESET,           WSAECONNRESET},\n        {STATUS_TRANSACTION_ABORTED,        WSAECONNABORTED},\n        {STATUS_CONNECTION_REFUSED,         WSAECONNREFUSED},\n        {STATUS_GRACEFUL_DISCONNECT,        WSAEDISCON},\n        {STATUS_CONNECTION_ACTIVE,          WSAEISCONN},\n        {STATUS_NETWORK_UNREACHABLE,        WSAENETUNREACH},\n        {STATUS_HOST_UNREACHABLE,           WSAEHOSTUNREACH},\n        {STATUS_PROTOCOL_UNREACHABLE,       WSAENETUNREACH},\n        {STATUS_PORT_UNREACHABLE,           WSAECONNRESET},\n        {STATUS_REQUEST_ABORTED,            WSAEINTR},\n        {STATUS_CONNECTION_ABORTED,         WSAECONNABORTED},\n        {STATUS_DATATYPE_MISALIGNMENT_ERROR,WSAEFAULT},\n        {STATUS_HOST_DOWN,                  WSAEHOSTDOWN},\n        {0x80070000 | ERROR_IO_INCOMPLETE,  ERROR_IO_INCOMPLETE},\n        {0xc0010000 | ERROR_IO_INCOMPLETE,  ERROR_IO_INCOMPLETE},\n        {0xc0070000 | ERROR_IO_INCOMPLETE,  ERROR_IO_INCOMPLETE},\n    };\n\n    unsigned int i;\n\n    for (i = 0; i < ARRAY_SIZE(errors); ++i)\n    {\n        if (errors[i].status == status)\n            return errors[i].error;\n    }\n\n    return NT_SUCCESS(status) ? RtlNtStatusToDosErrorNoTeb(status) : WSAEINVAL;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "struct (unnamed at /w/wine/dlls/ws2_32/socket.c:595:18)",
+    "kind": "struct_decl",
+    "start_line": 595,
+    "end_line": 599,
+    "code": "    static const struct\n    {\n        NTSTATUS status;\n        DWORD error;\n    }"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 33,
+    "end_line": 33,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(winsock);"
+   },
+   {
+    "name": "cs_socket_list",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 187,
+    "end_line": 187,
+    "code": "DECLARE_CRITICAL_SECTION(cs_socket_list);"
+   },
+   {
+    "name": "socket_list",
+    "type": "SOCKET *",
+    "static": true,
+    "start_line": 189,
+    "end_line": 189,
+    "code": "static SOCKET *socket_list;"
+   },
+   {
+    "name": "socket_list_size",
+    "type": "unsigned int",
+    "static": true,
+    "start_line": 190,
+    "end_line": 190,
+    "code": "static unsigned int socket_list_size;"
+   }
+  ],
+  "macros": [
+   {
+    "name": "SOCKET2HANDLE",
+    "start_line": 493,
+    "end_line": 493,
+    "code": "#define SOCKET2HANDLE(s) ((HANDLE)(s))"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "RtlNtStatusToDosErrorNoTeb",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:46"
+    ]
+   },
+   {
+    "name": "WaitForSingleObject",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/sync.c:395"
+    ]
+   }
+  ],
+  "header_inline": [
+   "ReadAcquire",
+   "SetLastError",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ws2_32.WSAGetOverlappedResult",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "Windows Sockets",
+   "header": "winsock2.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 51,
+   "body": 48,
+   "code": 26
+  },
+  "cyclomatic": 9,
+  "return_type": "BOOL",
+  "n_params": 5,
+  "tests": {
+   "n_tests_own": 4,
+   "n_tests": 4,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ws2_32/tests/sock.c::sync_recv",
+    "dlls/ws2_32/tests/sock.c::test_TransmitFile",
+    "dlls/ws2_32/tests/sock.c::test_WSAGetOverlappedResult",
+    "dlls/ws2_32/tests/sock.c::test_ip_pktinfo"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winsock2/nf-winsock2-wsagetoverlappedresult",
+   "source": "win32",
+   "description": "The WSAGetOverlappedResult function retrieves the results of an overlapped operation on the specified socket.",
+   "min_windows": "Windows 8.1, Windows Vista [desktop apps \\| UWP apps]",
+   "documented_dll": "Ws2_32.dll"
+  },
+  "exports": [
+   "ws2_32.WSAGetOverlappedResult"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2001-10-08",
+   "median_date": "2007-06-04",
+   "last_date": "2022-11-14",
+   "code_lines": 27,
+   "pair": "bluetoothapis.BluetoothIsConnectable",
+   "rank": 1,
+   "distance": 0.378
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "bluetoothapis.BluetoothIsConnectable",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-11-14",
+  "partner_rank": 1,
+  "distance": 0.378
+ }
+}

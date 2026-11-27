@@ -1,0 +1,220 @@
+{
+ "id": "0013",
+ "function": {
+  "name": "BluetoothRemoveDevice",
+  "export_name": "BluetoothRemoveDevice",
+  "module": "bluetoothapis",
+  "source_module": "bluetoothapis",
+  "exported_by": [
+   "bluetoothapis",
+   "bthprops.cpl",
+   "irprops.cpl"
+  ],
+  "side": "PE",
+  "file": "dlls/bluetoothapis/main.c",
+  "start_line": 1166,
+  "end_line": 1196,
+  "body_lines": 28,
+  "signature": "DWORD WINAPI BluetoothRemoveDevice( BLUETOOTH_ADDRESS *addr )",
+  "header_comment": null,
+  "code": "DWORD WINAPI BluetoothRemoveDevice( BLUETOOTH_ADDRESS *addr )\n{\n    BLUETOOTH_FIND_RADIO_PARAMS find_params = {0};\n    HBLUETOOTH_RADIO_FIND radio_find;\n    const static BYTE addr_zero[6];\n    BOOL success = FALSE;\n    HANDLE radio;\n    DWORD ret;\n\n    TRACE( \"(%s)\\n\", debugstr_addr( (BYTE *)addr ) );\n\n    if (!memcmp( addr_zero, &addr->rgBytes, sizeof( addr_zero ) ))\n        return ERROR_NOT_FOUND;\n\n    find_params.dwSize = sizeof( find_params );\n    radio_find = BluetoothFindFirstRadio( &find_params, &radio );\n    if (!radio_find)\n    {\n        ret = GetLastError();\n        return ret == ERROR_NO_MORE_ITEMS ? ERROR_NOT_FOUND : ret;\n    }\n\n    do {\n        DWORD bytes;\n        success |= DeviceIoControl( radio, IOCTL_WINEBTH_RADIO_REMOVE_DEVICE, addr, sizeof( *addr ), NULL, 0, &bytes, NULL );\n        CloseHandle( radio );\n    } while (BluetoothFindNextRadio( radio_find, &radio ));\n\n    BluetoothFindRadioClose( radio_find );\n    return success ? ERROR_SUCCESS : ERROR_NOT_FOUND;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <winternl.h>",
+   "#include <windef.h>",
+   "#include <winbase.h>",
+   "#include <winuser.h>",
+   "#include <winreg.h>",
+   "#include <winnls.h>",
+   "#include \"bthsdpdef.h\"",
+   "#include \"cfgmgr32.h\"",
+   "#include \"setupapi.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"initguid.h\"",
+   "#include \"bluetoothapis.h\"",
+   "#include \"bthledef.h\"",
+   "#include \"bthdef.h\"",
+   "#include \"bthioctl.h\"",
+   "#include \"wine/winebth.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"resource.h\""
+  ],
+  "resolution": [
+   "bluetoothapis!BluetoothRemoveDevice [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/bluetoothapis/tests/device.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 2
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "bluetoothapis",
+   "path": "sdk-api-src/content/bluetoothapis/nf-bluetoothapis-bluetoothremovedevice.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothremovedevice",
+   "documented_name": "bluetoothremovedevice",
+   "file": "docs/0013_sdk-api_nf-bluetoothapis-bluetoothremovedevice.md",
+   "text": "---\nUID: NF:bluetoothapis.BluetoothRemoveDevice\ntitle: BluetoothRemoveDevice function (bluetoothapis.h)\ndescription: Removes authentication between a Bluetooth device and the computer and clears cached service information for the device.\nhelpviewer_keywords: [\"BluetoothRemoveDevice\",\"BluetoothRemoveDevice function [Bluetooth]\",\"bluetooth.bluetoothremovedevice\",\"bluetoothapis/BluetoothRemoveDevice\"]\nold-location: bluetooth\\bluetoothremovedevice.htm\ntech.root: bluetooth\nms.assetid: dd4f6468-ccc2-4072-95c5-97553308ae47\nms.date: 12/05/2018\nms.keywords: BluetoothRemoveDevice, BluetoothRemoveDevice function [Bluetooth], bluetooth.bluetoothremovedevice, bluetoothapis/BluetoothRemoveDevice\nreq.header: bluetoothapis.h\nreq.include-header: Bthsdpdef.h, BluetoothAPIs.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista, Windows XP with SP2 [desktop apps only]\nreq.target-min-winversvr: None supported\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Bthprops.lib\nreq.dll: bthprops.cpl\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - BluetoothRemoveDevice\n - bluetoothapis/BluetoothRemoveDevice\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - bthprops.cpl\n - BluetoothAPIs.dll\n - Ext-MS-Win-Bluetooth-APIs-l1-1-0.dll\napi_name:\n - BluetoothRemoveDevice\n---\n\n# BluetoothRemoveDevice function\n\n\n## -description\n\nThe <b>BluetoothRemoveDevice</b> function removes authentication between a Bluetooth device and the computer and clears cached service information for the device.\n\n## -parameters\n\n### -param pAddress\n\nA pointer to the address of the Bluetooth device to be removed.\n\n## -returns\n\nReturns <b>ERROR_SUCCESS</b> upon successful removal of the Bluetooth device. Returns <b>ERROR_NOT_FOUND</b> if the device was not found.\n\n## -remarks\n\nThe <b>BluetoothRemoveDevice</b> function fails if the device indicated by <i>pAddress</i> is not a remembered device.\n\n## -see-also\n\n<a href=\"/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_device_info_struct\">BLUETOOTH_DEVICE_INFO</a>\n\n\n\n<a href=\"/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_device_search_params\">BLUETOOTH_DEVICE_SEARCH_PARAMS</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothdisplaydeviceproperties\">BluetoothDisplayDeviceProperties</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothfinddeviceclose\">BluetoothFindDeviceClose</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothfindfirstdevice\">BluetoothFindFirstDevice</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothfindnextdevice\">BluetoothFindNextDevice</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothgetdeviceinfo\">BluetoothGetDeviceInfo</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "debugstr_addr",
+   "file": "dlls/bluetoothapis/main.c",
+   "start_line": 75,
+   "end_line": 81,
+   "static": true,
+   "called_from": [
+    "BluetoothRemoveDevice"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bluetoothapis/main.c:692",
+    "dlls/bluetoothapis/main.c:935",
+    "dlls/bluetoothapis/main.c:998",
+    "dlls/bluetoothapis/main.c:1091"
+   ],
+   "signature": "static const char *debugstr_addr( const BYTE *addr )",
+   "code": "static const char *debugstr_addr( const BYTE *addr )\n{\n    if (!addr)\n        return wine_dbg_sprintf( \"(null)\" );\n\n    return wine_dbg_sprintf( \"%02x:%02x:%02x:%02x:%02x:%02x\", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5] );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 48,
+    "end_line": 48,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(bluetoothapis);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "BluetoothFindFirstRadio",
+    "impl": [
+     "dlls/bluetoothapis/main.c:246"
+    ]
+   },
+   {
+    "name": "BluetoothFindNextRadio",
+    "impl": [
+     "dlls/bluetoothapis/main.c:335"
+    ]
+   },
+   {
+    "name": "BluetoothFindRadioClose",
+    "impl": [
+     "dlls/bluetoothapis/main.c:293"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CloseHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "DeviceIoControl",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:4379"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetLastError",
+   "wine_dbg_log",
+   "wine_dbg_sprintf"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "bluetoothapis.BluetoothRemoveDevice",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "Wireless networking",
+   "header": "bluetoothapis.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 31,
+   "body": 30,
+   "code": 21
+  },
+  "cyclomatic": 6,
+  "return_type": "DWORD",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 2,
+   "n_tests": 2,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/bluetoothapis/tests/device.c::test_BluetoothRemoveDevice",
+    "dlls/bluetoothapis/tests/device.c::test_radio_BluetoothRemoveDevice"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothremovedevice",
+   "source": "win32",
+   "description": "Removes authentication between a Bluetooth device and the computer and clears cached service information for the device.",
+   "min_windows": "Windows Vista, Windows XP with SP2 [desktop apps only]",
+   "documented_dll": "bthprops.cpl"
+  },
+  "exports": [
+   "bluetoothapis.BluetoothRemoveDevice",
+   "bthprops.cpl.BluetoothRemoveDevice",
+   "irprops.cpl.BluetoothRemoveDevice"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 1.0,
+   "first_date": "2025-03-18",
+   "median_date": "2025-04-17",
+   "last_date": "2025-04-17",
+   "code_lines": 22
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "iphlpapi.ConvertInterfaceNameToLuidW",
+  "share_after_cutoff": 1.0,
+  "last_date": "2025-04-17"
+ }
+}

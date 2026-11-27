@@ -1,0 +1,673 @@
+{
+ "id": "0083",
+ "function": {
+  "name": "GdipMeasureString",
+  "export_name": "GdipMeasureString",
+  "module": "gdiplus",
+  "source_module": "gdiplus",
+  "exported_by": [
+   "gdiplus"
+  ],
+  "side": "PE",
+  "file": "dlls/gdiplus/graphics.c",
+  "start_line": 6265,
+  "end_line": 6430,
+  "body_lines": 163,
+  "signature": "GpStatus WINGDIPAPI GdipMeasureString(GpGraphics *graphics, GDIPCONST WCHAR *string, INT length, GDIPCONST GpFont *font, GDIPCONST RectF *rect, GDIPCONST GpStringFormat *format, RectF *bounds, INT *codepointsfitted, INT *linesfilled)",
+  "header_comment": "/* Find the smallest rectangle that bounds the text when it is printed in rect\n * according to the format options listed in format. If rect has 0 width and\n * height, then just find the smallest rectangle that bounds the text when it's\n * printed at location (rect->X, rect-Y). */",
+  "code": "GpStatus WINGDIPAPI GdipMeasureString(GpGraphics *graphics,\n    GDIPCONST WCHAR *string, INT length, GDIPCONST GpFont *font,\n    GDIPCONST RectF *rect, GDIPCONST GpStringFormat *format, RectF *bounds,\n    INT *codepointsfitted, INT *linesfilled)\n{\n    GpStatus status;\n    HFONT oldfont, gdifont;\n    struct measure_string_args args;\n    HDC temp_hdc=NULL, hdc;\n    RectF scaled_rect;\n    REAL margin_x;\n    INT lines, glyphs;\n    BOOL vertical = format != NULL ? !!(format->attr & StringFormatFlagsDirectionVertical) : FALSE;\n\n    TRACE(\"(%p, %s, %i, %p, %s, %p, %p, %p, %p)\\n\", graphics,\n        debugstr_wn(string, length), length, font, debugstr_rectf(rect), format,\n        bounds, codepointsfitted, linesfilled);\n\n    if(!graphics || !string || !font || !rect || !bounds)\n        return InvalidParameter;\n\n    if(!has_gdi_dc(graphics))\n    {\n        hdc = temp_hdc = CreateCompatibleDC(0);\n        if (!temp_hdc) return OutOfMemory;\n    }\n    else\n    {\n        status = gdi_dc_acquire(graphics, &hdc);\n        if (status != Ok)\n            return status;\n    }\n\n    if(linesfilled) *linesfilled = 0;\n    if(codepointsfitted) *codepointsfitted = 0;\n\n    if(format)\n        TRACE(\"may be ignoring some format flags: attr %x\\n\", format->attr);\n\n    transform_properties(graphics, NULL, TRUE, &args.rel_width, &args.rel_height, NULL);\n    margin_x = (format && format->generic_typographic) ? 0.0 : font->emSize / 6.0;\n    margin_x *= units_scale(font->unit, graphics->unit, vertical ? graphics->yres : graphics->xres, graphics->printer_display);\n\n    scaled_rect.Width = rect->Width * args.rel_width;\n    scaled_rect.Height = rect->Height * args.rel_height;\n    if (vertical)\n    {\n        scaled_rect.X = rect->X * args.rel_width;\n        scaled_rect.Y = (rect->Y + margin_x) * args.rel_height;\n        if (scaled_rect.Height >= 0.5)\n        {\n            scaled_rect.Height -= margin_x * 2.0 * args.rel_height;\n            if (scaled_rect.Height < 0.5) /* doesn't fit */\n                goto end;\n        }\n    }\n    else\n    {\n        scaled_rect.X = (rect->X + margin_x) * args.rel_width;\n        scaled_rect.Y = rect->Y * args.rel_height;\n        if (scaled_rect.Width >= 0.5)\n        {\n            scaled_rect.Width -= margin_x * 2.0 * args.rel_width;\n            if (scaled_rect.Width < 0.5) /* doesn't fit */\n                goto end;\n        }\n    }\n\n    if (scaled_rect.Width >= 1 << 23) scaled_rect.Width = 1 << 23;\n    if (scaled_rect.Height >= 1 << 23) scaled_rect.Height = 1 << 23;\n\n    get_font_hfont(graphics, font, vertical, format, &gdifont, NULL, NULL);\n    oldfont = SelectObject(hdc, gdifont);\n\n    set_rect(bounds, rect->X, rect->Y, 0.0f, 0.0f);\n\n    args.bounds = bounds;\n    args.codepointsfitted = &glyphs;\n    args.linesfilled = &lines;\n    args.vertical = vertical;\n    lines = glyphs = 0;\n\n    gdi_transform_acquire(graphics);\n\n    gdip_format_string(graphics, hdc, string, length, font, &scaled_rect, format, TRUE,\n        measure_string_callback, &args);\n\n    gdi_transform_release(graphics);\n\n    if (linesfilled) *linesfilled = lines;\n    if (codepointsfitted) *codepointsfitted = glyphs;\n\n    if (lines)\n    {\n        if (vertical)\n            bounds->Height += margin_x * 2.0;\n        else\n            bounds->Width += margin_x * 2.0;\n    }\n\n    if (lines && format)\n    {\n        if (vertical)\n        {\n            switch (format->align)\n            {\n            case StringAlignmentCenter:\n                bounds->Y = rect->Y + (rect->Height - bounds->Height) / 2.0f;\n                break;\n            case StringAlignmentFar:\n                bounds->Y = rect->Y + rect->Height - bounds->Height;\n                break;\n            default:\n                break;\n            }\n\n            switch (format->line_align)\n            {\n            case StringAlignmentCenter:\n                bounds->X = rect->X + (rect->Width - bounds->Width) / 2.0f;\n                break;\n            case StringAlignmentFar:\n                bounds->X = rect->X + rect->Width - bounds->Width;\n                break;\n            default:\n                break;\n            }\n        }\n        else\n        {\n            switch (format->align)\n            {\n            case StringAlignmentCenter:\n                bounds->X = rect->X + (rect->Width - bounds->Width) / 2.0f;\n                break;\n            case StringAlignmentFar:\n                bounds->X = rect->X + rect->Width - bounds->Width;\n                break;\n            default:\n                break;\n            }\n\n            switch (format->line_align)\n            {\n            case StringAlignmentCenter:\n                bounds->Y = rect->Y + (rect->Height - bounds->Height) / 2.0f;\n                break;\n            case StringAlignmentFar:\n                bounds->Y = rect->Y + rect->Height - bounds->Height;\n                break;\n            default:\n                break;\n            }\n        }\n    }\n\n    SelectObject(hdc, oldfont);\n    DeleteObject(gdifont);\nend:\n    if (temp_hdc)\n        DeleteDC(temp_hdc);\n    else\n        gdi_dc_release(graphics, hdc);\n\n    return Ok;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <math.h>",
+   "#include <limits.h>",
+   "#include <assert.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winuser.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"objbase.h\"",
+   "#include \"ocidl.h\"",
+   "#include \"olectl.h\"",
+   "#include \"ole2.h\"",
+   "#include \"winreg.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"mlang.h\"",
+   "#include \"gdiplus.h\"",
+   "#include \"gdiplus_private.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\""
+  ],
+  "resolution": [
+   "gdiplus!GdipMeasureString [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdiplus/tests/font.c",
+   "dlls/gdiplus/tests/graphics.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 7
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "gdiplusflat",
+   "path": "desktop-src/gdiplus/-gdiplus-text-flat.md",
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-text-flat",
+   "documented_name": "gdipmeasurestring",
+   "excerpt": {
+    "note": "GDI+ flat API page: one table row per function; only the page introduction, the table header and this function's row are kept",
+    "full_page_chars": 6958
+   },
+   "file": "docs/0083_win32_-gdiplus-text-flat.md",
+   "text": "---\ndescription: Windows GDI+ exposes a flat API that consists of about 600 functions. These flat API functions are wrapped by the Graphics Text C++ class.\nms.assetid: 70d35c08-08d9-46a6-a6df-76d989551866\ntitle: Text Functions\nms.topic: reference\nms.date: 05/31/2018\n---\n\n# Text Functions\n\nWindows GDI+ exposes a flat API that consists of about 600 functions, which are implemented in Gdiplus.dll and declared in Gdiplusflat.h. The functions in the GDI+ flat API are wrapped by a collection of about 40 C++ classes. It is recommended that you do not directly call the functions in the flat API. Whenever you make calls to GDI+, you should do so by calling the methods and functions provided by the C++ wrappers. Microsoft Product Support Services will not provide support for code that calls the flat API directly. For more information on using these wrapper methods, see [GDI+ Flat API](-gdiplus-flatapi-flat.md). The following flat API functions are wrapped by the [**Graphics**](/windows/desktop/api/gdiplusgraphics/nl-gdiplusgraphics-graphics) Text C++ class.\n\n## Text Functions and Corresponding Wrapper Methods\n\n\n\n| Flat function                                                                                                                                                                                                                                                                   | Wrapper method                                                                                                                                                                                                                                                                                                                                                                        | Remarks                                                                                                                                                                                                           |\n|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|\n| GpStatus WINGDIPAPI GdipMeasureString( GpGraphics \\*graphics, GDIPCONST WCHAR \\*string, INT length, GDIPCONST GpFont \\*font, GDIPCONST RectF \\*layoutRect, GDIPCONST GpStringFormat \\*stringFormat, RectF \\*boundingBox, INT \\*codepointsFitted, INT \\*linesFilled )<br/> | [**Status Graphics::MeasureString( IN const WCHAR \\*string, IN INT length, IN const Font \\*font, IN const RectF &layoutRect, IN const StringFormat \\*stringFormat, OUT RectF \\*boundingBox, OUT INT \\*codepointsFitted = 0, OUT INT \\*linesFilled = 0 ) const**](/previous-versions//ms535831(v=vs.85))<br/> | Measures the extent of the string in the specified font, format, and layout rectangle.                                                                                                                            |\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "gdi_dc_acquire",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 50,
+   "end_line": 69,
+   "static": false,
+   "called_from": [
+    "GdipMeasureString",
+    "gdi_transform_acquire"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:384",
+    "dlls/gdiplus/graphics.c:698",
+    "dlls/gdiplus/graphics.c:1259",
+    "dlls/gdiplus/graphics.c:1789",
+    "dlls/gdiplus/graphics.c:2192"
+   ],
+   "signature": "GpStatus gdi_dc_acquire(GpGraphics *graphics, HDC *hdc)",
+   "code": "GpStatus gdi_dc_acquire(GpGraphics *graphics, HDC *hdc)\n{\n    if (graphics->hdc != NULL)\n    {\n        *hdc = graphics->hdc;\n        graphics->hdc_refs++;\n        return Ok;\n    }\n    else if (graphics->owndc)\n    {\n        *hdc = graphics->hdc = GetDC(graphics->hwnd);\n        if (!graphics->hdc)\n            return OutOfMemory;\n        graphics->hdc_refs++;\n        return Ok;\n    }\n\n    *hdc = NULL;\n    return InvalidParameter;\n}"
+  },
+  {
+   "name": "transform_properties",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 6008,
+   "end_line": 6029,
+   "static": false,
+   "called_from": [
+    "GdipMeasureString",
+    "get_font_hfont"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:6155",
+    "dlls/gdiplus/graphics.c:6589",
+    "dlls/gdiplus/font.c:484"
+   ],
+   "signature": "void transform_properties(GpGraphics *graphics, GDIPCONST GpMatrix *matrix, BOOL graphics_transform, REAL *rel_width, REAL *rel_height, REAL *angle)",
+   "code": "void transform_properties(GpGraphics *graphics, GDIPCONST GpMatrix *matrix, BOOL graphics_transform,\n                          REAL *rel_width, REAL *rel_height, REAL *angle)\n{\n    GpPointF pt[3] = {{0.0f, 0.0f}, {1.0f, 0.0f}, {0.0f, 1.0f}};\n    GpMatrix xform;\n\n    if (matrix)\n    {\n        xform = *matrix;\n        GdipTransformMatrixPoints(&xform, pt, 3);\n    }\n\n    if (graphics_transform)\n        gdip_transform_points(graphics, WineCoordinateSpaceGdiDevice, CoordinateSpaceWorld, pt, 3);\n\n    if (rel_width)\n        *rel_width = hypotf(pt[1].Y - pt[0].Y, pt[1].X - pt[0].X);\n    if (rel_height)\n        *rel_height = hypotf(pt[2].Y - pt[0].Y, pt[2].X - pt[0].X);\n    if (angle)\n        *angle = -gdiplus_atan2((pt[1].Y - pt[0].Y), (pt[1].X - pt[0].X));\n}"
+  },
+  {
+   "name": "get_font_hfont",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 2424,
+   "end_line": 2484,
+   "static": false,
+   "called_from": [
+    "GdipMeasureString",
+    "font_link_get_text_extent_point",
+    "generate_font_link_info"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:6185",
+    "dlls/gdiplus/graphics.c:6637",
+    "dlls/gdiplus/graphics.c:7994",
+    "dlls/gdiplus/graphics.c:8151",
+    "dlls/gdiplus/graphics.c:8258"
+   ],
+   "signature": "void get_font_hfont(GpGraphics *graphics, GDIPCONST GpFont *font, BOOL vertical, GDIPCONST GpStringFormat *format, HFONT *hfont, LOGFONTW *lfw_return, GDIPCONST GpMatrix *matrix)",
+   "code": "void get_font_hfont(GpGraphics *graphics, GDIPCONST GpFont *font, BOOL vertical,\n                           GDIPCONST GpStringFormat *format, HFONT *hfont,\n                           LOGFONTW *lfw_return, GDIPCONST GpMatrix *matrix)\n{\n    HDC hdc = CreateCompatibleDC(0);\n    REAL angle, rel_width, rel_height, font_height;\n    LOGFONTW lfw;\n    HFONT unscaled_font;\n    TEXTMETRICW textmet;\n    GDIPCONST GpMatrix vert_matrix = {{0,1,-1,0,0,0}}, identity = {{1,0,0,1,0,0}};\n    GpMatrix text_matrix;\n\n    if (font->unit == UnitPixel || font->unit == UnitWorld)\n        font_height = font->emSize;\n    else\n    {\n        REAL unit_scale, res;\n\n        res = (graphics->unit == UnitDisplay || graphics->unit == UnitPixel) ? graphics->xres : graphics->yres;\n        unit_scale = units_scale(font->unit, graphics->unit, res, graphics->printer_display);\n\n        font_height = font->emSize * unit_scale;\n    }\n\n    if (!matrix)\n        matrix = &identity;\n\n    if (vertical)\n    {\n        text_matrix = vert_matrix;\n        GdipMultiplyMatrix(&text_matrix, matrix, MatrixOrderPrepend);\n    }\n    else\n        text_matrix = *matrix;\n\n    transform_properties(graphics, &text_matrix, TRUE, &rel_width, &rel_height, &angle);\n    /* If the font unit is not pixels scaling should not be applied */\n    if (font->unit != UnitPixel && font->unit != UnitWorld)\n    {\n        rel_width /= graphics->scale;\n        rel_height /= graphics->scale;\n    }\n\n    get_log_fontW(font, vertical, graphics, &lfw);\n    lfw.lfHeight = -gdip_round(font_height * rel_height);\n    unscaled_font = CreateFontIndirectW(&lfw);\n\n    SelectObject(hdc, unscaled_font);\n    GetTextMetricsW(hdc, &textmet);\n\n    lfw.lfWidth = gdip_round(textmet.tmAveCharWidth * rel_width / rel_height);\n    lfw.lfEscapement = lfw.lfOrientation = gdip_round((angle / M_PI) * 1800.0);\n\n    *hfont = CreateFontIndirectW(&lfw);\n\n    if (lfw_return)\n        *lfw_return = lfw;\n\n    DeleteDC(hdc);\n    DeleteObject(unscaled_font);\n}"
+  },
+  {
+   "name": "gdi_transform_acquire",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 7733,
+   "end_line": 7753,
+   "static": false,
+   "called_from": [
+    "GdipMeasureString"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:3479",
+    "dlls/gdiplus/graphics.c:3550",
+    "dlls/gdiplus/graphics.c:3790",
+    "dlls/gdiplus/graphics.c:4168",
+    "dlls/gdiplus/graphics.c:4553"
+   ],
+   "signature": "GpStatus gdi_transform_acquire(GpGraphics *graphics)",
+   "code": "GpStatus gdi_transform_acquire(GpGraphics *graphics)\n{\n    if (graphics->gdi_transform_acquire_count == 0 && has_gdi_dc(graphics))\n    {\n        HDC hdc;\n        GpStatus stat;\n\n        stat = gdi_dc_acquire(graphics, &hdc);\n        if (stat != Ok)\n            return stat;\n\n        graphics->gdi_transform_save = SaveDC(hdc);\n        ModifyWorldTransform(hdc, NULL, MWT_IDENTITY);\n        SetGraphicsMode(hdc, GM_COMPATIBLE);\n        SetMapMode(hdc, MM_TEXT);\n        SetWindowOrgEx(hdc, 0, 0, NULL);\n        SetViewportOrgEx(hdc, 0, 0, NULL);\n    }\n    graphics->gdi_transform_acquire_count++;\n    return Ok;\n}"
+  },
+  {
+   "name": "gdip_format_string",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 5726,
+   "end_line": 6006,
+   "static": false,
+   "called_from": [
+    "GdipMeasureString"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:6205",
+    "dlls/gdiplus/graphics.c:6659",
+    "dlls/gdiplus/graphicspath.c:1223",
+    "dlls/gdiplus/gdiplus_private.h:702"
+   ],
+   "signature": "GpStatus gdip_format_string(GpGraphics *graphics, HDC hdc, GDIPCONST WCHAR *string, INT length, GDIPCONST GpFont *font, GDIPCONST RectF *rect, GDIPCONST GpStringFormat *format, int ignore_empty_clip, gdip_format_string_callback callback, void *user_data)",
+   "code": "GpStatus gdip_format_string(GpGraphics *graphics, HDC hdc,\n    GDIPCONST WCHAR *string, INT length, GDIPCONST GpFont *font,\n    GDIPCONST RectF *rect, GDIPCONST GpStringFormat *format, int ignore_empty_clip,\n    gdip_format_string_callback callback, void *user_data)\n{\n    WCHAR* stringdup;\n    int sum = 0, height = 0, fit, fitcpy, i, j, lret, nwidth,\n        nheight, lineend, lineno = 0;\n    RectF bounds;\n    StringAlignment halign;\n    GpStatus stat = Ok;\n    SIZE size;\n    HotkeyPrefix hkprefix;\n    INT *hotkeyprefix_offsets=NULL;\n    INT hotkeyprefix_count=0;\n    INT hotkeyprefix_pos=0, hotkeyprefix_end_pos=0;\n    BOOL seen_prefix = FALSE, unixstyle_newline = TRUE;\n    struct gdip_format_string_info info;\n    BOOL vertical = format != NULL ? !!(format->attr & StringFormatFlagsDirectionVertical) : FALSE;\n\n    info.graphics = graphics;\n    info.hdc = hdc;\n    info.rect = rect;\n    info.bounds = &bounds;\n    info.user_data = user_data;\n\n    if(length == -1) length = lstrlenW(string);\n\n    stringdup = calloc(length + 1, sizeof(WCHAR));\n    if(!stringdup) return OutOfMemory;\n\n    info.string = stringdup;\n\n    if (!format)\n        format = &default_drawstring_format;\n\n    info.format = format;\n\n    nwidth = (int)(rect->Width + 0.005f);\n    nheight = (int)(rect->Height + 0.005f);\n    if (ignore_empty_clip)\n    {\n        if (!nwidth) nwidth = INT_MAX;\n        if (!nheight) nheight = INT_MAX;\n    }\n\n    hkprefix = format->hkprefix;\n\n    if (hkprefix == HotkeyPrefixShow)\n    {\n        for (i=0; i<length; i++)\n        {\n            if (string[i] == '&')\n                hotkeyprefix_count++;\n        }\n    }\n\n    if (hotkeyprefix_count)\n    {\n        hotkeyprefix_offsets = calloc(hotkeyprefix_count, sizeof(INT));\n        if (!hotkeyprefix_offsets)\n        {\n            free(stringdup);\n            return OutOfMemory;\n        }\n    }\n\n    hotkeyprefix_count = 0;\n\n    for(i = 0, j = 0; i < length; i++){\n\n        /* FIXME: tabs should be handled using tabstops from stringformat */\n        if (string[i] == '\\t')\n            continue;\n\n        if (seen_prefix && hkprefix == HotkeyPrefixShow && string[i] != '&')\n            hotkeyprefix_offsets[hotkeyprefix_count++] = j;\n        else if (!seen_prefix && hkprefix != HotkeyPrefixNone && string[i] == '&')\n        {\n            seen_prefix = TRUE;\n            continue;\n        }\n\n        seen_prefix = FALSE;\n\n        stringdup[j] = string[i];\n        j++;\n    }\n\n    length = j;\n\n    halign = format->align;\n\n    generate_font_link_info(&info, length, font);\n\n    while(sum < length){\n        font_link_get_text_extent_point(&info, vertical, sum, length - sum, vertical ? nheight : nwidth, &fit, &size);\n        fitcpy = fit;\n\n        if(fit == 0)\n            break;\n\n        for(lret = 0; lret < fit; lret++) {\n            if(*(stringdup + sum + lret) == '\\n')\n            {\n               unixstyle_newline = TRUE;\n               break;\n            }\n\n            if(*(stringdup + sum + lret) == '\\r' && sum + lret + 1 < length\n               && *(stringdup + sum + lret + 1) == '\\n')\n            {\n               unixstyle_newline = FALSE;\n               break;\n            }\n        }\n\n        /* If no newline found within fit, check position fit for \\n or \\r\\n.\n         * Wine's GetTextExtentExPointW may assign non-zero advance width to\n         * newline characters (rendering them as missing-glyph boxes), causing\n         * them to be excluded from the fit count. When this happens, the\n         * newline is invisible to the scan above, leading to incorrect line\n         * breaking under StringFormatFlagsNoWrap. */\n        if (lret == fit && sum + fit < length)\n        {\n            if (*(stringdup + sum + fit) == '\\n')\n            {\n                unixstyle_newline = TRUE;\n                fitcpy = fit + 1;\n                fit++;\n            }\n            else if (sum + fit + 1 < length &&\n                     *(stringdup + sum + fit) == '\\r' &&\n                     *(stringdup + sum + fit + 1) == '\\n')\n            {\n                unixstyle_newline = FALSE;\n                fitcpy = fit + 2;\n                fit += 2;\n            }\n        }\n\n        /* Line break code (may look strange, but it imitates windows). */\n        if(lret < fit)\n            lineend = fit = lret;    /* this is not an off-by-one error */\n        else if(fit < (length - sum)){\n            if(*(stringdup + sum + fit) == ' ')\n                while(*(stringdup + sum + fit) == ' ')\n                    fit++;\n            else if (!(format->attr & StringFormatFlagsNoWrap))\n                while(*(stringdup + sum + fit - 1) != ' '){\n                    fit--;\n\n                    if(*(stringdup + sum + fit) == '\\t')\n                        break;\n\n                    if(fit == 0){\n                        fit = fitcpy;\n                        break;\n                    }\n                }\n            lineend = fit;\n            while(*(stringdup + sum + lineend - 1) == ' ' ||\n                  *(stringdup + sum + lineend - 1) == '\\t')\n                lineend--;\n        }\n        else\n            lineend = fit;\n\n        font_link_get_text_extent_point(&info, vertical, sum, lineend, vertical ? nheight : nwidth, &j, &size);\n\n        if (vertical)\n            bounds.Height = size.cx;\n        else\n            bounds.Width = size.cx;\n\n        if (vertical)\n        {\n            if(height + size.cy > nwidth)\n            {\n                if (format->attr & StringFormatFlagsLineLimit)\n                    break;\n                bounds.Width = nwidth - height;\n            }\n            else\n                bounds.Width = size.cy;\n        }\n        else\n        {\n            if(height + size.cy > nheight)\n            {\n                if (format->attr & StringFormatFlagsLineLimit)\n                    break;\n                bounds.Height = nheight - height;\n            }\n            else\n                bounds.Height = size.cy;\n        }\n\n        if (vertical)\n            bounds.X = rect->X + height;\n        else\n            bounds.Y = rect->Y + height;\n\n        if (vertical)\n        {\n            switch (halign)\n            {\n            case StringAlignmentNear:\n            default:\n                bounds.Y = rect->Y;\n                break;\n            case StringAlignmentCenter:\n                bounds.Y = rect->Y + (rect->Height/2) - (bounds.Height/2);\n                break;\n            case StringAlignmentFar:\n                bounds.Y = rect->Y + rect->Height - bounds.Height;\n                break;\n            }\n        }\n        else\n        {\n            switch (halign)\n            {\n            case StringAlignmentNear:\n            default:\n                bounds.X = rect->X;\n                break;\n            case StringAlignmentCenter:\n                bounds.X = rect->X + (rect->Width/2) - (bounds.Width/2);\n                break;\n            case StringAlignmentFar:\n                bounds.X = rect->X + rect->Width - bounds.Width;\n                break;\n            }\n        }\n\n        for (hotkeyprefix_end_pos=hotkeyprefix_pos; hotkeyprefix_end_pos<hotkeyprefix_count; hotkeyprefix_end_pos++)\n            if (hotkeyprefix_offsets[hotkeyprefix_end_pos] >= sum + lineend)\n                break;\n\n        info.index = sum;\n        info.length = lineend;\n        info.lineno = lineno;\n        info.underlined_indexes = &hotkeyprefix_offsets[hotkeyprefix_pos];\n        info.underlined_index_count = hotkeyprefix_end_pos-hotkeyprefix_pos;\n\n        stat = callback(&info);\n\n        if (stat != Ok)\n            break;\n\n\n        if (unixstyle_newline)\n        {\n            height += size.cy;\n            lineno++;\n            sum += fit + (lret < fitcpy ? 1 : 0);\n        }\n        else\n        {\n            height += size.cy;\n            lineno++;\n            sum += fit + (lret < fitcpy ? 2 : 0);\n        }\n\n        hotkeyprefix_pos = hotkeyprefix_end_pos;\n\n        if(height > (vertical ? nwidth : nheight))\n            break;\n\n        /* Stop if this was a linewrap (but not if it was a linebreak). */\n        if ((lret == fitcpy) && (format->attr & StringFormatFlagsNoWrap))\n            break;\n    }\n\n    release_font_link_info(&info.font_link_info);\n    free(stringdup);\n    free(hotkeyprefix_offsets);\n\n    return stat;\n}"
+  },
+  {
+   "name": "measure_string_callback",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 6229,
+   "end_line": 6259,
+   "static": true,
+   "called_from": [
+    "GdipMeasureString"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static GpStatus measure_string_callback(struct gdip_format_string_info *info)",
+   "code": "static GpStatus measure_string_callback(struct gdip_format_string_info *info)\n{\n    struct measure_string_args *args = info->user_data;\n    RectF *bounds = args->bounds;\n    REAL new_width, new_height;\n\n    if (args->vertical)\n    {\n        new_width = (info->bounds->Width + info->bounds->X) / args->rel_width - bounds->X;\n        new_height = info->bounds->Height / args->rel_height;\n    }\n    else\n    {\n        new_width = info->bounds->Width / args->rel_width;\n        new_height = (info->bounds->Height + info->bounds->Y) / args->rel_height - bounds->Y;\n    }\n\n    if (new_width > bounds->Width)\n        bounds->Width = new_width;\n\n    if (new_height > bounds->Height)\n        bounds->Height = new_height;\n\n    if (args->codepointsfitted)\n        *args->codepointsfitted = info->index + info->length;\n\n    if (args->linesfilled)\n        (*args->linesfilled)++;\n\n    return Ok;\n}"
+  },
+  {
+   "name": "gdi_transform_release",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 7755,
+   "end_line": 7769,
+   "static": false,
+   "called_from": [
+    "GdipMeasureString"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:3485",
+    "dlls/gdiplus/graphics.c:3563",
+    "dlls/gdiplus/graphics.c:3795",
+    "dlls/gdiplus/graphics.c:4174",
+    "dlls/gdiplus/graphics.c:4565"
+   ],
+   "signature": "GpStatus gdi_transform_release(GpGraphics *graphics)",
+   "code": "GpStatus gdi_transform_release(GpGraphics *graphics)\n{\n    if (graphics->gdi_transform_acquire_count <= 0)\n    {\n        ERR(\"called without matching gdi_transform_acquire\\n\");\n        return GenericError;\n    }\n    if (graphics->gdi_transform_acquire_count == 1 && graphics->hdc)\n    {\n        RestoreDC(graphics->hdc, graphics->gdi_transform_save);\n        gdi_dc_release(graphics, graphics->hdc);\n    }\n    graphics->gdi_transform_acquire_count--;\n    return Ok;\n}"
+  },
+  {
+   "name": "gdi_dc_release",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 71,
+   "end_line": 82,
+   "static": false,
+   "called_from": [
+    "GdipMeasureString",
+    "gdi_transform_release"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:412",
+    "dlls/gdiplus/graphics.c:714",
+    "dlls/gdiplus/graphics.c:728",
+    "dlls/gdiplus/graphics.c:1322",
+    "dlls/gdiplus/graphics.c:1988"
+   ],
+   "signature": "void gdi_dc_release(GpGraphics *graphics, HDC hdc)",
+   "code": "void gdi_dc_release(GpGraphics *graphics, HDC hdc)\n{\n    assert(graphics->hdc_refs > 0);\n    graphics->hdc_refs--;\n\n    if (graphics->owndc && !graphics->hdc_refs)\n    {\n        assert(graphics->hdc == hdc);\n        graphics->hdc = NULL;\n        ReleaseDC(graphics->hwnd, hdc);\n    }\n}"
+  },
+  {
+   "name": "gdip_transform_points",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 7849,
+   "end_line": 7859,
+   "static": false,
+   "called_from": [
+    "transform_properties"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:323",
+    "dlls/gdiplus/graphics.c:1407",
+    "dlls/gdiplus/graphics.c:1468",
+    "dlls/gdiplus/graphics.c:1834",
+    "dlls/gdiplus/graphics.c:1859"
+   ],
+   "signature": "GpStatus gdip_transform_points(GpGraphics *graphics, GpCoordinateSpace dst_space, GpCoordinateSpace src_space, GpPointF *points, INT count)",
+   "code": "GpStatus gdip_transform_points(GpGraphics *graphics, GpCoordinateSpace dst_space,\n                               GpCoordinateSpace src_space, GpPointF *points, INT count)\n{\n    GpMatrix matrix;\n    GpStatus stat;\n\n    stat = get_graphics_transform(graphics, dst_space, src_space, &matrix);\n    if (stat != Ok) return stat;\n\n    return GdipTransformMatrixPoints(&matrix, points, count);\n}"
+  },
+  {
+   "name": "get_log_fontW",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 2389,
+   "end_line": 2422,
+   "static": false,
+   "called_from": [
+    "get_font_hfont"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphicspath.c:1200",
+    "dlls/gdiplus/font.c:485"
+   ],
+   "signature": "void get_log_fontW(const GpFont *font, BOOL vertical, GpGraphics *graphics, LOGFONTW *lf)",
+   "code": "void get_log_fontW(const GpFont *font, BOOL vertical, GpGraphics *graphics, LOGFONTW *lf)\n{\n    REAL height;\n\n    if (font->unit == UnitPixel)\n    {\n        height = units_to_pixels(font->emSize, graphics->unit, graphics->yres, graphics->printer_display);\n    }\n    else\n    {\n        if (graphics->unit == UnitDisplay || graphics->unit == UnitPixel)\n            height = units_to_pixels(font->emSize, font->unit, graphics->xres, graphics->printer_display);\n        else\n            height = units_to_pixels(font->emSize, font->unit, graphics->yres, graphics->printer_display);\n    }\n\n    lf->lfHeight = -(height + 0.5);\n    lf->lfWidth = 0;\n    lf->lfEscapement = 0;\n    lf->lfOrientation = 0;\n    lf->lfWeight = font->otm.otmTextMetrics.tmWeight;\n    lf->lfItalic = font->otm.otmTextMetrics.tmItalic ? 1 : 0;\n    lf->lfUnderline = font->otm.otmTextMetrics.tmUnderlined ? 1 : 0;\n    lf->lfStrikeOut = font->otm.otmTextMetrics.tmStruckOut ? 1 : 0;\n    lf->lfCharSet = font->otm.otmTextMetrics.tmCharSet;\n    lf->lfOutPrecision = OUT_DEFAULT_PRECIS;\n    lf->lfClipPrecision = CLIP_DEFAULT_PRECIS;\n    lf->lfQuality = DEFAULT_QUALITY;\n    lf->lfPitchAndFamily = 0;\n    if (vertical && font->family->VerticalFamilyName[0])\n        lstrcpyW(lf->lfFaceName, font->family->VerticalFamilyName);\n    else\n        lstrcpyW(lf->lfFaceName, font->family->FamilyName);\n}"
+  },
+  {
+   "name": "generate_font_link_info",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 5603,
+   "end_line": 5672,
+   "static": true,
+   "called_from": [
+    "gdip_format_string"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void generate_font_link_info(struct gdip_format_string_info *info, DWORD length, GDIPCONST GpFont *base_font)",
+   "code": "static void generate_font_link_info(struct gdip_format_string_info *info, DWORD length, GDIPCONST GpFont *base_font)\n{\n    IMLangFontLink *iMLFL;\n    GpFont *gpfont;\n    HFONT map_hfont, hfont, old_font;\n    LONG processed, progress = 0;\n    struct gdip_font_link_section *section;\n    DWORD string_codepages;\n    WORD *glyph_indices;\n    HRESULT hr;\n    GpStatus stat;\n\n    list_init(&info->font_link_info.sections);\n    info->font_link_info.base_font = base_font;\n\n    glyph_indices = calloc(length, sizeof(*glyph_indices));\n    GetGlyphIndicesW(info->hdc, info->string, length, glyph_indices, GGI_MARK_NONEXISTING_GLYPHS);\n\n    /* Newlines won't have a glyph but don't need a fallback */\n    for (progress = 0; progress < length; progress++)\n        if (info->string[progress] == '\\r' || info->string[progress] == '\\n')\n            glyph_indices[progress] = 0;\n\n    GetGlobalFontLinkObject(&iMLFL);\n\n    get_font_hfont(info->graphics, base_font, FALSE, NULL, &hfont, NULL, NULL);\n\n    progress = 0;\n    while (progress < length)\n    {\n        section = calloc(1, sizeof(*section));\n        section->start = progress;\n\n        if (glyph_indices[progress] != 0xffff)\n        {\n            section->font = (GpFont *)base_font;\n\n            processed = 0;\n            while (progress + processed < length && glyph_indices[progress + processed] != 0xffff)\n                processed++;\n        }\n        else\n        {\n            IMLangFontLink_GetStrCodePages(iMLFL, &info->string[progress], length - progress,\n                                            0, &string_codepages, &processed);\n            hr = IMLangFontLink_MapFont(iMLFL, info->hdc, string_codepages, hfont, &map_hfont);\n            if (SUCCEEDED(hr))\n            {\n                old_font = SelectObject(info->hdc, map_hfont);\n                stat = GdipCreateFontFromDC(info->hdc, &gpfont);\n                SelectObject(info->hdc, old_font);\n                IMLangFontLink_ReleaseFont(iMLFL, map_hfont);\n                if (stat == Ok)\n                    section->font = gpfont;\n                else\n                    section->font = (GpFont *)base_font;\n            }\n            else\n                section->font = (GpFont *)base_font;\n        }\n\n        section->end = section->start + processed;\n        list_add_tail(&info->font_link_info.sections, &section->entry);\n        progress += processed;\n    }\n\n    DeleteObject(hfont);\n    IMLangFontLink_Release(iMLFL);\n    free(glyph_indices);\n}"
+  },
+  {
+   "name": "font_link_get_text_extent_point",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 5674,
+   "end_line": 5710,
+   "static": true,
+   "called_from": [
+    "gdip_format_string"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/graphics.c:6058",
+    "dlls/gdiplus/graphics.c:6061",
+    "dlls/gdiplus/graphics.c:6069",
+    "dlls/gdiplus/graphics.c:6072",
+    "dlls/gdiplus/graphics.c:6457"
+   ],
+   "signature": "static void font_link_get_text_extent_point(struct gdip_format_string_info *info, BOOL vertical, INT index, int length, int max_ext, LPINT fit, SIZE *size)",
+   "code": "static void font_link_get_text_extent_point(struct gdip_format_string_info *info, BOOL vertical,\n                                            INT index, int length, int max_ext, LPINT fit, SIZE *size)\n{\n    DWORD to_measure_length;\n    HFONT hfont, oldhfont;\n    SIZE sizeaux = { 0 };\n    int i = index, fitaux = 0;\n    struct gdip_font_link_section *section;\n\n    size->cx = 0;\n    size->cy = 0;\n\n    if (fit)\n        *fit = 0;\n\n    LIST_FOR_EACH_ENTRY(section, &info->font_link_info.sections, struct gdip_font_link_section, entry)\n    {\n        if (i >= section->end) continue;\n\n        to_measure_length = min(length - (i - index), section->end - i);\n\n        get_font_hfont(info->graphics, section->font, vertical, NULL, &hfont, NULL, NULL);\n        oldhfont = SelectObject(info->hdc, hfont);\n        GetTextExtentExPointW(info->hdc, &info->string[i], to_measure_length, max_ext, &fitaux, NULL, &sizeaux);\n        SelectObject(info->hdc, oldhfont);\n        DeleteObject(hfont);\n\n        max_ext -= sizeaux.cx;\n        if (fit)\n            *fit += fitaux;\n        size->cx += sizeaux.cx;\n        size->cy = max(size->cy, sizeaux.cy);\n\n        i += to_measure_length;\n        if ((i - index) >= length || fitaux < to_measure_length) break;\n    }\n}"
+  },
+  {
+   "name": "release_font_link_info",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 5712,
+   "end_line": 5724,
+   "static": true,
+   "called_from": [
+    "gdip_format_string"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void release_font_link_info(struct gdip_font_link_info *font_link_info)",
+   "code": "static void release_font_link_info(struct gdip_font_link_info *font_link_info)\n{\n    struct list *entry;\n\n    while ((entry = list_head(&font_link_info->sections)))\n    {\n        struct gdip_font_link_section *section = LIST_ENTRY(entry, struct gdip_font_link_section, entry);\n        list_remove(entry);\n        if (section->font != font_link_info->base_font)\n            GdipDeleteFont(section->font);\n        free(section);\n    }\n}"
+  },
+  {
+   "name": "get_graphics_transform",
+   "file": "dlls/gdiplus/graphics.c",
+   "start_line": 7771,
+   "end_line": 7847,
+   "static": false,
+   "called_from": [
+    "gdip_transform_points"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/gdiplus/region.c:1397",
+    "dlls/gdiplus/region.c:1838",
+    "dlls/gdiplus/graphics.c:480",
+    "dlls/gdiplus/graphics.c:1599",
+    "dlls/gdiplus/graphics.c:3831"
+   ],
+   "signature": "GpStatus get_graphics_transform(GpGraphics *graphics, GpCoordinateSpace dst_space, GpCoordinateSpace src_space, GpMatrix *matrix)",
+   "code": "GpStatus get_graphics_transform(GpGraphics *graphics, GpCoordinateSpace dst_space,\n        GpCoordinateSpace src_space, GpMatrix *matrix)\n{\n    GpStatus stat = Ok;\n    REAL scale_x, scale_y;\n\n    GdipSetMatrixElements(matrix, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0);\n\n    if (dst_space != src_space)\n    {\n        if(graphics->unit != UnitDisplay)\n        {\n            scale_x = units_to_pixels(graphics->scale, graphics->unit, graphics->xres, graphics->printer_display);\n            scale_y = units_to_pixels(graphics->scale, graphics->unit, graphics->yres, graphics->printer_display);\n        }\n        else\n        {\n            scale_x = units_to_pixels(1.0, graphics->unit, graphics->xres, graphics->printer_display);\n            scale_y = units_to_pixels(1.0, graphics->unit, graphics->yres, graphics->printer_display);\n        }\n\n        if (dst_space < src_space)\n        {\n            /* transform towards world space */\n            switch ((int)src_space)\n            {\n            case WineCoordinateSpaceGdiDevice:\n            {\n                GpMatrix gdixform = graphics->gdi_transform;\n                stat = GdipInvertMatrix(&gdixform);\n                if (stat != Ok)\n                    break;\n                memcpy(matrix->matrix, gdixform.matrix, sizeof(matrix->matrix));\n                if (dst_space == CoordinateSpaceDevice)\n                    break;\n                /* else fall-through */\n            }\n            case CoordinateSpaceDevice:\n                GdipScaleMatrix(matrix, 1.0/scale_x, 1.0/scale_y, MatrixOrderAppend);\n                if (dst_space == CoordinateSpacePage)\n                    break;\n                /* else fall-through */\n            case CoordinateSpacePage:\n            {\n                GpMatrix inverted_transform = graphics->worldtrans;\n                stat = GdipInvertMatrix(&inverted_transform);\n                if (stat == Ok)\n                    GdipMultiplyMatrix(matrix, &inverted_transform, MatrixOrderAppend);\n                break;\n            }\n            }\n        }\n        else\n        {\n            /* transform towards device space */\n            switch ((int)src_space)\n            {\n            case CoordinateSpaceWorld:\n                memcpy(matrix->matrix, &graphics->worldtrans, sizeof(matrix->matrix));\n                if (dst_space == CoordinateSpacePage)\n                    break;\n                /* else fall-through */\n            case CoordinateSpacePage:\n                GdipScaleMatrix(matrix, scale_x, scale_y, MatrixOrderAppend);\n                if (dst_space == CoordinateSpaceDevice)\n                    break;\n                /* else fall-through */\n            case CoordinateSpaceDevice:\n            {\n                GdipMultiplyMatrix(matrix, &graphics->gdi_transform, MatrixOrderAppend);\n                break;\n            }\n            }\n        }\n    }\n    return stat;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "measure_string_args",
+    "kind": "struct_decl",
+    "start_line": 6221,
+    "end_line": 6227,
+    "code": "struct measure_string_args {\n    RectF *bounds;\n    INT *codepointsfitted;\n    INT *linesfilled;\n    REAL rel_width, rel_height;\n    BOOL vertical;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 44,
+    "end_line": 44,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(gdiplus);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "debugstr_rectf",
+    "file": "dlls/gdiplus/gdiplus.c",
+    "start_line": 486
+   },
+   {
+    "name": "gdiplus_atan2",
+    "file": "dlls/gdiplus/gdiplus.c",
+    "start_line": 306
+   },
+   {
+    "name": "units_scale",
+    "file": "dlls/gdiplus/gdiplus.c",
+    "start_line": 382
+   },
+   {
+    "name": "units_to_pixels",
+    "file": "dlls/gdiplus/gdiplus.c",
+    "start_line": 329
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "GdipCreateFontFromDC",
+    "impl": [
+     "dlls/gdiplus/font.c:288"
+    ]
+   },
+   {
+    "name": "GdipDeleteFont",
+    "impl": [
+     "dlls/gdiplus/font.c:272"
+    ]
+   },
+   {
+    "name": "GdipInvertMatrix",
+    "impl": [
+     "dlls/gdiplus/matrix.c:181"
+    ]
+   },
+   {
+    "name": "GdipMultiplyMatrix",
+    "impl": [
+     "dlls/gdiplus/matrix.c:239"
+    ]
+   },
+   {
+    "name": "GdipScaleMatrix",
+    "impl": [
+     "dlls/gdiplus/matrix.c:288"
+    ]
+   },
+   {
+    "name": "GdipSetMatrixElements",
+    "impl": [
+     "dlls/gdiplus/matrix.c:318"
+    ]
+   },
+   {
+    "name": "GdipTransformMatrixPoints",
+    "impl": [
+     "dlls/gdiplus/matrix.c:365"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "CreateCompatibleDC",
+    "module": "gdi32",
+    "impl": [
+     "dlls/win32u/dc.c:792"
+    ]
+   },
+   {
+    "name": "CreateFontIndirectW",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/text.c:876"
+    ]
+   },
+   {
+    "name": "DeleteDC",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:532"
+    ]
+   },
+   {
+    "name": "DeleteObject",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:194"
+    ]
+   },
+   {
+    "name": "GetDC",
+    "module": "user32",
+    "impl": [
+     "dlls/win32u/dce.c:1416"
+    ]
+   },
+   {
+    "name": "GetGlobalFontLinkObject",
+    "module": "mlang",
+    "impl": [
+     "dlls/mlang/mlang.c:3932"
+    ]
+   },
+   {
+    "name": "GetGlyphIndicesW",
+    "module": "gdi32",
+    "impl": [
+     "dlls/win32u/font.c:6370"
+    ]
+   },
+   {
+    "name": "GetTextExtentExPointW",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/text.c:1380"
+    ]
+   },
+   {
+    "name": "GetTextMetricsW",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/text.c:1538"
+    ]
+   },
+   {
+    "name": "ModifyWorldTransform",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:1322"
+    ]
+   },
+   {
+    "name": "ReleaseDC",
+    "module": "user32",
+    "impl": [
+     "dlls/win32u/dce.c:1408"
+    ]
+   },
+   {
+    "name": "RestoreDC",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:608"
+    ]
+   },
+   {
+    "name": "SaveDC",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:595"
+    ]
+   },
+   {
+    "name": "SelectObject",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/objects.c:324"
+    ]
+   },
+   {
+    "name": "SetGraphicsMode",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:945"
+    ]
+   },
+   {
+    "name": "SetMapMode",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:1021"
+    ]
+   },
+   {
+    "name": "SetViewportOrgEx",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:1280"
+    ]
+   },
+   {
+    "name": "SetWindowOrgEx",
+    "module": "gdi32",
+    "impl": [
+     "dlls/gdi32/dc.c:1205"
+    ]
+   },
+   {
+    "name": "_assert",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/exit.c:319"
+    ]
+   },
+   {
+    "name": "calloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "IMLangFontLink_GetStrCodePages",
+   "IMLangFontLink_MapFont",
+   "IMLangFontLink_Release",
+   "IMLangFontLink_ReleaseFont",
+   "debugstr_wn",
+   "hypotf",
+   "list_add_tail",
+   "list_head",
+   "list_init",
+   "list_remove",
+   "lstrcpyW",
+   "lstrlenW",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "gdip_round",
+   "has_gdi_dc",
+   "set_rect"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "callback",
+    "in_function": "gdip_format_string",
+    "at": "dlls/gdiplus/graphics.c:5972",
+    "candidates": [
+     "callback @ dlls/gdiplus/metafile.c:3866"
+    ]
+   }
+  ]
+ },
+ "winebench": {
+  "id": "gdiplus.GdipMeasureString",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI+",
+   "header": "gdiplusflat.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 166,
+   "body": 162,
+   "code": 111
+  },
+  "cyclomatic": 39,
+  "return_type": "GpStatus",
+  "n_params": 9,
+  "tests": {
+   "n_tests_own": 7,
+   "n_tests": 7,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/gdiplus/tests/font.c::test_font_transform",
+    "dlls/gdiplus/tests/graphics.c::test_GdipMeasureString",
+    "dlls/gdiplus/tests/graphics.c::test_font_height_scaling",
+    "dlls/gdiplus/tests/graphics.c::test_measure_string",
+    "dlls/gdiplus/tests/graphics.c::test_measure_string_vertical",
+    "dlls/gdiplus/tests/graphics.c::test_measured_extra_space",
+    "dlls/gdiplus/tests/graphics.c::test_string_functions"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-text-flat",
+   "source": "win32-gdiplus-flat",
+   "description": "",
+   "min_windows": "",
+   "documented_dll": "gdiplus.dll"
+  },
+  "exports": [
+   "gdiplus.GdipMeasureString"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.504,
+   "first_date": "2007-06-12",
+   "median_date": "2024-08-14",
+   "last_date": "2026-09-22",
+   "code_lines": 113
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "gdi32.EnumEnhMetaFile",
+  "share_after_cutoff": 0.504,
+  "last_date": "2026-09-22"
+ }
+}

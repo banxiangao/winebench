@@ -1,0 +1,187 @@
+{
+ "id": "0075",
+ "function": {
+  "name": "ConvertInterfaceAliasToLuid",
+  "export_name": "ConvertInterfaceAliasToLuid",
+  "module": "iphlpapi",
+  "source_module": "iphlpapi",
+  "exported_by": [
+   "iphlpapi"
+  ],
+  "side": "PE",
+  "file": "dlls/iphlpapi/iphlpapi_main.c",
+  "start_line": 4309,
+  "end_line": 4337,
+  "body_lines": 26,
+  "signature": "DWORD WINAPI ConvertInterfaceAliasToLuid( const WCHAR *alias, NET_LUID *luid )",
+  "header_comment": "/******************************************************************\n *    ConvertInterfaceAliasToLuid (IPHLPAPI.@)\n */",
+  "code": "DWORD WINAPI ConvertInterfaceAliasToLuid( const WCHAR *alias, NET_LUID *luid )\n{\n    struct nsi_ndis_ifinfo_rw *data;\n    DWORD err, count, i, len;\n    NET_LUID *keys;\n\n    TRACE( \"(%s %p)\\n\", debugstr_w(alias), luid );\n\n    if (!alias || !*alias || !luid) return ERROR_INVALID_PARAMETER;\n    luid->Value = 0;\n    len = wcslen( alias );\n\n    err = NsiAllocateAndGetTable( 1, &NPI_MS_NDIS_MODULEID, NSI_NDIS_IFINFO_TABLE, (void **)&keys, sizeof(*keys),\n                                  (void **)&data, sizeof(*data), NULL, 0, NULL, 0, &count, 0 );\n    if (err) return err;\n\n    err = ERROR_INVALID_PARAMETER;\n    for (i = 0; i < count; i++)\n    {\n        if (data[i].alias.Length == len * 2 && !memcmp( data[i].alias.String, alias, len * 2 ))\n        {\n            luid->Value = keys[i].Value;\n            err = ERROR_SUCCESS;\n            break;\n        }\n    }\n    NsiFreeTable( keys, data, NULL, NULL );\n    return err;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winsock2.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ws2ipdef.h\"",
+   "#include \"windns.h\"",
+   "#include \"iphlpapi.h\"",
+   "#include \"ipifcons.h\"",
+   "#include \"fltdefs.h\"",
+   "#include \"ifdef.h\"",
+   "#include \"netioapi.h\"",
+   "#include \"ip2string.h\"",
+   "#include \"netiodef.h\"",
+   "#include \"icmpapi.h\"",
+   "#include \"psapi.h\"",
+   "#include \"wine/nsi.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "iphlpapi!ConvertInterfaceAliasToLuid [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/iphlpapi/tests/iphlpapi.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "netioapi",
+   "path": "sdk-api-src/content/netioapi/nf-netioapi-convertinterfacealiastoluid.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/netioapi/nf-netioapi-convertinterfacealiastoluid",
+   "documented_name": "convertinterfacealiastoluid",
+   "file": "docs/0075_sdk-api_nf-netioapi-convertinterfacealiastoluid.md",
+   "text": "---\nUID: NF:netioapi.ConvertInterfaceAliasToLuid\ntitle: ConvertInterfaceAliasToLuid function (netioapi.h)\ndescription: Converts an interface alias name for a network interface to the locally unique identifier (LUID) for the interface.\nhelpviewer_keywords: [\"ConvertInterfaceAliasToLuid\",\"ConvertInterfaceAliasToLuid function [IP Helper]\",\"iphlp.convertinterfacealiastoluid\",\"netioapi/ConvertInterfaceAliasToLuid\"]\nold-location: iphlp\\convertinterfacealiastoluid.htm\ntech.root: IpHlp\nms.assetid: 7fa80938-d475-4ace-b463-a53aac26e88b\nms.date: 12/05/2018\nms.keywords: ConvertInterfaceAliasToLuid, ConvertInterfaceAliasToLuid function [IP Helper], iphlp.convertinterfacealiastoluid, netioapi/ConvertInterfaceAliasToLuid\nreq.header: netioapi.h\nreq.include-header: Iphlpapi.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps only]\nreq.target-min-winversvr: Windows Server 2008 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Iphlpapi.lib\nreq.dll: Iphlpapi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ConvertInterfaceAliasToLuid\n - netioapi/ConvertInterfaceAliasToLuid\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Iphlpapi.dll\napi_name:\n - ConvertInterfaceAliasToLuid\n---\n\n# ConvertInterfaceAliasToLuid function\n\n\n## -description\n\nThe \n<b>ConvertInterfaceAliasToLuid</b> function converts an interface alias name for a network interface to the locally unique identifier (LUID) for the interface.\n\n## -parameters\n\n### -param InterfaceAlias [in]\n\nA pointer to a <b>NULL</b>-terminated Unicode string containing the alias name of the network interface.\n\n### -param InterfaceLuid [out]\n\nA pointer to the <a href=\"/windows/desktop/api/ifdef/ns-ifdef-net_luid_lh\">NET_LUID</a> for this interface.\n\n## -returns\n\nOn success, \n<b>ConvertInterfaceAliasToLuid</b> returns NO_ERROR. Any nonzero return value indicates failure and a <b>NULL</b> is returned in the <i>InterfaceLuid</i> parameter. \n\n<table>\n<tr>\n<th>Error code</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOne of the parameters was invalid. This error is returned if either the <i>InterfaceAlias</i> or <i>InterfaceLuid</i> parameter was <b>NULL</b> or if the <i>InterfaceAlias</i> parameter was invalid.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe <b>ConvertInterfaceAliasToLuid</b> function is available on Windows Vista and later.\n\nThe <b>ConvertInterfaceAliasToLuid</b> function is protocol independent and works with network interfaces for both the IPv6 and IPv4 protocol.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-convertinterfaceguidtoluid\">ConvertInterfaceGuidToLuid</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-convertinterfaceindextoluid\">ConvertInterfaceIndexToLuid</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-convertinterfaceluidtoalias\">ConvertInterfaceLuidToAlias</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-convertinterfaceluidtoguid\">ConvertInterfaceLuidToGuid</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-convertinterfaceluidtoindex\">ConvertInterfaceLuidToIndex</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-convertinterfaceluidtonamea\">ConvertInterfaceLuidToNameA</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-convertinterfaceluidtonamew\">ConvertInterfaceLuidToNameW</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-convertinterfacenametoluida\">ConvertInterfaceNameToLuidA</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-convertinterfacenametoluidw\">ConvertInterfaceNameToLuidW</a>\n\n\n\n<a href=\"/windows/desktop/api/ifdef/ns-ifdef-net_luid_lh\">NET_LUID</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-if_indextoname\">if_indextoname</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-if_nametoindex\">if_nametoindex</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(iphlpapi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "NsiAllocateAndGetTable",
+    "module": "nsi",
+    "impl": [
+     "dlls/nsi/nsi.c:66"
+    ]
+   },
+   {
+    "name": "NsiFreeTable",
+    "module": "nsi",
+    "impl": [
+     "dlls/nsi/nsi.c:209"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   },
+   {
+    "name": "wcslen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:215"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_w",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "iphlpapi.ConvertInterfaceAliasToLuid",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "IP Helper",
+   "header": "netioapi.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 29,
+   "body": 28,
+   "code": 18
+  },
+  "cyclomatic": 8,
+  "return_type": "DWORD",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/iphlpapi/tests/iphlpapi.c::test_interface_identifier_conversion"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/netioapi/nf-netioapi-convertinterfacealiastoluid",
+   "source": "win32",
+   "description": "Converts an interface alias name for a network interface to the locally unique identifier (LUID) for the interface.",
+   "min_windows": "Windows Vista [desktop apps only]",
+   "documented_dll": "Iphlpapi.dll"
+  },
+  "exports": [
+   "iphlpapi.ConvertInterfaceAliasToLuid"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2021-07-06",
+   "median_date": "2021-07-07",
+   "last_date": "2021-10-06",
+   "code_lines": 19,
+   "pair": "dnsapi.DnsServiceConstructInstance",
+   "rank": 1,
+   "distance": 0.3
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "dnsapi.DnsServiceConstructInstance",
+  "share_after_cutoff": 0.0,
+  "last_date": "2021-10-06",
+  "partner_rank": 1,
+  "distance": 0.3
+ }
+}

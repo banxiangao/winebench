@@ -1,0 +1,477 @@
+{
+ "id": "0165",
+ "function": {
+  "name": "glGetString",
+  "export_name": "glGetString",
+  "module": "opengl32",
+  "source_module": "opengl32",
+  "exported_by": [
+   "opengl32"
+  ],
+  "side": "PE",
+  "file": "dlls/opengl32/wgl.c",
+  "start_line": 3179,
+  "end_line": 3206,
+  "body_lines": 25,
+  "signature": "const GLubyte * WINAPI glGetString( GLenum name )",
+  "header_comment": "/***********************************************************************\n *              glGetString (OPENGL32.@)\n */",
+  "code": "const GLubyte * WINAPI glGetString( GLenum name )\n{\n    struct glGetString_params args = { .teb = NtCurrentTeb(), .name = name };\n    struct context *ctx;\n    GLubyte *wow64_str;\n    NTSTATUS status;\n\n    TRACE( \"name %d\\n\", name );\n\n    if (!(ctx = context_from_handle( NtCurrentTeb()->glCurrentRC ))) return NULL;\n\n    switch (name)\n    {\n    case GL_VENDOR: return (const GLubyte *)ctx->base.vendor_name;\n    case GL_RENDERER: return (const GLubyte *)ctx->base.device_name;\n    case GL_VERSION: return (const GLubyte *)ctx->base.version_str;\n    case GL_EXTENSIONS: if (ctx->extensions) return ctx->extensions; break;\n    }\n\n    args.ret = wow64_str = alloc_string_entry( ctx, unix_glGetString, name, 0, name == GL_EXTENSIONS ? MAX_EXTENSION_STR : 64 );\n    while ((status = UNIX_CALL( glGetString, &args )) == STATUS_BUFFER_TOO_SMALL && wow64_str)\n        args.ret = wow64_str = grow_string_entry( ctx, wow64_str, (size_t)args.ret );\n    if (status) WARN( \"glGetString returned %#lx\\n\", status );\n\n    if (name == GL_EXTENSIONS && args.ret) args.ret = ctx->extensions = filter_extensions( &ctx->base, args.ret );\n    if (args.ret != wow64_str) free_string_entry( ctx, wow64_str );\n    return args.ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <math.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"ntuser.h\"",
+   "#include \"ntgdi.h\"",
+   "#include \"malloc.h\"",
+   "#include \"unixlib.h\"",
+   "#include \"private.h\"",
+   "#include \"wine/glu.h\"",
+   "#include \"wine/rbtree.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "opengl32!glGetString [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/opengl32/tests/opengl.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 6
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "",
+   "path": "desktop-src/OpenGL/glgetstring.md",
+   "url": "https://learn.microsoft.com/windows/win32/opengl/glgetstring",
+   "documented_name": "glgetstring",
+   "file": "docs/0165_win32_glgetstring.md",
+   "text": "---\ntitle: glGetString function (Gl.h)\ndescription: The glGetString function returns a string describing the current OpenGL connection.\nms.assetid: 768e6ec2-3f00-44e6-b3cb-de0f06d6a73d\nkeywords:\n- glGetString function OpenGL\ntopic_type:\n- apiref\napi_name:\n- glGetString\napi_location:\n- opengl32.dll\napi_type:\n- DllExport\nms.topic: reference\nms.date: 05/31/2018\n---\n\n# glGetString function\n\nThe **glGetString** function returns a string describing the current OpenGL connection.\n\n## Syntax\n\n\n```C++\nconst GLubyte* WINAPI glGetString(\n   GLenum name\n);\n```\n\n\n\n## Parameters\n\n<dl> <dt>\n\n*name* \n</dt> <dd>\n\nOne of the following symbolic constants.\n\n\n\n| Value                                                                                                                                                         | Meaning                                                                                                                                                                        |\n|---------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|\n| <span id=\"GL_VENDOR\"></span><span id=\"gl_vendor\"></span><dl> <dt>**GL\\_VENDOR**</dt> </dl>             | Returns the company responsible for this OpenGL implementation. This name does not change from release to release.<br/>                                                  |\n| <span id=\"GL_RENDERER\"></span><span id=\"gl_renderer\"></span><dl> <dt>**GL\\_RENDERER**</dt> </dl>       | Returns the name of the renderer. This name is typically specific to a particular configuration of a hardware platform. It does not change from release to release.<br/> |\n| <span id=\"GL_VERSION\"></span><span id=\"gl_version\"></span><dl> <dt>**GL\\_VERSION**</dt> </dl>          | Returns a version or release number.<br/>                                                                                                                                |\n| <span id=\"GL_EXTENSIONS\"></span><span id=\"gl_extensions\"></span><dl> <dt>**GL\\_EXTENSIONS**</dt> </dl> | Returns a space-separated list of supported extensions to OpenGL.<br/>                                                                                                   |\n\n\n\n \n\n</dd> </dl>\n\n## Error codes\n\nThe following error codes can be retrieved by the [**glGetError**](glgeterror.md) function.\n\n\n\n| Name                                                                                                  | Meaning                                                                                                                               |\n|-------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|\n| <dl> <dt>**GL\\_INVALID\\_ENUM**</dt> </dl>      | *name* was not an accepted value.<br/>                                                                                          |\n| <dl> <dt>**GL\\_INVALID\\_OPERATION**</dt> </dl> | The function was called between a call to [**glBegin**](glbegin.md) and the corresponding call to [**glEnd**](glend.md).<br/> |\n\n\n\n## Remarks\n\nThe **glGetString** function returns a pointer to a static string describing some aspect of the current OpenGL connection.\n\nBecause OpenGL does not include queries for the performance characteristics of an implementation, it is expected that some applications will be written to recognize known platforms and will modify their OpenGL usage based on known performance characteristics of these platforms. The strings GL\\_VENDOR and GL\\_RENDERER together uniquely specify a platform, and will not change from release to release. They should be used as such by platform recognition algorithms.\n\nThe format and contents of the string that **glGetString** returns depend on the implementation, except that:\n\n-   Extension names will not include space characters and will be separated by space characters in the GL\\_EXTENSIONS string.\n-   The GL\\_VERSION string begins with a version number. The version number uses one of these forms:\n\n    *major\\_number*.*minor\\_number*\n\n    *major\\_number*.*minor\\_number*.*release\\_number*\n\n-   Vendor-specific information may follow the version number. Its format depends on the implementation, but a space always separates the version number and the vendor-specific information.\n-   All strings are null-terminated.\n\nIf an error is generated, **glGetString** returns zero.\n\n## Requirements\n\n\n\n| Requirement | Value |\n|-------------------------------------|-----------------------------------------------------------------------------------------|\n| Minimum supported client<br/> | Windows 2000 Professional \\[desktop apps only\\]<br/>                              |\n| Minimum supported server<br/> | Windows 2000 Server \\[desktop apps only\\]<br/>                                    |\n| Header<br/>                   | <dl> <dt>Gl.h</dt> </dl>         |\n| Library<br/>                  | <dl> <dt>Opengl32.lib</dt> </dl> |\n| DLL<br/>                      | <dl> <dt>Opengl32.dll</dt> </dl> |\n\n\n\n## See also\n\n<dl> <dt>\n\n[**glBegin**](glbegin.md)\n</dt> <dt>\n\n[**glEnd**](glend.md)\n</dt> </dl>\n\n \n\n \n\n\n\n\n\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "context_from_handle",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 655,
+   "end_line": 658,
+   "static": true,
+   "called_from": [
+    "glGetString"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:662",
+    "dlls/opengl32/wgl.c:702",
+    "dlls/opengl32/wgl.c:1085",
+    "dlls/opengl32/wgl.c:1182",
+    "dlls/opengl32/wgl.c:1183"
+   ],
+   "signature": "static struct context *context_from_handle( HGLRC handle )",
+   "code": "static struct context *context_from_handle( HGLRC handle )\n{\n    return context_from_opengl_client_context( opengl_client_context_from_handle( handle ) );\n}"
+  },
+  {
+   "name": "alloc_string_entry",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 717,
+   "end_line": 740,
+   "static": true,
+   "called_from": [
+    "glGetString"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:3136",
+    "dlls/opengl32/wgl.c:3231",
+    "dlls/opengl32/wgl.c:3257"
+   ],
+   "signature": "static void *alloc_string_entry( struct context *ctx, enum unix_funcs func, GLenum pname, UINT index, UINT len )",
+   "code": "static void *alloc_string_entry( struct context *ctx, enum unix_funcs func, GLenum pname, UINT index, UINT len )\n{\n#ifdef _WIN64\n    return NULL;\n#else\n    struct string_entry key = { .func = func, .pname = pname, .index = index }, *str;\n    struct rb_entry *entry;\n\n    if ((entry = rb_get( &ctx->wow64_strings, &key )))\n    {\n        struct string_entry *str = CONTAINING_RECORD( entry, struct string_entry, entry );\n        return str->str.len >= len ? str : grow_string_entry( ctx, str->str.ptr, len );\n    }\n\n    if (!(str = malloc( offsetof( struct string_entry, str.ptr[len] ) ))) return NULL;\n    str->func = func;\n    str->pname = pname;\n    str->index = index;\n    str->str.len = len;\n    rb_put( &ctx->wow64_strings, str, &str->entry );\n\n    return str->str.ptr;\n#endif\n}"
+  },
+  {
+   "name": "grow_string_entry",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 705,
+   "end_line": 715,
+   "static": true,
+   "called_from": [
+    "glGetString"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:3138",
+    "dlls/opengl32/wgl.c:3233",
+    "dlls/opengl32/wgl.c:3259"
+   ],
+   "signature": "static void *grow_string_entry( struct context *ctx, void *ptr, UINT len )",
+   "code": "static void *grow_string_entry( struct context *ctx, void *ptr, UINT len )\n{\n    struct string_entry *str = CONTAINING_RECORD( ptr, struct string_entry, str.ptr );\n\n    rb_remove( &ctx->wow64_strings, &str->entry );\n    if (!(str = realloc( str, offsetof(struct string_entry, str.ptr[len] )))) return NULL;\n    str->str.len = len;\n\n    rb_put( &ctx->wow64_strings, str, &str->entry );\n    return str->str.ptr;\n}"
+  },
+  {
+   "name": "filter_extensions",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 3146,
+   "end_line": 3174,
+   "static": true,
+   "called_from": [
+    "glGetString"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static GLubyte *filter_extensions( struct opengl_client_context *client, const GLubyte *str )",
+   "code": "static GLubyte *filter_extensions( struct opengl_client_context *client, const GLubyte *str )\n{\n    enum opengl_extension extensions[GL_EXTENSION_COUNT];\n    size_t count, i, size = 1;\n    char *ret, *ptr;\n\n    if (!(count = parse_extensions( (const char *)str, extensions ))) return NULL;\n    if (client->extensions[WGL_EXT_extensions_string]) extensions[count++] = WGL_EXT_extensions_string;\n    if (client->extensions[WGL_EXT_swap_control]) extensions[count++] = WGL_EXT_swap_control;\n\n    for (i = 0; i < count; i++)\n    {\n        if (!client->extensions[extensions[i]]) continue;\n        size += all_extensions[extensions[i]].len + 1;\n    }\n\n    if (!(ret = malloc( size ))) return NULL;\n\n    for (ptr = ret, i = 0; i < count; i++)\n    {\n        if (!client->extensions[extensions[i]]) continue;\n        memcpy( ptr, all_extensions[extensions[i]].name, all_extensions[extensions[i]].len );\n        ptr += all_extensions[extensions[i]].len;\n        *ptr++ = ' ';\n    }\n    *ptr = 0;\n\n    return (GLubyte *)ret;\n}"
+  },
+  {
+   "name": "free_string_entry",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 742,
+   "end_line": 747,
+   "static": true,
+   "called_from": [
+    "glGetString"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:3141",
+    "dlls/opengl32/wgl.c:3236",
+    "dlls/opengl32/wgl.c:3262"
+   ],
+   "signature": "static void free_string_entry( struct context *ctx, void *ptr )",
+   "code": "static void free_string_entry( struct context *ctx, void *ptr )\n{\n    struct string_entry *str = ptr ? CONTAINING_RECORD( ptr, struct string_entry, str.ptr ) : NULL;\n    if (str) rb_remove( &ctx->wow64_strings, &str->entry );\n    free( str );\n}"
+  },
+  {
+   "name": "context_from_opengl_client_context",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 643,
+   "end_line": 646,
+   "static": true,
+   "called_from": [
+    "context_from_handle"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:686"
+   ],
+   "signature": "static struct context *context_from_opengl_client_context( struct opengl_client_context *base )",
+   "code": "static struct context *context_from_opengl_client_context( struct opengl_client_context *base )\n{\n    return CONTAINING_RECORD( base, struct context, base );\n}"
+  },
+  {
+   "name": "opengl_client_context_from_handle",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 648,
+   "end_line": 653,
+   "static": true,
+   "called_from": [
+    "context_from_handle"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:752",
+    "dlls/opengl32/wgl.c:1148",
+    "dlls/opengl32/wgl.c:1154"
+   ],
+   "signature": "static struct opengl_client_context *opengl_client_context_from_handle( HGLRC handle )",
+   "code": "static struct opengl_client_context *opengl_client_context_from_handle( HGLRC handle )\n{\n    struct handle_entry *ptr;\n    if (!(ptr = get_handle_ptr( &contexts, handle ))) return NULL;\n    return ptr->context;\n}"
+  },
+  {
+   "name": "parse_extensions",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 97,
+   "end_line": 112,
+   "static": true,
+   "called_from": [
+    "filter_extensions"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static size_t parse_extensions( const char *name, enum opengl_extension extensions[GL_EXTENSION_COUNT] )",
+   "code": "static size_t parse_extensions( const char *name, enum opengl_extension extensions[GL_EXTENSION_COUNT] )\n{\n    size_t count = 0;\n\n    while (*name)\n    {\n        const char *end = name + 1;\n        while (*end && *end != ' ') end++;\n        extensions[count] = parse_extension( name, end - name );\n        if (extensions[count] != GL_EXTENSION_COUNT) count++;\n        while (*end == ' ') end++;\n        name = end;\n    }\n\n    return count;\n}"
+  },
+  {
+   "name": "get_handle_ptr",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 207,
+   "end_line": 224,
+   "static": true,
+   "called_from": [
+    "opengl_client_context_from_handle"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/opengl32/wgl.c:230",
+    "dlls/opengl32/wgl.c:284",
+    "dlls/opengl32/wgl.c:1112",
+    "dlls/opengl32/wgl.c:2967",
+    "dlls/opengl32/wgl.c:3029"
+   ],
+   "signature": "static struct handle_entry *get_handle_ptr( struct handle_table *table, HANDLE handle )",
+   "code": "static struct handle_entry *get_handle_ptr( struct handle_table *table, HANDLE handle )\n{\n    UINT index = ((UINT_PTR)handle & 0xffff) - 1;\n    struct handle_entry *ptr;\n\n    if (index >= ARRAY_SIZE(table->handles)) return NULL;\n    ptr = table->handles + index;\n\n    AcquireSRWLockShared( &table->lock );\n    if (index >= table->count || ULongToHandle( ptr->handle ) != handle)\n    {\n        RtlSetLastWin32Error( ERROR_INVALID_HANDLE );\n        ptr = NULL;\n    }\n    ReleaseSRWLockShared( &table->lock );\n\n    return ptr;\n}"
+  },
+  {
+   "name": "parse_extension",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 81,
+   "end_line": 95,
+   "static": true,
+   "called_from": [
+    "parse_extensions"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static enum opengl_extension parse_extension( const char *ext, size_t len )",
+   "code": "static enum opengl_extension parse_extension( const char *ext, size_t len )\n{\n    const struct extension_entry entry = { .name = ext, .len = len }, *found;\n\n    if ((found = bsearch( &entry, all_extensions, ARRAY_SIZE(all_extensions), sizeof(entry), extension_entry_cmp )))\n    {\n        enum opengl_extension ext = found - all_extensions;\n        if (ext == GL_EXT_memory_object_fd) return GL_EXT_memory_object_win32;\n        if (ext == GL_EXT_semaphore_fd) return GL_EXT_semaphore_win32;\n        return ext;\n    }\n\n    WARN( \"Extension %s unknown\\n\", debugstr_an(ext, len) );\n    return GL_EXTENSION_COUNT;\n}"
+  },
+  {
+   "name": "extension_entry_cmp",
+   "file": "dlls/opengl32/wgl.c",
+   "start_line": 74,
+   "end_line": 79,
+   "static": true,
+   "called_from": [
+    "parse_extension"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static int extension_entry_cmp( const void *a, const void *b )",
+   "code": "static int extension_entry_cmp( const void *a, const void *b )\n{\n    const struct extension_entry *entry_a = a, *entry_b = b;\n    size_t len = max( entry_a->len, entry_b->len );\n    return strncmp( entry_a->name, entry_b->name, len );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "context",
+    "kind": "struct_decl",
+    "start_line": 626,
+    "end_line": 641,
+    "code": "struct context\n{\n    struct opengl_client_context base;\n    struct display_lists *lists;\n    GLubyte *extensions; /* compat extension string */\n    struct rb_tree wow64_strings;\n\n    /* semi-stub state tracker for wglCopyContext */\n    GLbitfield used;                            /* context state used bits */\n    struct lighting_state lighting;             /* GL_LIGHTING_BIT */\n    struct depth_buffer_state depth_buffer;     /* GL_DEPTH_BUFFER_BIT */\n    struct viewport_state viewport;             /* GL_VIEWPORT_BIT */\n    struct enable_state enable;                 /* GL_ENABLE_BIT */\n    struct color_buffer_state color_buffer;     /* GL_COLOR_BUFFER_BIT */\n    struct hint_state hint;                     /* GL_HINT_BIT */\n};"
+   },
+   {
+    "name": "extension_entry",
+    "kind": "struct_decl",
+    "start_line": 61,
+    "end_line": 65,
+    "code": "struct extension_entry\n{\n    const char *name;\n    size_t len;\n};"
+   },
+   {
+    "name": "handle_entry",
+    "kind": "struct_decl",
+    "start_line": 153,
+    "end_line": 163,
+    "code": "struct handle_entry\n{\n    UINT handle;\n    union\n    {\n        struct opengl_client_context *context;\n        struct opengl_client_pbuffer *pbuffer;\n        struct handle_entry *next_free;\n        void *user_data;\n    };\n};"
+   },
+   {
+    "name": "handle_table",
+    "kind": "struct_decl",
+    "start_line": 165,
+    "end_line": 171,
+    "code": "struct handle_table\n{\n    SRWLOCK              lock;\n    struct handle_entry  handles[1024];\n    struct handle_entry *next_free;\n    UINT                 count;\n};"
+   },
+   {
+    "name": "string_entry",
+    "kind": "struct_decl",
+    "start_line": 607,
+    "end_line": 614,
+    "code": "struct string_entry\n{\n    struct rb_entry         entry;\n    enum unix_funcs         func;\n    GLenum                  pname;\n    UINT                    index;\n    struct opengl_wow64_str str;\n};"
+   },
+   {
+    "name": "union (anonymous at /w/wine/dlls/opengl32/wgl.c:156:5)",
+    "kind": "union_decl",
+    "start_line": 156,
+    "end_line": 162,
+    "code": "    union\n    {\n        struct opengl_client_context *context;\n        struct opengl_client_pbuffer *pbuffer;\n        struct handle_entry *next_free;\n        void *user_data;\n    };"
+   }
+  ],
+  "globals": [
+   {
+    "name": "MAX_EXTENSION_STR",
+    "type": "const UINT",
+    "static": true,
+    "start_line": 71,
+    "end_line": 71,
+    "code": "static const UINT MAX_EXTENSION_STR = 1 ALL_GL_EXTS ALL_WGL_EXTS;"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 41,
+    "end_line": 41,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(opengl);"
+   },
+   {
+    "name": "all_extensions",
+    "type": "const struct extension_entry[1115]",
+    "static": true,
+    "start_line": 68,
+    "end_line": 68,
+    "code": "static const struct extension_entry all_extensions[] = { ALL_EGL_EXTS ALL_GL_EXTS ALL_WGL_EXTS };"
+   },
+   {
+    "name": "contexts",
+    "type": "struct handle_table",
+    "static": true,
+    "start_line": 174,
+    "end_line": 174,
+    "code": "static struct handle_table contexts;"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "AcquireSRWLockShared",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:556"
+    ]
+   },
+   {
+    "name": "ReleaseSRWLockShared",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:616"
+    ]
+   },
+   {
+    "name": "RtlSetLastWin32Error",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   },
+   {
+    "name": "bsearch",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/misc.c:210"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "realloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:459"
+    ]
+   },
+   {
+    "name": "strncmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:488"
+    ]
+   }
+  ],
+  "header_inline": [
+   "NtCurrentTeb",
+   "ULongToHandle",
+   "__wine_unix_call",
+   "debugstr_an",
+   "rb_put",
+   "rb_remove",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [
+   {
+    "code": "unix_glGetString",
+    "function": "gl_glGetString",
+    "impl": "dlls/opengl32/unix_thunks.c:1112"
+   }
+  ],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "opengl32.glGetString",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "OpenGL",
+   "header": "",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 28,
+   "body": 27,
+   "code": 18
+  },
+  "cyclomatic": 14,
+  "return_type": "const GLubyte *",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 6,
+   "n_tests": 8,
+   "n_tests_other": 2,
+   "own_test_functions": [
+    "dlls/opengl32/tests/opengl.c::START_TEST(opengl)",
+    "dlls/opengl32/tests/opengl.c::test_framebuffer",
+    "dlls/opengl32/tests/opengl.c::test_getprocaddress",
+    "dlls/opengl32/tests/opengl.c::test_memory_map",
+    "dlls/opengl32/tests/opengl.c::test_sharelists",
+    "dlls/opengl32/tests/opengl.c::wgl_thread"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/opengl/glgetstring",
+   "source": "win32-conceptual",
+   "description": "The glGetString function returns a string describing the current OpenGL connection.",
+   "min_windows": "",
+   "documented_dll": "opengl32.dll"
+  },
+  "exports": [
+   "opengl32.glGetString"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.737,
+   "first_date": "2022-11-21",
+   "median_date": "2026-08-10",
+   "last_date": "2026-09-03",
+   "code_lines": 19
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "gdi32.CreateDCA",
+  "share_after_cutoff": 0.737,
+  "last_date": "2026-09-03"
+ }
+}

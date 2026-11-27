@@ -1,0 +1,548 @@
+{
+ "id": "0042",
+ "function": {
+  "name": "InitializePrintMonitorUI",
+  "export_name": "InitializePrintMonitorUI",
+  "module": "localui",
+  "source_module": "localui",
+  "exported_by": [
+   "localui"
+  ],
+  "side": "PE",
+  "file": "dlls/localui/localui.c",
+  "start_line": 636,
+  "end_line": 648,
+  "body_lines": 10,
+  "signature": "PMONITORUI WINAPI InitializePrintMonitorUI(void)",
+  "header_comment": null,
+  "code": "PMONITORUI WINAPI InitializePrintMonitorUI(void)\n{\n    static MONITORUI mymonitorui =\n    {\n        sizeof(MONITORUI),\n        localui_AddPortUI,\n        localui_ConfigurePortUI,\n        localui_DeletePortUI\n    };\n\n    TRACE(\"=> %p\\n\", &mymonitorui);\n    return &mymonitorui;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winspool.h\"",
+   "#include \"ddk/winsplp.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"localui.h\""
+  ],
+  "resolution": [
+   "localui!InitializePrintMonitorUI [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/localui/tests/localui.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "winsplp",
+   "path": "wdk-ddi-src/content/winsplp/nf-winsplp-initializeprintmonitorui.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/winsplp/nf-winsplp-initializeprintmonitorui",
+   "documented_name": "initializeprintmonitorui",
+   "file": "docs/0042_windows-driver-docs-ddi_nf-winsplp-initializeprintmonitorui.md",
+   "text": "---\nUID: NF:winsplp.InitializePrintMonitorUI\ntitle: InitializePrintMonitorUI function (winsplp.h)\ndescription: A port monitor UI DLL's InitializePrintMonitorUI function supplies the print spooler with addresses of DLL functions.\nold-location: print\\initializeprintmonitorui.htm\ntech.root: print\nms.date: 04/20/2018\nkeywords: [\"InitializePrintMonitorUI function\"]\nms.keywords: InitializePrintMonitorUI, InitializePrintMonitorUI function [Print Devices], print.initializeprintmonitorui, spoolfnc_927446a6-117a-4585-8ce0-9a4b543c4037.xml, winsplp/InitializePrintMonitorUI\nreq.header: winsplp.h\nreq.include-header: Winsplp.h\nreq.target-type: Desktop\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: \nreq.dll: \nreq.irql: \ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - InitializePrintMonitorUI\n - winsplp/InitializePrintMonitorUI\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - HeaderDef\napi_location:\n - Winsplp.h\napi_name:\n - InitializePrintMonitorUI\n---\n\n# InitializePrintMonitorUI function\n\n\n## -description\n\nA port monitor UI DLL's <b>InitializePrintMonitorUI</b> function supplies the print spooler with addresses of DLL functions.\n\n## -returns\n\nThe function should return a pointer to an initialized <a href=\"/windows-hardware/drivers/ddi/winsplp/ns-winsplp-_monitorui\">MONITORUI</a> structure.\n\n## -remarks\n\nPort monitor UI DLLs are required to export an <b>InitializePrintMonitorUI</b> function. The function is called immediately after the DLL is loaded, and is not called again until the DLL is reloaded. Its purposes are to allow the DLL to initialize itself, and to provide the spooler with pointers to internal functions.\n\n## -see-also\n\n<a href=\"/windows-hardware/drivers/ddi/winsplp/nf-winsplp-initializeprintmonitor\">InitializePrintMonitor</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/winsplp/ns-winsplp-_monitorui\">MONITORUI</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "localui_AddPortUI",
+   "file": "dlls/localui/localui.c",
+   "start_line": 473,
+   "end_line": 525,
+   "static": true,
+   "called_from": [
+    "InitializePrintMonitorUI"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL WINAPI localui_AddPortUI(PCWSTR pName, HWND hWnd, PCWSTR pMonitorName, PWSTR *ppPortName)",
+   "code": "static BOOL WINAPI localui_AddPortUI(PCWSTR pName, HWND hWnd, PCWSTR pMonitorName, PWSTR *ppPortName)\n{\n    addportui_t data;\n    HANDLE  hXcv;\n    DWORD   needed;\n    DWORD   dummy;\n    DWORD   status;\n    DWORD   res = FALSE;\n\n    TRACE(  \"(%s, %p, %s, %p) (*ppPortName: %p)\\n\", debugstr_w(pName), hWnd,\n            debugstr_w(pMonitorName), ppPortName, ppPortName ? *ppPortName : NULL);\n\n    if (open_monitor_by_name(L\",XcvMonitor \", pMonitorName, &hXcv)) {\n\n        ZeroMemory(&data, sizeof(addportui_t));\n        data.hXcv = hXcv;\n        res = DialogBoxParamW(LOCALUI_hInstance, MAKEINTRESOURCEW(ADDPORT_DIALOG), hWnd,\n                               dlgproc_addport, (LPARAM) &data);\n\n        TRACE(\"got %lu with %lu for %s\\n\", res, GetLastError(), debugstr_w(data.portname));\n\n        if (ppPortName) *ppPortName = NULL;\n\n        if (res) {\n            res = XcvDataW(hXcv, L\"AddPort\", (BYTE *) data.portname,\n                            (lstrlenW(data.portname)+1) * sizeof(WCHAR),\n                            (PBYTE) &dummy, 0, &needed, &status);\n\n            TRACE(\"got %lu with status %lu\\n\", res, status);\n            if (res && (status == ERROR_SUCCESS) && ppPortName) {\n                /* Native localui uses GlobalAlloc also.\n                   The caller must GlobalFree the buffer */\n                *ppPortName = GlobalAlloc(GPTR, (lstrlenW(data.portname)+1) * sizeof(WCHAR));\n                if (*ppPortName) lstrcpyW(*ppPortName, data.portname);\n            }\n\n            if (res && (status == ERROR_ALREADY_EXISTS)) {\n                dlg_port_already_exists(hWnd, data.portname);\n                /* Native localui also return \"TRUE\" from AddPortUI in this case */\n            }\n\n            HeapFree(GetProcessHeap(), 0, data.portname);\n        }\n        else\n        {\n            SetLastError(ERROR_CANCELLED);\n        }\n        ClosePrinter(hXcv);\n    }\n\n    TRACE(\"=> %lu with %lu\\n\", res, GetLastError());\n    return res;\n}"
+  },
+  {
+   "name": "localui_ConfigurePortUI",
+   "file": "dlls/localui/localui.c",
+   "start_line": 543,
+   "end_line": 574,
+   "static": true,
+   "called_from": [
+    "InitializePrintMonitorUI"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL WINAPI localui_ConfigurePortUI(PCWSTR pName, HWND hWnd, PCWSTR pPortName)",
+   "code": "static BOOL WINAPI localui_ConfigurePortUI(PCWSTR pName, HWND hWnd, PCWSTR pPortName)\n{\n    HANDLE  hXcv;\n    DWORD   res;\n\n    TRACE(\"(%s, %p, %s)\\n\", debugstr_w(pName), hWnd, debugstr_w(pPortName));\n    if (open_monitor_by_name(L\",XcvPort \", pPortName, &hXcv)) {\n\n        res = get_type_from_name(pPortName);\n        switch(res)\n        {\n\n        case PORT_IS_COM:\n            res = dlg_configure_com(hXcv, hWnd, pPortName);\n            break;\n\n        case PORT_IS_LPT:\n            res = dlg_configure_lpt(hXcv, hWnd);\n            break;\n\n        default:\n            dlg_nothingtoconfig(hWnd);\n            SetLastError(ERROR_CANCELLED);\n            res = FALSE;\n        }\n\n        ClosePrinter(hXcv);\n        return res;\n    }\n    return FALSE;\n\n}"
+  },
+  {
+   "name": "localui_DeletePortUI",
+   "file": "dlls/localui/localui.c",
+   "start_line": 594,
+   "end_line": 623,
+   "static": true,
+   "called_from": [
+    "InitializePrintMonitorUI"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL WINAPI localui_DeletePortUI(PCWSTR pName, HWND hWnd, PCWSTR pPortName)",
+   "code": "static BOOL WINAPI localui_DeletePortUI(PCWSTR pName, HWND hWnd, PCWSTR pPortName)\n{\n    HANDLE  hXcv;\n    DWORD   dummy;\n    DWORD   needed;\n    DWORD   status;\n\n    TRACE(\"(%s, %p, %s)\\n\", debugstr_w(pName), hWnd, debugstr_w(pPortName));\n\n    if ((!pPortName) || (!pPortName[0])) {\n        SetLastError(ERROR_INVALID_PARAMETER);\n        return FALSE;\n    }\n\n    if (open_monitor_by_name(L\",XcvPort \", pPortName, &hXcv)) {\n        /* native localui tests here for LPT / COM - Ports and failed with\n           ERROR_NOT_SUPPORTED. */\n        if (XcvDataW(hXcv, L\"DeletePort\", (BYTE *) pPortName,\n            (lstrlenW(pPortName)+1) * sizeof(WCHAR), (LPBYTE) &dummy, 0, &needed, &status)) {\n\n            ClosePrinter(hXcv);\n            if (status != ERROR_SUCCESS) SetLastError(status);\n            return (status == ERROR_SUCCESS);\n        }\n        ClosePrinter(hXcv);\n        return FALSE;\n    }\n    SetLastError(ERROR_UNKNOWN_PORT);\n    return FALSE;\n}"
+  },
+  {
+   "name": "open_monitor_by_name",
+   "file": "dlls/localui/localui.c",
+   "start_line": 433,
+   "end_line": 450,
+   "static": true,
+   "called_from": [
+    "localui_AddPortUI",
+    "localui_ConfigurePortUI",
+    "localui_DeletePortUI"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL open_monitor_by_name(LPCWSTR pPrefix, LPCWSTR pPort, HANDLE * phandle)",
+   "code": "static BOOL open_monitor_by_name(LPCWSTR pPrefix, LPCWSTR pPort, HANDLE * phandle)\n{\n    PRINTER_DEFAULTSW pd;\n    LPWSTR  fullname;\n    BOOL    res;\n\n    * phandle = 0;\n    TRACE(\"(%s,%s)\\n\", debugstr_w(pPrefix),debugstr_w(pPort) );\n\n    fullname = strdupWW(pPrefix, pPort);\n    pd.pDatatype = NULL;\n    pd.pDevMode  = NULL;\n    pd.DesiredAccess = SERVER_ACCESS_ADMINISTER;\n\n    res = OpenPrinterW(fullname, phandle, &pd);\n    HeapFree(GetProcessHeap(), 0, fullname);\n    return res;\n}"
+  },
+  {
+   "name": "dlgproc_addport",
+   "file": "dlls/localui/localui.c",
+   "start_line": 240,
+   "end_line": 301,
+   "static": true,
+   "called_from": [
+    "localui_AddPortUI"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static INT_PTR CALLBACK dlgproc_addport(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)",
+   "code": "static INT_PTR CALLBACK dlgproc_addport(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)\n{\n    addportui_t * data;\n    DWORD   status;\n    DWORD   dummy;\n    DWORD   len;\n    DWORD   res;\n\n    switch(msg)\n    {\n    case WM_INITDIALOG:\n        SetWindowLongPtrW(hwnd, DWLP_USER, lparam);\n        return TRUE;\n\n    case WM_COMMAND:\n        if (wparam == MAKEWPARAM(IDOK, BN_CLICKED))\n        {\n            data = (addportui_t *) GetWindowLongPtrW(hwnd, DWLP_USER);\n            /* length in WCHAR, without the '\\0' */\n            len = SendDlgItemMessageW(hwnd, ADDPORT_EDIT, WM_GETTEXTLENGTH, 0, 0);\n            data->portname = HeapAlloc(GetProcessHeap(), 0, (len + 1) * sizeof(WCHAR));\n\n            if (!data->portname) {\n                EndDialog(hwnd, FALSE);\n                return TRUE;\n            }\n            /* length is in WCHAR, including the '\\0' */\n            GetDlgItemTextW(hwnd, ADDPORT_EDIT, data->portname, len + 1);\n            status = ERROR_SUCCESS;\n            res = XcvDataW( data->hXcv, L\"PortIsValid\", (BYTE *) data->portname,\n                            (lstrlenW(data->portname) + 1) * sizeof(WCHAR),\n                            (PBYTE) &dummy, 0, &len, &status);\n\n            TRACE(\"got %lu with status %lu\\n\", res, status);\n            if (res && (status == ERROR_SUCCESS)) {\n                /* The caller must free data->portname */\n                EndDialog(hwnd, TRUE);\n                return TRUE;\n            }\n\n            if (res && (status == ERROR_INVALID_NAME)) {\n                dlg_invalid_portname(hwnd, data->portname);\n                HeapFree(GetProcessHeap(), 0, data->portname);\n                data->portname = NULL;\n                return TRUE;\n            }\n\n            dlg_win32error(hwnd, status);\n            HeapFree(GetProcessHeap(), 0, data->portname);\n            data->portname = NULL;\n            return TRUE;\n        }\n\n        if (wparam == MAKEWPARAM(IDCANCEL, BN_CLICKED))\n        {\n            EndDialog(hwnd, FALSE);\n            return TRUE;\n        }\n        return FALSE;\n    }\n    return FALSE;\n}"
+  },
+  {
+   "name": "dlg_port_already_exists",
+   "file": "dlls/localui/localui.c",
+   "start_line": 147,
+   "end_line": 167,
+   "static": true,
+   "called_from": [
+    "localui_AddPortUI"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void dlg_port_already_exists(HWND hWnd, LPCWSTR portname)",
+   "code": "static void dlg_port_already_exists(HWND hWnd, LPCWSTR portname)\n{\n    WCHAR res_PortW[IDS_LOCALPORT_MAXLEN];\n    WCHAR res_PortExistsW[IDS_PORTEXISTS_MAXLEN];\n    LPWSTR  message;\n    DWORD   len;\n\n    res_PortW[0] = '\\0';\n    res_PortExistsW[0] = '\\0';\n    LoadStringW(LOCALUI_hInstance, IDS_LOCALPORT, res_PortW, IDS_LOCALPORT_MAXLEN);\n    LoadStringW(LOCALUI_hInstance, IDS_PORTEXISTS, res_PortExistsW, IDS_PORTEXISTS_MAXLEN);\n\n    len = lstrlenW(portname) + IDS_PORTEXISTS_MAXLEN + 1;\n    message = HeapAlloc(GetProcessHeap(), 0, len * sizeof(WCHAR));\n    if (message) {\n        message[0] = '\\0';\n        swprintf(message, len, res_PortExistsW, portname);\n        MessageBoxW(hWnd, message, res_PortW, MB_OK | MB_ICONERROR);\n        HeapFree(GetProcessHeap(), 0, message);\n    }\n}"
+  },
+  {
+   "name": "get_type_from_name",
+   "file": "dlls/localui/localui.c",
+   "start_line": 388,
+   "end_line": 427,
+   "static": true,
+   "called_from": [
+    "localui_ConfigurePortUI"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static DWORD get_type_from_name(LPCWSTR name)",
+   "code": "static DWORD get_type_from_name(LPCWSTR name)\n{\n    HANDLE  hfile;\n\n    if (!wcsnicmp(name, L\"LPT\", ARRAY_SIZE(L\"LPT\") -1))\n        return PORT_IS_LPT;\n\n    if (!wcsnicmp(name, L\"COM\", ARRAY_SIZE(L\"COM\") -1))\n        return PORT_IS_COM;\n\n    if (!wcsicmp(name, L\"FILE:\"))\n        return PORT_IS_FILE;\n\n    if (name[0] == '/')\n        return PORT_IS_UNIXNAME;\n\n    if (name[0] == '|')\n        return PORT_IS_PIPE;\n\n    if (!wcsncmp(name, L\"CUPS:\", ARRAY_SIZE(L\"CUPS:\") -1))\n        return PORT_IS_CUPS;\n\n    if (!wcsncmp(name, L\"LPR:\", ARRAY_SIZE(L\"LPR:\") -1))\n        return PORT_IS_LPR;\n\n    /* Must be a file or a directory. Does the file exist ? */\n    hfile = CreateFileW(name, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);\n    TRACE(\"%p for OPEN_EXISTING on %s\\n\", hfile, debugstr_w(name));\n    if (hfile == INVALID_HANDLE_VALUE) {\n        /* Can we create the file? */\n        hfile = CreateFileW(name, GENERIC_WRITE, 0, NULL, OPEN_ALWAYS, FILE_FLAG_DELETE_ON_CLOSE, NULL);\n        TRACE(\"%p for OPEN_ALWAYS\\n\", hfile);\n    }\n    if (hfile != INVALID_HANDLE_VALUE) {\n        CloseHandle(hfile);\n        return PORT_IS_FILENAME;\n    }\n    /* We can't use the name. use GetLastError() for the reason */\n    return PORT_IS_UNKNOWN;\n}"
+  },
+  {
+   "name": "dlg_configure_com",
+   "file": "dlls/localui/localui.c",
+   "start_line": 79,
+   "end_line": 118,
+   "static": true,
+   "called_from": [
+    "localui_ConfigurePortUI"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL dlg_configure_com(HANDLE hXcv, HWND hWnd, PCWSTR pPortName)",
+   "code": "static BOOL dlg_configure_com(HANDLE hXcv, HWND hWnd, PCWSTR pPortName)\n{\n    COMMCONFIG cfg;\n    LPWSTR shortname;\n    DWORD status;\n    DWORD dummy;\n    DWORD len;\n    BOOL  res;\n\n    /* strip the colon (pPortName is never empty here) */\n    len = lstrlenW(pPortName);\n    shortname = HeapAlloc(GetProcessHeap(), 0, len  * sizeof(WCHAR));\n    if (shortname) {\n        memcpy(shortname, pPortName, (len -1) * sizeof(WCHAR));\n        shortname[len-1] = '\\0';\n\n        /* get current settings */\n        len = FIELD_OFFSET(COMMCONFIG, wcProviderData[1]);\n        status = ERROR_SUCCESS;\n        res = XcvDataW( hXcv, L\"GetDefaultCommConfig\",\n                        (PBYTE) shortname,\n                        (lstrlenW(shortname) +1) * sizeof(WCHAR),\n                        (PBYTE) &cfg, len, &len, &status);\n\n        if (res && (status == ERROR_SUCCESS)) {\n            /* display the Dialog */\n            res = CommConfigDialogW(pPortName, hWnd, &cfg);\n            if (res) {\n                status = ERROR_SUCCESS;\n                /* set new settings */\n                res = XcvDataW(hXcv, L\"SetDefaultCommConfig\",\n                               (PBYTE) &cfg, len,\n                               (PBYTE) &dummy, 0, &len, &status);\n            }\n        }\n        HeapFree(GetProcessHeap(), 0, shortname);\n        return res;\n    }\n    return FALSE;\n}"
+  },
+  {
+   "name": "dlg_configure_lpt",
+   "file": "dlls/localui/localui.c",
+   "start_line": 126,
+   "end_line": 141,
+   "static": true,
+   "called_from": [
+    "localui_ConfigurePortUI"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL dlg_configure_lpt(HANDLE hXcv, HWND hWnd)",
+   "code": "static BOOL dlg_configure_lpt(HANDLE hXcv, HWND hWnd)\n{\n    lptconfig_t data;\n    BOOL  res;\n\n\n    data.hXcv = hXcv;\n\n    res = DialogBoxParamW(LOCALUI_hInstance, MAKEINTRESOURCEW(LPTCONFIG_DIALOG), hWnd,\n                               dlgproc_lptconfig, (LPARAM) &data);\n\n    TRACE(\"got %u with %lu\\n\", res, GetLastError());\n\n    if (!res) SetLastError(ERROR_CANCELLED);\n    return res;\n}"
+  },
+  {
+   "name": "dlg_nothingtoconfig",
+   "file": "dlls/localui/localui.c",
+   "start_line": 200,
+   "end_line": 211,
+   "static": true,
+   "called_from": [
+    "localui_ConfigurePortUI"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void dlg_nothingtoconfig(HWND hWnd)",
+   "code": "static void dlg_nothingtoconfig(HWND hWnd)\n{\n    WCHAR res_PortW[IDS_LOCALPORT_MAXLEN];\n    WCHAR res_nothingW[IDS_NOTHINGTOCONFIG_MAXLEN];\n\n    res_PortW[0] = '\\0';\n    res_nothingW[0] = '\\0';\n    LoadStringW(LOCALUI_hInstance, IDS_LOCALPORT, res_PortW, IDS_LOCALPORT_MAXLEN);\n    LoadStringW(LOCALUI_hInstance, IDS_NOTHINGTOCONFIG, res_nothingW, IDS_NOTHINGTOCONFIG_MAXLEN);\n\n    MessageBoxW(hWnd, res_nothingW, res_PortW, MB_OK | MB_ICONINFORMATION);\n}"
+  },
+  {
+   "name": "strdupWW",
+   "file": "dlls/localui/localui.c",
+   "start_line": 60,
+   "end_line": 72,
+   "static": true,
+   "called_from": [
+    "open_monitor_by_name"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static LPWSTR strdupWW(LPCWSTR pPrefix, LPCWSTR pSuffix)",
+   "code": "static LPWSTR strdupWW(LPCWSTR pPrefix, LPCWSTR pSuffix)\n{\n    LPWSTR  ptr;\n    DWORD   len;\n\n    len = lstrlenW(pPrefix) + (pSuffix ? lstrlenW(pSuffix) : 0) + 1;\n    ptr = HeapAlloc(GetProcessHeap(), 0, len * sizeof(WCHAR));\n    if (ptr) {\n        lstrcpyW(ptr, pPrefix);\n        if (pSuffix) lstrcatW(ptr, pSuffix);\n    }\n    return ptr;\n}"
+  },
+  {
+   "name": "dlg_invalid_portname",
+   "file": "dlls/localui/localui.c",
+   "start_line": 173,
+   "end_line": 193,
+   "static": true,
+   "called_from": [
+    "dlgproc_addport"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void dlg_invalid_portname(HWND hWnd, LPCWSTR portname)",
+   "code": "static void dlg_invalid_portname(HWND hWnd, LPCWSTR portname)\n{\n    WCHAR res_PortW[IDS_LOCALPORT_MAXLEN];\n    WCHAR res_InvalidNameW[IDS_INVALIDNAME_MAXLEN];\n    LPWSTR  message;\n    DWORD   len;\n\n    res_PortW[0] = '\\0';\n    res_InvalidNameW[0] = '\\0';\n    LoadStringW(LOCALUI_hInstance, IDS_LOCALPORT, res_PortW, IDS_LOCALPORT_MAXLEN);\n    LoadStringW(LOCALUI_hInstance, IDS_INVALIDNAME, res_InvalidNameW, IDS_INVALIDNAME_MAXLEN);\n\n    len = lstrlenW(portname) + IDS_INVALIDNAME_MAXLEN;\n    message = HeapAlloc(GetProcessHeap(), 0, len * sizeof(WCHAR));\n    if (message) {\n        message[0] = '\\0';\n        swprintf(message, len, res_InvalidNameW, portname);\n        MessageBoxW(hWnd, message, res_PortW, MB_OK | MB_ICONERROR);\n        HeapFree(GetProcessHeap(), 0, message);\n    }\n}"
+  },
+  {
+   "name": "dlg_win32error",
+   "file": "dlls/localui/localui.c",
+   "start_line": 217,
+   "end_line": 234,
+   "static": true,
+   "called_from": [
+    "dlgproc_addport"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void dlg_win32error(HWND hWnd, DWORD lasterror)",
+   "code": "static void dlg_win32error(HWND hWnd, DWORD lasterror)\n{\n    WCHAR res_PortW[IDS_LOCALPORT_MAXLEN];\n    LPWSTR  message = NULL;\n    DWORD   res;\n\n    res_PortW[0] = '\\0';\n    LoadStringW(LOCALUI_hInstance, IDS_LOCALPORT, res_PortW, IDS_LOCALPORT_MAXLEN);\n\n\n    res = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,\n                        NULL, lasterror, 0, (LPWSTR) &message, 0, NULL);\n\n    if (res > 0) {\n        MessageBoxW(hWnd, message, res_PortW, MB_OK | MB_ICONERROR);\n        LocalFree(message);\n    }\n}"
+  },
+  {
+   "name": "dlgproc_lptconfig",
+   "file": "dlls/localui/localui.c",
+   "start_line": 314,
+   "end_line": 380,
+   "static": true,
+   "called_from": [
+    "dlg_configure_lpt"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static INT_PTR CALLBACK dlgproc_lptconfig(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)",
+   "code": "static INT_PTR CALLBACK dlgproc_lptconfig(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)\n{\n    lptconfig_t * data;\n    WCHAR   bufferW[16];\n    DWORD   status;\n    DWORD   dummy;\n    DWORD   len;\n    DWORD   res;\n\n\n    switch(msg)\n    {\n    case WM_INITDIALOG:\n        SetWindowLongPtrW(hwnd, DWLP_USER, lparam);\n        data = (lptconfig_t *) lparam;\n\n        /* Get current setting */\n        data->value = 45;\n        status = ERROR_SUCCESS;\n        res = XcvDataW( data->hXcv, L\"GetTransmissionRetryTimeout\",\n                        (PBYTE) &dummy, 0,\n                        (PBYTE) &data->value, sizeof(data->value), &len, &status);\n\n        TRACE(\"got %lu with status %lu\\n\", res, status);\n\n        /* Set current setting as the initial value in the Dialog */\n        SetDlgItemInt(hwnd, LPTCONFIG_EDIT, data->value, FALSE);\n        return TRUE;\n\n    case WM_COMMAND:\n        if (wparam == MAKEWPARAM(IDOK, BN_CLICKED))\n        {\n            data = (lptconfig_t *) GetWindowLongPtrW(hwnd, DWLP_USER);\n\n            status = FALSE;\n            res = GetDlgItemInt(hwnd, LPTCONFIG_EDIT, (BOOL *) &status, FALSE);\n            /* length is in WCHAR, including the '\\0' */\n            GetDlgItemTextW(hwnd, LPTCONFIG_EDIT, bufferW, ARRAY_SIZE(bufferW));\n            TRACE(\"got %s and %lu (translated: %lu)\\n\", debugstr_w(bufferW), res, status);\n\n            /* native localui.dll use the same limits */\n            if ((res > 0) && (res < 1000000) && status) {\n                swprintf(bufferW, ARRAY_SIZE(bufferW), L\"%u\", res);\n                res = XcvDataW( data->hXcv, L\"ConfigureLPTPortCommandOK\",\n                        (PBYTE) bufferW,\n                        (lstrlenW(bufferW) +1) * sizeof(WCHAR),\n                        (PBYTE) &dummy, 0, &len, &status);\n\n                TRACE(\"got %lu with status %lu\\n\", res, status);\n                EndDialog(hwnd, TRUE);\n                return TRUE;\n            }\n\n            /* Set initial value and rerun the Dialog */\n            SetDlgItemInt(hwnd, LPTCONFIG_EDIT, data->value, FALSE);\n            return TRUE;\n        }\n\n        if (wparam == MAKEWPARAM(IDCANCEL, BN_CLICKED))\n        {\n            EndDialog(hwnd, FALSE);\n            return TRUE;\n        }\n        return FALSE;\n    }\n    return FALSE;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "addportui_t",
+    "kind": "typedef_decl",
+    "start_line": 43,
+    "end_line": 46,
+    "code": "typedef struct tag_addportui_t {\n    LPWSTR  portname;\n    HANDLE  hXcv;\n} addportui_t;"
+   },
+   {
+    "name": "lptconfig_t",
+    "kind": "typedef_decl",
+    "start_line": 48,
+    "end_line": 51,
+    "code": "typedef struct tag_lptconfig_t {\n    HANDLE  hXcv;\n    DWORD   value;\n} lptconfig_t;"
+   },
+   {
+    "name": "tag_addportui_t",
+    "kind": "struct_decl",
+    "start_line": 43,
+    "end_line": 46,
+    "code": "typedef struct tag_addportui_t {\n    LPWSTR  portname;\n    HANDLE  hXcv;\n} addportui_t;"
+   },
+   {
+    "name": "tag_lptconfig_t",
+    "kind": "struct_decl",
+    "start_line": 48,
+    "end_line": 51,
+    "code": "typedef struct tag_lptconfig_t {\n    HANDLE  hXcv;\n    DWORD   value;\n} lptconfig_t;"
+   }
+  ],
+  "globals": [
+   {
+    "name": "LOCALUI_hInstance",
+    "type": "HINSTANCE",
+    "static": true,
+    "start_line": 39,
+    "end_line": 39,
+    "code": "static HINSTANCE LOCALUI_hInstance;"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 35,
+    "end_line": 35,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(localui);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "CloseHandle",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:421"
+    ]
+   },
+   {
+    "name": "ClosePrinter",
+    "module": "winspool.drv",
+    "impl": [
+     "dlls/winspool.drv/info.c:2759"
+    ]
+   },
+   {
+    "name": "CommConfigDialogW",
+    "module": "kernel32",
+    "impl": [
+     "dlls/kernel32/comm.c:580"
+    ]
+   },
+   {
+    "name": "CreateFileW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/file.c:795"
+    ]
+   },
+   {
+    "name": "DialogBoxParamW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/dialog.c:859"
+    ]
+   },
+   {
+    "name": "EndDialog",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/dialog.c:909"
+    ]
+   },
+   {
+    "name": "FormatMessageW",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:5500"
+    ]
+   },
+   {
+    "name": "GetDlgItemInt",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/dialog.c:1401"
+    ]
+   },
+   {
+    "name": "GetDlgItemTextW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/dialog.c:1375"
+    ]
+   },
+   {
+    "name": "GetWindowLongPtrW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/win.c:1543"
+    ]
+   },
+   {
+    "name": "GlobalAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:1018"
+    ]
+   },
+   {
+    "name": "HeapAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "HeapFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "LoadStringW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/resource.c:149"
+    ]
+   },
+   {
+    "name": "LocalFree",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:1107"
+    ]
+   },
+   {
+    "name": "MessageBoxW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/msgbox.c:398"
+    ]
+   },
+   {
+    "name": "OpenPrinterW",
+    "module": "winspool.drv",
+    "impl": [
+     "dlls/winspool.drv/info.c:1979"
+    ]
+   },
+   {
+    "name": "SendDlgItemMessageW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/dialog.c:1334"
+    ]
+   },
+   {
+    "name": "SetDlgItemInt",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/dialog.c:1386"
+    ]
+   },
+   {
+    "name": "SetWindowLongPtrW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/win.c:1561"
+    ]
+   },
+   {
+    "name": "XcvDataW",
+    "module": "winspool.drv",
+    "impl": [
+     "dlls/winspool.drv/info.c:6954"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   },
+   {
+    "name": "wcsncmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:341"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetLastError",
+   "GetProcessHeap",
+   "SetLastError",
+   "debugstr_w",
+   "lstrcatW",
+   "lstrcpyW",
+   "lstrlenW",
+   "swprintf",
+   "wcsicmp",
+   "wcsnicmp",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "localui.InitializePrintMonitorUI",
+  "category": {
+   "l1": "Devices",
+   "l2": "Printing",
+   "header": "winsplp.h",
+   "textbook": "Device management",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 13,
+   "body": 12,
+   "code": 8
+  },
+  "cyclomatic": 1,
+  "return_type": "PMONITORUI",
+  "n_params": 0,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/localui/tests/localui.c::START_TEST(localui)"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/winsplp/nf-winsplp-initializeprintmonitorui",
+   "source": "ddi",
+   "description": "A port monitor UI DLL's InitializePrintMonitorUI function supplies the print spooler with addresses of DLL functions.",
+   "min_windows": "",
+   "documented_dll": ""
+  },
+  "exports": [
+   "localui.InitializePrintMonitorUI"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2007-04-09",
+   "median_date": "2007-04-09",
+   "last_date": "2007-04-09",
+   "code_lines": 8,
+   "pair": "cfgmgr32.CM_Open_Class_KeyW",
+   "rank": 1,
+   "distance": 4.459
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "cfgmgr32.CM_Open_Class_KeyW",
+  "share_after_cutoff": 0.0,
+  "last_date": "2007-04-09",
+  "partner_rank": 1,
+  "distance": 4.459
+ }
+}

@@ -1,0 +1,321 @@
+{
+ "id": "0178",
+ "function": {
+  "name": "LsaCallAuthenticationPackage",
+  "export_name": "LsaCallAuthenticationPackage",
+  "module": "secur32",
+  "source_module": "secur32",
+  "exported_by": [
+   "secur32",
+   "sspicli"
+  ],
+  "side": "PE",
+  "file": "dlls/secur32/lsa.c",
+  "start_line": 237,
+  "end_line": 259,
+  "body_lines": 20,
+  "signature": "NTSTATUS WINAPI LsaCallAuthenticationPackage(HANDLE lsa_handle, ULONG package_id, PVOID in_buffer, ULONG in_buffer_length, PVOID *out_buffer, PULONG out_buffer_length, PNTSTATUS prot_status)",
+  "header_comment": null,
+  "code": "NTSTATUS WINAPI LsaCallAuthenticationPackage(HANDLE lsa_handle, ULONG package_id,\n        PVOID in_buffer, ULONG in_buffer_length,\n        PVOID *out_buffer, PULONG out_buffer_length, PNTSTATUS prot_status)\n{\n    NTSTATUS status;\n\n    TRACE(\"%p,%lu,%p,%lu,%p,%p,%p\\n\", lsa_handle, package_id, in_buffer,\n        in_buffer_length, out_buffer, out_buffer_length, prot_status);\n\n    if (out_buffer) *out_buffer = NULL;\n    if (out_buffer_length) *out_buffer_length = 0;\n    if (prot_status) *prot_status = STATUS_SUCCESS;\n\n    if (package_id >= loaded_packages_count)\n        return STATUS_NO_SUCH_PACKAGE;\n\n    LSASS_CALL_START\n    status = call_package_untrusted(get_lsass_handle(), GetCurrentThreadId(),\n            0, package_id, in_buffer, in_buffer, in_buffer_length,\n            out_buffer, out_buffer_length, prot_status);\n    LSASS_CALL_END\n    return status;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winsvc.h\"",
+   "#include \"sspi.h\"",
+   "#include \"ntsecapi.h\"",
+   "#include \"ntsecpkg.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"rpc.h\"",
+   "#include \"lsass.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"secur32_priv.h\""
+  ],
+  "resolution": [
+   "secur32!LsaCallAuthenticationPackage [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/secur32/tests/negotiate.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "ntsecapi",
+   "path": "sdk-api-src/content/ntsecapi/nf-ntsecapi-lsacallauthenticationpackage.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/ntsecapi/nf-ntsecapi-lsacallauthenticationpackage",
+   "documented_name": "lsacallauthenticationpackage",
+   "file": "docs/0178_sdk-api_nf-ntsecapi-lsacallauthenticationpackage.md",
+   "text": "---\nUID: NF:ntsecapi.LsaCallAuthenticationPackage\ntitle: LsaCallAuthenticationPackage function (ntsecapi.h)\ndescription: Used by a logon application to communicate with an authentication package.\nhelpviewer_keywords: [\"LsaCallAuthenticationPackage\",\"LsaCallAuthenticationPackage function [Security]\",\"_lsa_lsacallauthenticationpackage\",\"ntsecapi/LsaCallAuthenticationPackage\",\"security.lsacallauthenticationpackage\"]\nold-location: security\\lsacallauthenticationpackage.htm\ntech.root: security\nms.assetid: b891fa60-28b3-4819-9a92-e4524677fa4f\nms.date: 12/05/2018\nms.keywords: LsaCallAuthenticationPackage, LsaCallAuthenticationPackage function [Security], _lsa_lsacallauthenticationpackage, ntsecapi/LsaCallAuthenticationPackage, security.lsacallauthenticationpackage\nreq.header: ntsecapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Secur32.lib\nreq.dll: Secur32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - LsaCallAuthenticationPackage\n - ntsecapi/LsaCallAuthenticationPackage\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Secur32.dll\napi_name:\n - LsaCallAuthenticationPackage\n---\n\n# LsaCallAuthenticationPackage function\n\n\n## -description\n\nThe <b>LsaCallAuthenticationPackage</b> function is used by a logon application to communicate with an authentication package.\n\nThis function is typically used to access services provided by the authentication package.\n\n## -parameters\n\n### -param LsaHandle [in]\n\nA handle obtained from a previous call to \n<a href=\"/windows/desktop/api/ntsecapi/nf-ntsecapi-lsaregisterlogonprocess\">LsaRegisterLogonProcess</a> or \n<a href=\"/windows/desktop/api/ntsecapi/nf-ntsecapi-lsaconnectuntrusted\">LsaConnectUntrusted</a>.\n\n### -param AuthenticationPackage [in]\n\nSupplies the identifier of the authentication package. This value is obtained by calling \n<a href=\"/windows/desktop/api/ntsecapi/nf-ntsecapi-lsalookupauthenticationpackage\">LsaLookupAuthenticationPackage</a>.\n\n### -param ProtocolSubmitBuffer [in]\n\nAn authentication package–specific message buffer passed to the authentication package.\n\nFor information about the format and content of this buffer, see the documentation for the individual authentication package.\n\n### -param SubmitBufferLength [in]\n\nIndicates the length, in bytes, of the <i>ProtocolSubmitBuffer</i> buffer.\n\n### -param ProtocolReturnBuffer [out]\n\nA pointer that receives the address of the buffer returned by the authentication package.\n\nFor information about the format and content of this buffer, see the documentation for the individual authentication package.\n\nThis buffer is allocated by this function. When you have finished using this buffer, free the memory by calling the <a href=\"/windows/desktop/api/ntsecapi/nf-ntsecapi-lsafreereturnbuffer\">LsaFreeReturnBuffer</a> function.\n\n### -param ReturnBufferLength [out]\n\nA pointer to a <b>ULONG</b> that receives the length of the returned buffer, in bytes.\n\n### -param ProtocolStatus [out]\n\nIf the function succeeds, this parameter receives an <b>NTSTATUS</b> code that indicates the completion status of the authentication package.\n\n## -returns\n\nIf the function succeeds, the return value is STATUS_SUCCESS. Check the <i>ProtocolStatus</i> parameter to obtain the status returned by the authentication package.\n\nIf the function fails, the return value is an <b>NTSTATUS</b> code. The following are possible error codes.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_QUOTA_EXCEEDED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe call could not be completed because the client's memory quota is not sufficient to allocate the return buffer.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_NO_SUCH_PACKAGE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe specified authentication package is not recognized by the LSA.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_PKINIT_FAILURE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe Kerberos client received a KDC certificate that is not valid. For device logon, strict KDC validation is required, so the KDC must have certificates that use the \"Kerberos Authentication\" template or equivalent. Also the KDC certificate could be expired, revoked, or the client is under active attack of sending requests to the wrong server.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_PKINIT_CLIENT_FAILURE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe Kerberos client is using a system certificate that is not valid. For device logon, there must be a DNS name. Also, the system certificate could be expired or the wrong one could be selected.\n\n</td>\n</tr>\n</table>\n \n\nFor more information, see \n<a href=\"/windows/desktop/SecMgmt/management-return-values\">LSA Policy Function Return Values</a>.\n\nThe \n<a href=\"/windows/desktop/api/ntsecapi/nf-ntsecapi-lsantstatustowinerror\">LsaNtStatusToWinError</a> function converts an <b>NTSTATUS</b> code to a Windows error code.\n\n## -remarks\n\nLogon applications can call <b>LsaCallAuthenticationPackage</b> to communicate with an authentication package. There are several reasons why an application may do this:\n\n<ul>\n<li>To implement multiple-message authentication protocols, such as the NTLM Challenge-Response protocol.</li>\n<li>To pass state change information to the authentication package. For example, the NTLM might notify the MSV1_0 package that a previously unreachable domain controller is now reachable. The authentication package would then re-logon any users logged on to that domain controller.</li>\n</ul>\nTypically, this function is used to exchange information with a custom authentication package. This function is not needed by an application that is using one of the authentication packages supplied with Windows, such as MSV1_0 or Kerberos.\n\nYou must call <b>LsaCallAuthenticationPackage</b> to clean up PKINIT device credentials for LOCAL_SYSTEM and NETWORK_SERVICE. When there is no PKINIT device credential, a successful call does no operation. When there is a PKINIT device credential, a successful call cleans up the PKINIT device credential so that only the password credential remains.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/ntsecapi/nf-ntsecapi-lsafreereturnbuffer\">LsaFreeReturnBuffer</a>\n\n\n\n<a href=\"/windows/desktop/api/ntsecapi/nf-ntsecapi-lsalookupauthenticationpackage\">LsaLookupAuthenticationPackage</a>\n\n\n\n<a href=\"/windows/desktop/api/ntsecapi/nf-ntsecapi-lsantstatustowinerror\">LsaNtStatusToWinError</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_lsass_handle",
+   "file": "dlls/secur32/lsa.c",
+   "start_line": 197,
+   "end_line": 223,
+   "static": true,
+   "called_from": [
+    "LsaCallAuthenticationPackage"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/secur32/lsa.c:407",
+    "dlls/secur32/lsa.c:458",
+    "dlls/secur32/lsa.c:520",
+    "dlls/secur32/lsa.c:542",
+    "dlls/secur32/lsa.c:584"
+   ],
+   "signature": "static RPC_BINDING_HANDLE get_lsass_handle(void)",
+   "code": "static RPC_BINDING_HANDLE get_lsass_handle(void)\n{\n    static RPC_BINDING_HANDLE irpcss_handle;\n\n    if (!irpcss_handle)\n    {\n        unsigned short protseq[] = LSASS_PROTSEQ;\n        unsigned short endpoint[] = LSASS_ENDPOINT;\n        RPC_BINDING_HANDLE handle;\n        RPC_STATUS status;\n        RPC_WSTR binding;\n\n        status = RpcStringBindingComposeW(NULL, protseq, NULL, endpoint, NULL, &binding);\n        if (status != RPC_S_OK)\n            return NULL;\n\n        status = RpcBindingFromStringBindingW(binding, &handle);\n        RpcStringFreeW(&binding);\n        if (status != RPC_S_OK)\n            return NULL;\n\n        if (InterlockedCompareExchangePointer(&irpcss_handle, handle, NULL))\n            /* another thread beat us to it */\n            RpcBindingFree(&handle);\n    }\n    return irpcss_handle;\n}"
+  },
+  {
+   "name": "rpc_filter",
+   "file": "dlls/secur32/lsa.c",
+   "start_line": 123,
+   "end_line": 126,
+   "static": true,
+   "called_from": [
+    "LsaCallAuthenticationPackage"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/secur32/lsa.c:185",
+    "referenced through a macro (conservatively shared)"
+   ],
+   "signature": "static LONG WINAPI rpc_filter(EXCEPTION_POINTERS *eptr)",
+   "code": "static LONG WINAPI rpc_filter(EXCEPTION_POINTERS *eptr)\n{\n    return I_RpcExceptionFilter(eptr->ExceptionRecord->ExceptionCode);\n}"
+  },
+  {
+   "name": "start_samss",
+   "file": "dlls/secur32/lsa.c",
+   "start_line": 128,
+   "end_line": 177,
+   "static": true,
+   "called_from": [
+    "LsaCallAuthenticationPackage"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/secur32/lsa.c:191",
+    "referenced through a macro (conservatively shared)"
+   ],
+   "signature": "static BOOL start_samss(void)",
+   "code": "static BOOL start_samss(void)\n{\n    SERVICE_STATUS_PROCESS status;\n    SC_HANDLE scm, service;\n    BOOL ret = FALSE;\n\n    TRACE(\"\\n\");\n\n    if (!(scm = OpenSCManagerW(NULL, NULL, 0)))\n    {\n        ERR(\"Failed to open service manager\\n\");\n        return FALSE;\n    }\n\n    if (!(service = OpenServiceW(scm, L\"SamSs\", SERVICE_START | SERVICE_QUERY_STATUS)))\n    {\n        ERR(\"Failed to open SamSs service\\n\");\n        CloseServiceHandle( scm );\n        return FALSE;\n    }\n\n    if (StartServiceW(service, 0, NULL) || GetLastError() == ERROR_SERVICE_ALREADY_RUNNING)\n    {\n        ULONGLONG start_time = GetTickCount64();\n        do\n        {\n            DWORD dummy;\n\n            if (!QueryServiceStatusEx(service, SC_STATUS_PROCESS_INFO, (BYTE *)&status, sizeof(status), &dummy))\n                break;\n            if (status.dwCurrentState == SERVICE_RUNNING)\n            {\n                ret = TRUE;\n                break;\n            }\n            if (GetTickCount64() - start_time > 30000) break;\n            Sleep( 100 );\n\n        } while (status.dwCurrentState == SERVICE_START_PENDING);\n\n        if (status.dwCurrentState != SERVICE_RUNNING)\n            WARN(\"SamSs failed to start %lu\\n\", status.dwCurrentState);\n    }\n    else\n        ERR(\"Failed to start SamSs service\\n\");\n\n    CloseServiceHandle(service);\n    CloseServiceHandle(scm);\n    return ret;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 43,
+    "end_line": 43,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(secur32);"
+   },
+   {
+    "name": "loaded_packages_count",
+    "type": "ULONG",
+    "static": true,
+    "start_line": 59,
+    "end_line": 59,
+    "code": "static ULONG loaded_packages_count;"
+   }
+  ],
+  "macros": [
+   {
+    "name": "LSASS_CALL_END",
+    "start_line": 184,
+    "end_line": 195,
+    "code": "#define LSASS_CALL_END \\\n        } __EXCEPT(rpc_filter) { \\\n            err = GetExceptionCode(); \\\n            status = SEC_E_INTERNAL_ERROR; \\\n        } \\\n        __ENDTRY \\\n        if (err == RPC_S_SERVER_UNAVAILABLE) { \\\n            if (start_samss()) \\\n                continue; \\\n        } \\\n        break; \\\n    }"
+   },
+   {
+    "name": "LSASS_CALL_START",
+    "start_line": 179,
+    "end_line": 182,
+    "code": "#define LSASS_CALL_START \\\n    for (;;) { \\\n        DWORD err = 0; \\\n        __TRY {"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "CloseServiceHandle",
+    "module": "advapi32",
+    "impl": [
+     "dlls/sechost/service.c:448"
+    ]
+   },
+   {
+    "name": "GetTickCount64",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/sync.c:191"
+    ]
+   },
+   {
+    "name": "I_RpcExceptionFilter",
+    "module": "rpcrt4",
+    "impl": [
+     "dlls/rpcrt4/rpcrt4_main.c:871"
+    ]
+   },
+   {
+    "name": "OpenSCManagerW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/sechost/service.c:270"
+    ]
+   },
+   {
+    "name": "OpenServiceW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/sechost/service.c:310"
+    ]
+   },
+   {
+    "name": "QueryServiceStatusEx",
+    "module": "advapi32",
+    "impl": [
+     "dlls/sechost/service.c:1105"
+    ]
+   },
+   {
+    "name": "RpcBindingFree",
+    "module": "rpcrt4",
+    "impl": [
+     "dlls/rpcrt4/rpc_binding.c:765"
+    ]
+   },
+   {
+    "name": "RpcBindingFromStringBindingW",
+    "module": "rpcrt4",
+    "impl": [
+     "dlls/rpcrt4/rpc_binding.c:858"
+    ]
+   },
+   {
+    "name": "RpcStringBindingComposeW",
+    "module": "rpcrt4",
+    "impl": [
+     "dlls/rpcrt4/rpc_binding.c:493"
+    ]
+   },
+   {
+    "name": "RpcStringFreeW",
+    "module": "rpcrt4",
+    "impl": [
+     "dlls/rpcrt4/rpcrt4_main.c:179"
+    ]
+   },
+   {
+    "name": "Sleep",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/sync.c:361"
+    ]
+   },
+   {
+    "name": "StartServiceW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/sechost/service.c:1041"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetCurrentThreadId",
+   "GetLastError",
+   "_InterlockedCompareExchangePointer",
+   "__wine_pop_frame",
+   "__wine_push_frame",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "__wine_exception_handler",
+   "__wine_setjmpex",
+   "call_package_untrusted"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "secur32.LsaCallAuthenticationPackage",
+  "category": {
+   "l1": "Security and identity",
+   "l2": "Authentication",
+   "header": "ntsecapi.h",
+   "textbook": "Protection",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 23,
+   "body": 20,
+   "code": 14
+  },
+  "cyclomatic": 5,
+  "return_type": "NTSTATUS",
+  "n_params": 7,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/secur32/tests/negotiate.c::test_Negotiate"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/ntsecapi/nf-ntsecapi-lsacallauthenticationpackage",
+   "source": "win32",
+   "description": "Used by a logon application to communicate with an authentication package.",
+   "min_windows": "Windows XP [desktop apps only]",
+   "documented_dll": "Secur32.dll"
+  },
+  "exports": [
+   "secur32.LsaCallAuthenticationPackage",
+   "sspicli.LsaCallAuthenticationPackage"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.647,
+   "first_date": "2017-10-18",
+   "median_date": "2026-08-25",
+   "last_date": "2026-08-25",
+   "code_lines": 17
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "advapi32.CryptDecrypt",
+  "share_after_cutoff": 0.647,
+  "last_date": "2026-08-25"
+ }
+}

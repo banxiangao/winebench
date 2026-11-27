@@ -1,0 +1,258 @@
+{
+ "id": "0071",
+ "function": {
+  "name": "D3DXSaveTextureToFileInMemory",
+  "export_name": "D3DXSaveTextureToFileInMemory",
+  "module": "d3dx9_36",
+  "source_module": "d3dx9_36",
+  "exported_by": [
+   "d3dx9_24",
+   "d3dx9_25",
+   "d3dx9_26",
+   "d3dx9_27",
+   "d3dx9_28",
+   "d3dx9_29",
+   "d3dx9_30",
+   "d3dx9_31",
+   "d3dx9_32",
+   "d3dx9_33",
+   "d3dx9_34",
+   "d3dx9_35",
+   "d3dx9_36",
+   "d3dx9_37",
+   "d3dx9_38",
+   "d3dx9_39",
+   "d3dx9_40",
+   "d3dx9_41",
+   "d3dx9_42",
+   "d3dx9_43"
+  ],
+  "side": "PE",
+  "file": "dlls/d3dx9_36/texture.c",
+  "start_line": 1865,
+  "end_line": 2083,
+  "body_lines": 216,
+  "signature": "HRESULT WINAPI D3DXSaveTextureToFileInMemory(ID3DXBuffer **dst_buffer, D3DXIMAGE_FILEFORMAT file_format, IDirect3DBaseTexture9 *src_texture, const PALETTEENTRY *src_palette)",
+  "header_comment": null,
+  "code": "HRESULT WINAPI D3DXSaveTextureToFileInMemory(ID3DXBuffer **dst_buffer, D3DXIMAGE_FILEFORMAT file_format,\n        IDirect3DBaseTexture9 *src_texture, const PALETTEENTRY *src_palette)\n{\n    const struct pixel_format_desc *fmt_desc = NULL;\n    unsigned int levels, file_size, i, j;\n    struct d3dx_image image;\n    D3DRESOURCETYPE type;\n    ID3DXBuffer *buffer;\n    struct volume size;\n    HRESULT hr;\n\n    TRACE(\"dst_buffer %p, file_format %u, src_texture %p, src_palette %p.\\n\",\n            dst_buffer, file_format, src_texture, src_palette);\n\n    if (!dst_buffer || !src_texture || file_format > D3DXIFF_PFM)\n        return D3DERR_INVALIDCALL;\n\n    *dst_buffer = buffer = NULL;\n    type = IDirect3DBaseTexture9_GetType(src_texture);\n    if (type < D3DRTYPE_TEXTURE || type > D3DRTYPE_CUBETEXTURE)\n        return D3DERR_INVALIDCALL;\n\n    if (file_format != D3DXIFF_DDS)\n    {\n        if (type == D3DRTYPE_VOLUMETEXTURE)\n        {\n            IDirect3DVolume9 *volume;\n\n            hr = IDirect3DVolumeTexture9_GetVolumeLevel((IDirect3DVolumeTexture9 *)src_texture, 0, &volume);\n            if (SUCCEEDED(hr))\n            {\n                hr = D3DXSaveVolumeToFileInMemory(dst_buffer, file_format, volume, src_palette, NULL);\n                IDirect3DVolume9_Release(volume);\n            }\n        }\n        else\n        {\n            IDirect3DSurface9 *surface;\n\n            hr = get_surface(type, src_texture, D3DCUBEMAP_FACE_POSITIVE_X, 0, &surface);\n            if (SUCCEEDED(hr))\n            {\n                hr = D3DXSaveSurfaceToFileInMemory(dst_buffer, file_format, surface, src_palette, NULL);\n                IDirect3DSurface9_Release(surface);\n            }\n        }\n\n        return hr;\n    }\n\n    levels = IDirect3DBaseTexture9_GetLevelCount(src_texture);\n    switch (type)\n    {\n        case D3DRTYPE_TEXTURE:\n        {\n            IDirect3DTexture9 *texture = (IDirect3DTexture9 *)src_texture;\n            D3DSURFACE_DESC desc;\n\n            hr = IDirect3DTexture9_GetLevelDesc(texture, 0, &desc);\n            if (FAILED(hr))\n                break;\n\n            fmt_desc = get_format_info(desc.Format);\n            if (is_unknown_format(fmt_desc))\n                return E_NOTIMPL;\n\n            set_volume_struct(&size, desc.Width, desc.Height, 1);\n            break;\n        }\n\n        case D3DRTYPE_CUBETEXTURE:\n        {\n            IDirect3DCubeTexture9 *texture = (IDirect3DCubeTexture9 *)src_texture;\n            D3DSURFACE_DESC desc;\n\n            hr = IDirect3DCubeTexture9_GetLevelDesc(texture, 0, &desc);\n            if (FAILED(hr))\n                break;\n\n            fmt_desc = get_format_info(desc.Format);\n            if (is_unknown_format(fmt_desc))\n                return E_NOTIMPL;\n\n            set_volume_struct(&size, desc.Width, desc.Height, 1);\n            break;\n        }\n\n        case D3DRTYPE_VOLUMETEXTURE:\n        {\n            IDirect3DVolumeTexture9 *texture = (IDirect3DVolumeTexture9 *)src_texture;\n            D3DVOLUME_DESC desc;\n\n            hr = IDirect3DVolumeTexture9_GetLevelDesc(texture, 0, &desc);\n            if (FAILED(hr))\n                break;\n\n            fmt_desc = get_format_info(desc.Format);\n            if (is_unknown_format(fmt_desc))\n                return E_NOTIMPL;\n\n            set_volume_struct(&size, desc.Width, desc.Height, desc.Depth);\n            break;\n        }\n\n        default:\n            assert(0); /* Should not happen. */\n            return E_FAIL;\n    }\n\n    if (is_index_format(fmt_desc) && !src_palette)\n        return E_NOTIMPL;\n\n    file_size = d3dx_calculate_layer_pixels_size(fmt_desc->format, size.width, size.height, size.depth, levels);\n    if (type == D3DRTYPE_CUBETEXTURE)\n        file_size *= 6;\n    file_size += is_index_format(fmt_desc) ? sizeof(struct dds_header) + DDS_PALETTE_SIZE : sizeof(struct dds_header);\n\n    hr = D3DXCreateBuffer(file_size, &buffer);\n    if (FAILED(hr))\n        return hr;\n\n    hr = d3dx_init_dds_header((struct dds_header *)ID3DXBuffer_GetBufferPointer(buffer),\n            d3dx_resource_type_from_d3dresourcetype(type), fmt_desc->format, &size, levels);\n    if (FAILED(hr))\n        goto exit;\n\n    if (is_index_format(fmt_desc))\n        memcpy((uint8_t *)ID3DXBuffer_GetBufferPointer(buffer) + sizeof(struct dds_header), src_palette,\n                DDS_PALETTE_SIZE);\n\n    hr = d3dx_image_init(ID3DXBuffer_GetBufferPointer(buffer), ID3DXBuffer_GetBufferSize(buffer), &image, 0, 0);\n    if (FAILED(hr))\n        goto exit;\n\n    if (type != D3DRTYPE_VOLUMETEXTURE)\n    {\n        for (j = 0; j < image.layer_count; ++j)\n        {\n            for (i = 0; i < levels; ++i)\n            {\n                IDirect3DSurface9 *src_surface, *tmp_surface;\n                struct d3dx_pixels src_pixels, dst_pixels;\n                D3DSURFACE_DESC src_surface_desc;\n                D3DLOCKED_RECT src_locked_rect;\n                RECT src_rect;\n\n                hr = d3dx_image_get_pixels(&image, j, i, &dst_pixels);\n                if (FAILED(hr))\n                    goto exit;\n\n                hr = get_surface(type, src_texture, j, i, &src_surface);\n                if (FAILED(hr))\n                    goto exit;\n\n                hr = lock_surface(src_surface, NULL, &src_locked_rect, &tmp_surface, FALSE);\n                if (FAILED(hr))\n                {\n                    IDirect3DSurface9_Release(src_surface);\n                    goto exit;\n                }\n\n                IDirect3DSurface9_GetDesc(src_surface, &src_surface_desc);\n                SetRect(&src_rect, 0, 0, src_surface_desc.Width, src_surface_desc.Height);\n                set_d3dx_pixels(&src_pixels, src_locked_rect.pBits, src_locked_rect.Pitch, 0, src_palette,\n                        src_surface_desc.Width, src_surface_desc.Height, 1, &src_rect);\n\n                hr = d3dx_load_pixels_from_pixels(&dst_pixels, fmt_desc, &src_pixels, fmt_desc, D3DX_FILTER_NONE, 0);\n                if (FAILED(hr))\n                {\n                    unlock_surface(src_surface, NULL, tmp_surface, FALSE);\n                    IDirect3DSurface9_Release(src_surface);\n                    goto exit;\n                }\n\n                hr = unlock_surface(src_surface, NULL, tmp_surface, FALSE);\n                IDirect3DSurface9_Release(src_surface);\n                if (FAILED(hr))\n                    goto exit;\n            }\n        }\n    }\n    else\n    {\n        IDirect3DVolumeTexture9 *volume_tex = (IDirect3DVolumeTexture9 *)src_texture;\n\n        for (i = 0; i < levels; ++i)\n        {\n            struct d3dx_pixels src_pixels, dst_pixels;\n            D3DVOLUME_DESC src_volume_desc;\n            D3DLOCKED_BOX src_locked_box;\n            RECT src_rect;\n\n            hr = d3dx_image_get_pixels(&image, 0, i, &dst_pixels);\n            if (FAILED(hr))\n                goto exit;\n\n            hr = IDirect3DVolumeTexture9_LockBox(volume_tex, i, &src_locked_box, NULL, D3DLOCK_READONLY);\n            if (FAILED(hr))\n                goto exit;\n\n            IDirect3DVolumeTexture9_GetLevelDesc(volume_tex, i, &src_volume_desc);\n            SetRect(&src_rect, 0, 0, src_volume_desc.Width, src_volume_desc.Height);\n            set_d3dx_pixels(&src_pixels, src_locked_box.pBits, src_locked_box.RowPitch, src_locked_box.SlicePitch,\n                    src_palette, src_volume_desc.Width, src_volume_desc.Height, src_volume_desc.Depth, &src_rect);\n\n            hr = d3dx_load_pixels_from_pixels(&dst_pixels, fmt_desc, &src_pixels, fmt_desc, D3DX_FILTER_NONE, 0);\n            IDirect3DVolumeTexture9_UnlockBox(volume_tex, i);\n            if (FAILED(hr))\n                goto exit;\n        }\n    }\n    *dst_buffer = buffer;\n\nexit:\n    if (buffer && (buffer != *dst_buffer))\n        ID3DXBuffer_Release(buffer);\n\n    return hr;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"d3dx9_private.h\""
+  ],
+  "resolution": [
+   "d3dx9_36!D3DXSaveTextureToFileInMemory [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/d3dx9_36/tests/texture.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 2
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "",
+   "path": "desktop-src/direct3d9/d3dxsavetexturetofileinmemory.md",
+   "url": "https://learn.microsoft.com/windows/win32/direct3d9/d3dxsavetexturetofileinmemory",
+   "documented_name": "d3dxsavetexturetofileinmemory",
+   "file": "docs/0071_win32_d3dxsavetexturetofileinmemory.md",
+   "text": "---\ndescription: Saves a texture to an image file.\nms.assetid: 8dcfd58a-ae1e-43c3-8ff1-94e3fa398b0f\ntitle: D3DXSaveTextureToFileInMemory function (D3dx9tex.h)\nms.topic: reference\nms.date: 05/31/2018\ntopic_type:\n- APIRef\n- kbSyntax\napi_name:\n- D3DXSaveTextureToFileInMemory\napi_type:\n- LibDef\napi_location:\n- d3dx9.lib\n- d3dx9.dll\n---\n\n# D3DXSaveTextureToFileInMemory function\n\nSaves a texture to an image file.\n\n## Syntax\n\n\n```C++\nHRESULT D3DXSaveTextureToFileInMemory(\n  _Out_       LPD3DXBUFFER           *ppDestBuf,\n  _In_        D3DXIMAGE_FILEFORMAT   DestFormat,\n  _In_        LPDIRECT3DBASETEXTURE9 pSrcTexture,\n  _In_  const PALETTEENTRY           *pSrcPalette\n);\n```\n\n\n\n## Parameters\n\n<dl> <dt>\n\n*ppDestBuf* \\[out\\]\n</dt> <dd>\n\nType: **[**LPD3DXBUFFER**](id3dxbuffer.md)\\***\n\nAddress of a pointer to an [**ID3DXBuffer**](id3dxbuffer.md) that will store the image.\n\n</dd> <dt>\n\n*DestFormat* \\[in\\]\n</dt> <dd>\n\nType: **[**D3DXIMAGE\\_FILEFORMAT**](./d3dximage-fileformat.md)**\n\n[**D3DXIMAGE\\_FILEFORMAT**](./d3dximage-fileformat.md) specifying the file format to use when saving. This function supports saving to all **D3DXIMAGE\\_FILEFORMAT** formats except Portable Pixmap (.ppm) and Targa/Truevision Graphics Adapter (.tga).\n\n</dd> <dt>\n\n*pSrcTexture* \\[in\\]\n</dt> <dd>\n\nType: **[**LPDIRECT3DBASETEXTURE9**](/windows/win32/api/d3d9helper/nn-d3d9helper-idirect3dbasetexture9)**\n\nPointer to [**IDirect3DBaseTexture9**](/windows/win32/api/d3d9helper/nn-d3d9helper-idirect3dbasetexture9) interface containing the image to be saved.\n\n</dd> <dt>\n\n*pSrcPalette* \\[in\\]\n</dt> <dd>\n\nType: **const [**PALETTEENTRY**](/windows/win32/api/wingdi/ns-wingdi-paletteentry)\\***\n\nPointer to a [**PALETTEENTRY**](/windows/win32/api/wingdi/ns-wingdi-paletteentry) structure containing a palette of 256 colors. This parameter can be **NULL**.\n\n</dd> </dl>\n\n## Return value\n\nType: **[**HRESULT**](https://msdn.microsoft.com/library/Bb401631(v=MSDN.10).aspx)**\n\nIf the function succeeds, the return value is D3D\\_OK. If the function fails, the return value can be the following: D3DERR\\_INVALIDCALL.\n\n## Remarks\n\nThis function handles conversion to and from compressed texture formats.\n\n## Requirements\n\n\n\n| Requirement | Value |\n|--------------------|---------------------------------------------------------------------------------------|\n| Header<br/>  | <dl> <dt>D3dx9tex.h</dt> </dl> |\n| Library<br/> | <dl> <dt>D3dx9.lib</dt> </dl>  |\n\n\n\n## See also\n\n<dl> <dt>\n\n[Texture Functions in D3DX 9](dx9-graphics-reference-d3dx-functions-texture.md)\n</dt> <dt>\n\n[**D3DXSaveSurfaceToFileInMemory**](d3dxsavesurfacetofileinmemory.md)\n</dt> <dt>\n\n[**D3DXSaveVolumeToFileInMemory**](d3dxsavevolumetofileinmemory.md)\n</dt> </dl>\n\n \n\n \n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_surface",
+   "file": "dlls/d3dx9_36/texture.c",
+   "start_line": 27,
+   "end_line": 40,
+   "static": true,
+   "called_from": [
+    "D3DXSaveTextureToFileInMemory"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/d3dx9_36/texture.c:95",
+    "dlls/d3dx9_36/texture.c:100"
+   ],
+   "signature": "static HRESULT get_surface(D3DRESOURCETYPE type, struct IDirect3DBaseTexture9 *tex, int face, UINT level, struct IDirect3DSurface9 **surf)",
+   "code": "static HRESULT get_surface(D3DRESOURCETYPE type, struct IDirect3DBaseTexture9 *tex,\n        int face, UINT level, struct IDirect3DSurface9 **surf)\n{\n    switch (type)\n    {\n        case D3DRTYPE_TEXTURE:\n            return IDirect3DTexture9_GetSurfaceLevel((IDirect3DTexture9*) tex, level, surf);\n        case D3DRTYPE_CUBETEXTURE:\n            return IDirect3DCubeTexture9_GetCubeMapSurface((IDirect3DCubeTexture9*) tex, face, level, surf);\n        default:\n            ERR(\"Unexpected texture type\\n\");\n            return E_NOTIMPL;\n    }\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 25,
+    "end_line": 25,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(d3dx);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "d3dx_calculate_layer_pixels_size",
+    "file": "dlls/d3dx9_36/d3dx_helpers.c",
+    "start_line": 529
+   },
+   {
+    "name": "d3dx_image_get_pixels",
+    "file": "dlls/d3dx9_36/d3dx_helpers.c",
+    "start_line": 1914
+   },
+   {
+    "name": "d3dx_image_init",
+    "file": "dlls/d3dx9_36/d3dx_helpers.c",
+    "start_line": 1845
+   },
+   {
+    "name": "d3dx_init_dds_header",
+    "file": "dlls/d3dx9_36/d3dx_helpers.c",
+    "start_line": 547
+   },
+   {
+    "name": "d3dx_load_pixels_from_pixels",
+    "file": "dlls/d3dx9_36/d3dx_helpers.c",
+    "start_line": 3193
+   },
+   {
+    "name": "d3dx_resource_type_from_d3dresourcetype",
+    "file": "dlls/d3dx9_36/util.c",
+    "start_line": 140
+   },
+   {
+    "name": "get_format_info",
+    "file": "dlls/d3dx9_36/util.c",
+    "start_line": 409
+   },
+   {
+    "name": "lock_surface",
+    "file": "dlls/d3dx9_36/surface.c",
+    "start_line": 28
+   },
+   {
+    "name": "unlock_surface",
+    "file": "dlls/d3dx9_36/surface.c",
+    "start_line": 86
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "D3DXCreateBuffer",
+    "impl": [
+     "dlls/d3dx9_36/core.c:127"
+    ]
+   },
+   {
+    "name": "D3DXSaveSurfaceToFileInMemory",
+    "impl": [
+     "dlls/d3dx9_36/surface.c:795"
+    ]
+   },
+   {
+    "name": "D3DXSaveVolumeToFileInMemory",
+    "impl": [
+     "dlls/d3dx9_36/volume.c:288"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "_assert",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/exit.c:319"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetRect",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "is_index_format",
+   "is_unknown_format",
+   "set_d3dx_pixels",
+   "set_volume_struct"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "d3dx9_36.D3DXSaveTextureToFileInMemory",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "Direct3D",
+   "header": "",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 219,
+   "body": 217,
+   "code": 143
+  },
+  "cyclomatic": 41,
+  "return_type": "HRESULT",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 2,
+   "n_tests": 2,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/d3dx9_36/tests/texture.c::test_D3DXSaveTextureToFileInMemory",
+    "dlls/d3dx9_36/tests/texture.c::test_save_texture_to_dds_file"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/direct3d9/d3dxsavetexturetofileinmemory",
+   "source": "win32-conceptual",
+   "description": "Saves a texture to an image file.",
+   "min_windows": "",
+   "documented_dll": "d3dx9.dll"
+  },
+  "exports": [
+   "d3dx9_36.D3DXSaveTextureToFileInMemory"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.81,
+   "first_date": "2010-04-07",
+   "median_date": "2025-03-26",
+   "last_date": "2025-08-01",
+   "code_lines": 142
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "d3dx9_36.D3DXCreateCylinder",
+  "share_after_cutoff": 0.81,
+  "last_date": "2025-08-01"
+ }
+}

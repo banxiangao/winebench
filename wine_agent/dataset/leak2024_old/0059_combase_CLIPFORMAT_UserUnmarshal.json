@@ -1,0 +1,189 @@
+{
+ "id": "0059",
+ "function": {
+  "name": "CLIPFORMAT_UserUnmarshal",
+  "export_name": "CLIPFORMAT_UserUnmarshal",
+  "module": "combase",
+  "source_module": "combase",
+  "exported_by": [
+   "combase",
+   "ole32"
+  ],
+  "side": "PE",
+  "file": "dlls/combase/usrmarshal.c",
+  "start_line": 270,
+  "end_line": 317,
+  "body_lines": 45,
+  "signature": "unsigned char * __RPC_USER CLIPFORMAT_UserUnmarshal(ULONG *pFlags, unsigned char *pBuffer, CLIPFORMAT *pCF)",
+  "header_comment": "/******************************************************************************\n *           CLIPFORMAT_UserUnmarshal (combase.@)\n *\n * Unmarshals a clip format from a buffer.\n *\n * PARAMS\n *  pFlags  [I] Flags. See notes.\n *  pBuffer [I] Buffer to marshal the clip format from.\n *  pCF     [O] Address that receive the unmarshaled clip format.\n *\n * RETURNS\n *  The end of the marshaled data in the buffer.\n *\n * NOTES\n *  Even though the function is documented to take a pointer to an unsigned\n *  long in pFlags, it actually takes a pointer to a USER_MARSHAL_CB structure, of which\n *  the first parameter is an unsigned long.\n *  This function is only intended to be called by the RPC runtime.\n */",
+  "code": "unsigned char * __RPC_USER CLIPFORMAT_UserUnmarshal(ULONG *pFlags, unsigned char *pBuffer, CLIPFORMAT *pCF)\n{\n    LONG fContext;\n\n    TRACE(\"%s, %p, %p.\\n\", debugstr_user_flags(pFlags), pBuffer, pCF);\n\n    ALIGN_POINTER(pBuffer, 3);\n\n    fContext = *(DWORD *)pBuffer;\n    pBuffer += 4;\n\n    if (fContext == WDT_INPROC_CALL)\n    {\n        *pCF = *(CLIPFORMAT *)pBuffer;\n        pBuffer += 4;\n    }\n    else if (fContext == WDT_REMOTE_CALL)\n    {\n        CLIPFORMAT cf;\n        UINT len;\n\n        /* pointer ID for registered clip format string */\n        if (*(DWORD *)pBuffer == 0)\n            RaiseException(RPC_S_INVALID_BOUND, 0, 0, NULL);\n        pBuffer += 4;\n\n        len = *(UINT *)pBuffer;\n        pBuffer += sizeof(UINT);\n        if (*(UINT *)pBuffer != 0)\n            RaiseException(RPC_S_INVALID_BOUND, 0, 0, NULL);\n        pBuffer += sizeof(UINT);\n        if (*(UINT *)pBuffer != len)\n            RaiseException(RPC_S_INVALID_BOUND, 0, 0, NULL);\n        pBuffer += sizeof(UINT);\n        if (((WCHAR *)pBuffer)[len - 1] != '\\0')\n            RaiseException(RPC_S_INVALID_BOUND, 0, 0, NULL);\n        TRACE(\"unmarshaling clip format %s\\n\", debugstr_w((LPCWSTR)pBuffer));\n        cf = RegisterClipboardFormatW((LPCWSTR)pBuffer);\n        pBuffer += len * sizeof(WCHAR);\n        if (!cf)\n            RaiseException(DV_E_CLIPFORMAT, 0, 0, NULL);\n        *pCF = cf;\n    }\n    else\n        /* code not really appropriate, but nearest I can find */\n        RaiseException(RPC_S_INVALID_TAG, 0, 0, NULL);\n    return pBuffer;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ole2.h\"",
+   "#include \"winstring.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "ole32!CLIPFORMAT_UserUnmarshal [stdcall] -> forward combase.CLIPFORMAT_UserUnmarshal",
+   "combase!CLIPFORMAT_UserUnmarshal [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ole32/tests/usrmarshal.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "oleidl",
+   "path": "sdk-api-src/content/oleidl/nf-oleidl-clipformat_userunmarshal.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/oleidl/nf-oleidl-clipformat_userunmarshal",
+   "documented_name": "clipformat_userunmarshal",
+   "file": "docs/0059_sdk-api_nf-oleidl-clipformat_userunmarshal.md",
+   "text": "---\nUID: NF:oleidl.CLIPFORMAT_UserUnmarshal\ntech.root: com\ntitle: CLIPFORMAT_UserUnmarshal (oleidl.h)\nms.date: 08/15/2022\ntargetos: Windows\ndescription: The CLIPFORMAT_UserUnmarshal function (oleidl.h) unmarshals a CLIPFORMAT object from the RPC buffer.\nprerelease: false\nreq.assembly: \nreq.construct-type: function\nreq.ddi-compliance: \nreq.dll: \nreq.header: oleidl.h\nreq.idl: \nreq.include-header: \nreq.irql: \nreq.kmdf-ver: \nreq.lib: \nreq.max-support: \nreq.namespace: \nreq.redist: \nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: \nreq.target-type: \nreq.type-library: \nreq.umdf-ver: \nreq.unicode-ansi: \ntopic_type:\n - apiref\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-marshal-l1-1-0.dll\n - ole32.dll\napi_name:\n - CLIPFORMAT_UserUnmarshal\nf1_keywords:\n - CLIPFORMAT_UserUnmarshal\n - oleidl/CLIPFORMAT_UserUnmarshal\ndev_langs:\n - c++\nhelpviewer_keywords:\n - CLIPFORMAT_UserUnmarshal\n---\n\n## -description\n\nUnmarshals a CLIPFORMAT object from the RPC buffer.\n\n## -parameters\n\n### -param unnamedParam1 [in]\n\nThe data used by RPC.\n\n### -param unnamedParam2 [in]\n\nThe current buffer. This pointer may or may not be aligned on entry.\n\n### -param unnamedParam3 [out]\n\nThe object.\n\n## -returns\n\n## -remarks\n\n## -see-also\n\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "debugstr_user_flags",
+   "file": "dlls/combase/usrmarshal.c",
+   "start_line": 35,
+   "end_line": 62,
+   "static": true,
+   "called_from": [
+    "CLIPFORMAT_UserUnmarshal"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/usrmarshal.c:114",
+    "dlls/combase/usrmarshal.c:120",
+    "dlls/combase/usrmarshal.c:126",
+    "dlls/combase/usrmarshal.c:132",
+    "dlls/combase/usrmarshal.c:165"
+   ],
+   "signature": "static const char* debugstr_user_flags(ULONG *pFlags)",
+   "code": "static const char* debugstr_user_flags(ULONG *pFlags)\n{\n    char buf[12];\n    const char* loword;\n    switch (LOWORD(*pFlags))\n    {\n    case MSHCTX_LOCAL:\n        loword = \"MSHCTX_LOCAL\";\n        break;\n    case MSHCTX_NOSHAREDMEM:\n        loword = \"MSHCTX_NOSHAREDMEM\";\n        break;\n    case MSHCTX_DIFFERENTMACHINE:\n        loword = \"MSHCTX_DIFFERENTMACHINE\";\n        break;\n    case MSHCTX_INPROC:\n        loword = \"MSHCTX_INPROC\";\n        break;\n    default:\n        sprintf(buf, \"%d\", LOWORD(*pFlags));\n        loword=buf;\n    }\n\n    if (HIWORD(*pFlags) == NDR_LOCAL_DATA_REPRESENTATION)\n        return wine_dbg_sprintf(\"MAKELONG(%s, NDR_LOCAL_DATA_REPRESENTATION)\", loword);\n    else\n        return wine_dbg_sprintf(\"MAKELONG(%s, 0x%04x)\", loword, HIWORD(*pFlags));\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 28,
+    "end_line": 28,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ole);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "ALIGN_POINTER",
+    "start_line": 33,
+    "end_line": 33,
+    "code": "#define ALIGN_POINTER(_Ptr, _Align) _Ptr = ALIGNED_POINTER(_Ptr, _Align)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "RaiseException",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/debug.c:318"
+    ]
+   },
+   {
+    "name": "RegisterClipboardFormatW",
+    "module": "user32",
+    "impl": [
+     "dlls/user32/clipboard.c:528"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_w",
+   "sprintf",
+   "wine_dbg_log",
+   "wine_dbg_sprintf"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "combase.CLIPFORMAT_UserUnmarshal",
+  "category": {
+   "l1": "System services",
+   "l2": "COM",
+   "header": "oleidl.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 48,
+   "body": 47,
+   "code": 33
+  },
+  "cyclomatic": 8,
+  "return_type": "unsigned char *",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ole32/tests/usrmarshal.c::test_marshal_CLIPFORMAT"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/oleidl/nf-oleidl-clipformat_userunmarshal",
+   "source": "win32",
+   "description": "The CLIPFORMAT_UserUnmarshal function (oleidl.h) unmarshals a CLIPFORMAT object from the RPC buffer.",
+   "min_windows": "Windows XP [desktop apps \\| UWP apps]",
+   "documented_dll": ""
+  },
+  "exports": [
+   "combase.CLIPFORMAT_UserUnmarshal",
+   "ole32.CLIPFORMAT_UserUnmarshal"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2005-11-29",
+   "median_date": "2009-02-09",
+   "last_date": "2020-08-03",
+   "code_lines": 32,
+   "pair": "combase.RoGetAgileReference",
+   "rank": 1,
+   "distance": 0.118
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "combase.RoGetAgileReference",
+  "share_after_cutoff": 0.0,
+  "last_date": "2020-08-03",
+  "partner_rank": 1,
+  "distance": 0.118
+ }
+}

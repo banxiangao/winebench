@@ -1,0 +1,238 @@
+{
+ "id": "0234",
+ "function": {
+  "name": "NtGdiDdDDIShareObjects",
+  "export_name": "D3DKMTShareObjects",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "gdi32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/d3dkmt.c",
+  "start_line": 927,
+  "end_line": 983,
+  "body_lines": 54,
+  "signature": "NTSTATUS WINAPI NtGdiDdDDIShareObjects( UINT count, const D3DKMT_HANDLE *handles, OBJECT_ATTRIBUTES *attr, UINT access, HANDLE *handle )",
+  "header_comment": "/******************************************************************************\n *           NtGdiDdDDIShareObjects    (win32u.@)\n */",
+  "code": "NTSTATUS WINAPI NtGdiDdDDIShareObjects( UINT count, const D3DKMT_HANDLE *handles, OBJECT_ATTRIBUTES *attr,\n                                        UINT access, HANDLE *handle )\n{\n    struct d3dkmt_object *object, *resource = NULL, *sync = NULL, *mutex = NULL;\n    struct object_attributes *objattr;\n    data_size_t len;\n    NTSTATUS status;\n\n    TRACE( \"count %u, handles %p, attr %p, access %#x, handle %p\\n\", count, handles, attr, access, handle );\n\n    if (count == 1)\n    {\n        if (!(object = get_d3dkmt_object( handles[0], -1 )) || !object->shared) goto failed;\n        if (object->type == D3DKMT_RESOURCE) resource = object;\n        else if (object->type == D3DKMT_SYNC) sync = object;\n        else goto failed;\n    }\n    else if (count == 3)\n    {\n        if (!(object = get_d3dkmt_object( handles[0], -1 )) || !object->shared) goto failed;\n        if (object->type != D3DKMT_RESOURCE) goto failed;\n        resource = object;\n\n        if (!(object = get_d3dkmt_object( handles[1], -1 )) || !object->shared) goto failed;\n        if (object->type != D3DKMT_MUTEX) goto failed;\n        mutex = object;\n\n        if (!(object = get_d3dkmt_object( handles[2], -1 )) || !object->shared) goto failed;\n        if (object->type != D3DKMT_SYNC) goto failed;\n        sync = object;\n    }\n    else goto failed;\n\n    if ((status = wine_server_alloc_object_attributes( attr, &objattr, &len ))) return status;\n\n    SERVER_START_REQ( d3dkmt_share_objects )\n    {\n        req->access = access | STANDARD_RIGHTS_ALL;\n        if (resource) req->resource = resource->global;\n        if (mutex) req->mutex = mutex->global;\n        if (sync) req->sync = sync->global;\n        wine_server_add_data( req, objattr, len );\n        status = wine_server_call( req );\n        *handle = wine_server_ptr_handle( reply->handle );\n    }\n    SERVER_END_REQ;\n\n    free( objattr );\n\n    if (status) WARN( \"Failed to share objects, status %#x\\n\", status );\n    else TRACE( \"Shared objects with handle %p\\n\", *handle );\n    return status;\n\nfailed:\n    WARN( \"Unsupported object count / types / handles\\n\" );\n    return STATUS_INVALID_PARAMETER;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"config.h\"",
+   "#include <assert.h>",
+   "#include <pthread.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"ntgdi_private.h\"",
+   "#include \"win32u_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include <d3d9types.h>",
+   "#include <dxgi.h>",
+   "#include <d3d10.h>",
+   "#include <d3d11.h>",
+   "#include <d3d12.h>"
+  ],
+  "resolution": [
+   "gdi32!D3DKMTShareObjects [stdcall] -> forward win32u.NtGdiDdDDIShareObjects",
+   "win32u!NtGdiDdDDIShareObjects [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/win32u/tests/d3dkmt.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "d3dkmthk",
+   "path": "wdk-ddi-src/content/d3dkmthk/nf-d3dkmthk-d3dkmtshareobjects.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/d3dkmthk/nf-d3dkmthk-d3dkmtshareobjects",
+   "documented_name": "d3dkmtshareobjects",
+   "file": "docs/0234_windows-driver-docs-ddi_nf-d3dkmthk-d3dkmtshareobjects.md",
+   "text": "---\nUID: NF:d3dkmthk.D3DKMTShareObjects\ntitle: D3DKMTShareObjects function (d3dkmthk.h)\ndescription: Learn more about the D3DKMTShareObjects function.\nms.date: 10/02/2024\nreq.header: d3dkmthk.h\nreq.include-header: D3dkmthk.h\nreq.target-type: Universal\nreq.target-min-winverclnt: Windows 8\nreq.target-min-winversvr: Windows Server 2012\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\ntech.root: display\nreq.typenames: \nf1_keywords:\n - D3DKMTShareObjects\n - d3dkmthk/D3DKMTShareObjects\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - GDI32.dll\n - API-MS-Win-dx-d3dkmt-l1-1-0.dll\n - API-MS-Win-dx-d3dkmt-l1-1-1.dll\n - API-MS-Win-DX-D3DKMT-L1-1-2.dll\napi_name:\n - D3DKMTShareObjects\n---\n\n# D3DKMTShareObjects function\n\n## -description\n\n**D3DKMTShareObjects** shares resource objects that were created with the [**D3KMTCreateAllocation**](nf-d3dkmthk-d3dkmtcreateallocation.md),  [**D3KMTCreateAllocation2**](nf-d3dkmthk-d3dkmtcreateallocation2.md)[**D3DKMTCreateKeyedMutex2**](nf-d3dkmthk-d3dkmtcreatekeyedmutex2.md), and [**D3DKMTCreateSynchronizationObject2**](nf-d3dkmthk-d3dkmtcreatesynchronizationobject2.md) functions.\n\n## -parameters\n\n### -param cObjects [in]\n\nThe number of resource objects provided in the **hObjects** parameter. This value must be less than or equal to **D3DKMT_MAX_OBJECTS_PER_HANDLE**.\n\n### -param hObjects [in]\n\nA pointer to an array of local kernel-mode handles that specify the resource objects to be shared. For more information, see **Remarks**.\n\n### -param pObjectAttributes [in]\n\nA pointer to an [**OBJECT_ATTRIBUTES**](/windows/win32/api/ntdef/ns-ntdef-_object_attributes) structure that specifies attributes of the resource objects.\n\n### -param dwDesiredAccess [in]\n\nSpecifies read and write access for the resource.\n\nFor GPU synchronization objects, **dwDesiredAccess** can be a combination of the following bit fields (defined in *d3dukmdt.h*).\n\n| Value | Meaning |\n| ----- | ------- |\n| STANDARD_RIGHTS_READ | The process that opens the sync object can read the state of the sync object. This flag must be specified or the object will be inaccessible. |\n| D3DDDI_SYNC_OBJECT_WAIT       | The process that opens the sync object can issue wait operations for the sync object. |\n| D3DDDI_SYNC_OBJECT_SIGNAL     | The process that opens the sync object can issue signal operations for the sync object. |\n| D3DDDI_SYNC_OBJECT_ALL_ACCESS | The process that opens the sync object can issue any operation for the sync object. |\n\nFor shared resources, the desired access can be specified as a combination of the following flags (defined in *d3dkmthk.h*):\n\n| Value | Meaning |\n| ----- | ------- |\n| STANDARD_RIGHTS_READ         | The process that opens the resource can have read access. This flag must be specified or the object will be inaccessible. |\n| SHARED_ALLOCATION_WRITE      | The process that opens the resource can have write access. If this access flag is not specified, the resource will be opened as read-only. |\n| SHARED_ALLOCATION_ALL_ACCESS | The process that opens the resource can have all access to the object. |\n\n### -param phSharedNtHandle [out]\n\nA pointer to a shared NT handle that specifies the resource objects.\n\nThis parameter will be **NULL** if the **NtSecuritySharing** flag value is not set. For more information, see **Remarks**.\n\n## -returns\n\nThe method returns **STATUS_SUCCESS** if the operation succeeds. Otherwise, this method might return an appropriate **[NTSTATUS](/windows-hardware/drivers/kernel/ntstatus-values)** error code.\n\n## -remarks\n\nObjects to be shared using  **D3DKMTShareObjects**  must first be created with the **NtSecuritySharing** flag value set. This flag value is available in the [**D3DKMT_CREATEALLOCATIONFLAGS**](ns-d3dkmthk-_d3dkmt_createallocationflags.md), [**D3DKMT_CREATEKEYEDMUTEX2_FLAGS**](ns-d3dkmthk-_d3dkmt_createkeyedmutex2_flags.md), and [**D3DDDI_SYNCHRONIZATIONOBJECT_FLAGS**](../d3dukmdt/ns-d3dukmdt-_d3dddi_synchronizationobject_flags.md) structures.\n\nThis function must specify handles through the **hObjects** parameter only to the following combinations of input object array types:\n\n- an allocation\n- an allocation, a keyed mutex, and a synchronization object\n- a synchronization object\n\nThe operating system will reject any other input handle combinations.\n\n## -see-also\n\n[**D3DDDI_SYNCHRONIZATIONOBJECT_FLAGS**](../d3dukmdt/ns-d3dukmdt-_d3dddi_synchronizationobject_flags.md)\n\n[**D3DKMTCreateAllocation**](nf-d3dkmthk-d3dkmtcreateallocation.md)\n\n[**D3DKMTCreateAllocation2**](nf-d3dkmthk-d3dkmtcreateallocation2.md)\n\n[**D3DKMTCreateKeyedMutex2**](nf-d3dkmthk-d3dkmtcreatekeyedmutex2.md)\n\n[**D3DKMTCreateSynchronizationObject2**](nf-d3dkmthk-d3dkmtcreatesynchronizationobject2.md)\n\n[**D3DKMT_CREATEALLOCATIONFLAGS**](ns-d3dkmthk-_d3dkmt_createallocationflags.md)\n\n[**D3DKMT_CREATEKEYEDMUTEX2_FLAGS**](ns-d3dkmthk-_d3dkmt_createkeyedmutex2_flags.md)\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_d3dkmt_object",
+   "file": "dlls/win32u/d3dkmt.c",
+   "start_line": 270,
+   "end_line": 282,
+   "static": true,
+   "called_from": [
+    "NtGdiDdDDIShareObjects"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/d3dkmt.c:452",
+    "dlls/win32u/d3dkmt.c:489",
+    "dlls/win32u/d3dkmt.c:556",
+    "dlls/win32u/d3dkmt.c:579",
+    "dlls/win32u/d3dkmt.c:665"
+   ],
+   "signature": "static void *get_d3dkmt_object( D3DKMT_HANDLE local, enum d3dkmt_type type )",
+   "code": "static void *get_d3dkmt_object( D3DKMT_HANDLE local, enum d3dkmt_type type )\n{\n    unsigned int index = handle_to_index( local );\n    struct d3dkmt_object *object;\n\n    pthread_mutex_lock( &d3dkmt_lock );\n    if (objects + index >= objects_end) object = NULL;\n    else object = objects[index];\n    pthread_mutex_unlock( &d3dkmt_lock );\n\n    if (!object || object->local != local || (type != -1 && object->type != type)) return NULL;\n    return object;\n}"
+  },
+  {
+   "name": "handle_to_index",
+   "file": "dlls/win32u/d3dkmt.c",
+   "start_line": 201,
+   "end_line": 204,
+   "static": true,
+   "called_from": [
+    "get_d3dkmt_object"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/d3dkmt.c:216",
+    "dlls/win32u/d3dkmt.c:260"
+   ],
+   "signature": "static int handle_to_index( D3DKMT_HANDLE handle )",
+   "code": "static int handle_to_index( D3DKMT_HANDLE handle )\n{\n    return (handle & ~0xc0000000) >> 6;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "d3dkmt_object",
+    "kind": "struct_decl",
+    "start_line": 144,
+    "end_line": 151,
+    "code": "struct d3dkmt_object\n{\n    enum d3dkmt_type    type;           /* object type */\n    D3DKMT_HANDLE       local;          /* object local handle */\n    D3DKMT_HANDLE       global;         /* object global handle */\n    BOOL                shared;         /* object is shared using nt handles */\n    HANDLE              handle;         /* internal handle of the server object */\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 39,
+    "end_line": 39,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(d3dkmt);"
+   },
+   {
+    "name": "d3dkmt_lock",
+    "type": "pthread_mutex_t",
+    "static": true,
+    "start_line": 184,
+    "end_line": 184,
+    "code": "static pthread_mutex_t d3dkmt_lock = PTHREAD_MUTEX_INITIALIZER;"
+   },
+   {
+    "name": "objects",
+    "type": "struct d3dkmt_object **",
+    "static": true,
+    "start_line": 187,
+    "end_line": 187,
+    "code": "static struct d3dkmt_object **objects, **objects_end, **objects_next;"
+   },
+   {
+    "name": "objects_end",
+    "type": "struct d3dkmt_object **",
+    "static": true,
+    "start_line": 187,
+    "end_line": 187,
+    "code": "static struct d3dkmt_object **objects, **objects_end, **objects_next;"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "wine_server_call",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/loader.c:3436"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log",
+   "wine_server_add_data",
+   "wine_server_ptr_handle"
+  ],
+  "system": [
+   "free",
+   "memset",
+   "pthread_mutex_lock",
+   "pthread_mutex_unlock"
+  ],
+  "unresolved": [
+   "wine_server_alloc_object_attributes"
+  ],
+  "server_requests": [
+   {
+    "request": "d3dkmt_share_objects",
+    "handler": "server/d3dkmt.c:607"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "win32u.NtGdiDdDDIShareObjects",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "Direct3D",
+   "header": "d3dkmthk.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 57,
+   "body": 55,
+   "code": 38
+  },
+  "cyclomatic": 21,
+  "return_type": "NTSTATUS",
+  "n_params": 5,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/win32u/tests/d3dkmt.c::test_D3DKMTShareObjects"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/d3dkmthk/nf-d3dkmthk-d3dkmtshareobjects",
+   "source": "ddi",
+   "description": "Learn more about the D3DKMTShareObjects function.",
+   "min_windows": "Windows 8",
+   "documented_dll": "Gdi32.dll"
+  },
+  "exports": [
+   "gdi32.D3DKMTShareObjects",
+   "win32u.NtGdiDdDDIShareObjects"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.974,
+   "first_date": "2024-03-13",
+   "median_date": "2025-10-01",
+   "last_date": "2026-08-10",
+   "code_lines": 39
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "win32u.NtGdiCombineRgn",
+  "share_after_cutoff": 0.974,
+  "last_date": "2026-08-10"
+ }
+}

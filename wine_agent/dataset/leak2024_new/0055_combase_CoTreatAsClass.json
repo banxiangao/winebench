@@ -1,0 +1,335 @@
+{
+ "id": "0055",
+ "function": {
+  "name": "CoTreatAsClass",
+  "export_name": "CoTreatAsClass",
+  "module": "combase",
+  "source_module": "combase",
+  "exported_by": [
+   "combase",
+   "ole32"
+  ],
+  "side": "PE",
+  "file": "dlls/combase/combase.c",
+  "start_line": 1214,
+  "end_line": 1267,
+  "body_lines": 51,
+  "signature": "HRESULT WINAPI CoTreatAsClass(REFCLSID clsidOld, REFCLSID clsidNew)",
+  "header_comment": "/******************************************************************************\n *              CoTreatAsClass        (combase.@)\n */",
+  "code": "HRESULT WINAPI CoTreatAsClass(REFCLSID clsidOld, REFCLSID clsidNew)\n{\n    WCHAR clsidW[CHARS_IN_GUID];\n    HKEY hkey = NULL;\n    HRESULT hr;\n    LONG size;\n    CLSID id;\n\n    if (!clsidOld || !clsidNew)\n        return E_INVALIDARG;\n\n    if (FAILED(hr = open_key_for_clsid(clsidOld, NULL, KEY_READ | KEY_WRITE, &hkey)))\n        return hr;\n\n    if (IsEqualGUID( clsidOld, clsidNew ))\n    {\n       size = sizeof(clsidW);\n       if (!RegQueryValueW(hkey, L\"AutoTreatAs\", clsidW, &size) && CLSIDFromString(clsidW, &id) == S_OK)\n       {\n           if (RegSetValueW(hkey, L\"TreatAs\", REG_SZ, clsidW, sizeof(clsidW)))\n           {\n               hr = REGDB_E_WRITEREGDB;\n               goto done;\n           }\n       }\n       else\n       {\n           if (RegDeleteKeyW(hkey, L\"TreatAs\"))\n               hr = REGDB_E_WRITEREGDB;\n           goto done;\n       }\n    }\n    else\n    {\n        if (IsEqualGUID(clsidNew, &CLSID_NULL))\n        {\n           RegDeleteKeyW(hkey, L\"TreatAs\");\n        }\n        else\n        {\n            StringFromGUID2(clsidNew, clsidW, ARRAY_SIZE(clsidW));\n            if (RegSetValueW(hkey, L\"TreatAs\", REG_SZ, clsidW, sizeof(clsidW)) != ERROR_SUCCESS)\n            {\n                WARN(\"RegSetValue failed\\n\");\n                hr = REGDB_E_WRITEREGDB;\n                goto done;\n            }\n        }\n    }\n\ndone:\n    if (hkey) RegCloseKey(hkey);\n    return hr;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"objbase.h\"",
+   "#include \"comsvcs.h\"",
+   "#include \"ctxtcall.h\"",
+   "#include \"oleauto.h\"",
+   "#include \"dde.h\"",
+   "#include \"winternl.h\"",
+   "#include \"dcom.h\"",
+   "#include \"combase_private.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\""
+  ],
+  "resolution": [
+   "ole32!CoTreatAsClass [stdcall] -> forward combase.CoTreatAsClass",
+   "combase!CoTreatAsClass [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ole32/tests/compobj.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "objbase",
+   "path": "sdk-api-src/content/objbase/nf-objbase-cotreatasclass.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/objbase/nf-objbase-cotreatasclass",
+   "documented_name": "cotreatasclass",
+   "file": "docs/0055_sdk-api_nf-objbase-cotreatasclass.md",
+   "text": "---\nUID: NF:objbase.CoTreatAsClass\ntitle: CoTreatAsClass function (objbase.h)\ndescription: Establishes or removes an emulation, in which objects of one class are treated as objects of a different class.\nhelpviewer_keywords: [\"CoTreatAsClass\",\"CoTreatAsClass function [COM]\",\"_com_CoTreatAsClass\",\"com.cotreatasclass\",\"objbase/CoTreatAsClass\"]\nold-location: com\\cotreatasclass.htm\ntech.root: com\nms.assetid: d871879f-ec68-48e1-8ef6-364cf1447d0f\nms.date: 12/05/2018\nms.keywords: CoTreatAsClass, CoTreatAsClass function [COM], _com_CoTreatAsClass, com.cotreatasclass, objbase/CoTreatAsClass\nreq.header: objbase.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ole32.lib\nreq.dll: Ole32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CoTreatAsClass\n - objbase/CoTreatAsClass\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-com-ole32-l1-4-0.dll\n - ext-ms-win-com-ole32-l1-3-0.dll\n - ext-ms-win-com-ole32-l1-2-0.dll\n - ext-ms-win-com-ole32-l1-1-5.dll\n - ext-ms-win-com-ole32-l1-1-4.dll\n - ext-ms-win-com-ole32-l1-1-3.dll\n - ext-ms-win-com-ole32-l1-1-2.dll\n - ext-ms-win-com-ole32-l1-1-1.dll\n - ext-ms-win-com-ole32-l1-1-0.dll\n - api-ms-win-core-com-private-l1-3-1.dll\n - Ole32.dll\napi_name:\n - CoTreatAsClass\n---\n\n# CoTreatAsClass function\n\n\n## -description\n\nEstablishes or removes an emulation, in which objects of one class are treated as objects of a different class.\n\n## -parameters\n\n### -param clsidOld [in]\n\nThe CLSID of the object to be emulated.\n\n### -param clsidNew [in]\n\nThe CLSID of the object that should emulate the original object. This replaces any existing emulation for <i>clsidOld</i>. This parameter can be CLSID_NULL, in which case any existing emulation for <i>clsidOld</i> is removed.\n\n## -returns\n\nThis function can return the standard return values E_INVALIDARG, as well as the following values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>S_OK</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe emulation was successfully established or removed.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>REGDB_E_CLASSNOTREG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <i>clsidOld</i> parameter is not properly registered in the registration database.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>REGDB_E_READREGDB</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nError reading from registration database.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>REGDB_E_WRITEREGDB</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nError writing to registration database.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThis function sets the <b>TreatAs</b> entry in the registry for the specified object, allowing the object to be emulated by another application. Emulation allows an application to open and edit an object of a different format, while retaining the original format of the object. After this entry is set, whenever any function such as <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-cogetclassobject\">CoGetClassObject</a> specifies the object's original CLSID (<i>clsidOld</i>), it is transparently forwarded to the new CLSID (<i>clsidNew</i>), thus launching the application associated with the <b>TreatAs</b> CLSID. When the object is saved, it can be saved in its native format, which may result in loss of edits not supported by the original format.\n\nIf your application supports emulation, call <b>CoTreatAsClass</b> in the following situations:\n\n<ul>\n<li>\nIn response to an end-user request (through a conversion dialog box) that a specified object be treated as an object of a different class (an object created under one application be run under another application, while retaining the original format information).\n\n</li>\n<li>\nIn a setup program, to register that one class of objects be treated as objects of a different class.\n\n</li>\n</ul>\nAn example of the first case is that an end user might wish to edit a spreadsheet created by one application using a different application that can read and write the spreadsheet format of the original application. For an application that supports emulation, <b>CoTreatAsClass</b> can be called to implement a <b>Treat As</b> option in a conversion dialog box.\n\n\n\nAn example of the use of <b>CoTreatAsClass</b> in a setup program would be in an updated version of an application. When the application is updated, the objects created with the earlier version can be activated and treated as objects of the new version, while retaining the previous format information. This would allow you to give the user the option to convert when they save, or to save it in the previous format, possibly losing format information not available in the older version.\n\nOne result of setting an emulation is that when you enumerate verbs, as in the <a href=\"/windows/desktop/api/oleidl/nf-oleidl-ioleobject-enumverbs\">IOleObject::EnumVerbs</a> method implementation in the default handler, this would enumerate the verbs from <i>clsidNew</i> instead of <i>clsidOld</i>.\n\n\n\nTo ensure that existing emulation information is removed when you install an application, your setup programs should call <b>CoTreatAsClass</b>, setting the <i>clsidNew</i> parameter to CLSID_NULL to remove any existing emulation for the classes they install.\n\nIf there is no CLSID assigned to the <b>AutoTreatAs</b> key in the registry, setting <i>clsidNew</i> and <i>clsidOld</i> to the same value removes the <b>TreatAs</b> entry, so there is no emulation. If there is a CLSID assigned to the <b>AutoTreatAs</b> key, that CLSID is assigned to the <b>TreatAs</b> key.\n\n\n\n<b>CoTreatAsClass</b> does not validate whether an appropriate registry entry for clsidNew currently exists.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-cogettreatasclass\">CoGetTreatAsClass</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "open_key_for_clsid",
+   "file": "dlls/combase/combase.c",
+   "start_line": 306,
+   "end_line": 335,
+   "static": false,
+   "called_from": [
+    "CoTreatAsClass"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/rpc.c:492",
+    "dlls/combase/rpc.c:495",
+    "dlls/combase/rpc.c:562",
+    "dlls/combase/rpc.c:564",
+    "dlls/combase/combase.c:350"
+   ],
+   "signature": "HRESULT open_key_for_clsid(REFCLSID clsid, const WCHAR *keyname, REGSAM access, HKEY *subkey)",
+   "code": "HRESULT open_key_for_clsid(REFCLSID clsid, const WCHAR *keyname, REGSAM access, HKEY *subkey)\n{\n    static const WCHAR clsidW[] = L\"CLSID\\\\\";\n    WCHAR path[CHARS_IN_GUID + ARRAY_SIZE(clsidW) - 1];\n    LONG res;\n    HKEY key;\n\n    lstrcpyW(path, clsidW);\n    StringFromGUID2(clsid, path + lstrlenW(clsidW), CHARS_IN_GUID);\n    res = open_classes_key(HKEY_CLASSES_ROOT, path, access, &key);\n    if (res == ERROR_FILE_NOT_FOUND)\n        return REGDB_E_CLASSNOTREG;\n    else if (res != ERROR_SUCCESS)\n        return REGDB_E_READREGDB;\n\n    if (!keyname)\n    {\n        *subkey = key;\n        return S_OK;\n    }\n\n    res = open_classes_key(key, keyname, access, subkey);\n    RegCloseKey(key);\n    if (res == ERROR_FILE_NOT_FOUND)\n        return REGDB_E_KEYMISSING;\n    else if (res != ERROR_SUCCESS)\n        return REGDB_E_READREGDB;\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "open_classes_key",
+   "file": "dlls/combase/combase.c",
+   "start_line": 287,
+   "end_line": 304,
+   "static": true,
+   "called_from": [
+    "open_key_for_clsid"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/combase.c:364",
+    "dlls/combase/combase.c:1426",
+    "dlls/combase/combase.c:2290"
+   ],
+   "signature": "static LSTATUS open_classes_key(HKEY hkey, const WCHAR *name, REGSAM access, HKEY *retkey)",
+   "code": "static LSTATUS open_classes_key(HKEY hkey, const WCHAR *name, REGSAM access, HKEY *retkey)\n{\n    OBJECT_ATTRIBUTES attr;\n    UNICODE_STRING nameW;\n\n    if (!(hkey = get_classes_root_hkey(hkey, access)))\n        return ERROR_INVALID_HANDLE;\n\n    attr.Length = sizeof(attr);\n    attr.RootDirectory = hkey;\n    attr.ObjectName = &nameW;\n    attr.Attributes = 0;\n    attr.SecurityDescriptor = NULL;\n    attr.SecurityQualityOfService = NULL;\n    RtlInitUnicodeString( &nameW, name );\n\n    return RtlNtStatusToDosError(NtOpenKey((HANDLE *)retkey, access, &attr));\n}"
+  },
+  {
+   "name": "get_classes_root_hkey",
+   "file": "dlls/combase/combase.c",
+   "start_line": 267,
+   "end_line": 285,
+   "static": true,
+   "called_from": [
+    "create_classes_key",
+    "open_classes_key"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HKEY get_classes_root_hkey(HKEY hkey, REGSAM access)",
+   "code": "static HKEY get_classes_root_hkey(HKEY hkey, REGSAM access)\n{\n    HKEY ret = hkey;\n    const BOOL is_win64 = sizeof(void*) > sizeof(int);\n    const BOOL force_wow32 = is_win64 && (access & KEY_WOW64_32KEY);\n\n    if (hkey == HKEY_CLASSES_ROOT &&\n        ((access & KEY_WOW64_64KEY) || !(ret = classes_root_hkey)))\n        ret = create_classes_root_hkey(MAXIMUM_ALLOWED | (access & KEY_WOW64_64KEY));\n    if (force_wow32 && ret && ret == classes_root_hkey)\n    {\n        access &= ~KEY_WOW64_32KEY;\n        if (create_classes_key(classes_root_hkey, L\"Wow6432Node\", access, &hkey))\n            return 0;\n        ret = hkey;\n    }\n\n    return ret;\n}"
+  },
+  {
+   "name": "create_classes_root_hkey",
+   "file": "dlls/combase/combase.c",
+   "start_line": 218,
+   "end_line": 244,
+   "static": true,
+   "called_from": [
+    "get_classes_root_hkey"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HKEY create_classes_root_hkey(DWORD access)",
+   "code": "static HKEY create_classes_root_hkey(DWORD access)\n{\n    HKEY hkey, ret = 0;\n    OBJECT_ATTRIBUTES attr;\n    UNICODE_STRING name = RTL_CONSTANT_STRING(L\"\\\\Registry\\\\Machine\\\\Software\\\\Classes\");\n\n    attr.Length = sizeof(attr);\n    attr.RootDirectory = 0;\n    attr.ObjectName = &name;\n    attr.Attributes = 0;\n    attr.SecurityDescriptor = NULL;\n    attr.SecurityQualityOfService = NULL;\n\n    if (create_key( &hkey, access, &attr )) return 0;\n    TRACE( \"%s -> %p\\n\", debugstr_w(attr.ObjectName->Buffer), hkey );\n\n    if (!(access & KEY_WOW64_64KEY))\n    {\n        if (!(ret = InterlockedCompareExchangePointer( (void **)&classes_root_hkey, hkey, 0 )))\n            ret = hkey;\n        else\n            NtClose( hkey );  /* somebody beat us to it */\n    }\n    else\n        ret = hkey;\n    return ret;\n}"
+  },
+  {
+   "name": "create_classes_key",
+   "file": "dlls/combase/combase.c",
+   "start_line": 248,
+   "end_line": 265,
+   "static": true,
+   "called_from": [
+    "get_classes_root_hkey"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static LSTATUS create_classes_key(HKEY hkey, const WCHAR *name, REGSAM access, HKEY *retkey)",
+   "code": "static LSTATUS create_classes_key(HKEY hkey, const WCHAR *name, REGSAM access, HKEY *retkey)\n{\n    OBJECT_ATTRIBUTES attr;\n    UNICODE_STRING nameW;\n\n    if (!(hkey = get_classes_root_hkey(hkey, access)))\n        return ERROR_INVALID_HANDLE;\n\n    attr.Length = sizeof(attr);\n    attr.RootDirectory = hkey;\n    attr.ObjectName = &nameW;\n    attr.Attributes = 0;\n    attr.SecurityDescriptor = NULL;\n    attr.SecurityQualityOfService = NULL;\n    RtlInitUnicodeString( &nameW, name );\n\n    return RtlNtStatusToDosError(create_key(retkey, access, &attr));\n}"
+  },
+  {
+   "name": "create_key",
+   "file": "dlls/combase/combase.c",
+   "start_line": 179,
+   "end_line": 214,
+   "static": true,
+   "called_from": [
+    "create_classes_key",
+    "create_classes_root_hkey"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS create_key(HKEY *retkey, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr)",
+   "code": "static NTSTATUS create_key(HKEY *retkey, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr)\n{\n    NTSTATUS status = NtCreateKey((HANDLE *)retkey, access, attr, 0, NULL, 0, NULL);\n\n    if (status == STATUS_OBJECT_NAME_NOT_FOUND)\n    {\n        HANDLE subkey;\n        WCHAR *buffer = attr->ObjectName->Buffer;\n        DWORD pos = 0, i = 0, len = attr->ObjectName->Length / sizeof(WCHAR);\n        UNICODE_STRING str;\n        OBJECT_ATTRIBUTES attr2 = *attr;\n\n        while (i < len && buffer[i] != '\\\\') i++;\n        if (i == len) return status;\n\n        attr2.ObjectName = &str;\n\n        while (i < len)\n        {\n            str.Buffer = buffer + pos;\n            str.Length = (i - pos) * sizeof(WCHAR);\n            status = NtCreateKey(&subkey, access, &attr2, 0, NULL, 0, NULL);\n            if (attr2.RootDirectory != attr->RootDirectory) NtClose(attr2.RootDirectory);\n            if (status) return status;\n            attr2.RootDirectory = subkey;\n            while (i < len && buffer[i] == '\\\\') i++;\n            pos = i;\n            while (i < len && buffer[i] != '\\\\') i++;\n        }\n        str.Buffer = buffer + pos;\n        str.Length = (i - pos) * sizeof(WCHAR);\n        status = NtCreateKey((HANDLE *)retkey, access, &attr2, 0, NULL, 0, NULL);\n        if (attr2.RootDirectory != attr->RootDirectory) NtClose(attr2.RootDirectory);\n    }\n    return status;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ole);"
+   },
+   {
+    "name": "classes_root_hkey",
+    "type": "HKEY",
+    "static": true,
+    "start_line": 216,
+    "end_line": 216,
+    "code": "static HKEY classes_root_hkey;"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "CLSIDFromString",
+    "impl": [
+     "dlls/combase/combase.c:1480"
+    ]
+   },
+   {
+    "name": "StringFromGUID2",
+    "impl": [
+     "dlls/combase/combase.c:1535"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtClose",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/server.c:1940"
+    ]
+   },
+   {
+    "name": "NtCreateKey",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/registry.c:74"
+    ]
+   },
+   {
+    "name": "NtOpenKey",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/registry.c:166"
+    ]
+   },
+   {
+    "name": "RegCloseKey",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1129"
+    ]
+   },
+   {
+    "name": "RegDeleteKeyW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/registry.c:320"
+    ]
+   },
+   {
+    "name": "RegQueryValueW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/registry.c:406"
+    ]
+   },
+   {
+    "name": "RegSetValueW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/advapi32/registry.c:366"
+    ]
+   },
+   {
+    "name": "RtlInitUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:173"
+    ]
+   },
+   {
+    "name": "RtlNtStatusToDosError",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:77"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   }
+  ],
+  "header_inline": [
+   "_InterlockedCompareExchangePointer",
+   "debugstr_w",
+   "lstrcpyW",
+   "lstrlenW",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "combase.CoTreatAsClass",
+  "category": {
+   "l1": "System services",
+   "l2": "COM",
+   "header": "objbase.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 54,
+   "body": 53,
+   "code": 31
+  },
+  "cyclomatic": 12,
+  "return_type": "HRESULT",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ole32/tests/compobj.c::test_TreatAsClass"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/objbase/nf-objbase-cotreatasclass",
+   "source": "win32",
+   "description": "Establishes or removes an emulation, in which objects of one class are treated as objects of a different class.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Ole32.dll"
+  },
+  "exports": [
+   "combase.CoTreatAsClass",
+   "ole32.CoTreatAsClass"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.906,
+   "first_date": "1999-03-28",
+   "median_date": "2025-10-16",
+   "last_date": "2025-10-16",
+   "code_lines": 32
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "combase.HBITMAP_UserUnmarshal",
+  "share_after_cutoff": 0.906,
+  "last_date": "2025-10-16"
+ }
+}

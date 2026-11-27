@@ -1,0 +1,185 @@
+{
+ "id": "0012",
+ "function": {
+  "name": "InternetGetCookieExA",
+  "export_name": "InternetGetCookieExA",
+  "module": "wininet",
+  "source_module": "wininet",
+  "exported_by": [
+   "wininet"
+  ],
+  "side": "PE",
+  "file": "dlls/wininet/cookie.c",
+  "start_line": 805,
+  "end_line": 851,
+  "body_lines": 44,
+  "signature": "BOOL WINAPI InternetGetCookieExA(LPCSTR lpszUrl, LPCSTR lpszCookieName, LPSTR lpCookieData, LPDWORD lpdwSize, DWORD flags, void *reserved)",
+  "header_comment": "/***********************************************************************\n *           InternetGetCookieExA (WININET.@)\n *\n * Retrieve cookie from the specified url\n *\n * RETURNS\n *    TRUE  on success\n *    FALSE on failure\n *\n */",
+  "code": "BOOL WINAPI InternetGetCookieExA(LPCSTR lpszUrl, LPCSTR lpszCookieName,\n        LPSTR lpCookieData, LPDWORD lpdwSize, DWORD flags, void *reserved)\n{\n    WCHAR *url, *name;\n    DWORD len, size = 0;\n    BOOL r;\n\n    TRACE(\"(%s %s %p %p(%lu) %lx %p)\\n\", debugstr_a(lpszUrl), debugstr_a(lpszCookieName),\n          lpCookieData, lpdwSize, lpdwSize ? *lpdwSize : 0, flags, reserved);\n\n    url = strdupAtoW(lpszUrl);\n    name = strdupAtoW(lpszCookieName);\n\n    r = InternetGetCookieExW( url, name, NULL, &len, flags, reserved );\n    if( r )\n    {\n        WCHAR *szCookieData;\n\n        szCookieData = malloc(len * sizeof(WCHAR));\n        if( !szCookieData )\n        {\n            r = FALSE;\n        }\n        else\n        {\n            r = InternetGetCookieExW( url, name, szCookieData, &len, flags, reserved );\n\n            if(r) {\n                size = WideCharToMultiByte( CP_ACP, 0, szCookieData, len, NULL, 0, NULL, NULL);\n                if(lpCookieData) {\n                    if(*lpdwSize >= size) {\n                        WideCharToMultiByte( CP_ACP, 0, szCookieData, len, lpCookieData, *lpdwSize, NULL, NULL);\n                    }else {\n                        SetLastError(ERROR_INSUFFICIENT_BUFFER);\n                        r = FALSE;\n                    }\n                }\n            }\n\n            free( szCookieData );\n        }\n    }\n    *lpdwSize = size;\n    free(name);\n    free(url);\n    return r;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ws2tcpip.h\"",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include <assert.h>",
+   "#include <wchar.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wininet.h\"",
+   "#include \"lmcons.h\"",
+   "#include \"winerror.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"internet.h\""
+  ],
+  "resolution": [
+   "wininet!InternetGetCookieExA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/wininet/tests/internet.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 2
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wininet",
+   "path": "sdk-api-src/content/wininet/nf-wininet-internetgetcookieexa.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wininet/nf-wininet-internetgetcookieexa",
+   "documented_name": "internetgetcookieexa",
+   "file": "docs/0012_sdk-api_nf-wininet-internetgetcookieexa.md",
+   "text": "---\nUID: NF:wininet.InternetGetCookieExA\ntitle: InternetGetCookieExA function (wininet.h)\ndescription: Retrieves data stored in cookies associated with a specified URL. (ANSI)\nhelpviewer_keywords: [\"INTERNET_COOKIE_HTTPONLY\", \"INTERNET_COOKIE_THIRD_PARTY\", \"INTERNET_FLAG_RESTRICTED_ZONE\", \"InternetGetCookieExA\", \"wininet/InternetGetCookieExA\"]\nold-location: wininet\\internetgetcookieex.htm\ntech.root: wininet\nms.assetid: 5006f009-e217-4fdc-9e4e-800ff5fcbf03\nms.date: 12/05/2018\nms.keywords: INTERNET_COOKIE_HTTPONLY, INTERNET_COOKIE_THIRD_PARTY, INTERNET_FLAG_RESTRICTED_ZONE, InternetGetCookieEx, InternetGetCookieEx function [WinINet], InternetGetCookieExA, InternetGetCookieExW, wininet.internetgetcookieex, wininet/InternetGetCookieEx, wininet/InternetGetCookieExA, wininet/InternetGetCookieExW\nreq.header: wininet.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: InternetGetCookieExW (Unicode) and InternetGetCookieExA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Wininet.lib\nreq.dll: Wininet.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - InternetGetCookieExA\n - wininet/InternetGetCookieExA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Wininet.dll\napi_name:\n - InternetGetCookieEx\n - InternetGetCookieExA\n - InternetGetCookieExW\n---\n\n# InternetGetCookieExA function\n\n\n## -description\n\nThe <b>InternetGetCookieEx</b> function retrieves data stored in cookies associated with a specified URL. Unlike <a href=\"/windows/desktop/api/wininet/nf-wininet-internetgetcookiea\">InternetGetCookie</a>, <b>InternetGetCookieEx</b> can be used to  restrict data retrieved to a single cookie name or, by policy, associated with untrusted sites or third-party cookies.\n\n## -parameters\n\n### -param lpszUrl [in]\n\nA pointer to a <b>null</b>-terminated string that contains the URL with which the cookie to retrieve is associated. This parameter cannot be <b>NULL</b> or <b>InternetGetCookieEx</b> fails and returns an  <b>ERROR_INVALID_PARAMETER</b> error.\n\n### -param lpszCookieName [in]\n\nA pointer to a <b>null</b>-terminated string that contains the name of the cookie to retrieve. This name is case-sensitive.\n\n### -param lpszCookieData [in, out, optional]\n\nA pointer to a buffer to receive the cookie data.\n\n### -param lpdwSize [in, out]\n\nA pointer to a DWORD variable. \n\nOn entry, the variable must contain the size, in TCHARs, of the buffer pointed to by the <i>pchCookieData</i> parameter.\n\nOn exit, if the function is successful, this variable contains the number of TCHARs of cookie data copied into the buffer. If <b>NULL</b> was passed as the <i>lpszCookieData</i> parameter, or if the function fails with an error of <b>ERROR_INSUFFICIENT_BUFFER</b>, the variable contains the size, in BYTEs, of buffer required to receive the cookie data.\n\nThis parameter cannot be <b>NULL</b> or <b>InternetGetCookieEx</b> fails and returns an  <b>ERROR_INVALID_PARAMETER</b> error.\n\n### -param dwFlags [in]\n\nA flag that controls how the function retrieves cookie data. This parameter can be one of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_COOKIE_HTTPONLY\"></a><a id=\"internet_cookie_httponly\"></a><dl>\n<dt><b>INTERNET_COOKIE_HTTPONLY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nEnables the retrieval of cookies that are marked as \"HTTPOnly\".  \n\n\n\nDo  not use this flag if you expose a scriptable interface, because this has security implications. It is imperative that you use this flag only if you can guarantee that you will never expose the cookie to third-party code by way of an extensibility mechanism you provide.\n\n\n<b>Version:  </b>Requires Internet Explorer 8.0 or later.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_COOKIE_THIRD_PARTY\"></a><a id=\"internet_cookie_third_party\"></a><dl>\n<dt><b>INTERNET_COOKIE_THIRD_PARTY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nRetrieves only third-party cookies if policy explicitly allows all cookies for the specified URL to be retrieved.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"INTERNET_FLAG_RESTRICTED_ZONE\"></a><a id=\"internet_flag_restricted_zone\"></a><dl>\n<dt><b>INTERNET_FLAG_RESTRICTED_ZONE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nRetrieves only cookies that would be allowed if the specified URL were untrusted; that is, if it belonged to the URLZONE_UNTRUSTED zone.\n\n</td>\n</tr>\n</table>\n\n### -param lpReserved [in]\n\nReserved for future use. Set to <b>NULL</b>.\n\n## -returns\n\nIf the function succeeds, the function returns <b>TRUE</b>.\n\n\nIf the function fails, it returns <b>FALSE</b>. To get a specific error value, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\nIf <b>NULL</b> is passed to <i>lpszCookieData</i>, the call will succeed and the function will not set <b>ERROR_INSUFFICIENT_BUFFER</b>.\n\n\nThe following error codes may be set by this function.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INSUFFICIENT_BUFFER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturned if cookie data retrieved is larger than the buffer size pointed to by the <i>pcchCookieData</i> parameter or if that parameter is <b>NULL</b>.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturned if either the <i>pchURL</i> or the <i>pcchCookieData</i> parameter is <b>NULL</b>.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NO_MORE_ITEMS</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nReturned if no cookied data as specified could be retrieved.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\n<div class=\"alert\"><b>Note</b>  WinINet does not support server implementations. In addition, it should not be used from a service.  For server implementations or services use <a href=\"/windows/desktop/WinHttp/winhttp-start-page\">Microsoft Windows HTTP Services (WinHTTP)</a>.</div>\n<div> </div>\n\n\n\n\n> [!NOTE]\n> The wininet.h header defines InternetGetCookieEx as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/WinInet/http-cookies\">HTTP Cookies</a>\n\n\n\n<a href=\"/windows/desktop/api/wininet/nf-wininet-internetgetcookiea\">InternetGetCookie</a>\n\n\n\n<a href=\"/windows/desktop/api/wininet/nf-wininet-internetsetcookiea\">InternetSetCookie</a>\n\n\n\n<a href=\"/windows/desktop/api/wininet/nf-wininet-internetsetcookieexa\">InternetSetCookieEx</a>\n\n\n\n<a href=\"/windows/desktop/WinInet/managing-cookies\">Managing Cookies</a>\n\n\n\n<a href=\"/windows/desktop/WinInet/wininet-functions\">WinINet Functions</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 44,
+    "end_line": 44,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(wininet);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "InternetGetCookieExW",
+    "impl": [
+     "dlls/wininet/cookie.c:725"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "debugstr_a",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "strdupAtoW"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "wininet.InternetGetCookieExA",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "WinINet",
+   "header": "wininet.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 47,
+   "body": 45,
+   "code": 28
+  },
+  "cyclomatic": 7,
+  "return_type": "BOOL",
+  "n_params": 6,
+  "tests": {
+   "n_tests_own": 2,
+   "n_tests": 2,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/wininet/tests/internet.c::test_cookie_attrs",
+    "dlls/wininet/tests/internet.c::test_cookie_url"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/wininet/nf-wininet-internetgetcookieexa",
+   "source": "win32",
+   "description": "Retrieves data stored in cookies associated with a specified URL. (ANSI)",
+   "min_windows": "Windows XP [desktop apps only]",
+   "documented_dll": "Wininet.dll"
+  },
+  "exports": [
+   "wininet.InternetGetCookieExA"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2004-03-30",
+   "median_date": "2012-12-28",
+   "last_date": "2022-11-25",
+   "code_lines": 29,
+   "pair": "bluetoothapis.BluetoothIsDiscoverable",
+   "rank": 2,
+   "distance": 0.814
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "bluetoothapis.BluetoothIsDiscoverable",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-11-25",
+  "partner_rank": 2,
+  "distance": 0.814
+ }
+}

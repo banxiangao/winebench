@@ -1,0 +1,262 @@
+{
+ "id": "0003",
+ "function": {
+  "name": "BCryptDeriveKeyPBKDF2",
+  "export_name": "BCryptDeriveKeyPBKDF2",
+  "module": "bcrypt",
+  "source_module": "bcrypt",
+  "exported_by": [
+   "bcrypt",
+   "cng.sys",
+   "ksecdd.sys",
+   "ncrypt"
+  ],
+  "side": "PE",
+  "file": "dlls/bcrypt/bcrypt_main.c",
+  "start_line": 4132,
+  "end_line": 4148,
+  "body_lines": 14,
+  "signature": "NTSTATUS WINAPI BCryptDeriveKeyPBKDF2( BCRYPT_ALG_HANDLE handle, UCHAR *pwd, ULONG pwd_len, UCHAR *salt, ULONG salt_len, ULONGLONG iterations, UCHAR *key, ULONG key_len, ULONG flags )",
+  "header_comment": null,
+  "code": "NTSTATUS WINAPI BCryptDeriveKeyPBKDF2( BCRYPT_ALG_HANDLE handle, UCHAR *pwd, ULONG pwd_len, UCHAR *salt, ULONG salt_len,\n                                       ULONGLONG iterations, UCHAR *key, ULONG key_len, ULONG flags )\n{\n    const struct algorithm *alg = get_alg_object( handle );\n    const SYMCRYPT_MAC *mac;\n\n    TRACE( \"%p, %p, %lu, %p, %lu, %s, %p, %lu, %#lx\\n\", handle, pwd, pwd_len, salt, salt_len,\n           wine_dbgstr_longlong(iterations), key, key_len, flags );\n\n    if (!alg || !(alg->flags & BCRYPT_ALG_HANDLE_HMAC_FLAG)) return STATUS_INVALID_HANDLE;\n    if (!iterations) return STATUS_INVALID_PARAMETER;\n\n    if (!(mac = get_mac_from_alg( alg->id ))) return STATUS_NOT_SUPPORTED;\n\n    if (SymCryptPbkdf2( mac, pwd, pwd_len, salt, salt_len, iterations, key, key_len )) return STATUS_INTERNAL_ERROR;\n    return STATUS_SUCCESS;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"ntsecapi.h\"",
+   "#include \"wincrypt.h\"",
+   "#include \"winternl.h\"",
+   "#include \"bcrypt.h\"",
+   "#include \"symcrypt.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "bcrypt!BCryptDeriveKeyPBKDF2 [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/bcrypt/tests/bcrypt.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "bcrypt",
+   "path": "sdk-api-src/content/bcrypt/nf-bcrypt-bcryptderivekeypbkdf2.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/bcrypt/nf-bcrypt-bcryptderivekeypbkdf2",
+   "documented_name": "bcryptderivekeypbkdf2",
+   "file": "docs/0003_sdk-api_nf-bcrypt-bcryptderivekeypbkdf2.md",
+   "text": "---\nUID: NF:bcrypt.BCryptDeriveKeyPBKDF2\ntitle: BCryptDeriveKeyPBKDF2 function (bcrypt.h)\ndescription: Derives a key from a hash value by using the PBKDF2 key derivation algorithm as defined by RFC 2898.\nhelpviewer_keywords: [\"BCryptDeriveKeyPBKDF2\",\"BCryptDeriveKeyPBKDF2 function [Security]\",\"bcrypt/BCryptDeriveKeyPBKDF2\",\"security.bcryptderivekeypbkdf2\"]\nold-location: security\\bcryptderivekeypbkdf2.htm\ntech.root: security\nms.assetid: afdddfec-a3a5-410c-998b-9a5af8e051b6\nms.date: 12/05/2018\nms.keywords: BCryptDeriveKeyPBKDF2, BCryptDeriveKeyPBKDF2 function [Security], bcrypt/BCryptDeriveKeyPBKDF2, security.bcryptderivekeypbkdf2\nreq.header: bcrypt.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 7 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 R2 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Bcrypt.lib\nreq.dll: Bcrypt.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - BCryptDeriveKeyPBKDF2\n - bcrypt/BCryptDeriveKeyPBKDF2\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Bcrypt.dll\napi_name:\n - BCryptDeriveKeyPBKDF2\n---\n\n# BCryptDeriveKeyPBKDF2 function\n\n\n## -description\n\nThe <b>BCryptDeriveKeyPBKDF2</b> function derives a key from a <a href=\"/windows/desktop/SecGloss/h-gly\">hash</a> value by using the PBKDF2 key derivation algorithm as defined by <a href=\"https://www.ietf.org/rfc/rfc2898.txt\">RFC 2898</a>.\n\n## -parameters\n\n### -param hPrf [in]\n\nThe handle of an algorithm provider that provides the pseudo-random function. This should be an algorithm provider that performs a <a href=\"/windows/desktop/SecGloss/m-gly\">Message Authentication Code</a> computation. When you use the default Microsoft algorithm provider, any <a href=\"/windows/desktop/SecGloss/h-gly\">hashing algorithm</a> opened by using the  <b>BCRYPT_ALG_HANDLE_HMAC_FLAG</b> flag can be used.\n\n<div class=\"alert\"><b>Note</b>  Only algorithms that implement the BCRYPT_IS_KEYED_HASH  property can be used to populate this parameter.</div>\n<div> </div>\n\n### -param pbPassword [in, optional]\n\nA pointer to a buffer that contains the password parameter for the PBKDF2 key derivation algorithm. <div class=\"alert\"><b>Note</b>  Any secret information used in the key derivation should be passed in this buffer.</div>\n<div> </div>\n\n### -param cbPassword [in]\n\nThe length, in bytes, of the data in the buffer pointed to by the <i>pbPassword</i> parameter.\n\n### -param pbSalt [in, optional]\n\nA pointer to a buffer that contains the salt argument  for the PBKDF2 key derivation algorithm.\n\n<div class=\"alert\"><b>Note</b>  Any information that is not secret and that is used in the key derivation should be passed in this buffer.</div>\n<div> </div>\n\n### -param cbSalt [in]\n\nThe length, in bytes, of the salt argument pointed to by the <i>pbSalt</i> parameter.\n\n### -param cIterations [in]\n\nThe iteration count for the PBKDF2 key derivation algorithm.\n\n### -param pbDerivedKey [out]\n\nA pointer to a buffer that receives the derived key.\n\n### -param cbDerivedKey [in]\n\nThe length, in bytes, of the derived key returned in the buffer pointed to by the <i>pbDerivedKey</i> parameter.\n\n### -param dwFlags [in]\n\nThis parameter is reserved and must be set to zero.\n\n## -returns\n\nReturns a status code that indicates the success or failure of the function.\n\n\nPossible return codes include, but are not limited to, the following.\n\n\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_SUCCESS</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe function was successful.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_INVALID_HANDLE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe handle in the <i>hPrf</i> parameter is not valid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOne or more parameters are not valid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_NO_MEMORY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA memory allocation failure occurred.\n \n\n</td>\n</tr>\n</table>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_alg_object",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 551,
+   "end_line": 554,
+   "static": true,
+   "called_from": [
+    "BCryptDeriveKeyPBKDF2"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:574",
+    "dlls/bcrypt/bcrypt_main.c:1416",
+    "dlls/bcrypt/bcrypt_main.c:1555",
+    "dlls/bcrypt/bcrypt_main.c:1737",
+    "dlls/bcrypt/bcrypt_main.c:2102"
+   ],
+   "signature": "static inline struct algorithm *get_alg_object( BCRYPT_ALG_HANDLE handle )",
+   "code": "static inline struct algorithm *get_alg_object( BCRYPT_ALG_HANDLE handle )\n{\n    return (struct algorithm *)get_object( handle, MAGIC_ALG );\n}"
+  },
+  {
+   "name": "get_mac_from_alg",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 4118,
+   "end_line": 4130,
+   "static": true,
+   "called_from": [
+    "BCryptDeriveKeyPBKDF2"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static const SYMCRYPT_MAC *get_mac_from_alg( enum alg_id alg )",
+   "code": "static const SYMCRYPT_MAC *get_mac_from_alg( enum alg_id alg )\n{\n    switch (alg)\n    {\n    case ALG_ID_SHA1:   return SymCryptHmacSha1Algorithm;\n    case ALG_ID_SHA256: return SymCryptHmacSha256Algorithm;\n    case ALG_ID_SHA384: return SymCryptHmacSha384Algorithm;\n    case ALG_ID_SHA512: return SymCryptHmacSha512Algorithm;\n    default:\n        FIXME( \"hash algorithm %u not supported\\n\", alg );\n        return NULL;\n    }\n}"
+  },
+  {
+   "name": "get_object",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 529,
+   "end_line": 549,
+   "static": true,
+   "called_from": [
+    "get_alg_object"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:558",
+    "dlls/bcrypt/bcrypt_main.c:563",
+    "dlls/bcrypt/bcrypt_main.c:568",
+    "dlls/bcrypt/bcrypt_main.c:1229",
+    "dlls/bcrypt/bcrypt_main.c:1325"
+   ],
+   "signature": "static struct object *get_object( BCRYPT_HANDLE handle, ULONG magic )",
+   "code": "static struct object *get_object( BCRYPT_HANDLE handle, ULONG magic )\n{\n    ULONG idx;\n\n    if (!handle) return NULL;\n\n    if (!is_alg_pseudo_handle( handle ))\n    {\n        struct object *obj = handle;\n        if (magic && obj->magic != magic) return NULL;\n        return obj;\n    }\n\n    idx = (ULONG_PTR)handle >> 4;\n    if (idx >= ARRAY_SIZE(pseudo_algorithms) || !pseudo_algorithms[idx].hdr.magic)\n    {\n        FIXME( \"pseudo-handle %p not supported\\n\", handle );\n        return NULL;\n    }\n    return (struct object *)&pseudo_algorithms[idx];\n}"
+  },
+  {
+   "name": "is_alg_pseudo_handle",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 524,
+   "end_line": 527,
+   "static": true,
+   "called_from": [
+    "get_object"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:586",
+    "dlls/bcrypt/bcrypt_main.c:687",
+    "dlls/bcrypt/bcrypt_main.c:1234"
+   ],
+   "signature": "static inline BOOL is_alg_pseudo_handle( BCRYPT_ALG_HANDLE handle )",
+   "code": "static inline BOOL is_alg_pseudo_handle( BCRYPT_ALG_HANDLE handle )\n{\n    return (((ULONG_PTR)handle & 1) == 1);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "alg_id",
+    "kind": "enum_decl",
+    "start_line": 51,
+    "end_line": 95,
+    "code": "enum alg_id\n{\n    /* cipher */\n    ALG_ID_3DES,\n    ALG_ID_CHACHA20_POLY1305,\n    ALG_ID_AES,\n    ALG_ID_AES_GMAC,\n    ALG_ID_RC4,\n\n    /* hash */\n    ALG_ID_SHA256,\n    ALG_ID_SHA384,\n    ALG_ID_SHA512,\n    ALG_ID_SHA1,\n    ALG_ID_MD5,\n    ALG_ID_MD4,\n    ALG_ID_MD2,\n\n    /* asymmetric encryption */\n    ALG_ID_RSA,\n\n    /* secret agreement */\n    ALG_ID_DH,\n    ALG_ID_ECDH,\n    ALG_ID_ECDH_P256,\n    ALG_ID_ECDH_P384,\n    ALG_ID_ECDH_P521,\n\n    /* signature */\n    ALG_ID_RSA_SIGN,\n    ALG_ID_ECDSA,\n    ALG_ID_ECDSA_P256,\n    ALG_ID_ECDSA_P384,\n    ALG_ID_ECDSA_P521,\n    ALG_ID_DSA,\n\n    /* rng */\n    ALG_ID_RNG,\n\n    /* key derivation */\n    ALG_ID_PBKDF2,\n    ALG_ID_TLS1_1_KDF,\n    ALG_ID_TLS1_2_KDF,\n    ALG_ID_HKDF,\n};"
+   },
+   {
+    "name": "algorithm",
+    "kind": "struct_decl",
+    "start_line": 135,
+    "end_line": 142,
+    "code": "struct algorithm\n{\n    struct object     hdr;\n    enum alg_id       id;\n    enum chain_mode   chain_mode;\n    ULONG             flags;\n    enum ecc_curve_id curve_id;\n};"
+   },
+   {
+    "name": "object",
+    "kind": "struct_decl",
+    "start_line": 46,
+    "end_line": 49,
+    "code": "struct object\n{\n    ULONG magic;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 35,
+    "end_line": 35,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(bcrypt);"
+   },
+   {
+    "name": "pseudo_algorithms",
+    "type": "const struct algorithm[59]",
+    "static": true,
+    "start_line": 458,
+    "end_line": 519,
+    "code": "static const struct algorithm pseudo_algorithms[] =\n{\n    {{ MAGIC_ALG }, ALG_ID_MD2 },\n    {{ MAGIC_ALG }, ALG_ID_MD4 },\n    {{ MAGIC_ALG }, ALG_ID_MD5 },\n    {{ MAGIC_ALG }, ALG_ID_SHA1 },\n    {{ MAGIC_ALG }, ALG_ID_SHA256 },\n    {{ MAGIC_ALG }, ALG_ID_SHA384 },\n    {{ MAGIC_ALG }, ALG_ID_SHA512 },\n    {{ MAGIC_ALG }, ALG_ID_RC4 },\n    {{ MAGIC_ALG }, ALG_ID_RNG },\n    {{ MAGIC_ALG }, ALG_ID_MD5, 0, BCRYPT_ALG_HANDLE_HMAC_FLAG },\n    {{ MAGIC_ALG }, ALG_ID_SHA1, 0, BCRYPT_ALG_HANDLE_HMAC_FLAG },\n    {{ MAGIC_ALG }, ALG_ID_SHA256, 0, BCRYPT_ALG_HANDLE_HMAC_FLAG },\n    {{ MAGIC_ALG }, ALG_ID_SHA384, 0, BCRYPT_ALG_HANDLE_HMAC_FLAG },\n    {{ MAGIC_ALG }, ALG_ID_SHA512, 0, BCRYPT_ALG_HANDLE_HMAC_FLAG },\n    {{ MAGIC_ALG }, ALG_ID_RSA },\n    {{ MAGIC_ALG }, ALG_ID_ECDSA },\n    {{ 0 }}, /* AES_CMAC */\n    {{ MAGIC_ALG }, ALG_ID_AES_GMAC, CHAIN_MODE_GCM },\n    {{ MAGIC_ALG }, ALG_ID_MD2, 0, BCRYPT_ALG_HANDLE_HMAC_FLAG },\n    {{ MAGIC_ALG }, ALG_ID_MD4, 0, BCRYPT_ALG_HANDLE_HMAC_FLAG },\n    {{ MAGIC_ALG }, ALG_ID_3DES, CHAIN_MODE_CBC },\n    {{ MAGIC_ALG }, ALG_ID_3DES, CHAIN_MODE_ECB },\n    {{ MAGIC_ALG }, ALG_ID_3DES, CHAIN_MODE_CFB },\n    {{ 0 }}, /* 3DES_112_CBC */\n    {{ 0 }}, /* 3DES_112_ECB */\n    {{ 0 }}, /* 3DES_112_CFB */\n    {{ MAGIC_ALG }, ALG_ID_AES, CHAIN_MODE_CBC },\n    {{ MAGIC_ALG }, ALG_ID_AES, CHAIN_MODE_ECB },\n    {{ MAGIC_ALG }, ALG_ID_AES, CHAIN_MODE_CFB },\n    {{ MAGIC_ALG }, ALG_ID_AES, CHAIN_MODE_CCM },\n    {{ MAGIC_ALG }, ALG_ID_AES, CHAIN_MODE_GCM },\n    {{ 0 }}, /* DES_CBC */\n    {{ 0 }}, /* DES_ECB */\n    {{ 0 }}, /* DES_CFB */\n    {{ 0 }}, /* DESX_CBC */\n    {{ 0 }}, /* DESX_ECB */\n    {{ 0 }}, /* DESX_CFB */\n    {{ 0 }}, /* RC2_CBC */\n    {{ 0 }}, /* RC2_ECB */\n    {{ 0 }}, /* RC2_CFB */\n    {{ MAGIC_ALG }, ALG_ID_DH },\n    {{ MAGIC_ALG }, ALG_ID_ECDH },\n    {{ MAGIC_ALG }, ALG_ID_ECDH_P256, 0, 0, ECC_CURVE_P256R1 },\n    {{ MAGIC_ALG }, ALG_ID_ECDH_P384, 0, 0, ECC_CURVE_P384R1 },\n    {{ MAGIC_ALG }, ALG_ID_ECDH_P521, 0, 0, ECC_CURVE_P521R1 },\n    {{ MAGIC_ALG }, ALG_ID_DSA },\n    {{ MAGIC_ALG }, ALG_ID_ECDSA_P256, 0, 0, ECC_CURVE_P256R1 },\n    {{ MAGIC_ALG }, ALG_ID_ECDSA_P384, 0, 0, ECC_CURVE_P384R1 },\n    {{ MAGIC_ALG }, ALG_ID_ECDSA_P521, 0, 0, ECC_CURVE_P521R1 },\n    {{ MAGIC_ALG }, ALG_ID_RSA_SIGN },\n    {{ 0 }}, /* CAPI_KDF */\n    {{ MAGIC_ALG }, ALG_ID_PBKDF2 },\n    {{ 0 }}, /* SP800108_CTR_HMAC */\n    {{ 0 }}, /* SP80056A_CONCAT */\n    {{ MAGIC_ALG }, ALG_ID_TLS1_1_KDF },\n    {{ MAGIC_ALG }, ALG_ID_TLS1_2_KDF },\n    {{ 0 }}, /* XTS_AES */\n    {{ MAGIC_ALG }, ALG_ID_HKDF },\n    {{ MAGIC_ALG }, ALG_ID_CHACHA20_POLY1305 },\n};"
+   }
+  ],
+  "macros": [
+   {
+    "name": "MAGIC_ALG",
+    "start_line": 42,
+    "end_line": 42,
+    "code": "#define MAGIC_ALG  (('A' << 24) | ('L' << 16) | ('G' << 8) | '0')"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_dbg_log",
+   "wine_dbgstr_longlong"
+  ],
+  "system": [
+   "SymCryptPbkdf2"
+  ],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "bcrypt.BCryptDeriveKeyPBKDF2",
+  "category": {
+   "l1": "Security and identity",
+   "l2": "Cryptography",
+   "header": "bcrypt.h",
+   "textbook": "Protection",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 17,
+   "body": 15,
+   "code": 9
+  },
+  "cyclomatic": 6,
+  "return_type": "NTSTATUS",
+  "n_params": 9,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/bcrypt/tests/bcrypt.c::test_BcryptDeriveKeyPBKDF2"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/bcrypt/nf-bcrypt-bcryptderivekeypbkdf2",
+   "source": "win32",
+   "description": "Derives a key from a hash value by using the PBKDF2 key derivation algorithm as defined by RFC 2898.",
+   "min_windows": "Windows 7 [desktop apps \\| UWP apps]",
+   "documented_dll": "Bcrypt.dll"
+  },
+  "exports": [
+   "bcrypt.BCryptDeriveKeyPBKDF2",
+   "cng.sys.BCryptDeriveKeyPBKDF2",
+   "ksecdd.sys.BCryptDeriveKeyPBKDF2",
+   "ncrypt.BCryptDeriveKeyPBKDF2"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.818,
+   "first_date": "2019-02-13",
+   "median_date": "2026-06-08",
+   "last_date": "2026-06-08",
+   "code_lines": 11
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "advapi32.SetNamedSecurityInfoA",
+  "share_after_cutoff": 0.818,
+  "last_date": "2026-06-08"
+ }
+}

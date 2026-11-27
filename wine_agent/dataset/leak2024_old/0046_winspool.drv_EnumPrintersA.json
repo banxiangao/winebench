@@ -1,0 +1,313 @@
+{
+ "id": "0046",
+ "function": {
+  "name": "EnumPrintersA",
+  "export_name": "EnumPrintersA",
+  "module": "winspool.drv",
+  "source_module": "winspool.drv",
+  "exported_by": [
+   "winspool.drv"
+  ],
+  "side": "PE",
+  "file": "dlls/winspool.drv/info.c",
+  "start_line": 4237,
+  "end_line": 4262,
+  "body_lines": 23,
+  "signature": "BOOL WINAPI EnumPrintersA(DWORD flags, LPSTR pName, DWORD level, LPBYTE pPrinters, DWORD cbBuf, LPDWORD pcbNeeded, LPDWORD pcReturned)",
+  "header_comment": "/******************************************************************\n * EnumPrintersA    [WINSPOOL.@]\n *\n * See EnumPrintersW\n *\n */",
+  "code": "BOOL WINAPI EnumPrintersA(DWORD flags, LPSTR pName, DWORD level, LPBYTE pPrinters,\n                          DWORD cbBuf, LPDWORD pcbNeeded, LPDWORD pcReturned)\n{\n    BOOL ret;\n    UNICODE_STRING pNameU;\n    LPWSTR pNameW;\n    LPBYTE pPrintersW;\n\n    TRACE(\"(0x%lx, %s, %lu, %p, %ld, %p, %p)\\n\", flags, debugstr_a(pName), level,\n                                              pPrinters, cbBuf, pcbNeeded, pcReturned);\n\n    pNameW = asciitounicode(&pNameU, pName);\n\n    /* Request a buffer with a size, that is big enough for EnumPrintersW.\n       MS Office need this */\n    pPrintersW = (pPrinters && cbBuf) ? malloc(cbBuf) : NULL;\n\n    ret = EnumPrintersW(flags, pNameW, level, pPrintersW, cbBuf, pcbNeeded, pcReturned);\n\n    RtlFreeUnicodeString(&pNameU);\n    if (ret) {\n        convert_printerinfo_W_to_A(pPrinters, pPrintersW, level, *pcbNeeded, *pcReturned);\n    }\n    free(pPrintersW);\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include <ctype.h>",
+   "#include <stddef.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winreg.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winspool.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wine/windef16.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/rbtree.h\"",
+   "#include <wine/unixlib.h>",
+   "#include \"ddk/compstui.h\"",
+   "#include \"ddk/winsplp.h\"",
+   "#include \"wspool.h\""
+  ],
+  "resolution": [
+   "winspool.drv!EnumPrintersA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/winspool.drv/tests/info.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "",
+   "path": "desktop-src/printdocs/enumprinters.md",
+   "url": "https://learn.microsoft.com/windows/win32/printdocs/enumprinters",
+   "documented_name": "enumprintersa",
+   "file": "docs/0046_win32_enumprinters.md",
+   "text": "---\ndescription: The EnumPrinters function enumerates available printers, print servers, domains, or print providers.\nms.assetid: 0d0cc726-c515-4146-9273-cdf1db3c76b7\ntitle: EnumPrinters function (Winspool.h)\nms.topic: reference\nms.date: 05/31/2018\ntopic_type: \n- APIRef\n- kbSyntax\napi_name: \n- EnumPrinters\n- EnumPrintersA\n- EnumPrintersW\napi_type: \n- DllExport\napi_location: \n- Winspool.drv\n---\n\n# EnumPrinters function\n\nThe **EnumPrinters** function enumerates available printers, print servers, domains, or print providers.\n\n## Syntax\n\n\n```C++\nBOOL EnumPrinters(\n  _In_  DWORD   Flags,\n  _In_  LPTSTR  Name,\n  _In_  DWORD   Level,\n  _Out_ LPBYTE  pPrinterEnum,\n  _In_  DWORD   cbBuf,\n  _Out_ LPDWORD pcbNeeded,\n  _Out_ LPDWORD pcReturned\n);\n```\n\n\n\n## Parameters\n\n<dl> <dt>\n\n*Flags* \\[in\\]\n</dt> <dd>\n\nThe types of print objects that the function should enumerate. This value can be one or more of the following values.\n\n\n\n| Value                                                                                                                                                                                               | Meaning                                                                                                                                                                                                                                                |\n|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|\n| <span id=\"PRINTER_ENUM_LOCAL\"></span><span id=\"printer_enum_local\"></span><dl> <dt>**PRINTER\\_ENUM\\_LOCAL**</dt> </dl>                       | If the PRINTER\\_ENUM\\_NAME flag is not also passed, the function ignores the *Name* parameter, and enumerates the locally installed printers. If PRINTER\\_ENUM\\_NAME is also passed, the function enumerates the local printers on *Name*. <br/> |\n| <span id=\"PRINTER_ENUM_NAME\"></span><span id=\"printer_enum_name\"></span><dl> <dt>**PRINTER\\_ENUM\\_NAME**</dt> </dl>                          | The function enumerates the printer identified by *Name*. This can be a server, a domain, or a print provider. If *Name* is **NULL**, the function enumerates available print providers.<br/>                                                    |\n| <span id=\"PRINTER_ENUM_SHARED\"></span><span id=\"printer_enum_shared\"></span><dl> <dt>**PRINTER\\_ENUM\\_SHARED**</dt> </dl>                    | The function enumerates printers that have the shared attribute. Cannot be used in isolation; use an OR operation to combine with another PRINTER\\_ENUM type.<br/>                                                                               |\n| <span id=\"PRINTER_ENUM_CONNECTIONS\"></span><span id=\"printer_enum_connections\"></span><dl> <dt>**PRINTER\\_ENUM\\_CONNECTIONS**</dt> </dl>     | The function enumerates the list of printers to which the user has made previous connections.<br/>                                                                                                                                               |\n| <span id=\"PRINTER_ENUM_NETWORK\"></span><span id=\"printer_enum_network\"></span><dl> <dt>**PRINTER\\_ENUM\\_NETWORK**</dt> </dl>                 | The function enumerates network printers in the computer's domain. This value is valid only if *Level* is 1.<br/>                                                                                                                                |\n| <span id=\"PRINTER_ENUM_REMOTE\"></span><span id=\"printer_enum_remote\"></span><dl> <dt>**PRINTER\\_ENUM\\_REMOTE**</dt> </dl>                    | The function enumerates network printers and print servers in the computer's domain. This value is valid only if *Level* is 1.<br/>                                                                                                              |\n| <span id=\"PRINTER_ENUM_CATEGORY_3D\"></span><span id=\"printer_enum_category_3d\"></span><dl> <dt>**PRINTER\\_ENUM\\_CATEGORY\\_3D**</dt> </dl>    | The function enumerates only 3D printers.<br/>                                                                                                                                                                                                   |\n| <span id=\"PRINTER_ENUM_CATEGORY_ALL\"></span><span id=\"printer_enum_category_all\"></span><dl> <dt>**PRINTER\\_ENUM\\_CATEGORY\\_ALL**</dt> </dl> | The function enumerates all print devices, including 3D printers.<br/>                                                                                                                                                                           |\n\n\n\n \n\nIf *Level* is 4, you can only use the PRINTER\\_ENUM\\_CONNECTIONS and PRINTER\\_ENUM\\_LOCAL constants.\n\n> [!Note]  \n> 3D print devices are not enumerated by default. You must include both **PRINTER\\_ENUM\\_CATEGORY\\_3D** and **PRINTER\\_ENUM\\_LOCAL** to enumerate only 3D printers. To include 3D printers, along with all other local printers, use **PRINTER\\_ENUM\\_CATEGORY\\_ALL** and **PRINTER\\_ENUM\\_LOCAL**.\n\n \n\n</dd> <dt>\n\n*Name* \\[in\\]\n</dt> <dd>\n\nIf *Level* is 1, *Flags* contains PRINTER\\_ENUM\\_NAME, and *Name* is non-**NULL**, then *Name* is a pointer to a null-terminated string that specifies the name of the object to enumerate. This string can be the name of a server, a domain, or a print provider.\n\nIf *Level* is 1, *Flags* contains PRINTER\\_ENUM\\_NAME, and *Name* is **NULL**, then the function enumerates the available print providers.\n\nIf *Level* is 1, *Flags* contains PRINTER\\_ENUM\\_REMOTE, and *Name* is **NULL**, then the function enumerates the printers in the user's domain.\n\nIf *Level* is 2 or 5,*Name* is a pointer to a null-terminated string that specifies the name of a server whose printers are to be enumerated. If this string is **NULL**, then the function enumerates the printers installed on the local computer.\n\nIf *Level* is 4, *Name* should be **NULL**. The function always queries on the local computer.\n\nWhen *Name* is **NULL**, setting *Flags* to PRINTER\\_ENUM\\_LOCAL \\| PRINTER\\_ENUM\\_CONNECTIONS enumerates printers that are installed on the local machine. These printers include those that are physically attached to the local machine as well as remote printers to which it has a network connection.\n\nWhen *Name* is not **NULL**, setting *Flags* to PRINTER\\_ENUM\\_LOCAL \\| PRINTER\\_ENUM\\_NAME enumerates the local printers that are installed on the server *Name*.\n\n</dd> <dt>\n\n*Level* \\[in\\]\n</dt> <dd>\n\nThe type of data structures pointed to by *pPrinterEnum*. Valid values are 1, 2, 4, and 5, which correspond to the [**PRINTER\\_INFO\\_1**](printer-info-1.md), [**PRINTER\\_INFO\\_2**](printer-info-2.md) , [**PRINTER\\_INFO\\_4**](printer-info-4.md), and [**PRINTER\\_INFO\\_5**](printer-info-5.md) data structures.\n\nThis value can be 1, 2, 4, or 5.\n\n</dd> <dt>\n\n*pPrinterEnum* \\[out\\]\n</dt> <dd>\n\nA pointer to a buffer that receives an array of [**PRINTER\\_INFO\\_1**](printer-info-1.md), [**PRINTER\\_INFO\\_2**](printer-info-2.md), [**PRINTER\\_INFO\\_4**](printer-info-4.md), or [**PRINTER\\_INFO\\_5**](printer-info-5.md) structures. Each structure contains data that describes an available print object.\n\nIf *Level* is 1, the array contains [**PRINTER\\_INFO\\_1**](printer-info-1.md) structures. If *Level* is 2, the array contains [**PRINTER\\_INFO\\_2**](printer-info-2.md) structures. If *Level* is 4, the array contains [**PRINTER\\_INFO\\_4**](printer-info-4.md) structures. If *Level* is 5, the array contains [**PRINTER\\_INFO\\_5**](printer-info-5.md) structures.\n\nThe buffer must be large enough to receive the array of data structures and any strings or other data to which the structure members point. If the buffer is too small, the *pcbNeeded* parameter returns the required buffer size.\n\n</dd> <dt>\n\n*cbBuf* \\[in\\]\n</dt> <dd>\n\nThe size, in bytes, of the buffer pointed to by *pPrinterEnum*.\n\n</dd> <dt>\n\n*pcbNeeded* \\[out\\]\n</dt> <dd>\n\nA pointer to a value that receives the number of bytes copied if the function succeeds or the number of bytes required if *cbBuf* is too small.\n\n</dd> <dt>\n\n*pcReturned* \\[out\\]\n</dt> <dd>\n\nA pointer to a value that receives the number of [**PRINTER\\_INFO\\_1**](printer-info-1.md), [**PRINTER\\_INFO\\_2**](printer-info-2.md) , [**PRINTER\\_INFO\\_4**](printer-info-4.md), or [**PRINTER\\_INFO\\_5**](printer-info-5.md) structures that the function returns in the array to which *pPrinterEnum* points.\n\n</dd> </dl>\n\n## Return value\n\nIf the function succeeds, the return value is a nonzero value.\n\nIf the function fails, the return value is zero.\n\n## Remarks\n\nDo not call this method in [**DllMain**](/windows/desktop/Dlls/dllmain).\n\n> [!Note]  \n> This is a blocking or synchronous function and might not return immediately. How quickly this function returns depends on run-time factors such as network status, print server configuration, and printer driver implementation factors that are difficult to predict when writing an application. Calling this function from a thread that manages interaction with the user interface could make the application appear to be unresponsive.\n\n \n\nIf **EnumPrinters** returns a [**PRINTER\\_INFO\\_1**](printer-info-1.md) structure in which PRINTER\\_ENUM\\_CONTAINER is specified, this indicates that there is a hierarchy of printer objects. An application can enumerate the hierarchy by calling **EnumPrinters** again, setting *Name* to the value of the **PRINTER\\_INFO\\_1** structure's **pName** member.\n\nThe **EnumPrinters** function does not retrieve security information. If [**PRINTER\\_INFO\\_2**](printer-info-2.md) structures are returned in the array pointed to by *pPrinterEnum*, their *pSecurityDescriptor* members will be set to **NULL**.\n\nTo get information about the default printer, call [**GetDefaultPrinter**](getdefaultprinter.md).\n\nThe [**PRINTER\\_INFO\\_4**](printer-info-4.md) structure provides an easy and extremely fast way to retrieve the names of the printers installed on a local machine, as well as the remote connections that a user has established. When **EnumPrinters** is called with a **PRINTER\\_INFO\\_4** data structure, that function queries the registry for the specified information, then returns immediately. This differs from the behavior of **EnumPrinters** when called with other levels of **PRINTER\\_INFO\\_\\*** data structures. In particular, when **EnumPrinters** is called with a level 2 ([**PRINTER\\_INFO\\_2**](printer-info-2.md)) data structure, it performs an [**OpenPrinter**](openprinter.md) call on each remote connection. If a remote connection is down, or the remote server no longer exists, or the remote printer no longer exists, the function must wait for RPC to time out and consequently fail the **OpenPrinter** call. This can take a while. Passing a **PRINTER\\_INFO\\_4** structure lets an application retrieve a bare minimum of required information; if more detailed information is desired, a subsequent **EnumPrinters** level 2 call can be made.\n\n**Windows Vista:** The printer data returned by **EnumPrinters** is retrieved from a local cache when the value of *Level* is 4.\n\nThe following table shows the **EnumPrinters** output for various *Flags* values when the *Level* parameter is set to 1.\n\nIn the *Name* parameter column of the table, you should substitute an appropriate name for Print Provider, Domain, and Machine. For example, for \"Print Provider,\" you could use the name of the network print provider or the name of the local print provider. To retrieve print provider names, call **EnumPrinters** with *Name* set to **NULL**.\n\n\n\n| *Flags* parameter                                  | *Name* parameter                            | Result                                                                                            |\n|----------------------------------------------------|---------------------------------------------|---------------------------------------------------------------------------------------------------|\n| PRINTER\\_ENUM\\_LOCAL (and not PRINTER\\_ENUM\\_NAME) | The *Name* parameter is ignored.<br/> | All local printers.<br/>                                                                    |\n| PRINTER\\_ENUM\\_NAME                                | \"Print Provider\"<br/>                 | All domain names<br/>                                                                       |\n| PRINTER\\_ENUM\\_NAME                                | \"Print Provider!Domain\"<br/>          | All printers and print servers in the computer's domain<br/>                                |\n| PRINTER\\_ENUM\\_NAME                                | \"Print Provider!!\\\\\\\\Machine\"<br/>    | All printers shared at \\\\\\\\Machine<br/>                                                     |\n| PRINTER\\_ENUM\\_NAME                                | An empty string, \"\"<br/>              | All local printers.<br/>                                                                    |\n| PRINTER\\_ENUM\\_NAME                                | **NULL**<br/>                         | All print providers in the computer's domain<br/>                                           |\n| PRINTER\\_ENUM\\_CONNECTIONS                         | The *Name* parameter is ignored.<br/> | All connected remote printers<br/>                                                          |\n| PRINTER\\_ENUM\\_NETWORK                             | The *Name* parameter is ignored.<br/> | All printers in the computer's domain<br/>                                                  |\n| PRINTER\\_ENUM\\_REMOTE                              | An empty string, \"\"<br/>              | All printers and print servers in the computer's domain<br/>                                |\n| PRINTER\\_ENUM\\_REMOTE                              | \"Print Provider\"<br/>                 | Same as PRINTER\\_ENUM\\_NAME<br/>                                                            |\n| PRINTER\\_ENUM\\_REMOTE                              | \"Print Provider!Domain\"<br/>          | All printers and print servers in computer's domain, regardless of *Domain* specified.<br/> |\n| PRINTER\\_ENUM\\_CATEGORY\\_3D                        | The *Name* parameter is ignored.<br/> | Only 3D printers are enumerated.<br/>                                                       |\n| PRINTER\\_ENUM\\_CATEGORY\\_ALL                       | The *Name* parameter is ignored.<br/> | 3D printers are enumerated, along with all other printers.<br/>                             |\n\n\n\n \n\n## Requirements\n\n\n\n| Requirement | Value |\n|-------------------------------------|-----------------------------------------------------------------------------------------------------------|\n| Minimum supported client<br/> | Windows 2000 Professional \\[desktop apps only\\]<br/>                                                |\n| Minimum supported server<br/> | Windows 2000 Server \\[desktop apps only\\]<br/>                                                      |\n| Header<br/>                   | <dl> <dt>Winspool.h (include Windows.h)</dt> </dl> |\n| Library<br/>                  | <dl> <dt>Winspool.lib</dt> </dl>                   |\n| DLL<br/>                      | <dl> <dt>Winspool.drv</dt> </dl>                   |\n| Unicode and ANSI names<br/>   | **EnumPrintersW** (Unicode) and **EnumPrintersA** (ANSI)<br/>                                       |\n\n\n\n## See also\n\n<dl> <dt>\n\n[Printing](printdocs-printing.md)\n</dt> <dt>\n\n[Print Spooler API Functions](printing-and-print-spooler-functions.md)\n</dt> <dt>\n\n[**AddPrinter**](addprinter.md)\n</dt> <dt>\n\n[**DeletePrinter**](deleteprinter.md)\n</dt> <dt>\n\n[**GetPrinter**](getprinter.md)\n</dt> <dt>\n\n[**PRINTER\\_INFO\\_1**](printer-info-1.md)\n</dt> <dt>\n\n[**PRINTER\\_INFO\\_2**](printer-info-2.md)\n</dt> <dt>\n\n[**PRINTER\\_INFO\\_4**](printer-info-4.md)\n</dt> <dt>\n\n[**PRINTER\\_INFO\\_5**](printer-info-5.md)\n</dt> <dt>\n\n[**SetPrinter**](setprinter.md)\n</dt> </dl>\n\n \n\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "asciitounicode",
+   "file": "dlls/winspool.drv/info.c",
+   "start_line": 201,
+   "end_line": 210,
+   "static": true,
+   "called_from": [
+    "EnumPrintersA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winspool.drv/info.c:1597",
+    "dlls/winspool.drv/info.c:1598",
+    "dlls/winspool.drv/info.c:1599",
+    "dlls/winspool.drv/info.c:1600",
+    "dlls/winspool.drv/info.c:1601"
+   ],
+   "signature": "static inline PWSTR asciitounicode( UNICODE_STRING * usBufferPtr, LPCSTR src )",
+   "code": "static inline PWSTR asciitounicode( UNICODE_STRING * usBufferPtr, LPCSTR src )\n{\n    if ( (src) )\n    {\n        RtlCreateUnicodeStringFromAsciiz(usBufferPtr, src);\n        return usBufferPtr->Buffer;\n    }\n    usBufferPtr->Buffer = NULL; /* so that RtlFreeUnicodeString won't barf */\n    return NULL;\n}"
+  },
+  {
+   "name": "convert_printerinfo_W_to_A",
+   "file": "dlls/winspool.drv/info.c",
+   "start_line": 1137,
+   "end_line": 1389,
+   "static": true,
+   "called_from": [
+    "EnumPrintersA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winspool.drv/info.c:4008"
+   ],
+   "signature": "static void convert_printerinfo_W_to_A(LPBYTE out, LPBYTE pPrintersW, DWORD level, DWORD outlen, DWORD numentries)",
+   "code": "static void convert_printerinfo_W_to_A(LPBYTE out, LPBYTE pPrintersW,\n                                       DWORD level, DWORD outlen, DWORD numentries)\n{\n    DWORD id = 0;\n    LPSTR ptr;\n    INT len;\n\n    TRACE(\"(%p, %p, %ld, %lu, %lu)\\n\", out, pPrintersW, level, outlen, numentries);\n\n    len = pi_sizeof[level] * numentries;\n    ptr = (LPSTR) out + len;\n    outlen -= len;\n\n    /* copy the numbers of all PRINTER_INFO_* first */\n    memcpy(out, pPrintersW, len);\n\n    while (id < numentries) {\n        switch (level) {\n            case 1:\n                {\n                    PRINTER_INFO_1W * piW = (PRINTER_INFO_1W *) pPrintersW;\n                    PRINTER_INFO_1A * piA = (PRINTER_INFO_1A *) out;\n\n                    TRACE(\"(%lu) #%lu: %s\\n\", level, id, debugstr_w(piW->pName));\n                    if (piW->pDescription) {\n                        piA->pDescription = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pDescription, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    if (piW->pName) {\n                        piA->pName = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pName, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    if (piW->pComment) {\n                        piA->pComment = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pComment, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    break;\n                }\n\n            case 2:\n                {\n                    PRINTER_INFO_2W * piW = (PRINTER_INFO_2W *) pPrintersW;\n                    PRINTER_INFO_2A * piA = (PRINTER_INFO_2A *) out;\n\n                    TRACE(\"(%lu) #%lu: %s\\n\", level, id, debugstr_w(piW->pPrinterName));\n                    if (piW->pServerName) {\n                        piA->pServerName = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pServerName, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    if (piW->pPrinterName) {\n                        piA->pPrinterName = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pPrinterName, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    if (piW->pShareName) {\n                        piA->pShareName = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pShareName, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    if (piW->pPortName) {\n                        piA->pPortName = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pPortName, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    if (piW->pDriverName) {\n                        piA->pDriverName = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pDriverName, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    if (piW->pComment) {\n                        piA->pComment = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pComment, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    if (piW->pLocation) {\n                        piA->pLocation = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pLocation, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n\n                    if (piW->pDevMode)\n                    {\n                        /* align DEVMODEA to a DWORD boundary */\n                        len = (4 - ( (DWORD_PTR) ptr & 3)) & 3;\n                        ptr += len;\n                        outlen -= len;\n\n                        piA->pDevMode = (LPDEVMODEA) ptr;\n                        DEVMODEWtoA(piW->pDevMode, piA->pDevMode);\n                        len = piA->pDevMode->dmSize + piA->pDevMode->dmDriverExtra;\n\n                        ptr += len;\n                        outlen -= len;\n                    }\n\n                    if (piW->pSepFile) {\n                        piA->pSepFile = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pSepFile, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    if (piW->pPrintProcessor) {\n                        piA->pPrintProcessor = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pPrintProcessor, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    if (piW->pDatatype) {\n                        piA->pDatatype = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pDatatype, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    if (piW->pParameters) {\n                        piA->pParameters = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pParameters, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    if (piW->pSecurityDescriptor) {\n                        piA->pSecurityDescriptor = NULL;\n                        FIXME(\"pSecurityDescriptor ignored: %s\\n\", debugstr_w(piW->pPrinterName));\n                    }\n                    break;\n                }\n\n            case 4:\n                {\n                    PRINTER_INFO_4W * piW = (PRINTER_INFO_4W *) pPrintersW;\n                    PRINTER_INFO_4A * piA = (PRINTER_INFO_4A *) out;\n\n                    TRACE(\"(%lu) #%lu: %s\\n\", level, id, debugstr_w(piW->pPrinterName));\n\n                    if (piW->pPrinterName) {\n                        piA->pPrinterName = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pPrinterName, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    if (piW->pServerName) {\n                        piA->pServerName = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pServerName, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    break;\n                }\n\n            case 5:\n                {\n                    PRINTER_INFO_5W * piW = (PRINTER_INFO_5W *) pPrintersW;\n                    PRINTER_INFO_5A * piA = (PRINTER_INFO_5A *) out;\n\n                    TRACE(\"(%lu) #%lu: %s\\n\", level, id, debugstr_w(piW->pPrinterName));\n\n                    if (piW->pPrinterName) {\n                        piA->pPrinterName = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pPrinterName, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    if (piW->pPortName) {\n                        piA->pPortName = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pPortName, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    break;\n                }\n\n            case 6:  /* 6A and 6W are the same structure */\n                break;\n\n            case 7:\n                {\n                    PRINTER_INFO_7W * piW = (PRINTER_INFO_7W *) pPrintersW;\n                    PRINTER_INFO_7A * piA = (PRINTER_INFO_7A *) out;\n\n                    TRACE(\"(%lu) #%lu\\n\", level, id);\n                    if (piW->pszObjectGUID) {\n                        piA->pszObjectGUID = ptr;\n                        len = WideCharToMultiByte(CP_ACP, 0, piW->pszObjectGUID, -1,\n                                                  ptr, outlen, NULL, NULL);\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    break;\n                }\n\n            case 8:\n            case 9:\n                {\n                    PRINTER_INFO_9W * piW = (PRINTER_INFO_9W *) pPrintersW;\n                    PRINTER_INFO_9A * piA = (PRINTER_INFO_9A *) out;\n\n                    TRACE(\"(%lu) #%lu\\n\", level, id);\n                    if (piW->pDevMode)\n                    {\n                        /* align DEVMODEA to a DWORD boundary */\n                        len = (4 - ( (DWORD_PTR) ptr & 3)) & 3;\n                        ptr += len;\n                        outlen -= len;\n\n                        piA->pDevMode = (LPDEVMODEA) ptr;\n                        DEVMODEWtoA(piW->pDevMode, piA->pDevMode);\n                        len = piA->pDevMode->dmSize + piA->pDevMode->dmDriverExtra;\n\n                        ptr += len;\n                        outlen -= len;\n                    }\n                    break;\n                }\n\n            default:\n                FIXME(\"for level %lu\\n\", level);\n        }\n        pPrintersW += pi_sizeof[level];\n        out += pi_sizeof[level];\n        id++;\n    }\n}"
+  },
+  {
+   "name": "DEVMODEWtoA",
+   "file": "dlls/winspool.drv/info.c",
+   "start_line": 235,
+   "end_line": 266,
+   "static": true,
+   "called_from": [
+    "convert_printerinfo_W_to_A"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winspool.drv/info.c:853",
+    "dlls/winspool.drv/info.c:1793",
+    "dlls/winspool.drv/info.c:7337"
+   ],
+   "signature": "static DEVMODEA *DEVMODEWtoA( const DEVMODEW *dmW, DEVMODEA *dmA )",
+   "code": "static DEVMODEA *DEVMODEWtoA( const DEVMODEW *dmW, DEVMODEA *dmA )\n{\n    DWORD size, sizeW;\n\n    if (!dmW) return NULL;\n    sizeW = dmW->dmSize;\n    size = sizeW - CCHDEVICENAME -\n                        ((sizeW > FIELD_OFFSET( DEVMODEW, dmFormName )) ? CCHFORMNAME : 0);\n\n    if (!dmA)\n        dmA = calloc( 1, size + dmW->dmDriverExtra );\n    if (!dmA) return NULL;\n\n    stringWtoA( dmW->dmDeviceName, (char *)dmA->dmDeviceName, CCHDEVICENAME );\n\n    if (FIELD_OFFSET( DEVMODEW, dmFormName ) >= sizeW)\n    {\n        memmove( &dmA->dmSpecVersion, &dmW->dmSpecVersion,\n                sizeW - FIELD_OFFSET( DEVMODEW, dmSpecVersion ) );\n    }\n    else\n    {\n        memmove( &dmA->dmSpecVersion, &dmW->dmSpecVersion,\n                FIELD_OFFSET( DEVMODEW, dmFormName ) - FIELD_OFFSET( DEVMODEW, dmSpecVersion ) );\n        stringWtoA( dmW->dmFormName, (char *)dmA->dmFormName, CCHFORMNAME );\n        memmove( &dmA->dmLogPixels, &dmW->dmLogPixels, sizeW - FIELD_OFFSET( DEVMODEW, dmLogPixels ) );\n    }\n\n    dmA->dmSize = size;\n    memmove( (char *)dmA + dmA->dmSize, (const char *)dmW + sizeW, dmW->dmDriverExtra );\n    return dmA;\n}"
+  },
+  {
+   "name": "stringWtoA",
+   "file": "dlls/winspool.drv/info.c",
+   "start_line": 215,
+   "end_line": 228,
+   "static": true,
+   "called_from": [
+    "DEVMODEWtoA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winspool.drv/info.c:282"
+   ],
+   "signature": "static void stringWtoA( const WCHAR *strW, char *strA, size_t size )",
+   "code": "static void stringWtoA( const WCHAR *strW, char *strA, size_t size )\n{\n    DWORD ret;\n    char *str;\n\n    str = (char *)strW == strA ? malloc( size ) : strA;\n    ret = WideCharToMultiByte( CP_ACP, 0, strW, -1, str, size, NULL, NULL );\n    if (str != strA)\n    {\n        memcpy( strA, str, ret );\n        free( str );\n    }\n    memset( strA + ret, 0, size - ret );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 53,
+    "end_line": 53,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(winspool);"
+   },
+   {
+    "name": "pi_sizeof",
+    "type": "const DWORD[10]",
+    "static": true,
+    "start_line": 123,
+    "end_line": 127,
+    "code": "static const DWORD pi_sizeof[] = {0, sizeof(PRINTER_INFO_1W), sizeof(PRINTER_INFO_2W),\n                                     sizeof(PRINTER_INFO_3),  sizeof(PRINTER_INFO_4W),\n                                     sizeof(PRINTER_INFO_5W), sizeof(PRINTER_INFO_6),\n                                     sizeof(PRINTER_INFO_7W), sizeof(PRINTER_INFO_8W),\n                                     sizeof(PRINTER_INFO_9W)};"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "EnumPrintersW",
+    "impl": [
+     "dlls/winspool.drv/info.c:4217"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "RtlCreateUnicodeStringFromAsciiz",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:255"
+    ]
+   },
+   {
+    "name": "RtlFreeUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:272"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   },
+   {
+    "name": "calloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "memmove",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:126"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_a",
+   "debugstr_w",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "winspool.drv.EnumPrintersA",
+  "category": {
+   "l1": "Devices",
+   "l2": "Printing",
+   "header": "",
+   "textbook": "Device management",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 26,
+   "body": 24,
+   "code": 14
+  },
+  "cyclomatic": 4,
+  "return_type": "BOOL",
+  "n_params": 7,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 2,
+   "n_tests_other": 1,
+   "own_test_functions": [
+    "dlls/winspool.drv/tests/info.c::test_EnumPrinters"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/printdocs/enumprinters",
+   "source": "win32-conceptual",
+   "description": "The EnumPrinters function enumerates available printers, print servers, domains, or print providers.",
+   "min_windows": "",
+   "documented_dll": ""
+  },
+  "exports": [
+   "winspool.drv.EnumPrintersA"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2000-05-25",
+   "median_date": "2008-03-24",
+   "last_date": "2022-11-14",
+   "code_lines": 16,
+   "pair": "cfgmgr32.CM_Unregister_Notification",
+   "rank": 1,
+   "distance": 0.3
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "cfgmgr32.CM_Unregister_Notification",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-11-14",
+  "partner_rank": 1,
+  "distance": 0.3
+ }
+}

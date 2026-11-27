@@ -1,0 +1,161 @@
+{
+ "id": "0108",
+ "function": {
+  "name": "GetFileInformationByHandle",
+  "export_name": "GetFileInformationByHandle",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/file.c",
+  "start_line": 3135,
+  "end_line": 3165,
+  "body_lines": 28,
+  "signature": "BOOL WINAPI DECLSPEC_HOTPATCH GetFileInformationByHandle( HANDLE file, BY_HANDLE_FILE_INFORMATION *info )",
+  "header_comment": "/***********************************************************************\n *\tGetFileInformationByHandle   (kernelbase.@)\n */",
+  "code": "BOOL WINAPI DECLSPEC_HOTPATCH GetFileInformationByHandle( HANDLE file, BY_HANDLE_FILE_INFORMATION *info )\n{\n    FILE_FS_VOLUME_INFORMATION volume_info;\n    FILE_ALL_INFORMATION all_info;\n    IO_STATUS_BLOCK io;\n    NTSTATUS status;\n\n    status = NtQueryInformationFile( file, &io, &all_info, sizeof(all_info), FileAllInformation );\n    if (status == STATUS_BUFFER_OVERFLOW) status = STATUS_SUCCESS;\n    if (!set_ntstatus( status )) return FALSE;\n\n    info->dwFileAttributes                = all_info.BasicInformation.FileAttributes;\n    info->ftCreationTime.dwHighDateTime   = all_info.BasicInformation.CreationTime.u.HighPart;\n    info->ftCreationTime.dwLowDateTime    = all_info.BasicInformation.CreationTime.u.LowPart;\n    info->ftLastAccessTime.dwHighDateTime = all_info.BasicInformation.LastAccessTime.u.HighPart;\n    info->ftLastAccessTime.dwLowDateTime  = all_info.BasicInformation.LastAccessTime.u.LowPart;\n    info->ftLastWriteTime.dwHighDateTime  = all_info.BasicInformation.LastWriteTime.u.HighPart;\n    info->ftLastWriteTime.dwLowDateTime   = all_info.BasicInformation.LastWriteTime.u.LowPart;\n    info->dwVolumeSerialNumber            = 0;\n    info->nFileSizeHigh                   = all_info.StandardInformation.EndOfFile.u.HighPart;\n    info->nFileSizeLow                    = all_info.StandardInformation.EndOfFile.u.LowPart;\n    info->nNumberOfLinks                  = all_info.StandardInformation.NumberOfLinks;\n    info->nFileIndexHigh                  = all_info.InternalInformation.IndexNumber.u.HighPart;\n    info->nFileIndexLow                   = all_info.InternalInformation.IndexNumber.u.LowPart;\n\n    status = NtQueryVolumeInformationFile( file, &io, &volume_info, sizeof(volume_info), FileFsVolumeInformation );\n    if (status == STATUS_SUCCESS || status == STATUS_BUFFER_OVERFLOW)\n        info->dwVolumeSerialNumber = volume_info.VolumeSerialNumber;\n\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include \"winerror.h\"",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"wincon.h\"",
+   "#include \"fileapi.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"ddk/ntddser.h\"",
+   "#include \"ioringapi.h\"",
+   "#include \"ddk/ntifs.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!GetFileInformationByHandle [stdcall -import] -> import from kernelbase",
+   "kernelbase!GetFileInformationByHandle [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/file.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 2
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "fileapi",
+   "path": "sdk-api-src/content/fileapi/nf-fileapi-getfileinformationbyhandle.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/fileapi/nf-fileapi-getfileinformationbyhandle",
+   "documented_name": "getfileinformationbyhandle",
+   "file": "docs/0108_sdk-api_nf-fileapi-getfileinformationbyhandle.md",
+   "text": "---\nUID: NF:fileapi.GetFileInformationByHandle\ntitle: GetFileInformationByHandle function (fileapi.h)\ndescription: Retrieves file information for the specified file. (GetFileInformationByHandle)\nhelpviewer_keywords: [\"GetFileInformationByHandle\",\"GetFileInformationByHandle function [Files]\",\"_win32_getfileinformationbyhandle\",\"base.getfileinformationbyhandle\",\"fileapi/GetFileInformationByHandle\",\"fs.getfileinformationbyhandle\",\"winbase/GetFileInformationByHandle\"]\nold-location: fs\\getfileinformationbyhandle.htm\ntech.root: fs\nms.assetid: d026ee3a-c165-42a2-a4e1-efccdafbefc5\nms.date: 12/05/2018\nms.keywords: GetFileInformationByHandle, GetFileInformationByHandle function [Files], _win32_getfileinformationbyhandle, base.getfileinformationbyhandle, fileapi/GetFileInformationByHandle, fs.getfileinformationbyhandle, winbase/GetFileInformationByHandle\nreq.header: fileapi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetFileInformationByHandle\n - fileapi/GetFileInformationByHandle\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-file-l1-2-5.dll\n - api-ms-win-core-file-l1-2-4.dll\n - api-ms-win-core-file-l1-2-3.dll\n - Kernel32.dll\n - API-MS-Win-Core-File-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-File-l1-2-0.dll\n - API-MS-Win-Core-File-l1-2-1.dll\n - API-MS-Win-Core-File-l1-2-2.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\napi_name:\n - GetFileInformationByHandle\n---\n\n# GetFileInformationByHandle function\n\n\n## -description\n\nRetrieves file information for the specified file.\n\nFor a more advanced version of this function, see \n    <a href=\"/windows/desktop/api/winbase/nf-winbase-getfileinformationbyhandleex\">GetFileInformationByHandleEx</a>.\n\nTo set file information using a file handle, see \n    <a href=\"/windows/desktop/api/fileapi/nf-fileapi-setfileinformationbyhandle\">SetFileInformationByHandle</a>.\n\n## -parameters\n\n### -param hFile [in]\n\nA handle to the file that contains the information to be retrieved.\n\nThis handle should not be a pipe handle.\n\n### -param lpFileInformation [out]\n\nA pointer to a \n      <a href=\"/windows/desktop/api/fileapi/ns-fileapi-by_handle_file_information\">BY_HANDLE_FILE_INFORMATION</a> structure that \n      receives the file information.\n\n## -returns\n\nIf the function succeeds, the return value is nonzero and file information data is contained in the buffer \n       pointed to by the <i>lpFileInformation</i> parameter.\n\nIf the function fails, the return value is zero. To get extended error information, call \n       <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nDepending on the underlying network features of the operating system and the type of server connected to, the \n    <b>GetFileInformationByHandle</b> function may fail, \n    return partial information, or full information for the given file.\n\nYou can compare the <b>VolumeSerialNumber</b> and <b>FileIndex</b> \n    members returned in the \n    <a href=\"/windows/desktop/api/fileapi/ns-fileapi-by_handle_file_information\">BY_HANDLE_FILE_INFORMATION</a> structure to \n    determine if two paths map to the same target; for example, you can compare two file paths and determine if they \n    map to the same directory.\n\nIIn Windows 8 and Windows Server 2012, this function is supported by the following technologies.\n\n<table>\n<tr>\n<th>Technology</th>\n<th>Supported</th>\n</tr>\n<tr>\n<td>\nServer Message Block (SMB) 3.0 protocol\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nSMB 3.0 Transparent Failover (TFO)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nSMB 3.0 with Scale-out File Shares (SO)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nCluster Shared Volume File System (CsvFS)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n<tr>\n<td>\nResilient File System (ReFS)\n\n</td>\n<td>\nYes\n\n</td>\n</tr>\n</table>\n \n\n<h3><a id=\"Transacted_Operations\"></a><a id=\"transacted_operations\"></a><a id=\"TRANSACTED_OPERATIONS\"></a>Transacted Operations</h3>\nIf there is a transaction bound to the thread at the time of the call, then the function returns the \n      compressed file size of the isolated file view. For more information, see \n      <a href=\"/windows/desktop/FileIO/about-transactional-ntfs\">About Transactional NTFS</a>.\n\n## -see-also\n\n<a href=\"/windows/desktop/FileIO/file-management-functions\">File Management Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-getfileinformationbyhandleex\">GetFileInformationByHandleEx</a>\n\n\n\n<a href=\"/windows/desktop/api/fileapi/nf-fileapi-setfileinformationbyhandle\">SetFileInformationByHandle</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "NtQueryInformationFile",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/file.c:4943"
+    ]
+   },
+   {
+    "name": "NtQueryVolumeInformationFile",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/file.c:7427"
+    ]
+   }
+  ],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [
+   "set_ntstatus"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "kernelbase.GetFileInformationByHandle",
+  "category": {
+   "l1": "Data access and storage",
+   "l2": "Files and I/O",
+   "header": "fileapi.h",
+   "textbook": "File management",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 31,
+   "body": 30,
+   "code": 24
+  },
+  "cyclomatic": 5,
+  "return_type": "BOOL",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 2,
+   "n_tests": 13,
+   "n_tests_other": 11,
+   "own_test_functions": [
+    "dlls/kernel32/tests/file.c::test_CreateFileA",
+    "dlls/kernel32/tests/file.c::test_posix_semantics"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/fileapi/nf-fileapi-getfileinformationbyhandle",
+   "source": "win32",
+   "description": "Retrieves file information for the specified file. (GetFileInformationByHandle)",
+   "min_windows": "Windows XP [desktop apps only]",
+   "documented_dll": "Kernel32.dll"
+  },
+  "exports": [
+   "kernel32.GetFileInformationByHandle",
+   "kernelbase.GetFileInformationByHandle"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.6,
+   "first_date": "2019-08-12",
+   "median_date": "2026-04-15",
+   "last_date": "2026-04-15",
+   "code_lines": 25
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "kernelbase.GetDriveTypeW",
+  "share_after_cutoff": 0.6,
+  "last_date": "2026-04-15"
+ }
+}

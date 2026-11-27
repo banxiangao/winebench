@@ -1,0 +1,229 @@
+{
+ "id": "0197",
+ "function": {
+  "name": "__C_specific_handler",
+  "export_name": "__C_specific_handler",
+  "module": "ucrtbase",
+  "source_module": "msvcrt",
+  "exported_by": [
+   "kernel32",
+   "kernelbase",
+   "msvcr100",
+   "msvcr110",
+   "msvcr120",
+   "msvcr120_app",
+   "msvcr80",
+   "msvcr90",
+   "msvcrt",
+   "ntdll",
+   "ntoskrnl.exe",
+   "ucrtbase",
+   "vcruntime140"
+  ],
+  "side": "PE",
+  "file": "dlls/msvcrt/except.c",
+  "start_line": 1108,
+  "end_line": 1177,
+  "body_lines": 67,
+  "signature": "EXCEPTION_DISPOSITION WINAPI __C_specific_handler( EXCEPTION_RECORD *rec, void *frame, ARM64_NT_CONTEXT *context, DISPATCHER_CONTEXT_ARM64 *dispatch )",
+  "header_comment": null,
+  "code": "EXCEPTION_DISPOSITION WINAPI __C_specific_handler( EXCEPTION_RECORD *rec, void *frame,\n                                                   ARM64_NT_CONTEXT *context,\n                                                   DISPATCHER_CONTEXT_ARM64 *dispatch )\n{\n    const SCOPE_TABLE *table = dispatch->HandlerData;\n    ULONG_PTR base = dispatch->ImageBase;\n    ULONG_PTR pc = dispatch->ControlPc;\n    unsigned int i;\n    void *handler;\n\n    TRACE_(unwind)( \"%p %p %p %p pc %Ix\\n\", rec, frame, context, dispatch, pc );\n    if (TRACE_ON(unwind)) DUMP_SCOPE_TABLE( base, table );\n\n    if (dispatch->ControlPcIsUnwound) pc -= 4;\n\n    if (rec->ExceptionFlags & (EXCEPTION_UNWINDING | EXCEPTION_EXIT_UNWIND))\n    {\n        for (i = dispatch->ScopeIndex; i < table->Count; i++)\n        {\n            if (pc < base + table->ScopeRecord[i].BeginAddress) continue;\n            if (pc >= base + table->ScopeRecord[i].EndAddress) continue;\n            if (table->ScopeRecord[i].JumpTarget) continue;\n\n            if (rec->ExceptionFlags & EXCEPTION_TARGET_UNWIND &&\n                dispatch->TargetPc >= base + table->ScopeRecord[i].BeginAddress &&\n                dispatch->TargetPc < base + table->ScopeRecord[i].EndAddress)\n            {\n                break;\n            }\n            handler = (void *)(base + table->ScopeRecord[i].HandlerAddress);\n            dispatch->ScopeIndex = i + 1;\n            TRACE_(unwind)( \"scope %u calling __finally %p frame %p\\n\", i, handler, frame );\n            __C_ExecuteExceptionFilter( ULongToPtr(TRUE), frame, handler, dispatch->NonVolatileRegisters );\n        }\n    }\n    else\n    {\n        for (i = dispatch->ScopeIndex; i < table->Count; i++)\n        {\n            if (pc < base + table->ScopeRecord[i].BeginAddress) continue;\n            if (pc >= base + table->ScopeRecord[i].EndAddress) continue;\n            if (!table->ScopeRecord[i].JumpTarget) continue;\n\n            if (table->ScopeRecord[i].HandlerAddress != EXCEPTION_EXECUTE_HANDLER)\n            {\n                EXCEPTION_POINTERS ptrs = { rec, (CONTEXT *)context };\n\n                handler = (void *)(base + table->ScopeRecord[i].HandlerAddress);\n                TRACE_(unwind)( \"scope %u calling filter %p ptrs %p frame %p\\n\", i, handler, &ptrs, frame );\n                switch (__C_ExecuteExceptionFilter( &ptrs, frame, handler, dispatch->NonVolatileRegisters ))\n                {\n                case EXCEPTION_EXECUTE_HANDLER:\n                    break;\n                case EXCEPTION_CONTINUE_SEARCH:\n                    continue;\n                case EXCEPTION_CONTINUE_EXECUTION:\n                    return ExceptionContinueExecution;\n                }\n            }\n            /* Call the destructor if we're handling a C++ exception. */\n            if (is_cxx_exception(rec)) __DestructExceptionObject( rec );\n\n            TRACE_(unwind)( \"unwinding to target %Ix\\n\", base + table->ScopeRecord[i].JumpTarget );\n            RtlUnwindEx( frame, (char *)base + table->ScopeRecord[i].JumpTarget,\n                         rec, ULongToPtr(rec->ExceptionCode), (CONTEXT *)dispatch->ContextRecord,\n                         dispatch->HistoryTable );\n        }\n    }\n    return ExceptionContinueSearch;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <float.h>",
+   "#include <signal.h>",
+   "#include <stdarg.h>",
+   "#include <stdbool.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winternl.h\"",
+   "#include \"msvcrt.h\"",
+   "#include \"excpt.h\"",
+   "#include \"unknwn.h\"",
+   "#include \"wincon.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"cppexcept.h\""
+  ],
+  "resolution": [
+   "ucrtbase!__C_specific_handler [stdcall -arch=!i386]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ucrtbase/tests/cpp.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "ntdll",
+   "source_module": "ntdll",
+   "exported_by": [
+    "kernel32",
+    "kernelbase",
+    "ntdll"
+   ],
+   "file": "dlls/ntdll/unwind.c",
+   "start_line": 863,
+   "resolution": [
+    "ntdll!__C_specific_handler [stdcall -arch=!i386]"
+   ],
+   "macro_generated": false,
+   "win16": false,
+   "end_line": 929,
+   "signature": "EXCEPTION_DISPOSITION WINAPI __C_specific_handler( EXCEPTION_RECORD *rec, void *frame, ARM64_NT_CONTEXT *context, DISPATCHER_CONTEXT_ARM64 *dispatch )",
+   "code": "EXCEPTION_DISPOSITION WINAPI __C_specific_handler( EXCEPTION_RECORD *rec, void *frame,\n                                                   ARM64_NT_CONTEXT *context,\n                                                   DISPATCHER_CONTEXT_ARM64 *dispatch )\n{\n    const SCOPE_TABLE *table = dispatch->HandlerData;\n    ULONG_PTR base = dispatch->ImageBase;\n    ULONG_PTR pc = dispatch->ControlPc;\n    unsigned int i;\n    void *handler;\n\n    TRACE( \"%p %p %p %p pc %Ix\\n\", rec, frame, context, dispatch, pc );\n    if (TRACE_ON(unwind)) DUMP_SCOPE_TABLE( base, table );\n\n    if (dispatch->ControlPcIsUnwound) pc -= 4;\n\n    if (rec->ExceptionFlags & (EXCEPTION_UNWINDING | EXCEPTION_EXIT_UNWIND))\n    {\n        for (i = dispatch->ScopeIndex; i < table->Count; i++)\n        {\n            if (pc < base + table->ScopeRecord[i].BeginAddress) continue;\n            if (pc >= base + table->ScopeRecord[i].EndAddress) continue;\n            if (table->ScopeRecord[i].JumpTarget) continue;\n\n            if (rec->ExceptionFlags & EXCEPTION_TARGET_UNWIND &&\n                dispatch->TargetPc >= base + table->ScopeRecord[i].BeginAddress &&\n                dispatch->TargetPc < base + table->ScopeRecord[i].EndAddress)\n            {\n                break;\n            }\n            handler = (void *)(base + table->ScopeRecord[i].HandlerAddress);\n            dispatch->ScopeIndex = i + 1;\n            TRACE( \"scope %u calling __finally %p frame %p\\n\", i, handler, frame );\n            __C_ExecuteExceptionFilter( ULongToPtr(TRUE), frame, handler, dispatch->NonVolatileRegisters );\n        }\n    }\n    else\n    {\n        for (i = dispatch->ScopeIndex; i < table->Count; i++)\n        {\n            if (pc < base + table->ScopeRecord[i].BeginAddress) continue;\n            if (pc >= base + table->ScopeRecord[i].EndAddress) continue;\n            if (!table->ScopeRecord[i].JumpTarget) continue;\n\n            if (table->ScopeRecord[i].HandlerAddress != EXCEPTION_EXECUTE_HANDLER)\n            {\n                EXCEPTION_POINTERS ptrs = { rec, (CONTEXT *)context };\n\n                handler = (void *)(base + table->ScopeRecord[i].HandlerAddress);\n                TRACE( \"scope %u calling filter %p ptrs %p frame %p\\n\", i, handler, &ptrs, frame );\n                switch (__C_ExecuteExceptionFilter( &ptrs, frame, handler, dispatch->NonVolatileRegisters ))\n                {\n                case EXCEPTION_EXECUTE_HANDLER:\n                    break;\n                case EXCEPTION_CONTINUE_SEARCH:\n                    continue;\n                case EXCEPTION_CONTINUE_EXECUTION:\n                    return ExceptionContinueExecution;\n                }\n            }\n            TRACE( \"unwinding to target %Ix\\n\", base + table->ScopeRecord[i].JumpTarget );\n            RtlUnwindEx( frame, (char *)base + table->ScopeRecord[i].JumpTarget,\n                         rec, ULongToPtr(rec->ExceptionCode), (CONTEXT *)dispatch->ContextRecord,\n                         dispatch->HistoryTable );\n        }\n    }\n    return ExceptionContinueSearch;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "",
+   "path": "desktop-src/DevNotes/--c-specific-handler2.md",
+   "url": "https://learn.microsoft.com/windows/win32/devnotes/--c-specific-handler2",
+   "documented_name": "__c_specific_handler",
+   "file": "docs/0197_win32_--c-specific-handler2.md",
+   "text": "---\ndescription: Called by the compiler to implement structured exception handling extensions.\nms.assetid: 6EAE0B4E-35E1-48EB-A8A9-0C1DC5387B03\ntitle: '__C_specific_handler function (Wdm.h)'\nms.topic: reference\nms.date: 05/31/2018\ntopic_type: \n- APIRef\n- kbSyntax\napi_name: \n- __C_specific_handler\n- __C_specific_handler\napi_type: \n- DllExport\napi_location: \n- ntoskrnl.exe\n- NTDll.dll\n- wpdupfltr.sys\n- kernelbase.dll\n---\n\n# \\_\\_C\\_specific\\_handler function\n\nCalled by the compiler to implement structured exception handling extensions.\n\nThe relative address of the language specific handler is present in the UNWIND\\_INFO whenever flags UNW\\_FLAG\\_EHANDLER or UNW\\_FLAG\\_UHANDLER are set. The language specific handler is called as part of the search for an exception handler or as part of an unwind. For more information see [Language Specific Handler](/cpp/build/exception-handling-x64#language-specific-handler).\n\n## Syntax\n\n\n```C++\n_CRTIMP  __C_specific_handler(\n  _In_    struct _EXCEPTION_RECORD   *ExceptionRecord,\n  _In_    void                       *EstablisherFrame,\n  _Inout_ struct _CONTEXT            *ContextRecord,\n  _Inout_ struct _DISPATCHER_CONTEXT *DispatcherContext\n);\n```\n\n\n\n## Parameters\n\n<dl> <dt>\n\n*ExceptionRecord* \\[in\\]\n</dt> <dd>\n\nSupplies a pointer to an exception record, which has the standard Win64 definition.\n\n</dd> <dt>\n\n*EstablisherFrame* \\[in\\]\n</dt> <dd>\n\nThe address of the base of the fixed stack allocation for this function.\n\n</dd> <dt>\n\n*ContextRecord* \\[in, out\\]\n</dt> <dd>\n\nPoints to the exception context at the time the exception was raised (in the exception handler case) or the current \"unwind\" context (in the termination handler case).\n\n</dd> <dt>\n\n*DispatcherContext* \\[in, out\\]\n</dt> <dd>\n\nPoints to the dispatcher context for this function.\n\n</dd> </dl>\n\n## Requirements\n\n\n\n| Requirement | Value |\n|--------------------|-----------------------------------------------------------------------------------------|\n| Header<br/>  | <dl> <dt>Wdm.h</dt> </dl>        |\n| Library<br/> | <dl> <dt>NtosKrnl.lib</dt> </dl> |\n| DLL<br/>     | <dl> <dt>Ntoskrnl.exe</dt> </dl> |\n\n\n\n \n\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch_unwind",
+    "type": "struct __wine_debug_channel",
+    "static": true,
+    "start_line": 46,
+    "end_line": 46,
+    "code": "WINE_DECLARE_DEBUG_CHANNEL(unwind);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "DUMP_SCOPE_TABLE",
+    "start_line": 1090,
+    "end_line": 1097,
+    "code": "#define DUMP_SCOPE_TABLE(base,table) do { \\\n    for (unsigned int i = 0; i < table->Count; i++) \\\n        TRACE_(unwind)( \"  %u: %p-%p handler %p target %p\\n\", i, \\\n               (char *)base + table->ScopeRecord[i].BeginAddress,   \\\n               (char *)base + table->ScopeRecord[i].EndAddress,     \\\n               (char *)base + table->ScopeRecord[i].HandlerAddress, \\\n               (char *)base + table->ScopeRecord[i].JumpTarget );   \\\n} while(0)"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "__DestructExceptionObject",
+    "impl": [
+     "dlls/msvcrt/except.c:961"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "RtlUnwindEx",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/signal_arm.c:432",
+     "dlls/ntdll/signal_arm64.c:469",
+     "dlls/ntdll/signal_x86_64.c:689"
+    ]
+   },
+   {
+    "name": "__wine_dbg_get_channel_flags",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/thread.c:93"
+    ]
+   }
+  ],
+  "header_inline": [
+   "ULongToPtr",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "is_cxx_exception"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "handler",
+    "in_function": "__C_specific_handler",
+    "at": "dlls/msvcrt/except.c:1297",
+    "candidates": [
+     "MSVCRT_new_handler @ dlls/msvcrt/heap.c:134"
+    ]
+   },
+   {
+    "expr": "filter",
+    "in_function": "__C_specific_handler",
+    "at": "dlls/msvcrt/except.c:1315",
+    "candidates": []
+   }
+  ]
+ },
+ "winebench": {
+  "id": "ucrtbase.__C_specific_handler",
+  "category": {
+   "l1": "Diagnostics",
+   "l2": "Debugging and error handling",
+   "header": "",
+   "textbook": "Process control",
+   "basis": "name_rule"
+  },
+  "loc": {
+   "total": 70,
+   "body": 67,
+   "code": 43
+  },
+  "cyclomatic": 20,
+  "return_type": "EXCEPTION_DISPOSITION",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ucrtbase/tests/cpp.c::test___C_specific_handler"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/devnotes/--c-specific-handler2",
+   "source": "win32-conceptual",
+   "description": "Called by the compiler to implement structured exception handling extensions.",
+   "min_windows": "",
+   "documented_dll": "NTDll.dll"
+  },
+  "exports": [
+   "ucrtbase.__C_specific_handler",
+   "vcruntime140.__C_specific_handler"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.978,
+   "first_date": "2024-02-29",
+   "median_date": "2025-11-04",
+   "last_date": "2025-11-04",
+   "code_lines": 46
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "kernelbase.GetPerformanceInfo",
+  "share_after_cutoff": 0.978,
+  "last_date": "2025-11-04"
+ }
+}

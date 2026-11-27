@@ -1,0 +1,278 @@
+{
+ "id": "0251",
+ "function": {
+  "name": "LocalUnlock",
+  "export_name": "LocalUnlock",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase",
+   "krnl386.exe16"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/memory.c",
+  "start_line": 1258,
+  "end_line": 1294,
+  "body_lines": 34,
+  "signature": "BOOL WINAPI DECLSPEC_HOTPATCH LocalUnlock( HLOCAL handle )",
+  "header_comment": "/***********************************************************************\n *           LocalUnlock   (kernelbase.@)\n */",
+  "code": "BOOL WINAPI DECLSPEC_HOTPATCH LocalUnlock( HLOCAL handle )\n{\n    HANDLE heap = GetProcessHeap();\n    struct mem_entry *mem;\n    BOOL ret = FALSE;\n\n    TRACE_(globalmem)( \"handle %p\\n\", handle );\n\n    if (unsafe_ptr_from_HLOCAL( handle ))\n    {\n        SetLastError( ERROR_NOT_LOCKED );\n        return FALSE;\n    }\n\n    RtlLockHeap( heap );\n    if ((mem = unsafe_mem_from_HLOCAL( handle )))\n    {\n        if (mem->lock)\n        {\n            ret = (--mem->lock != 0);\n            if (!ret) SetLastError( NO_ERROR );\n        }\n        else\n        {\n            WARN_(globalmem)( \"handle %p not locked\\n\", handle );\n            SetLastError( ERROR_NOT_LOCKED );\n        }\n    }\n    else\n    {\n        WARN_(globalmem)( \"invalid handle %p\\n\", handle );\n        SetLastError( ERROR_INVALID_HANDLE );\n    }\n    RtlUnlockHeap( heap );\n\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include <limits.h>",
+   "#include <sys/types.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winerror.h\"",
+   "#include \"ddk/wdm.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!LocalUnlock [stdcall -import] -> import from kernelbase",
+   "kernelbase!LocalUnlock [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/heap.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "krnl386.exe16",
+   "source_module": "krnl386.exe16",
+   "exported_by": [
+    "krnl386.exe16"
+   ],
+   "file": "dlls/krnl386.exe16/local.c",
+   "start_line": 1446,
+   "resolution": [
+    "krnl386.exe16!LocalUnlock [pascal -ret16] -> alias of krnl386.exe16!LocalUnlock16",
+    "krnl386.exe16!LocalUnlock16 [stdcall -arch=win32]"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 1461,
+   "signature": "BOOL16 WINAPI LocalUnlock16( HLOCAL16 handle )",
+   "code": "BOOL16 WINAPI LocalUnlock16( HLOCAL16 handle )\n{\n    HANDLE16 ds = CURRENT_DS;\n    char *ptr = MapSL( MAKESEGPTR( ds, 0 ) );\n\n    TRACE(\"%04x\\n\", handle );\n    if (HANDLE_MOVEABLE(handle))\n    {\n        LOCALHANDLEENTRY *pEntry = (LOCALHANDLEENTRY *)(ptr + handle);\n        if (!pEntry->lock || (pEntry->lock == 0xff)) return FALSE;\n        /* For moveable block, return the new lock count */\n        /* (see _Windows_Internals_ p. 197) */\n        return --pEntry->lock;\n    }\n    else return FALSE;\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winbase",
+   "path": "sdk-api-src/content/winbase/nf-winbase-localunlock.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-localunlock",
+   "documented_name": "localunlock",
+   "file": "docs/0251_sdk-api_nf-winbase-localunlock.md",
+   "text": "---\nUID: NF:winbase.LocalUnlock\ntitle: LocalUnlock function (winbase.h)\ndescription: Decrements the lock count associated with a memory object that was allocated with LMEM_MOVEABLE.\nhelpviewer_keywords: [\"LocalUnlock\",\"LocalUnlock function\",\"_win32_localunlock\",\"base.localunlock\",\"winbase/LocalUnlock\"]\nold-location: base\\localunlock.htm\ntech.root: base\nms.assetid: eac40b69-5fb6-4523-826d-a012f6f4e5ce\nms.date: 12/05/2018\nms.keywords: LocalUnlock, LocalUnlock function, _win32_localunlock, base.localunlock, winbase/LocalUnlock\nreq.header: winbase.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - LocalUnlock\n - winbase/LocalUnlock\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Kernel32.dll\n - API-MS-Win-Core-Heap-Obsolete-l1-1-0.dll\n - kernel32legacy.dll\n - API-MS-Win-DownLevel-Kernel32-l2-1-0.dll\n - API-MS-Win-Core-misc-l1-1-0.dll\n - KernelBase.dll\n - MinKernelBase.dll\n - API-Ms-Win-Core-Heap-L2-1-0.dll\napi_name:\n - LocalUnlock\n---\n\n# LocalUnlock function\n\n\n## -description\n\nDecrements the lock count associated with a memory object that was allocated with <b>LMEM_MOVEABLE</b>. This function has no effect on memory objects allocated with <b>LMEM_FIXED</b>.\n<div class=\"alert\"><b>Note</b>  The local functions have greater overhead and provide fewer features than other memory management functions. New applications should use the <a href=\"/windows/desktop/Memory/heap-functions\">heap functions</a> unless documentation states that a local function should be used. For more information, see <a href=\"/windows/desktop/Memory/global-and-local-functions\">Global and Local Functions</a>.</div><div> </div>\n\n## -parameters\n\n### -param hMem [in]\n\nA handle to the local memory object. This handle is returned by either the \n<a href=\"/windows/desktop/api/winbase/nf-winbase-localalloc\">LocalAlloc</a> or \n<a href=\"/windows/desktop/api/winbase/nf-winbase-localrealloc\">LocalReAlloc</a> function.\n\n## -returns\n\nIf the memory object is still locked after decrementing the lock count, the return value is nonzero. If the memory object is unlocked after decrementing the lock count, the function returns zero and <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> returns <b>NO_ERROR</b>.\n\nIf the function fails, the return value is zero and \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> returns a value other than <b>NO_ERROR</b>.\n\n## -remarks\n\nThe internal data structures for each memory object include a lock count that is initially zero. For movable memory objects, the \n<a href=\"/windows/desktop/api/winbase/nf-winbase-locallock\">LocalLock</a> function increments the count by one, and \n<b>LocalUnlock</b> decrements the count by one. For each call that a process makes to \n<b>LocalLock</b> for an object, it must eventually call \n<b>LocalUnlock</b>. Locked memory will not be moved or discarded unless the memory object is reallocated by using the \n<a href=\"/windows/desktop/api/winbase/nf-winbase-localrealloc\">LocalReAlloc</a> function. The memory block of a locked memory object remains locked until its lock count is decremented to zero, at which time it can be moved or discarded.\n\nIf the memory object is already unlocked, \n<b>LocalUnlock</b> returns <b>FALSE</b> and <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> reports <b>ERROR_NOT_LOCKED</b>. Memory objects allocated with <b>LMEM_FIXED</b> always have a lock count of zero and cause the <b>ERROR_NOT_LOCKED</b> error.\n\nA process should not rely on the return value to determine the number of times it must subsequently call \n<b>LocalUnlock</b> for the memory block.\n\n## -see-also\n\n<a href=\"/windows/desktop/Memory/global-and-local-functions\">Global and Local Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-localalloc\">LocalAlloc</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-localflags\">LocalFlags</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-locallock\">LocalLock</a>\n\n\n\n<a href=\"/windows/desktop/api/winbase/nf-winbase-localrealloc\">LocalReAlloc</a>\n\n\n\n<a href=\"/windows/desktop/Memory/memory-management-functions\">Memory\n    Management Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "unsafe_ptr_from_HLOCAL",
+   "file": "dlls/kernelbase/memory.c",
+   "start_line": 992,
+   "end_line": 996,
+   "static": true,
+   "called_from": [
+    "LocalUnlock"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/memory.c:1117",
+    "dlls/kernelbase/memory.c:1152",
+    "dlls/kernelbase/memory.c:1200"
+   ],
+   "signature": "static inline void *unsafe_ptr_from_HLOCAL( HLOCAL handle )",
+   "code": "static inline void *unsafe_ptr_from_HLOCAL( HLOCAL handle )\n{\n    if (((UINT_PTR)handle & ((sizeof(void *) << 1) - 1))) return NULL;\n    return handle;\n}"
+  },
+  {
+   "name": "unsafe_mem_from_HLOCAL",
+   "file": "dlls/kernelbase/memory.c",
+   "start_line": 976,
+   "end_line": 984,
+   "static": true,
+   "called_from": [
+    "LocalUnlock"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/memory.c:1028",
+    "dlls/kernelbase/memory.c:1122",
+    "dlls/kernelbase/memory.c:1168",
+    "dlls/kernelbase/memory.c:1213"
+   ],
+   "signature": "static inline struct mem_entry *unsafe_mem_from_HLOCAL( HLOCAL handle )",
+   "code": "static inline struct mem_entry *unsafe_mem_from_HLOCAL( HLOCAL handle )\n{\n    struct mem_entry *mem = CONTAINING_RECORD( *(volatile HANDLE *)&handle, struct mem_entry, ptr );\n    struct kernelbase_global_data *data = &global_data;\n    if (((UINT_PTR)handle & ((sizeof(void *) << 1) - 1)) != sizeof(void *)) return NULL;\n    if (mem < data->mem_entries || mem >= data->mem_entries_end) return NULL;\n    if (!(mem->flags & MEM_FLAG_USED)) return NULL;\n    return mem;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "kernelbase_global_data",
+    "kind": "struct_decl",
+    "start_line": 944,
+    "end_line": 948,
+    "code": "struct kernelbase_global_data\n{\n    struct mem_entry *mem_entries;\n    struct mem_entry *mem_entries_end;\n};"
+   },
+   {
+    "name": "mem_entry",
+    "kind": "struct_decl",
+    "start_line": 956,
+    "end_line": 968,
+    "code": "struct mem_entry\n{\n    union\n    {\n        struct\n        {\n            WORD flags;\n            BYTE lock;\n        };\n        void *next_free;\n    };\n    void *ptr;\n};"
+   },
+   {
+    "name": "struct (anonymous at /w/wine/dlls/kernelbase/memory.c:960:9)",
+    "kind": "struct_decl",
+    "start_line": 960,
+    "end_line": 964,
+    "code": "        struct\n        {\n            WORD flags;\n            BYTE lock;\n        };"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch_globalmem",
+    "type": "struct __wine_debug_channel",
+    "static": true,
+    "start_line": 41,
+    "end_line": 41,
+    "code": "WINE_DECLARE_DEBUG_CHANNEL(globalmem);"
+   },
+   {
+    "name": "global_data",
+    "type": "struct kernelbase_global_data",
+    "static": true,
+    "start_line": 974,
+    "end_line": 974,
+    "code": "static struct kernelbase_global_data global_data = {0};"
+   }
+  ],
+  "macros": [
+   {
+    "name": "MEM_FLAG_USED",
+    "start_line": 950,
+    "end_line": 950,
+    "code": "#define MEM_FLAG_USED        1"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetProcessHeap",
+    "impl": [
+     "dlls/kernelbase/process.c:910"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "RtlLockHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2302"
+    ]
+   },
+   {
+    "name": "RtlUnlockHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2324"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "kernelbase.LocalUnlock",
+  "category": {
+   "l1": "System services",
+   "l2": "Memory management",
+   "header": "winbase.h",
+   "textbook": "Process control",
+   "basis": "name_rule"
+  },
+  "loc": {
+   "total": 37,
+   "body": 36,
+   "code": 20
+  },
+  "cyclomatic": 5,
+  "return_type": "BOOL",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 3,
+   "n_tests_other": 2,
+   "own_test_functions": [
+    "dlls/kernel32/tests/heap.c::test_LocalAlloc"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-localunlock",
+   "source": "win32",
+   "description": "Decrements the lock count associated with a memory object that was allocated with LMEM_MOVEABLE.",
+   "min_windows": "Windows XP [desktop apps only]",
+   "documented_dll": "Kernel32.dll"
+  },
+  "exports": [
+   "kernel32.LocalUnlock",
+   "kernelbase.LocalUnlock"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2019-09-08",
+   "median_date": "2022-03-29",
+   "last_date": "2022-04-04",
+   "code_lines": 21,
+   "pair": "wintypes.RoParseTypeName",
+   "rank": 1,
+   "distance": 0.3
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "wintypes.RoParseTypeName",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-04-04",
+  "partner_rank": 1,
+  "distance": 0.3
+ }
+}

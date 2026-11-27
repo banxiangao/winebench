@@ -1,0 +1,831 @@
+{
+ "id": "0006",
+ "function": {
+  "name": "BCryptImportKey",
+  "export_name": "BCryptImportKey",
+  "module": "bcrypt",
+  "source_module": "bcrypt",
+  "exported_by": [
+   "bcrypt",
+   "cng.sys",
+   "ksecdd.sys",
+   "ncrypt"
+  ],
+  "side": "PE",
+  "file": "dlls/bcrypt/bcrypt_main.c",
+  "start_line": 2098,
+  "end_line": 2119,
+  "body_lines": 19,
+  "signature": "NTSTATUS WINAPI BCryptImportKey( BCRYPT_ALG_HANDLE handle, BCRYPT_KEY_HANDLE decrypt_key_handle, const WCHAR *type, BCRYPT_KEY_HANDLE *ret_handle, UCHAR *object, ULONG object_len, UCHAR *input, ULONG input_len, ULONG flags )",
+  "header_comment": null,
+  "code": "NTSTATUS WINAPI BCryptImportKey( BCRYPT_ALG_HANDLE handle, BCRYPT_KEY_HANDLE decrypt_key_handle, const WCHAR *type,\n                                 BCRYPT_KEY_HANDLE *ret_handle, UCHAR *object, ULONG object_len, UCHAR *input,\n                                 ULONG input_len, ULONG flags )\n{\n    const struct algorithm *alg = get_alg_object( handle );\n    struct key *key;\n    const struct key *decrypt_key = NULL;\n    NTSTATUS status;\n\n    TRACE( \"%p, %p, %s, %p, %p, %lu, %p, %lu, %#lx\\n\", handle, decrypt_key_handle, debugstr_w(type), ret_handle,\n           object, object_len, input, input_len, flags );\n\n    if (!alg || !is_symmetric_alg( alg )) return STATUS_INVALID_HANDLE;\n    if (!ret_handle || !type || !input) return STATUS_INVALID_PARAMETER;\n    if (decrypt_key_handle && !(decrypt_key = get_key_object( decrypt_key_handle ))) return STATUS_INVALID_HANDLE;\n\n    if ((status = import_key( alg, decrypt_key, type, input, input_len, &key ))) return status;\n    *ret_handle = key;\n\n    TRACE( \"returning handle %p\\n\", *ret_handle );\n    return STATUS_SUCCESS;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"ntsecapi.h\"",
+   "#include \"wincrypt.h\"",
+   "#include \"winternl.h\"",
+   "#include \"bcrypt.h\"",
+   "#include \"symcrypt.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "bcrypt!BCryptImportKey [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/bcrypt/tests/bcrypt.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 3
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "bcrypt",
+   "path": "sdk-api-src/content/bcrypt/nf-bcrypt-bcryptimportkey.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/bcrypt/nf-bcrypt-bcryptimportkey",
+   "documented_name": "bcryptimportkey",
+   "file": "docs/0006_sdk-api_nf-bcrypt-bcryptimportkey.md",
+   "text": "---\nUID: NF:bcrypt.BCryptImportKey\ntitle: BCryptImportKey function (bcrypt.h)\ndescription: Imports a symmetric key from a key BLOB.\nhelpviewer_keywords: [\"BCRYPT_AES_WRAP_KEY_BLOB\",\"BCRYPT_KEY_DATA_BLOB\",\"BCRYPT_OPAQUE_KEY_BLOB\",\"BCryptImportKey\",\"BCryptImportKey function [Security]\",\"bcrypt/BCryptImportKey\",\"security.bcryptimportkey_func\"]\nold-location: security\\bcryptimportkey_func.htm\ntech.root: security\nms.assetid: 6b9683f4-10f2-40e4-9757-a1f01991bef7\nms.date: 12/05/2018\nms.keywords: BCRYPT_AES_WRAP_KEY_BLOB, BCRYPT_KEY_DATA_BLOB, BCRYPT_OPAQUE_KEY_BLOB, BCryptImportKey, BCryptImportKey function [Security], bcrypt/BCryptImportKey, security.bcryptimportkey_func\nreq.header: bcrypt.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Bcrypt.lib\nreq.dll: Bcrypt.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - BCryptImportKey\n - bcrypt/BCryptImportKey\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Bcrypt.dll\n - Ksecdd.sys\napi_name:\n - BCryptImportKey\n---\n\n# BCryptImportKey function\n\n\n## -description\n\nThe <b>BCryptImportKey</b> function imports a symmetric key from a key <a href=\"/windows/desktop/SecGloss/b-gly\">BLOB</a>. The <a href=\"/windows/desktop/api/bcrypt/nf-bcrypt-bcryptimportkeypair\">BCryptImportKeyPair</a> function is used to import a <a href=\"/windows/desktop/SecGloss/p-gly\">public/private key pair</a>.\n\n## -parameters\n\n### -param hAlgorithm [in]\n\nThe handle of the algorithm provider to import the key. This handle is obtained by calling the <a href=\"/windows/desktop/api/bcrypt/nf-bcrypt-bcryptopenalgorithmprovider\">BCryptOpenAlgorithmProvider</a> function.\n\n### -param hImportKey [in, optional]\n\nThe handle of the key encryption key needed to unwrap the key BLOB in the <i>pbInput</i> parameter.<div class=\"alert\"><b>Note</b>  The handle must be supplied by the same provider that supplied the key that is being imported.</div>\n<div> </div>\n\n\n<b>Windows Server 2008 and Windows Vista:  </b>This parameter is not used and should be set to <b>NULL</b>.\n\n### -param pszBlobType [in]\n\nA null-terminated Unicode string that contains an identifier that specifies the type of BLOB that is contained in the <i>pbInput</i> buffer. This can be one of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"BCRYPT_AES_WRAP_KEY_BLOB\"></a><a id=\"bcrypt_aes_wrap_key_blob\"></a><dl>\n<dt><b>BCRYPT_AES_WRAP_KEY_BLOB</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nImport a symmetric key from an AES key–wrapped key BLOB. The <i>hImportKey</i> parameter must reference a valid <b>BCRYPT_KEY_HANDLE</b> pointer to the key encryption key.\n\n<b>Windows Server 2008 and Windows Vista:  </b>This BLOB type is not supported.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"BCRYPT_KEY_DATA_BLOB\"></a><a id=\"bcrypt_key_data_blob\"></a><dl>\n<dt><b>BCRYPT_KEY_DATA_BLOB</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nImport a symmetric key from a data BLOB. The <i>pbInput</i> parameter is a pointer to a <a href=\"/windows/desktop/api/bcrypt/ns-bcrypt-bcrypt_key_data_blob_header\">BCRYPT_KEY_DATA_BLOB_HEADER</a> structure immediately followed by the key BLOB.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"BCRYPT_OPAQUE_KEY_BLOB\"></a><a id=\"bcrypt_opaque_key_blob\"></a><dl>\n<dt><b>BCRYPT_OPAQUE_KEY_BLOB</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nImport a symmetric key BLOB in a format that is specific to a single CSP. Opaque BLOBs are not transferable and must be imported by using the same CSP that generated the BLOB. Opaque BLOBs are only intended to be used for interprocess transfer of keys and are not suitable to be persisted and read in across versions of a provider.\n\n</td>\n</tr>\n</table>\n\n### -param phKey [out]\n\nA pointer to a <b>BCRYPT_KEY_HANDLE</b> that receives the handle of the imported key. This handle is used in subsequent functions that require a key, such as <a href=\"/windows/desktop/api/bcrypt/nf-bcrypt-bcryptencrypt\">BCryptEncrypt</a>. This handle must be released when it is no longer needed by passing it to the <a href=\"/windows/desktop/api/bcrypt/nf-bcrypt-bcryptdestroykey\">BCryptDestroyKey</a> function.\n\n### -param pbKeyObject [out, optional]\n\nA pointer to a buffer that receives the imported key object. The <i>cbKeyObject</i> parameter contains the size of this buffer. The required size of this buffer can be obtained by calling the <a href=\"/windows/desktop/api/bcrypt/nf-bcrypt-bcryptgetproperty\">BCryptGetProperty</a> function to get the <b>BCRYPT_OBJECT_LENGTH</b> property. This will provide the size of the key object for the specified algorithm.\n\nThis memory can only be freed after the <i>phKey</i> key handle is destroyed.\n\n### -param cbKeyObject [in]\n\nThe size, in bytes, of the <i>pbKeyObject</i> buffer.\n\n### -param pbInput [in]\n\nThe address of a buffer that contains the key BLOB to import. The <i>cbInput</i> parameter contains the size of this buffer. The <i>pszBlobType</i> parameter specifies the type of key BLOB this buffer contains.\n\n### -param cbInput [in]\n\nThe size, in bytes, of the <i>pbInput</i> buffer.\n\n### -param dwFlags [in]\n\nA set of flags that modify the behavior of this function. No flags are currently defined, so this parameter should be zero.\n\n## -returns\n\nReturns a status code that indicates the success or failure of the function.\n\n\nPossible return codes include, but are not limited to, the following.\n\n\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_SUCCESS</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe function was successful.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_BUFFER_TOO_SMALL</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe size of the key object specified by the <i>cbKeyObject</i> parameter is not large enough to hold the key object.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_INVALID_HANDLE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe algorithm handle in the <i>hAlgorithm</i> parameter is not valid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOne or more parameters are not valid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_NOT_SUPPORTED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe algorithm provider specified by the <i>hAlgorithm</i> parameter does not support the BLOB type specified by the <i>pszBlobType</i> parameter.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nWhen using a supported algorithm provider, <b>BCryptImportKey</b> can be called either from user mode or kernel mode. Kernel mode callers can execute either at <b>PASSIVE_LEVEL</b> <a href=\"/windows/desktop/SecGloss/i-gly\">IRQL</a> or <b>DISPATCH_LEVEL</b> IRQL. If the current IRQL level is <b>DISPATCH_LEVEL</b>, the handle provided in the <i>hAlgorithm</i> parameter must have been opened by using the <b>BCRYPT_PROV_DISPATCH</b> flag, and any pointers passed to the <b>BCryptImportKey</b> function must refer to nonpaged (or locked) memory.\n\nTo call this function in kernel mode, use Cng.lib, which is part of the Driver Development Kit (DDK). <b>Windows Server 2008 and Windows Vista:  </b>To call this function in kernel mode, use Ksecdd.lib.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/bcrypt/nf-bcrypt-bcryptdestroykey\">BCryptDestroyKey</a>\n\n\n\n<a href=\"/windows/desktop/api/bcrypt/nf-bcrypt-bcryptexportkey\">BCryptExportKey</a>\n\n\n\n<a href=\"/windows/desktop/api/bcrypt/nf-bcrypt-bcryptimportkeypair\">BCryptImportKeyPair</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_alg_object",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 551,
+   "end_line": 554,
+   "static": true,
+   "called_from": [
+    "BCryptImportKey"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:574",
+    "dlls/bcrypt/bcrypt_main.c:1416",
+    "dlls/bcrypt/bcrypt_main.c:1555",
+    "dlls/bcrypt/bcrypt_main.c:1737",
+    "dlls/bcrypt/bcrypt_main.c:3463"
+   ],
+   "signature": "static inline struct algorithm *get_alg_object( BCRYPT_ALG_HANDLE handle )",
+   "code": "static inline struct algorithm *get_alg_object( BCRYPT_ALG_HANDLE handle )\n{\n    return (struct algorithm *)get_object( handle, MAGIC_ALG );\n}"
+  },
+  {
+   "name": "is_symmetric_alg",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 392,
+   "end_line": 396,
+   "static": true,
+   "called_from": [
+    "BCryptImportKey"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static inline BOOL is_symmetric_alg( const struct algorithm *alg )",
+   "code": "static inline BOOL is_symmetric_alg( const struct algorithm *alg )\n{\n    return builtin_algorithms[alg->id].class == BCRYPT_CIPHER_INTERFACE\n        || builtin_algorithms[alg->id].class == BCRYPT_KEY_DERIVATION_INTERFACE;\n}"
+  },
+  {
+   "name": "get_key_object",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 561,
+   "end_line": 564,
+   "static": true,
+   "called_from": [
+    "BCryptImportKey"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:1968",
+    "dlls/bcrypt/bcrypt_main.c:2307",
+    "dlls/bcrypt/bcrypt_main.c:2741",
+    "dlls/bcrypt/bcrypt_main.c:2748",
+    "dlls/bcrypt/bcrypt_main.c:3639"
+   ],
+   "signature": "static inline struct key *get_key_object( BCRYPT_KEY_HANDLE handle )",
+   "code": "static inline struct key *get_key_object( BCRYPT_KEY_HANDLE handle )\n{\n    return (struct key *)get_object( handle, MAGIC_KEY );\n}"
+  },
+  {
+   "name": "import_key",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 2042,
+   "end_line": 2096,
+   "static": true,
+   "called_from": [
+    "BCryptImportKey"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static NTSTATUS import_key( const struct algorithm *alg, const struct key *decrypt_key, const WCHAR *type, const UCHAR *input, ULONG input_len, struct key **ret_key )",
+   "code": "static NTSTATUS import_key( const struct algorithm *alg, const struct key *decrypt_key, const WCHAR *type,\n                            const UCHAR *input, ULONG input_len, struct key **ret_key )\n{\n    ULONG len;\n    NTSTATUS status;\n\n    if (decrypt_key && wcscmp( type, BCRYPT_AES_WRAP_KEY_BLOB ))\n    {\n        FIXME( \"decryption of key not supported\\n\" );\n        return STATUS_NOT_IMPLEMENTED;\n    }\n\n    if (!wcscmp( type, BCRYPT_KEY_DATA_BLOB ))\n    {\n        BCRYPT_KEY_DATA_BLOB_HEADER *header = (BCRYPT_KEY_DATA_BLOB_HEADER *)input;\n\n        if (input_len < sizeof(BCRYPT_KEY_DATA_BLOB_HEADER)) return STATUS_BUFFER_TOO_SMALL;\n        if (header->dwMagic != BCRYPT_KEY_DATA_BLOB_MAGIC) return STATUS_INVALID_PARAMETER;\n        if (header->dwVersion != BCRYPT_KEY_DATA_BLOB_VERSION1)\n        {\n            FIXME( \"unknown key data blob version %lu\\n\", header->dwVersion );\n            return STATUS_INVALID_PARAMETER;\n        }\n        len = header->cbKeyData;\n        if (len + sizeof(BCRYPT_KEY_DATA_BLOB_HEADER) > input_len) return STATUS_INVALID_PARAMETER;\n\n        return generate_symmetric_key( alg, (UCHAR *)&header[1], len, ret_key );\n    }\n    else if (!wcscmp( type, BCRYPT_OPAQUE_KEY_BLOB ))\n    {\n        if (input_len < sizeof(len)) return STATUS_BUFFER_TOO_SMALL;\n        len = *(ULONG *)input;\n        if (len + sizeof(len) > input_len) return STATUS_INVALID_PARAMETER;\n\n        return generate_symmetric_key( alg, input + sizeof(len), len, ret_key);\n    }\n    else if (!wcscmp( type, BCRYPT_AES_WRAP_KEY_BLOB ))\n    {\n        UCHAR output[32];\n\n        if (!decrypt_key || input_len < 8) return STATUS_INVALID_PARAMETER;\n\n        len = input_len - 8;\n        if (len < BLOCK_LENGTH_AES || len > sizeof(output) || len & (BLOCK_LENGTH_AES - 1))\n            return STATUS_INVALID_PARAMETER;\n\n        if ((status = unwrap_aes( decrypt_key->s.secret, decrypt_key->s.secret_len, input, len, output )))\n            return status;\n\n        return generate_symmetric_key( alg, output, len, ret_key );\n    }\n\n    FIXME( \"unsupported blob type %s\\n\", debugstr_w(type) );\n    return STATUS_NOT_IMPLEMENTED;\n}"
+  },
+  {
+   "name": "get_object",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 529,
+   "end_line": 549,
+   "static": true,
+   "called_from": [
+    "get_alg_object",
+    "get_key_object"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:558",
+    "dlls/bcrypt/bcrypt_main.c:568",
+    "dlls/bcrypt/bcrypt_main.c:1229",
+    "dlls/bcrypt/bcrypt_main.c:1325"
+   ],
+   "signature": "static struct object *get_object( BCRYPT_HANDLE handle, ULONG magic )",
+   "code": "static struct object *get_object( BCRYPT_HANDLE handle, ULONG magic )\n{\n    ULONG idx;\n\n    if (!handle) return NULL;\n\n    if (!is_alg_pseudo_handle( handle ))\n    {\n        struct object *obj = handle;\n        if (magic && obj->magic != magic) return NULL;\n        return obj;\n    }\n\n    idx = (ULONG_PTR)handle >> 4;\n    if (idx >= ARRAY_SIZE(pseudo_algorithms) || !pseudo_algorithms[idx].hdr.magic)\n    {\n        FIXME( \"pseudo-handle %p not supported\\n\", handle );\n        return NULL;\n    }\n    return (struct object *)&pseudo_algorithms[idx];\n}"
+  },
+  {
+   "name": "generate_symmetric_key",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 1681,
+   "end_line": 1732,
+   "static": true,
+   "called_from": [
+    "import_key"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:1746"
+   ],
+   "signature": "static NTSTATUS generate_symmetric_key( const struct algorithm *alg, const UCHAR *secret, ULONG secret_len, struct key **ret_key )",
+   "code": "static NTSTATUS generate_symmetric_key( const struct algorithm *alg, const UCHAR *secret, ULONG secret_len,\n                                        struct key **ret_key )\n{\n    BCRYPT_KEY_LENGTHS_STRUCT key_lengths;\n    struct key *key;\n    NTSTATUS status;\n    ULONG size;\n\n    if ((status = get_alg_property( alg, BCRYPT_KEY_LENGTHS, (UCHAR *)&key_lengths, sizeof(key_lengths), &size )))\n        return status;\n\n    if ((status = alloc_key( alg->id, 0, &key ))) return status;\n\n    switch (alg->id)\n    {\n    case ALG_ID_AES:\n    case ALG_ID_AES_GMAC:\n        if ((status = validate_len_aes( &key_lengths, secret_len, &secret_len )) ||\n            (status = alloc_aes_key( key, alg->chain_mode, BLOCK_LENGTH_AES, secret, secret_len )))\n        {\n            destroy_key( key );\n            return status;\n        }\n        break;\n\n    case ALG_ID_PBKDF2:\n    case ALG_ID_TLS1_1_KDF:\n    case ALG_ID_TLS1_2_KDF:\n    case ALG_ID_HKDF:\n        if (secret_len > key_lengths.dwMaxLength / 8 || secret_len < key_lengths.dwMinLength / 8)\n        {\n            destroy_key( key );\n            return STATUS_INVALID_PARAMETER;\n        }\n        if (!(key->s.secret = malloc( secret_len )))\n        {\n            destroy_key( key );\n            return STATUS_NO_MEMORY;\n        }\n        memcpy( key->s.secret, secret, secret_len );\n        key->s.block_size = key->s.secret_len = secret_len;\n        break;\n\n    default:\n        FIXME( \"unhandled algorithm %u\\n\", alg->id );\n        destroy_key( key );\n        return STATUS_NOT_SUPPORTED;\n    }\n\n    *ret_key = key;\n    return status;\n}"
+  },
+  {
+   "name": "unwrap_aes",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 1997,
+   "end_line": 2040,
+   "static": true,
+   "called_from": [
+    "import_key"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static NTSTATUS unwrap_aes( const UCHAR *secret, ULONG secret_len, const UCHAR *cipher, ULONG cipher_len, UCHAR *plain )",
+   "code": "static NTSTATUS unwrap_aes( const UCHAR *secret, ULONG secret_len, const UCHAR *cipher, ULONG cipher_len, UCHAR *plain )\n{\n    UCHAR a[8], *r, b[16];\n    ULONG len = 16, t, i, n = cipher_len / 8;\n    NTSTATUS status;\n    int j;\n    struct key *key;\n\n    memcpy( a, cipher, 8 );\n    r = plain;\n    memcpy( r, cipher + 8, 8 * n );\n\n    if ((status = alloc_key( ALG_ID_AES, 0, &key ))) return status;\n    if ((status = alloc_aes_key( key, CHAIN_MODE_ECB, BLOCK_LENGTH_AES, secret, secret_len )))\n    {\n        destroy_key( key );\n        return status;\n    }\n\n    for (j = 5; j >= 0; j--)\n    {\n        r = plain + (n - 1) * 8;\n        for (i = n; i >= 1; i--)\n        {\n            memcpy( b, a, 8 );\n            t = n * j + i;\n            b[7] ^= t;\n            b[6] ^= t >> 8;\n            b[5] ^= t >> 16;\n            b[4] ^= t >> 24;\n\n            memcpy( b + 8, r, 8 );\n            decrypt_aes_ecb( key, b, 16, b, 16, &len, 0 );\n            memcpy( a, b, 8 );\n            memcpy( r, b + 8, 8 );\n            r -= 8;\n        }\n    }\n\n    destroy_key( key );\n\n    for (i = 0; i < 8; i++) if (a[i] != 0xa6) return STATUS_UNSUCCESSFUL;\n    return STATUS_SUCCESS;\n}"
+  },
+  {
+   "name": "is_alg_pseudo_handle",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 524,
+   "end_line": 527,
+   "static": true,
+   "called_from": [
+    "get_object"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:586",
+    "dlls/bcrypt/bcrypt_main.c:687",
+    "dlls/bcrypt/bcrypt_main.c:1234"
+   ],
+   "signature": "static inline BOOL is_alg_pseudo_handle( BCRYPT_ALG_HANDLE handle )",
+   "code": "static inline BOOL is_alg_pseudo_handle( BCRYPT_ALG_HANDLE handle )\n{\n    return (((ULONG_PTR)handle & 1) == 1);\n}"
+  },
+  {
+   "name": "get_alg_property",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 932,
+   "end_line": 977,
+   "static": true,
+   "called_from": [
+    "generate_symmetric_key"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:1337"
+   ],
+   "signature": "static NTSTATUS get_alg_property( const struct algorithm *alg, const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )",
+   "code": "static NTSTATUS get_alg_property( const struct algorithm *alg, const WCHAR *prop, UCHAR *buf, ULONG size,\n                                  ULONG *ret_size )\n{\n    NTSTATUS status;\n\n    if ((status = get_generic_alg_property( alg->id, prop, buf, size, ret_size )) != STATUS_NOT_IMPLEMENTED)\n        return status;\n\n    switch (alg->id)\n    {\n    case ALG_ID_3DES:\n        return get_3des_property( alg->chain_mode, prop, buf, size, ret_size );\n\n    case ALG_ID_CHACHA20_POLY1305:\n        return get_chacha20_poly1305_property( prop, buf, size, ret_size );\n\n    case ALG_ID_AES:\n    case ALG_ID_AES_GMAC:\n        return get_aes_property( alg->chain_mode, prop, buf, size, ret_size );\n\n    case ALG_ID_RC4:\n        return get_rc4_property( prop, buf, size, ret_size );\n\n    case ALG_ID_RSA:\n        return get_rsa_property( prop, buf, size, ret_size );\n\n    case ALG_ID_DSA:\n        return get_dsa_property( prop, buf, size, ret_size );\n\n    case ALG_ID_PBKDF2:\n        return get_pbkdf2_property( prop, buf, size, ret_size );\n\n    case ALG_ID_TLS1_1_KDF:\n    case ALG_ID_TLS1_2_KDF:\n        return get_tls_kdf_property( prop, buf, size, ret_size );\n\n    case ALG_ID_HKDF:\n        return get_hkdf_property( prop, buf, size, ret_size );\n\n    default:\n        break;\n    }\n\n    FIXME( \"unsupported property %s algorithm %u\\n\", debugstr_w(prop), alg->id );\n    return STATUS_NOT_IMPLEMENTED;\n}"
+  },
+  {
+   "name": "alloc_key",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 1642,
+   "end_line": 1654,
+   "static": true,
+   "called_from": [
+    "generate_symmetric_key",
+    "unwrap_aes"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:2349",
+    "dlls/bcrypt/bcrypt_main.c:2794",
+    "dlls/bcrypt/bcrypt_main.c:2854",
+    "dlls/bcrypt/bcrypt_main.c:3176",
+    "dlls/bcrypt/bcrypt_main.c:3222"
+   ],
+   "signature": "static NTSTATUS alloc_key( enum alg_id alg_id, ULONG flags, struct key **ret_key )",
+   "code": "static NTSTATUS alloc_key( enum alg_id alg_id, ULONG flags, struct key **ret_key )\n{\n    struct key *key;\n\n    if (!(key = _aligned_malloc( sizeof(struct key), TYPE_ALIGNMENT(struct key) ))) return STATUS_NO_MEMORY;\n    memset( key, 0, sizeof(*key) );\n    key->hdr.magic = MAGIC_KEY;\n    key->alg_id    = alg_id;\n    key->flags     = flags;\n\n    *ret_key = key;\n    return STATUS_SUCCESS;\n}"
+  },
+  {
+   "name": "validate_len_aes",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 1656,
+   "end_line": 1679,
+   "static": true,
+   "called_from": [
+    "generate_symmetric_key"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS validate_len_aes( const BCRYPT_KEY_LENGTHS_STRUCT *key_lengths, ULONG secret_len, ULONG *ret_len )",
+   "code": "static NTSTATUS validate_len_aes( const BCRYPT_KEY_LENGTHS_STRUCT *key_lengths, ULONG secret_len, ULONG *ret_len )\n{\n    ULONG size;\n\n    if (secret_len > (size = key_lengths->dwMaxLength / 8))\n    {\n        WARN( \"secret_len %lu exceeds key max length %lu, setting to maximum\\n\", secret_len, size );\n        *ret_len = size;\n        return STATUS_SUCCESS;\n    }\n    else if (secret_len < (size = key_lengths->dwMinLength / 8))\n    {\n        WARN( \"secret_len %lu is less than minimum key length %lu\\n\", secret_len, size );\n        return STATUS_INVALID_PARAMETER;\n    }\n    else if (key_lengths->dwIncrement && (secret_len * 8 - key_lengths->dwMinLength) % key_lengths->dwIncrement)\n    {\n        WARN( \"secret_len %lu is not a valid key length\\n\", secret_len );\n        return STATUS_INVALID_PARAMETER;\n    }\n\n    *ret_len = secret_len;\n    return STATUS_SUCCESS;\n}"
+  },
+  {
+   "name": "alloc_aes_key",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 1609,
+   "end_line": 1640,
+   "static": true,
+   "called_from": [
+    "generate_symmetric_key",
+    "unwrap_aes"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:2350",
+    "dlls/bcrypt/bcrypt_main.c:3658"
+   ],
+   "signature": "static NTSTATUS alloc_aes_key( struct key *key, enum chain_mode mode, ULONG block_size, const UCHAR *secret, ULONG secret_len )",
+   "code": "static NTSTATUS alloc_aes_key( struct key *key, enum chain_mode mode, ULONG block_size, const UCHAR *secret,\n                               ULONG secret_len )\n{\n    key->s.mode       = mode;\n    key->s.block_size = block_size;\n\n    if (!(key->s.secret = malloc( secret_len ))) return STATUS_NO_MEMORY;\n    memcpy( key->s.secret, secret, secret_len );\n    key->s.secret_len = secret_len;\n\n    InitializeCriticalSection( &key->s.cs );\n\n    switch (mode)\n    {\n    case CHAIN_MODE_ECB:\n    case CHAIN_MODE_CBC:\n    case CHAIN_MODE_CFB:\n        if (SymCryptAesExpandKey( &key->s.aes.handle, secret, secret_len )) return STATUS_INTERNAL_ERROR;\n        break;\n\n    case CHAIN_MODE_GCM:\n        if (SymCryptGcmExpandKey( &key->s.gcm.handle, SymCryptAesBlockCipher, secret, secret_len ))\n            return STATUS_INTERNAL_ERROR;\n        break;\n\n    default:\n        FIXME( \"unhandled mode %u\\n\", mode );\n        return STATUS_NOT_SUPPORTED;\n    }\n\n    return STATUS_SUCCESS;\n}"
+  },
+  {
+   "name": "destroy_key",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 1565,
+   "end_line": 1607,
+   "static": true,
+   "called_from": [
+    "generate_symmetric_key",
+    "unwrap_aes"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:2352",
+    "dlls/bcrypt/bcrypt_main.c:2375",
+    "dlls/bcrypt/bcrypt_main.c:2796",
+    "dlls/bcrypt/bcrypt_main.c:2819",
+    "dlls/bcrypt/bcrypt_main.c:2856"
+   ],
+   "signature": "static void destroy_key( struct key *key )",
+   "code": "static void destroy_key( struct key *key )\n{\n    if (!key) return;\n    if (is_symmetric_key( key ))\n    {\n        secure_zero( key->s.secret, key->s.secret_len );\n        free( key->s.secret );\n        secure_zero( key->s.vector, key->s.block_size );\n        DeleteCriticalSection( &key->s.cs );\n    }\n    else\n    {\n        switch (key->alg_id)\n        {\n        case ALG_ID_RSA:\n        case ALG_ID_RSA_SIGN:\n            if (key->a.rsa.handle) SymCryptRsakeyFree( key->a.rsa.handle );\n            break;\n        case ALG_ID_ECDH:\n        case ALG_ID_ECDH_P256:\n        case ALG_ID_ECDH_P384:\n        case ALG_ID_ECDH_P521:\n        case ALG_ID_ECDSA:\n        case ALG_ID_ECDSA_P256:\n        case ALG_ID_ECDSA_P384:\n        case ALG_ID_ECDSA_P521:\n            if (key->a.ecc.handle) SymCryptEckeyFree( key->a.ecc.handle );\n            if (key->a.ecc.curve) SymCryptEcurveFree( key->a.ecc.curve );\n            break;\n        case ALG_ID_DH:\n        case ALG_ID_DSA:\n            if (key->a.dsa.handle) SymCryptDlkeyFree( key->a.dsa.handle );\n            if (key->a.dsa.group) SymCryptDlgroupFree( key->a.dsa.group );\n            break;\n        default:\n            FIXME( \"algorithm %u not handled\\n\", key->alg_id );\n            break;\n        }\n    }\n\n    secure_zero( &key->hdr.magic, sizeof(key->hdr.magic) );\n    _aligned_free( key );\n}"
+  },
+  {
+   "name": "decrypt_aes_ecb",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 1753,
+   "end_line": 1786,
+   "static": true,
+   "called_from": [
+    "unwrap_aes"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:1889"
+   ],
+   "signature": "static NTSTATUS decrypt_aes_ecb( const struct key *key, const UCHAR *input, ULONG input_len, UCHAR *output, ULONG output_len, ULONG *ret_len, ULONG flags )",
+   "code": "static NTSTATUS decrypt_aes_ecb( const struct key *key, const UCHAR *input, ULONG input_len, UCHAR *output,\n                                 ULONG output_len, ULONG *ret_len, ULONG flags )\n{\n    ULONG offset = input_len, block_size = key->s.block_size;\n    UCHAR buf[BLOCK_LENGTH_AES];\n    NTSTATUS status = STATUS_SUCCESS;\n\n    if (input_len & (block_size - 1)) return STATUS_INVALID_BUFFER_SIZE;\n    if (!output) return STATUS_SUCCESS;\n\n    if (flags & BCRYPT_BLOCK_PADDING)\n    {\n        if (output_len + block_size < *ret_len || input_len < block_size) return STATUS_BUFFER_TOO_SMALL;\n        offset -= block_size;\n    }\n    else if (output_len < *ret_len) return STATUS_BUFFER_TOO_SMALL;\n\n    SymCryptEcbDecrypt( SymCryptAesBlockCipher, &key->s.aes.handle, input, output, offset );\n\n    if (flags & BCRYPT_BLOCK_PADDING)\n    {\n        SymCryptEcbDecrypt( SymCryptAesBlockCipher, &key->s.aes.handle, input + offset, buf, block_size );\n\n        if (buf[block_size - 1] <= block_size)\n        {\n            *ret_len -= buf[block_size - 1];\n            if (output_len < *ret_len) status = STATUS_BUFFER_TOO_SMALL;\n            else memcpy( output + offset, buf, block_size - buf[block_size - 1] );\n        }\n        else status = STATUS_UNSUCCESSFUL; /* FIXME: invalid padding */\n    }\n\n    return status;\n}"
+  },
+  {
+   "name": "get_generic_alg_property",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 712,
+   "end_line": 741,
+   "static": true,
+   "called_from": [
+    "get_alg_property"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:1258"
+   ],
+   "signature": "static NTSTATUS get_generic_alg_property( enum alg_id id, const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )",
+   "code": "static NTSTATUS get_generic_alg_property( enum alg_id id, const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )\n{\n    if (!wcscmp( prop, BCRYPT_OBJECT_LENGTH ))\n    {\n        if (!builtin_algorithms[id].object_length) return STATUS_NOT_SUPPORTED;\n        return get_dword_property( buf, size, ret_size, builtin_algorithms[id].object_length );\n    }\n\n    if (!wcscmp( prop, BCRYPT_HASH_LENGTH ))\n    {\n        if (!builtin_algorithms[id].hash_length) return STATUS_NOT_SUPPORTED;\n        return get_dword_property( buf, size, ret_size, builtin_algorithms[id].hash_length );\n    }\n\n    if (!wcscmp( prop, BCRYPT_HASH_BLOCK_LENGTH ))\n    {\n        if (!builtin_algorithms[id].hash_block_length) return STATUS_NOT_SUPPORTED;\n        return get_dword_property( buf, size, ret_size, builtin_algorithms[id].hash_block_length );\n    }\n\n    if (!wcscmp( prop, BCRYPT_ALGORITHM_NAME ))\n    {\n        *ret_size = (lstrlenW(builtin_algorithms[id].name) + 1) * sizeof(WCHAR);\n        if (size < *ret_size) return STATUS_BUFFER_TOO_SMALL;\n        if(buf) memcpy(buf, builtin_algorithms[id].name, *ret_size);\n        return STATUS_SUCCESS;\n    }\n\n    return STATUS_NOT_IMPLEMENTED;\n}"
+  },
+  {
+   "name": "get_3des_property",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 743,
+   "end_line": 779,
+   "static": true,
+   "called_from": [
+    "get_alg_property"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:1300"
+   ],
+   "signature": "static NTSTATUS get_3des_property( enum chain_mode mode, const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )",
+   "code": "static NTSTATUS get_3des_property( enum chain_mode mode, const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )\n{\n    if (!wcscmp( prop, BCRYPT_BLOCK_LENGTH ))\n        return get_dword_property( buf, size, ret_size, BLOCK_LENGTH_3DES );\n\n    if (!wcscmp( prop, BCRYPT_CHAINING_MODE ))\n    {\n        const WCHAR *str;\n        switch (mode)\n        {\n        case CHAIN_MODE_CBC:\n            str = BCRYPT_CHAIN_MODE_CBC; break;\n        default:\n            return STATUS_NOT_IMPLEMENTED;\n        }\n\n        *ret_size = (wcslen(str) + 1) * sizeof(WCHAR) * 2; /* quirk */\n        if (size < *ret_size) return STATUS_BUFFER_TOO_SMALL;\n        memcpy( buf, str, (wcslen(str) + 1) * sizeof(WCHAR) );\n        return STATUS_SUCCESS;\n    }\n    if (!wcscmp( prop, BCRYPT_KEY_LENGTHS ))\n    {\n        BCRYPT_KEY_LENGTHS_STRUCT *key_lengths = (void *)buf;\n        *ret_size = sizeof(*key_lengths);\n        if (key_lengths && size < *ret_size) return STATUS_BUFFER_TOO_SMALL;\n        if (key_lengths)\n        {\n            key_lengths->dwMinLength = 192;\n            key_lengths->dwMaxLength = 192;\n            key_lengths->dwIncrement = 0;\n        }\n        return STATUS_SUCCESS;\n    }\n    FIXME( \"unsupported property %s\\n\", debugstr_w(prop) );\n    return STATUS_NOT_IMPLEMENTED;\n}"
+  },
+  {
+   "name": "get_chacha20_poly1305_property",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 923,
+   "end_line": 930,
+   "static": true,
+   "called_from": [
+    "get_alg_property"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS get_chacha20_poly1305_property( const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )",
+   "code": "static NTSTATUS get_chacha20_poly1305_property( const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )\n{\n    if (!wcscmp( prop, BCRYPT_BLOCK_LENGTH ))\n        return get_dword_property( buf, size, ret_size, BLOCK_LENGTH_CHACHA20_POLY1305 );\n\n    FIXME( \"unsupported property %s\\n\", debugstr_w(prop) );\n    return STATUS_NOT_IMPLEMENTED;\n}"
+  },
+  {
+   "name": "get_aes_property",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 781,
+   "end_line": 836,
+   "static": true,
+   "called_from": [
+    "get_alg_property"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:1305"
+   ],
+   "signature": "static NTSTATUS get_aes_property( enum chain_mode mode, const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )",
+   "code": "static NTSTATUS get_aes_property( enum chain_mode mode, const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )\n{\n    if (!wcscmp( prop, BCRYPT_BLOCK_LENGTH ))\n        return get_dword_property( buf, size, ret_size, BLOCK_LENGTH_AES );\n\n    if (!wcscmp( prop, BCRYPT_MESSAGE_BLOCK_LENGTH ))\n        return get_dword_property( buf, size, ret_size, 1 );\n\n    if (!wcscmp( prop, BCRYPT_CHAINING_MODE ))\n    {\n        const WCHAR *str;\n        switch (mode)\n        {\n        case CHAIN_MODE_ECB: str = BCRYPT_CHAIN_MODE_ECB; break;\n        case CHAIN_MODE_CBC: str = BCRYPT_CHAIN_MODE_CBC; break;\n        case CHAIN_MODE_GCM: str = BCRYPT_CHAIN_MODE_GCM; break;\n        case CHAIN_MODE_CFB: str = BCRYPT_CHAIN_MODE_CFB; break;\n        default: return STATUS_NOT_IMPLEMENTED;\n        }\n\n        *ret_size = (wcslen(str) + 1) * sizeof(WCHAR) * 2; /* quirk */\n        if (size < *ret_size) return STATUS_BUFFER_TOO_SMALL;\n        memcpy( buf, str, (wcslen(str) + 1) * sizeof(WCHAR) );\n        return STATUS_SUCCESS;\n    }\n    if (!wcscmp( prop, BCRYPT_KEY_LENGTHS ))\n    {\n        BCRYPT_KEY_LENGTHS_STRUCT *key_lengths = (void *)buf;\n        *ret_size = sizeof(*key_lengths);\n        if (key_lengths && size < *ret_size) return STATUS_BUFFER_TOO_SMALL;\n        if (key_lengths)\n        {\n            key_lengths->dwMinLength = 128;\n            key_lengths->dwMaxLength = 256;\n            key_lengths->dwIncrement = 64;\n        }\n        return STATUS_SUCCESS;\n    }\n    if (!wcscmp( prop, BCRYPT_AUTH_TAG_LENGTH ))\n    {\n        BCRYPT_AUTH_TAG_LENGTHS_STRUCT *tag_length = (void *)buf;\n        if (mode != CHAIN_MODE_GCM) return STATUS_NOT_SUPPORTED;\n        *ret_size = sizeof(*tag_length);\n        if (tag_length && size < *ret_size) return STATUS_BUFFER_TOO_SMALL;\n        if (tag_length)\n        {\n            tag_length->dwMinLength = 12;\n            tag_length->dwMaxLength = 16;\n            tag_length->dwIncrement =  1;\n        }\n        return STATUS_SUCCESS;\n    }\n\n    FIXME( \"unsupported property %s\\n\", debugstr_w(prop) );\n    return STATUS_NOT_IMPLEMENTED;\n}"
+  },
+  {
+   "name": "get_rc4_property",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 838,
+   "end_line": 845,
+   "static": true,
+   "called_from": [
+    "get_alg_property"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS get_rc4_property( const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )",
+   "code": "static NTSTATUS get_rc4_property( const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )\n{\n    if (!wcscmp( prop, BCRYPT_BLOCK_LENGTH ))\n        return get_dword_property( buf, size, ret_size, BLOCK_LENGTH_RC4 );\n\n    FIXME( \"unsupported property %s\\n\", debugstr_w(prop) );\n    return STATUS_NOT_IMPLEMENTED;\n}"
+  },
+  {
+   "name": "get_rsa_property",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 847,
+   "end_line": 854,
+   "static": true,
+   "called_from": [
+    "get_alg_property"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS get_rsa_property( const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )",
+   "code": "static NTSTATUS get_rsa_property( const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )\n{\n    if (!wcscmp( prop, BCRYPT_PADDING_SCHEMES ))\n        return get_dword_property( buf, size, ret_size, BCRYPT_SUPPORTED_PAD_PKCS1_SIG | BCRYPT_SUPPORTED_PAD_OAEP );\n\n    FIXME( \"unsupported property %s\\n\", debugstr_w(prop) );\n    return STATUS_NOT_IMPLEMENTED;\n}"
+  },
+  {
+   "name": "get_dsa_property",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 856,
+   "end_line": 861,
+   "static": true,
+   "called_from": [
+    "get_alg_property"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS get_dsa_property( const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )",
+   "code": "static NTSTATUS get_dsa_property( const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )\n{\n    if (!wcscmp( prop, BCRYPT_PADDING_SCHEMES )) return STATUS_NOT_SUPPORTED;\n    FIXME( \"unsupported property %s\\n\", debugstr_w(prop) );\n    return STATUS_NOT_IMPLEMENTED;\n}"
+  },
+  {
+   "name": "get_pbkdf2_property",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 863,
+   "end_line": 881,
+   "static": true,
+   "called_from": [
+    "get_alg_property"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS get_pbkdf2_property( const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )",
+   "code": "static NTSTATUS get_pbkdf2_property( const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )\n{\n    if (!wcscmp( prop, BCRYPT_BLOCK_LENGTH )) return STATUS_NOT_SUPPORTED;\n    if (!wcscmp( prop, BCRYPT_KEY_LENGTHS ))\n    {\n        BCRYPT_KEY_LENGTHS_STRUCT *key_lengths = (void *)buf;\n        *ret_size = sizeof(*key_lengths);\n        if (key_lengths && size < *ret_size) return STATUS_BUFFER_TOO_SMALL;\n        if (key_lengths)\n        {\n            key_lengths->dwMinLength = 0;\n            key_lengths->dwMaxLength = 16384;\n            key_lengths->dwIncrement = 8;\n        }\n        return STATUS_SUCCESS;\n    }\n    FIXME( \"unsupported property %s\\n\", debugstr_w(prop) );\n    return STATUS_NOT_IMPLEMENTED;\n}"
+  },
+  {
+   "name": "get_tls_kdf_property",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 883,
+   "end_line": 901,
+   "static": true,
+   "called_from": [
+    "get_alg_property"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS get_tls_kdf_property( const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )",
+   "code": "static NTSTATUS get_tls_kdf_property( const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )\n{\n    if (!wcscmp( prop, BCRYPT_BLOCK_LENGTH )) return STATUS_NOT_SUPPORTED;\n    if (!wcscmp( prop, BCRYPT_KEY_LENGTHS ))\n    {\n        BCRYPT_KEY_LENGTHS_STRUCT *key_lengths = (void *)buf;\n        *ret_size = sizeof(*key_lengths);\n        if (key_lengths && size < *ret_size) return STATUS_BUFFER_TOO_SMALL;\n        if (key_lengths)\n        {\n            key_lengths->dwMinLength = 0;\n            key_lengths->dwMaxLength = 16384;\n            key_lengths->dwIncrement = 8;\n        }\n        return STATUS_SUCCESS;\n    }\n    FIXME( \"unsupported property %s\\n\", debugstr_w(prop) );\n    return STATUS_NOT_IMPLEMENTED;\n}"
+  },
+  {
+   "name": "get_hkdf_property",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 903,
+   "end_line": 921,
+   "static": true,
+   "called_from": [
+    "get_alg_property"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS get_hkdf_property( const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )",
+   "code": "static NTSTATUS get_hkdf_property( const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )\n{\n    if (!wcscmp( prop, BCRYPT_BLOCK_LENGTH )) return STATUS_NOT_SUPPORTED;\n    if (!wcscmp( prop, BCRYPT_KEY_LENGTHS ))\n    {\n        BCRYPT_KEY_LENGTHS_STRUCT *key_lengths = (void *)buf;\n        *ret_size = sizeof(*key_lengths);\n        if (key_lengths && size < *ret_size) return STATUS_BUFFER_TOO_SMALL;\n        if (key_lengths)\n        {\n            key_lengths->dwMinLength = 0;\n            key_lengths->dwMaxLength = 16384;\n            key_lengths->dwIncrement = 8;\n        }\n        return STATUS_SUCCESS;\n    }\n    FIXME( \"unsupported property %s\\n\", debugstr_w(prop) );\n    return STATUS_NOT_IMPLEMENTED;\n}"
+  },
+  {
+   "name": "is_symmetric_key",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 398,
+   "end_line": 402,
+   "static": true,
+   "called_from": [
+    "destroy_key"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:1190",
+    "dlls/bcrypt/bcrypt_main.c:1293",
+    "dlls/bcrypt/bcrypt_main.c:1976",
+    "dlls/bcrypt/bcrypt_main.c:2315",
+    "dlls/bcrypt/bcrypt_main.c:2750"
+   ],
+   "signature": "static inline BOOL is_symmetric_key( const struct key *key )",
+   "code": "static inline BOOL is_symmetric_key( const struct key *key )\n{\n    return builtin_algorithms[key->alg_id].class == BCRYPT_CIPHER_INTERFACE\n        || builtin_algorithms[key->alg_id].class == BCRYPT_KEY_DERIVATION_INTERFACE;\n}"
+  },
+  {
+   "name": "secure_zero",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 670,
+   "end_line": 673,
+   "static": true,
+   "called_from": [
+    "destroy_key"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:677",
+    "dlls/bcrypt/bcrypt_main.c:4045"
+   ],
+   "signature": "static void secure_zero( void *ptr, SIZE_T size )",
+   "code": "static void secure_zero( void *ptr, SIZE_T size )\n{\n    if (ptr) SecureZeroMemory( ptr, size );\n}"
+  },
+  {
+   "name": "get_dword_property",
+   "file": "dlls/bcrypt/bcrypt_main.c",
+   "start_line": 704,
+   "end_line": 710,
+   "static": true,
+   "called_from": [
+    "get_3des_property",
+    "get_aes_property",
+    "get_chacha20_poly1305_property",
+    "get_generic_alg_property",
+    "get_rc4_property",
+    "get_rsa_property"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bcrypt/bcrypt_main.c:1294",
+    "dlls/bcrypt/bcrypt_main.c:1314"
+   ],
+   "signature": "static NTSTATUS get_dword_property( UCHAR *buf, ULONG size, ULONG *ret_size, DWORD value )",
+   "code": "static NTSTATUS get_dword_property( UCHAR *buf, ULONG size, ULONG *ret_size, DWORD value )\n{\n    *ret_size = sizeof(value);\n    if (size < sizeof(value)) return STATUS_BUFFER_TOO_SMALL;\n    if (buf) *(DWORD *)buf = value;\n    return STATUS_SUCCESS;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "aes_key",
+    "kind": "struct_decl",
+    "start_line": 144,
+    "end_line": 147,
+    "code": "struct aes_key\n{\n    SYMCRYPT_AES_EXPANDED_KEY handle;\n};"
+   },
+   {
+    "name": "alg_id",
+    "kind": "enum_decl",
+    "start_line": 51,
+    "end_line": 95,
+    "code": "enum alg_id\n{\n    /* cipher */\n    ALG_ID_3DES,\n    ALG_ID_CHACHA20_POLY1305,\n    ALG_ID_AES,\n    ALG_ID_AES_GMAC,\n    ALG_ID_RC4,\n\n    /* hash */\n    ALG_ID_SHA256,\n    ALG_ID_SHA384,\n    ALG_ID_SHA512,\n    ALG_ID_SHA1,\n    ALG_ID_MD5,\n    ALG_ID_MD4,\n    ALG_ID_MD2,\n\n    /* asymmetric encryption */\n    ALG_ID_RSA,\n\n    /* secret agreement */\n    ALG_ID_DH,\n    ALG_ID_ECDH,\n    ALG_ID_ECDH_P256,\n    ALG_ID_ECDH_P384,\n    ALG_ID_ECDH_P521,\n\n    /* signature */\n    ALG_ID_RSA_SIGN,\n    ALG_ID_ECDSA,\n    ALG_ID_ECDSA_P256,\n    ALG_ID_ECDSA_P384,\n    ALG_ID_ECDSA_P521,\n    ALG_ID_DSA,\n\n    /* rng */\n    ALG_ID_RNG,\n\n    /* key derivation */\n    ALG_ID_PBKDF2,\n    ALG_ID_TLS1_1_KDF,\n    ALG_ID_TLS1_2_KDF,\n    ALG_ID_HKDF,\n};"
+   },
+   {
+    "name": "algorithm",
+    "kind": "struct_decl",
+    "start_line": 135,
+    "end_line": 142,
+    "code": "struct algorithm\n{\n    struct object     hdr;\n    enum alg_id       id;\n    enum chain_mode   chain_mode;\n    ULONG             flags;\n    enum ecc_curve_id curve_id;\n};"
+   },
+   {
+    "name": "chain_mode",
+    "kind": "enum_decl",
+    "start_line": 114,
+    "end_line": 121,
+    "code": "enum chain_mode\n{\n    CHAIN_MODE_CBC,\n    CHAIN_MODE_ECB,\n    CHAIN_MODE_CFB,\n    CHAIN_MODE_CCM,\n    CHAIN_MODE_GCM,\n};"
+   },
+   {
+    "name": "dsa_key",
+    "kind": "struct_decl",
+    "start_line": 194,
+    "end_line": 200,
+    "code": "struct dsa_key\n{\n    SYMCRYPT_DLKEY   *handle;\n    SYMCRYPT_DLGROUP *group;\n    UCHAR             seed[20];\n    UINT32            count;\n};"
+   },
+   {
+    "name": "ecc_key",
+    "kind": "struct_decl",
+    "start_line": 187,
+    "end_line": 192,
+    "code": "struct ecc_key\n{\n    SYMCRYPT_ECKEY   *handle;\n    SYMCRYPT_ECURVE  *curve;\n    enum ecc_curve_id curve_id;\n};"
+   },
+   {
+    "name": "gcm_key",
+    "kind": "struct_decl",
+    "start_line": 149,
+    "end_line": 153,
+    "code": "struct gcm_key\n{\n    SYMCRYPT_GCM_EXPANDED_KEY handle;\n    SYMCRYPT_GCM_STATE        state;\n};"
+   },
+   {
+    "name": "key",
+    "kind": "struct_decl",
+    "start_line": 216,
+    "end_line": 226,
+    "code": "struct key\n{\n    struct object hdr;\n    enum alg_id   alg_id;\n    ULONG         flags;\n    union\n    {\n        struct symmetric_key s;\n        struct asymmetric_key a;\n    };\n};"
+   },
+   {
+    "name": "object",
+    "kind": "struct_decl",
+    "start_line": 46,
+    "end_line": 49,
+    "code": "struct object\n{\n    ULONG magic;\n};"
+   },
+   {
+    "name": "rsa_key",
+    "kind": "struct_decl",
+    "start_line": 182,
+    "end_line": 185,
+    "code": "struct rsa_key\n{\n    SYMCRYPT_RSAKEY *handle;\n};"
+   },
+   {
+    "name": "struct (unnamed at /w/wine/dlls/bcrypt/bcrypt_main.c:349:14)",
+    "kind": "struct_decl",
+    "start_line": 349,
+    "end_line": 358,
+    "code": "static const struct\n{\n    const WCHAR *name;\n    ULONG        class;\n    ULONG        object_length;\n    ULONG        hash_length;\n    ULONG        hash_block_length;\n    enum ecc_curve_id curve_id;\n    enum chain_mode   chain_mode;\n}"
+   },
+   {
+    "name": "symmetric_key",
+    "kind": "struct_decl",
+    "start_line": 166,
+    "end_line": 180,
+    "code": "struct symmetric_key\n{\n    enum chain_mode  mode;\n    ULONG            block_size;\n    UCHAR           *secret;\n    ULONG            secret_len;\n    UCHAR            vector[BLOCK_LENGTH_AES];\n    CRITICAL_SECTION cs;\n    union\n    {\n        struct aes_key  aes;\n        struct gcm_key  gcm;\n        struct hkdf_key hkdf;\n    };\n};"
+   },
+   {
+    "name": "union (anonymous at /w/wine/dlls/bcrypt/bcrypt_main.c:174:5)",
+    "kind": "union_decl",
+    "start_line": 174,
+    "end_line": 179,
+    "code": "    union\n    {\n        struct aes_key  aes;\n        struct gcm_key  gcm;\n        struct hkdf_key hkdf;\n    };"
+   },
+   {
+    "name": "union (anonymous at /w/wine/dlls/bcrypt/bcrypt_main.c:205:5)",
+    "kind": "union_decl",
+    "start_line": 205,
+    "end_line": 210,
+    "code": "    union\n    {\n        struct rsa_key rsa;\n        struct ecc_key ecc;\n        struct dsa_key dsa;\n    };"
+   },
+   {
+    "name": "union (anonymous at /w/wine/dlls/bcrypt/bcrypt_main.c:221:5)",
+    "kind": "union_decl",
+    "start_line": 221,
+    "end_line": 225,
+    "code": "    union\n    {\n        struct symmetric_key s;\n        struct asymmetric_key a;\n    };"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 35,
+    "end_line": 35,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(bcrypt);"
+   },
+   {
+    "name": "builtin_algorithms",
+    "type": "const struct (unnamed struct at /w/wine/dlls/bcrypt/bcrypt_main.c:349:14)[29]",
+    "static": true,
+    "start_line": 359,
+    "end_line": 390,
+    "code": "builtin_algorithms[] =\n{\n    { BCRYPT_3DES_ALGORITHM,       BCRYPT_CIPHER_INTERFACE,              522,    0,    0 },\n    { BCRYPT_CHACHA20_POLY1305_ALGORITHM, BCRYPT_CIPHER_INTERFACE,       166,    0,    0 },\n    { BCRYPT_AES_ALGORITHM,        BCRYPT_CIPHER_INTERFACE,              654,    0,    0 },\n    { BCRYPT_AES_GMAC_ALGORITHM,   BCRYPT_CIPHER_INTERFACE,              654,    0,    0, 0, CHAIN_MODE_GCM },\n    { BCRYPT_RC4_ALGORITHM,        BCRYPT_CIPHER_INTERFACE,              654,    0,    0 },\n    { BCRYPT_SHA256_ALGORITHM,     BCRYPT_HASH_INTERFACE,                286,   32,   64 },\n    { BCRYPT_SHA384_ALGORITHM,     BCRYPT_HASH_INTERFACE,                382,   48,  128 },\n    { BCRYPT_SHA512_ALGORITHM,     BCRYPT_HASH_INTERFACE,                382,   64,  128 },\n    { BCRYPT_SHA1_ALGORITHM,       BCRYPT_HASH_INTERFACE,                278,   20,   64 },\n    { BCRYPT_MD5_ALGORITHM,        BCRYPT_HASH_INTERFACE,                274,   16,   64 },\n    { BCRYPT_MD4_ALGORITHM,        BCRYPT_HASH_INTERFACE,                270,   16,   64 },\n    { BCRYPT_MD2_ALGORITHM,        BCRYPT_HASH_INTERFACE,                270,   16,   16 },\n    { BCRYPT_RSA_ALGORITHM,        BCRYPT_ASYMMETRIC_ENCRYPTION_INTERFACE, 0,      0,    0 },\n    { BCRYPT_DH_ALGORITHM,         BCRYPT_SECRET_AGREEMENT_INTERFACE,      0,      0,    0 },\n    { BCRYPT_ECDH_ALGORITHM,       BCRYPT_SECRET_AGREEMENT_INTERFACE,      0,      0,    0 },\n    { BCRYPT_ECDH_P256_ALGORITHM,  BCRYPT_SECRET_AGREEMENT_INTERFACE,      0,      0,    0, ECC_CURVE_P256R1 },\n    { BCRYPT_ECDH_P384_ALGORITHM,  BCRYPT_SECRET_AGREEMENT_INTERFACE,      0,      0,    0, ECC_CURVE_P384R1 },\n    { BCRYPT_ECDH_P521_ALGORITHM,  BCRYPT_SECRET_AGREEMENT_INTERFACE,      0,      0,    0, ECC_CURVE_P521R1 },\n    { BCRYPT_RSA_SIGN_ALGORITHM,   BCRYPT_SIGNATURE_INTERFACE,             0,      0,    0 },\n    { BCRYPT_ECDSA_ALGORITHM,      BCRYPT_SIGNATURE_INTERFACE,             0,      0,    0 },\n    { BCRYPT_ECDSA_P256_ALGORITHM, BCRYPT_SIGNATURE_INTERFACE,             0,      0,    0, ECC_CURVE_P256R1 },\n    { BCRYPT_ECDSA_P384_ALGORITHM, BCRYPT_SIGNATURE_INTERFACE,             0,      0,    0, ECC_CURVE_P384R1 },\n    { BCRYPT_ECDSA_P521_ALGORITHM, BCRYPT_SIGNATURE_INTERFACE,             0,      0,    0, ECC_CURVE_P521R1 },\n    { BCRYPT_DSA_ALGORITHM,        BCRYPT_SIGNATURE_INTERFACE,             0,      0,    0 },\n    { BCRYPT_RNG_ALGORITHM,        BCRYPT_RNG_INTERFACE,                   0,      0,    0 },\n    { BCRYPT_PBKDF2_ALGORITHM,     BCRYPT_KEY_DERIVATION_INTERFACE,      618,      0,    0 },\n    { BCRYPT_TLS1_1_KDF_ALGORITHM, BCRYPT_KEY_DERIVATION_INTERFACE,      702,      0,    0 },\n    { BCRYPT_TLS1_2_KDF_ALGORITHM, BCRYPT_KEY_DERIVATION_INTERFACE,      702,      0,    0 },\n    { BCRYPT_HKDF_ALGORITHM,       BCRYPT_KEY_DERIVATION_INTERFACE,      702,      0,    0 },\n};"
+   },
+   {
+    "name": "pseudo_algorithms",
+    "type": "const struct algorithm[59]",
+    "static": true,
+    "start_line": 458,
+    "end_line": 519,
+    "code": "static const struct algorithm pseudo_algorithms[] =\n{\n    {{ MAGIC_ALG }, ALG_ID_MD2 },\n    {{ MAGIC_ALG }, ALG_ID_MD4 },\n    {{ MAGIC_ALG }, ALG_ID_MD5 },\n    {{ MAGIC_ALG }, ALG_ID_SHA1 },\n    {{ MAGIC_ALG }, ALG_ID_SHA256 },\n    {{ MAGIC_ALG }, ALG_ID_SHA384 },\n    {{ MAGIC_ALG }, ALG_ID_SHA512 },\n    {{ MAGIC_ALG }, ALG_ID_RC4 },\n    {{ MAGIC_ALG }, ALG_ID_RNG },\n    {{ MAGIC_ALG }, ALG_ID_MD5, 0, BCRYPT_ALG_HANDLE_HMAC_FLAG },\n    {{ MAGIC_ALG }, ALG_ID_SHA1, 0, BCRYPT_ALG_HANDLE_HMAC_FLAG },\n    {{ MAGIC_ALG }, ALG_ID_SHA256, 0, BCRYPT_ALG_HANDLE_HMAC_FLAG },\n    {{ MAGIC_ALG }, ALG_ID_SHA384, 0, BCRYPT_ALG_HANDLE_HMAC_FLAG },\n    {{ MAGIC_ALG }, ALG_ID_SHA512, 0, BCRYPT_ALG_HANDLE_HMAC_FLAG },\n    {{ MAGIC_ALG }, ALG_ID_RSA },\n    {{ MAGIC_ALG }, ALG_ID_ECDSA },\n    {{ 0 }}, /* AES_CMAC */\n    {{ MAGIC_ALG }, ALG_ID_AES_GMAC, CHAIN_MODE_GCM },\n    {{ MAGIC_ALG }, ALG_ID_MD2, 0, BCRYPT_ALG_HANDLE_HMAC_FLAG },\n    {{ MAGIC_ALG }, ALG_ID_MD4, 0, BCRYPT_ALG_HANDLE_HMAC_FLAG },\n    {{ MAGIC_ALG }, ALG_ID_3DES, CHAIN_MODE_CBC },\n    {{ MAGIC_ALG }, ALG_ID_3DES, CHAIN_MODE_ECB },\n    {{ MAGIC_ALG }, ALG_ID_3DES, CHAIN_MODE_CFB },\n    {{ 0 }}, /* 3DES_112_CBC */\n    {{ 0 }}, /* 3DES_112_ECB */\n    {{ 0 }}, /* 3DES_112_CFB */\n    {{ MAGIC_ALG }, ALG_ID_AES, CHAIN_MODE_CBC },\n    {{ MAGIC_ALG }, ALG_ID_AES, CHAIN_MODE_ECB },\n    {{ MAGIC_ALG }, ALG_ID_AES, CHAIN_MODE_CFB },\n    {{ MAGIC_ALG }, ALG_ID_AES, CHAIN_MODE_CCM },\n    {{ MAGIC_ALG }, ALG_ID_AES, CHAIN_MODE_GCM },\n    {{ 0 }}, /* DES_CBC */\n    {{ 0 }}, /* DES_ECB */\n    {{ 0 }}, /* DES_CFB */\n    {{ 0 }}, /* DESX_CBC */\n    {{ 0 }}, /* DESX_ECB */\n    {{ 0 }}, /* DESX_CFB */\n    {{ 0 }}, /* RC2_CBC */\n    {{ 0 }}, /* RC2_ECB */\n    {{ 0 }}, /* RC2_CFB */\n    {{ MAGIC_ALG }, ALG_ID_DH },\n    {{ MAGIC_ALG }, ALG_ID_ECDH },\n    {{ MAGIC_ALG }, ALG_ID_ECDH_P256, 0, 0, ECC_CURVE_P256R1 },\n    {{ MAGIC_ALG }, ALG_ID_ECDH_P384, 0, 0, ECC_CURVE_P384R1 },\n    {{ MAGIC_ALG }, ALG_ID_ECDH_P521, 0, 0, ECC_CURVE_P521R1 },\n    {{ MAGIC_ALG }, ALG_ID_DSA },\n    {{ MAGIC_ALG }, ALG_ID_ECDSA_P256, 0, 0, ECC_CURVE_P256R1 },\n    {{ MAGIC_ALG }, ALG_ID_ECDSA_P384, 0, 0, ECC_CURVE_P384R1 },\n    {{ MAGIC_ALG }, ALG_ID_ECDSA_P521, 0, 0, ECC_CURVE_P521R1 },\n    {{ MAGIC_ALG }, ALG_ID_RSA_SIGN },\n    {{ 0 }}, /* CAPI_KDF */\n    {{ MAGIC_ALG }, ALG_ID_PBKDF2 },\n    {{ 0 }}, /* SP800108_CTR_HMAC */\n    {{ 0 }}, /* SP80056A_CONCAT */\n    {{ MAGIC_ALG }, ALG_ID_TLS1_1_KDF },\n    {{ MAGIC_ALG }, ALG_ID_TLS1_2_KDF },\n    {{ 0 }}, /* XTS_AES */\n    {{ MAGIC_ALG }, ALG_ID_HKDF },\n    {{ MAGIC_ALG }, ALG_ID_CHACHA20_POLY1305 },\n};"
+   }
+  ],
+  "macros": [
+   {
+    "name": "BLOCK_LENGTH_3DES",
+    "start_line": 163,
+    "end_line": 163,
+    "code": "#define BLOCK_LENGTH_3DES   8"
+   },
+   {
+    "name": "BLOCK_LENGTH_AES",
+    "start_line": 164,
+    "end_line": 164,
+    "code": "#define BLOCK_LENGTH_AES   16"
+   },
+   {
+    "name": "BLOCK_LENGTH_CHACHA20_POLY1305",
+    "start_line": 162,
+    "end_line": 162,
+    "code": "#define BLOCK_LENGTH_CHACHA20_POLY1305 1"
+   },
+   {
+    "name": "BLOCK_LENGTH_RC4",
+    "start_line": 161,
+    "end_line": 161,
+    "code": "#define BLOCK_LENGTH_RC4    1"
+   },
+   {
+    "name": "MAGIC_ALG",
+    "start_line": 42,
+    "end_line": 42,
+    "code": "#define MAGIC_ALG  (('A' << 24) | ('L' << 16) | ('G' << 8) | '0')"
+   },
+   {
+    "name": "MAGIC_KEY",
+    "start_line": 44,
+    "end_line": 44,
+    "code": "#define MAGIC_KEY  (('K' << 24) | ('E' << 16) | ('Y' << 8) | '0')"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "DeleteCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:271"
+    ]
+   },
+   {
+    "name": "InitializeCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:200"
+    ]
+   },
+   {
+    "name": "_aligned_free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:546"
+    ]
+   },
+   {
+    "name": "_aligned_malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:609"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   },
+   {
+    "name": "wcscmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:266"
+    ]
+   },
+   {
+    "name": "wcslen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:215"
+    ]
+   }
+  ],
+  "header_inline": [
+   "RtlSecureZeroMemory",
+   "debugstr_w",
+   "lstrlenW",
+   "wine_dbg_log"
+  ],
+  "system": [
+   "SymCryptAesExpandKey",
+   "SymCryptDlgroupFree",
+   "SymCryptDlkeyFree",
+   "SymCryptEcbDecrypt",
+   "SymCryptEckeyFree",
+   "SymCryptEcurveFree",
+   "SymCryptGcmExpandKey",
+   "SymCryptRsakeyFree"
+  ],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "bcrypt.BCryptImportKey",
+  "category": {
+   "l1": "Security and identity",
+   "l2": "Cryptography",
+   "header": "bcrypt.h",
+   "textbook": "Protection",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 22,
+   "body": 19,
+   "code": 13
+  },
+  "cyclomatic": 9,
+  "return_type": "NTSTATUS",
+  "n_params": 9,
+  "tests": {
+   "n_tests_own": 3,
+   "n_tests": 3,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/bcrypt/tests/bcrypt.c::test_aes_vector",
+    "dlls/bcrypt/tests/bcrypt.c::test_aes_vector_property",
+    "dlls/bcrypt/tests/bcrypt.c::test_key_import_export"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/bcrypt/nf-bcrypt-bcryptimportkey",
+   "source": "win32",
+   "description": "Imports a symmetric key from a key BLOB.",
+   "min_windows": "Windows Vista [desktop apps \\| UWP apps]",
+   "documented_dll": "Bcrypt.dll"
+  },
+  "exports": [
+   "bcrypt.BCryptImportKey",
+   "cng.sys.BCryptImportKey",
+   "ksecdd.sys.BCryptImportKey",
+   "ncrypt.BCryptImportKey"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.667,
+   "first_date": "2018-02-28",
+   "median_date": "2025-04-03",
+   "last_date": "2026-06-09",
+   "code_lines": 15
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "advapi32.ConvertStringSecurityDescriptorToSecurityDescriptorA",
+  "share_after_cutoff": 0.667,
+  "last_date": "2026-06-09"
+ }
+}

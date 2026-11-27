@@ -1,0 +1,278 @@
+{
+ "id": "0086",
+ "function": {
+  "name": "GetBestRoute2",
+  "export_name": "GetBestRoute2",
+  "module": "iphlpapi",
+  "source_module": "iphlpapi",
+  "exported_by": [
+   "iphlpapi"
+  ],
+  "side": "PE",
+  "file": "dlls/iphlpapi/iphlpapi_main.c",
+  "start_line": 4819,
+  "end_line": 4996,
+  "body_lines": 175,
+  "signature": "DWORD WINAPI GetBestRoute2( NET_LUID *luid, NET_IFINDEX index, const SOCKADDR_INET *src, const SOCKADDR_INET *dst, ULONG options, PMIB_IPFORWARD_ROW2 bestroute, SOCKADDR_INET *bestaddress )",
+  "header_comment": "/******************************************************************\n *    GetBestRoute2 (IPHLPAPI.@)\n */",
+  "code": "DWORD WINAPI GetBestRoute2( NET_LUID *luid, NET_IFINDEX index,\n                            const SOCKADDR_INET *src, const SOCKADDR_INET *dst,\n                            ULONG options, PMIB_IPFORWARD_ROW2 bestroute,\n                            SOCKADDR_INET *bestaddress )\n{\n    MIB_UNICASTIPADDRESS_ROW *uni_row = NULL;\n    MIB_UNICASTIPADDRESS_TABLE *uni;\n    MIB_IPFORWARD_TABLE2 *fwd;\n    unsigned int i, best_idx;\n    int max_prefix_len;\n    DWORD ret;\n    BOOL v6;\n\n    TRACE( \"(%p, %ld, %p, %p, 0x%08lx, %p, %p).\\n\", luid, index, src, dst, options, bestroute, bestaddress );\n\n    if (!dst || !bestroute || !bestaddress)\n        return ERROR_INVALID_PARAMETER;\n\n    memset( bestroute, 0, sizeof(*bestroute) );\n    memset( bestaddress, 0, sizeof(*bestaddress) );\n\n    if (dst->si_family != AF_INET && dst->si_family != AF_INET6) return ERROR_INVALID_PARAMETER;\n    v6 = dst->si_family == AF_INET6;\n    if (src)\n    {\n        if (src->si_family != dst->si_family)    src = NULL;\n        else if (is_addr_unspecified( src, v6 )) src = NULL;\n    }\n\n    if (v6 && !IN6_IS_ADDR_LINKLOCAL(&dst->Ipv6.sin6_addr) && dst->Ipv6.sin6_scope_id)\n        return ERROR_INVALID_PARAMETER;\n    if (v6 && src && !IN6_IS_ADDR_LINKLOCAL(&src->Ipv6.sin6_addr) && src->Ipv6.sin6_scope_id)\n        return ERROR_INVALID_PARAMETER;\n\n    if ((ret = GetUnicastIpAddressTable( dst->si_family, &uni ))) return ret;\n    if ((ret = GetIpForwardTable2( dst->si_family, &fwd )))\n    {\n        FreeMibTable( &uni );\n        return ret;\n    }\n\n    if (!luid && index)\n    {\n        for (i = 0; i < uni->NumEntries; ++i)\n        {\n            if (uni->Table[i].InterfaceIndex == index) break;\n        }\n        if (i == uni->NumEntries)\n        {\n            ret = ERROR_FILE_NOT_FOUND;\n            goto done;\n        }\n        luid = &uni->Table[i].InterfaceLuid;\n    }\n    if (src && !(uni_row = find_first_matching_unicast_addr( uni, v6, src, NULL, 0 )))\n    {\n        ret = ERROR_NOT_FOUND;\n        goto done;\n    }\n    if (!uni_row && luid && luid->Value)\n    {\n        for (i = 0; i < uni->NumEntries; ++i)\n        {\n            if (uni->Table[i].InterfaceLuid.Value == luid->Value) break;\n        }\n        if (i == uni->NumEntries)\n        {\n            ret = ERROR_NOT_FOUND;\n            goto done;\n        }\n        uni_row = &uni->Table[i];\n    }\n\n    if (uni_row) index = uni_row->InterfaceIndex;\n    else         index = 0;\n\n    if (v6)\n    {\n        if (!index) index = dst->Ipv6.sin6_scope_id;\n        if (IN6_IS_ADDR_LINKLOCAL(&dst->Ipv6.sin6_addr) && dst->Ipv6.sin6_scope_id\n            && dst->Ipv6.sin6_scope_id != index)\n        {\n            ret = ERROR_INVALID_PARAMETER;\n            goto done;\n        }\n    }\n\n    uni_row = NULL;\n    if (!src && !(v6 && IN6_IS_ADDR_LINKLOCAL(&dst->Ipv6.sin6_addr)))\n    {\n        static const struct in6_addr ipv6_default_addr = {{{ 0x20, 0x01, 0x0d, 0xb8 }}};\n        SOCKADDR_INET src_addr, dst_addr;\n        WORD ver = MAKEWORD (2, 2);\n        WSADATA data;\n        SOCKET s;\n        int len;\n\n        WSAStartup ( ver, &data );\n        if ((s = socket( dst->si_family, SOCK_DGRAM, IPPROTO_UDP )) == -1) goto skip_system_route;\n        dst_addr = *dst;\n        if (is_addr_unspecified( dst, v6 ))\n        {\n            /* GetBestRoute2() should return default route in this case while connect() while unspecified address for\n             * connect() has different semantics. So use some global IP address instead. */\n            if (v6) dst_addr.Ipv6.sin6_addr    = ipv6_default_addr;\n            else dst_addr.Ipv4.sin_addr.s_addr = 0x01010101;\n        }\n        if (connect( s, (struct sockaddr *)&dst_addr, sizeof(dst_addr) ) == -1)\n        {\n            WARN( \"Resolving destination address failed.\\n\" );\n            goto skip_system_route;\n        }\n        len = sizeof(src_addr);\n        if (getsockname( s, (struct sockaddr *)&src_addr, &len ))\n        {\n            WARN( \"getsockname failed, error %d.\\n\", WSAGetLastError() );\n            goto skip_system_route;\n        }\n        if (!(uni_row = find_first_matching_unicast_addr( uni, v6, &src_addr, &dst_addr, index )))\n        {\n            WARN( \"Could not find matching unicast addr for system route.\\n\" );\n            goto skip_system_route;\n        }\n        if (index && uni_row->InterfaceIndex != index)\n        {\n            WARN( \"Specified index %lu doesn't match system %lu.\\n\", index, uni_row->InterfaceIndex );\n            uni_row = NULL;\n            goto skip_system_route;\n        }\n        index = uni_row->InterfaceIndex;\nskip_system_route:\n        if (s != -1) closesocket(s);\n        WSACleanup();\n    }\n\n    max_prefix_len = -1;\n    best_idx = 0;\n    for (i = 0; i < fwd->NumEntries; ++i)\n    {\n        if (index && fwd->Table[i].InterfaceIndex != index) continue;\n\n        if (match_ip_address_with_prefix( dst, &fwd->Table[i].DestinationPrefix )\n            && max_prefix_len < fwd->Table[i].DestinationPrefix.PrefixLength )\n        {\n            max_prefix_len = fwd->Table[i].DestinationPrefix.PrefixLength;\n            best_idx = i;\n        }\n    }\n\n    if (max_prefix_len == -1)\n    {\n        ret = ERROR_NETWORK_UNREACHABLE;\n        goto done;\n    }\n    index = fwd->Table[best_idx].InterfaceIndex;\n    if (!fwd->Table[best_idx].Loopback && ((v6 && IN6_IS_ADDR_LOOPBACK(&dst->Ipv6.sin6_addr))\n        || (!v6 && dst->Ipv4.sin_addr.S_un.S_un_b.s_b1 == 127)))\n    {\n        ret = ERROR_INVALID_PARAMETER;\n        goto done;\n    }\n\n    if (!uni_row && !(uni_row = find_first_matching_unicast_addr( uni, v6, src, dst, index )))\n    {\n        WARN( \"Could not find source address.\\n\" );\n        ret = ERROR_NOT_FOUND;\n        goto done;\n    }\n    *bestaddress = uni_row->Address;\n    *bestroute = fwd->Table[best_idx];\n\n    ret = ERROR_SUCCESS;\ndone:\n    FreeMibTable( fwd );\n    FreeMibTable( uni );\n    TRACE( \"-> %lu.\\n\", ret );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winsock2.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ws2ipdef.h\"",
+   "#include \"windns.h\"",
+   "#include \"iphlpapi.h\"",
+   "#include \"ipifcons.h\"",
+   "#include \"fltdefs.h\"",
+   "#include \"ifdef.h\"",
+   "#include \"netioapi.h\"",
+   "#include \"ip2string.h\"",
+   "#include \"netiodef.h\"",
+   "#include \"icmpapi.h\"",
+   "#include \"psapi.h\"",
+   "#include \"wine/nsi.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "iphlpapi!GetBestRoute2 [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/iphlpapi/tests/iphlpapi.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "netioapi",
+   "path": "sdk-api-src/content/netioapi/nf-netioapi-getbestroute2.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/netioapi/nf-netioapi-getbestroute2",
+   "documented_name": "getbestroute2",
+   "file": "docs/0086_sdk-api_nf-netioapi-getbestroute2.md",
+   "text": "---\nUID: NF:netioapi.GetBestRoute2\ntitle: GetBestRoute2 function (netioapi.h)\ndescription: Retrieves the IP route entry on the local computer for the best route to the specified destination IP address.\nhelpviewer_keywords: [\"GetBestRoute2\",\"GetBestRoute2 function [IP Helper]\",\"iphlp.getbestroute2\",\"netioapi/GetBestRoute2\"]\nold-location: iphlp\\getbestroute2.htm\ntech.root: IpHlp\nms.assetid: 7bc16824-c98f-4cd5-a589-e198b48b637c\nms.date: 12/05/2018\nms.keywords: GetBestRoute2, GetBestRoute2 function [IP Helper], iphlp.getbestroute2, netioapi/GetBestRoute2\nreq.header: netioapi.h\nreq.include-header: Iphlpapi.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Iphlpapi.lib\nreq.dll: Iphlpapi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetBestRoute2\n - netioapi/GetBestRoute2\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Iphlpapi.dll\napi_name:\n - GetBestRoute2\n---\n\n# GetBestRoute2 function\n\n\n## -description\n\nThe \n<b>GetBestRoute2</b> function  retrieves the IP route entry on the local computer for the best route to the specified destination IP address.\n\n## -parameters\n\n### -param InterfaceLuid [in, optional]\n\nThe locally unique identifier (LUID) to specify the network interface associated with an IP route entry.\n\n### -param InterfaceIndex [in]\n\nThe local index value to specify the network interface associated with an IP route entry. This index value may change when a network adapter is disabled and then enabled, or under other circumstances, and should not be considered persistent.\n\n### -param SourceAddress [in]\n\nThe source IP address. This parameter may be omitted and passed as a <b>NULL</b> pointer.\n\n### -param DestinationAddress [in]\n\nThe destination IP address.\n\n### -param AddressSortOptions [in]\n\nA set of options that affect how IP addresses are sorted. This parameter is not currently used.\n\n### -param BestRoute [out]\n\nA pointer to the <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_ipforward_row2\">MIB_IPFORWARD_ROW2</a> for the best route from the source IP address to the destination IP address.\n\n### -param BestSourceAddress [out]\n\nA pointer to the best source IP address.\n\n## -returns\n\nIf the function succeeds, the return value is NO_ERROR.\n\nIf the function fails, the return value is one of the following error codes.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAn invalid parameter was passed to the function. This error is returned if a <b>NULL</b> pointer is passed in the <i>DestinationAddress</i>,  <i>BestSourceAddress</i>, or the <i>BestRoute</i> parameter. This error is also returned if the  <i>DestinationAddress</i> parameter does not specify an IPv4 or IPv6 address and family.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_FILE_NOT_FOUND</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe specified interface could not be found. This error is returned if the  network interface specified by the <i>InterfaceLuid</i> or <i>InterfaceIndex</i> parameter could not be found.  \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NOT_SUPPORTED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe request is not supported. This error is returned if no IPv4 stack is on the local computer and an IPv4 address and family  was specified in the <i>DestinationAddress</i>  parameter. This error is also returned if no IPv6 stack is on the local computer and an IPv6 address and family  was specified in the <i>DestinationAddress</i>  parameter. \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>Other</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nUse \n<a href=\"/windows/desktop/api/winbase/nf-winbase-formatmessage\">FormatMessage</a> to obtain the message string for the returned error.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe <b>GetBestRoute2</b> function is defined on Windows Vista and later. \n\nThe <b>GetBestRoute2</b> function is used to retrieve a <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_ipforward_row2\">MIB_IPFORWARD_ROW2</a> structure entry for the best route from a source IP address to a destination IP address.  \n\nOn input, the <i>DestinationAddress</i> parameter must be initialized to a valid IPv4 or IPv6 address and family. On input, the <i>SourceAddress</i> parameter may be initialized to the preferred IPv4 or IPv6 address and family. In addition, at least one of the following parameters must be initialized: the <i>InterfaceLuid</i> or <i>InterfaceIndex</i>.\n\nThe parameters are used in the order listed above. So if the <i>InterfaceLuid</i> is specified, then this member is used to determine the interface. If no value was set for the  <i>InterfaceLuid</i> member (the values of this member was set to zero), then the <i>InterfaceIndex</i> member is next used to determine the interface. \n\nOn output when the call is successful, <b>GetBestRoute2</b> retrieves and <a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_ipforward_row2\">MIB_IPFORWARD_ROW2</a> structure for the best route from the source IP address the destination IP address.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-createipforwardentry2\">CreateIpForwardEntry2</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-deleteipforwardentry2\">DeleteIpForwardEntry2</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-getipforwardentry2\">GetIpForwardEntry2</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-getipforwardtable2\">GetIpForwardTable2</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-initializeipforwardentry\">InitializeIpForwardEntry</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_ipforward_row2\">MIB_IPFORWARD_ROW2</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/ns-netioapi-mib_ipforward_table2\">MIB_IPFORWARD_TABLE2</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-notifyroutechange2\">NotifyRouteChange2</a>\n\n\n\n<a href=\"/windows/desktop/api/netioapi/nf-netioapi-setipforwardentry2\">SetIpForwardEntry2</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "is_addr_unspecified",
+   "file": "dlls/iphlpapi/iphlpapi_main.c",
+   "start_line": 4809,
+   "end_line": 4814,
+   "static": true,
+   "called_from": [
+    "GetBestRoute2"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL is_addr_unspecified( const SOCKADDR_INET *addr, BOOL v6 )",
+   "code": "static BOOL is_addr_unspecified( const SOCKADDR_INET *addr, BOOL v6 )\n{\n    if (v6 && IN6_IS_ADDR_UNSPECIFIED(&addr->Ipv6.sin6_addr)) return TRUE;\n    if (!v6 && !addr->Ipv4.sin_addr.s_addr) return TRUE;\n    return FALSE;\n}"
+  },
+  {
+   "name": "find_first_matching_unicast_addr",
+   "file": "dlls/iphlpapi/iphlpapi_main.c",
+   "start_line": 4778,
+   "end_line": 4807,
+   "static": true,
+   "called_from": [
+    "GetBestRoute2"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static MIB_UNICASTIPADDRESS_ROW *find_first_matching_unicast_addr( MIB_UNICASTIPADDRESS_TABLE *uni, BOOL v6, const SOCKADDR_INET *src, const SOCKADDR_INET *dst, NET_IFINDEX if_index )",
+   "code": "static MIB_UNICASTIPADDRESS_ROW *find_first_matching_unicast_addr( MIB_UNICASTIPADDRESS_TABLE *uni, BOOL v6,\n                                                                   const SOCKADDR_INET *src, const SOCKADDR_INET *dst,\n                                                                   NET_IFINDEX if_index )\n{\n    unsigned int i;\n\n    for (i = 0; i < uni->NumEntries; ++i)\n    {\n        if (if_index && uni->Table[i].InterfaceIndex != if_index) continue;\n        if (src)\n        {\n            if (v6)\n            {\n                if (src->Ipv6.sin6_scope_id && IN6_IS_ADDR_LINKLOCAL(&src->Ipv6.sin6_addr)\n                    && src->Ipv6.sin6_scope_id != uni->Table[i].InterfaceIndex) continue;\n                if (memcmp( &src->Ipv6.sin6_addr, &uni->Table[i].Address.Ipv6.sin6_addr, sizeof(src->Ipv6.sin6_addr) ))\n                    continue;\n            }\n            else if (src->Ipv4.sin_addr.s_addr != uni->Table[i].Address.Ipv4.sin_addr.s_addr) continue;\n        }\n        if (v6 && dst)\n        {\n            if (IN6_IS_ADDR_LINKLOCAL(&dst->Ipv6.sin6_addr)\n                != IN6_IS_ADDR_LINKLOCAL(&uni->Table[i].Address.Ipv6.sin6_addr))\n                continue;\n        }\n        return &uni->Table[i];\n    }\n    return NULL;\n}"
+  },
+  {
+   "name": "match_ip_address_with_prefix",
+   "file": "dlls/iphlpapi/iphlpapi_main.c",
+   "start_line": 4751,
+   "end_line": 4776,
+   "static": true,
+   "called_from": [
+    "GetBestRoute2"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static BOOL match_ip_address_with_prefix( const SOCKADDR_INET *addr, const IP_ADDRESS_PREFIX *pfx )",
+   "code": "static BOOL match_ip_address_with_prefix( const SOCKADDR_INET *addr, const IP_ADDRESS_PREFIX *pfx )\n{\n    const BYTE *p1, *p2;\n    unsigned int len;\n    BYTE mask;\n\n    if (addr->si_family != pfx->Prefix.si_family) return FALSE;\n    if (!(len = pfx->PrefixLength)) return TRUE;\n\n    if (addr->si_family == AF_INET6)\n    {\n        if (len > 128) return FALSE;\n        p1 = (const BYTE *)&addr->Ipv6.sin6_addr;\n        p2 = (const BYTE *)&pfx->Prefix.Ipv6.sin6_addr;\n    }\n    else\n    {\n        if (len > 32) return FALSE;\n        p1 = (const BYTE *)&addr->Ipv4.sin_addr;\n        p2 = (const BYTE *)&pfx->Prefix.Ipv4.sin_addr;\n    }\n    if (memcmp( p1, p2, len / 8 )) return FALSE;\n    mask = 0xffu << (8 - (len % 8));\n    if (!mask) return TRUE;\n    return (p1[len / 8] & mask) == (p2[len / 8] & mask);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 45,
+    "end_line": 45,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(iphlpapi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "FreeMibTable",
+    "impl": [
+     "dlls/iphlpapi/iphlpapi_main.c:511"
+    ]
+   },
+   {
+    "name": "GetIpForwardTable2",
+    "impl": [
+     "dlls/iphlpapi/iphlpapi_main.c:2280"
+    ]
+   },
+   {
+    "name": "GetUnicastIpAddressTable",
+    "impl": [
+     "dlls/iphlpapi/iphlpapi_main.c:3797"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "WSACleanup",
+    "module": "ws2_32",
+    "impl": [
+     "dlls/ws2_32/socket.c:778"
+    ]
+   },
+   {
+    "name": "WSAGetLastError",
+    "module": "ws2_32",
+    "impl": [
+     "dlls/ws2_32/socket.c:801"
+    ]
+   },
+   {
+    "name": "WSAStartup",
+    "module": "ws2_32",
+    "impl": [
+     "dlls/ws2_32/socket.c:743"
+    ]
+   },
+   {
+    "name": "closesocket",
+    "module": "ws2_32",
+    "impl": [
+     "dlls/ws2_32/socket.c:1346"
+    ]
+   },
+   {
+    "name": "connect",
+    "module": "ws2_32",
+    "impl": [
+     "dlls/ws2_32/socket.c:1370"
+    ]
+   },
+   {
+    "name": "getsockname",
+    "module": "ws2_32",
+    "impl": [
+     "dlls/ws2_32/socket.c:1698"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   },
+   {
+    "name": "socket",
+    "module": "ws2_32",
+    "impl": [
+     "dlls/ws2_32/socket.c:3806"
+    ]
+   }
+  ],
+  "header_inline": [
+   "IN6_IS_ADDR_LINKLOCAL",
+   "IN6_IS_ADDR_LOOPBACK",
+   "IN6_IS_ADDR_UNSPECIFIED",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "iphlpapi.GetBestRoute2",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "IP Helper",
+   "header": "netioapi.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 178,
+   "body": 174,
+   "code": 110
+  },
+  "cyclomatic": 62,
+  "return_type": "DWORD",
+  "n_params": 7,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/iphlpapi/tests/iphlpapi.c::test_best_routes"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/netioapi/nf-netioapi-getbestroute2",
+   "source": "win32",
+   "description": "Retrieves the IP route entry on the local computer for the best route to the specified destination IP address.",
+   "min_windows": "Windows Vista [desktop apps \\| UWP apps]",
+   "documented_dll": "Iphlpapi.dll"
+  },
+  "exports": [
+   "iphlpapi.GetBestRoute2"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.946,
+   "first_date": "2003-05-13",
+   "median_date": "2025-09-19",
+   "last_date": "2025-09-19",
+   "code_lines": 112
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "winhttp.WinHttpCrackUrl",
+  "share_after_cutoff": 0.946,
+  "last_date": "2025-09-19"
+ }
+}

@@ -1,0 +1,175 @@
+{
+ "id": "0191",
+ "function": {
+  "name": "SetupGetIntField",
+  "export_name": "SetupGetIntField",
+  "module": "setupapi",
+  "source_module": "setupapi",
+  "exported_by": [
+   "setupapi"
+  ],
+  "side": "PE",
+  "file": "dlls/setupapi/parser.c",
+  "start_line": 1754,
+  "end_line": 1784,
+  "body_lines": 28,
+  "signature": "BOOL WINAPI SetupGetIntField( PINFCONTEXT context, DWORD index, PINT result )",
+  "header_comment": "/***********************************************************************\n *\t\tSetupGetIntField    (SETUPAPI.@)\n */",
+  "code": "BOOL WINAPI SetupGetIntField( PINFCONTEXT context, DWORD index, PINT result )\n{\n    char localbuff[20];\n    char *end, *buffer = localbuff;\n    DWORD required;\n    INT res;\n    BOOL ret;\n\n    if (!(ret = SetupGetStringFieldA( context, index, localbuff, sizeof(localbuff), &required )))\n    {\n        if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) return FALSE;\n        if (!(buffer = malloc( required ))) return FALSE;\n        if (!(ret = SetupGetStringFieldA( context, index, buffer, required, NULL ))) goto done;\n    }\n    /* The call to SetupGetStringFieldA succeeded. If buffer is empty we have an optional field */\n    if (!*buffer) *result = 0;\n    else\n    {\n        res = strtol( buffer, &end, 0 );\n        if (end != buffer && !*end) *result = res;\n        else\n        {\n            SetLastError( ERROR_INVALID_DATA );\n            ret = FALSE;\n        }\n    }\n\n done:\n    if (buffer != localbuff) free( buffer );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <limits.h>",
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winerror.h\"",
+   "#include \"setupapi.h\"",
+   "#include \"setupapi_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "setupapi!SetupGetIntField [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/setupapi/tests/parser.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "setupapi",
+   "path": "sdk-api-src/content/setupapi/nf-setupapi-setupgetintfield.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/setupapi/nf-setupapi-setupgetintfield",
+   "documented_name": "setupgetintfield",
+   "file": "docs/0191_sdk-api_nf-setupapi-setupgetintfield.md",
+   "text": "---\nUID: NF:setupapi.SetupGetIntField\ntitle: SetupGetIntField function (setupapi.h)\ndescription: The SetupGetIntField function retrieves an integer value from the specified field of a line in an INF file.\nhelpviewer_keywords: [\"SetupGetIntField\",\"SetupGetIntField function [Setup API]\",\"_setupapi_setupgetintfield\",\"setup.setupgetintfield\",\"setupapi/SetupGetIntField\"]\nold-location: setup\\setupgetintfield.htm\ntech.root: setup\nms.assetid: 4c77052a-46ef-4154-82c0-5ec447861bcf\nms.date: 12/05/2018\nms.keywords: SetupGetIntField, SetupGetIntField function [Setup API], _setupapi_setupgetintfield, setup.setupgetintfield, setupapi/SetupGetIntField\nreq.header: setupapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Setupapi.lib\nreq.dll: Setupapi.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SetupGetIntField\n - setupapi/SetupGetIntField\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Setupapi.dll\n - Ext-MS-Win-SetupAPI-Inf-L1-1-1.dll\napi_name:\n - SetupGetIntField\nreq.apiset: ext-ms-win-setupapi-inf-l1-1-1 (introduced in Windows 10, version 10.0.14393)\n---\n\n# SetupGetIntField function\n\n\n## -description\n\n<p class=\"CCE_Message\">[This function is available for use in the operating systems indicated in the Requirements section. It may be altered or unavailable in subsequent versions.   SetupAPI should no longer be used for installing applications. Instead, use the Windows Installer for developing application installers. SetupAPI continues to be used for installing device drivers.]\n\nThe \n<b>SetupGetIntField</b> function retrieves an integer value from the specified field of a line in an INF file.\n\n## -parameters\n\n### -param Context [in]\n\nPointer to the context for a line in an INF file.\n\n### -param FieldIndex [in]\n\nThe 1-based index of the field within the specified line from which the integer should be retrieved. \n\n\n\n\nA <i>FieldIndex</i> of 0 can be used to retrieve an integer key (For example, consider the following INF line, 431 = 1, 2, 4. The value 431 would be put into the variable pointed at by <i>IntegerValue</i> if \n<b>SetupGetIntField</b> was called with a <i>FieldIndex</i> of 0).\n\n### -param IntegerValue [out]\n\nPointer to a variable that receives the integer. If the field is not an integer, the function fails and a call to \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> returns ERROR_INVALID_DATA.\n\n## -returns\n\nIf the function succeeds, the return value is a nonzero value.\n\nIf the function fails, the return value is zero. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nThe integer field may start with a positive (+) or negative (-) sign. It will be interpreted as a decimal number, unless  prefixed in the file with 0x or 0X, in which case it is hexadecimal.\n\n## -see-also\n\n<a href=\"/windows/desktop/SetupApi/functions\">Functions</a>\n\n\n\n<a href=\"/windows/desktop/SetupApi/overview\">Overview</a>\n\n\n\n<a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupgetbinaryfield\">SetupGetBinaryField</a>\n\n\n\n<a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupgetmultiszfielda\">SetupGetMultiSzField</a>\n\n\n\n<a href=\"/windows/desktop/api/setupapi/nf-setupapi-setupgetstringfielda\">SetupGetStringField</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "SetupGetStringFieldA",
+    "impl": [
+     "dlls/setupapi/parser.c:1692"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "strtol",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:980"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetLastError",
+   "SetLastError"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "setupapi.SetupGetIntField",
+  "category": {
+   "l1": "Application installation and servicing",
+   "l2": "Setup API",
+   "header": "setupapi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 31,
+   "body": 30,
+   "code": 19
+  },
+  "cyclomatic": 9,
+  "return_type": "BOOL",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/setupapi/tests/parser.c::test_SetupGetIntField"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/setupapi/nf-setupapi-setupgetintfield",
+   "source": "win32",
+   "description": "The SetupGetIntField function retrieves an integer value from the specified field of a line in an INF file.",
+   "min_windows": "Windows XP [desktop apps only]",
+   "documented_dll": "Setupapi.dll"
+  },
+  "exports": [
+   "setupapi.SetupGetIntField",
+   "updspapi.UpdSpGetIntField"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2002-04-02",
+   "median_date": "2004-01-05",
+   "last_date": "2023-05-25",
+   "code_lines": 20,
+   "pair": "setupapi.SetupDuplicateDiskSpaceListW",
+   "rank": 1,
+   "distance": 0.103
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "setupapi.SetupDuplicateDiskSpaceListW",
+  "share_after_cutoff": 0.0,
+  "last_date": "2023-05-25",
+  "partner_rank": 1,
+  "distance": 0.103
+ }
+}

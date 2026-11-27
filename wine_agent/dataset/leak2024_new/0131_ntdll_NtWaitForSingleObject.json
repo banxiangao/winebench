@@ -1,0 +1,480 @@
+{
+ "id": "0131",
+ "function": {
+  "name": "NtWaitForSingleObject",
+  "export_name": "NtWaitForSingleObject",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll",
+   "ntoskrnl.exe"
+  ],
+  "side": "unix",
+  "file": "dlls/ntdll/unix/sync.c",
+  "start_line": 2347,
+  "end_line": 2367,
+  "body_lines": 18,
+  "signature": "NTSTATUS WINAPI NtWaitForSingleObject( HANDLE handle, BOOLEAN alertable, const LARGE_INTEGER *timeout )",
+  "header_comment": "/******************************************************************\n *\t\tNtWaitForSingleObject (NTDLL.@)\n */",
+  "code": "NTSTATUS WINAPI NtWaitForSingleObject( HANDLE handle, BOOLEAN alertable, const LARGE_INTEGER *timeout )\n{\n    union select_op select_op;\n    UINT flags = SELECT_INTERRUPTIBLE;\n    unsigned int ret;\n\n    TRACE( \"handle %p, alertable %u, timeout %s\\n\", handle, alertable, debugstr_timeout(timeout) );\n\n    if ((ret = inproc_wait( 1, &handle, WaitAny, alertable, timeout )) != STATUS_NOT_IMPLEMENTED)\n    {\n        TRACE( \"-> %#x\\n\", ret );\n        return ret;\n    }\n\n    if (alertable) flags |= SELECT_ALERTABLE;\n    select_op.wait.op = SELECT_WAIT;\n    select_op.wait.handles[0] = wine_server_obj_handle( handle );\n    ret = server_wait( &select_op, offsetof( union select_op, wait.handles[1] ), flags, timeout );\n    TRACE( \"-> %#x\\n\", ret );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"config.h\"",
+   "#include <assert.h>",
+   "#include <errno.h>",
+   "#include <fcntl.h>",
+   "#include <inttypes.h>",
+   "#include <limits.h>",
+   "#include <signal.h>",
+   "#include <sys/types.h>",
+   "#include <sys/ioctl.h>",
+   "#include <sys/mman.h>",
+   "#include <sys/syscall.h>",
+   "#include <sys/time.h>",
+   "#include <poll.h>",
+   "#include <unistd.h>",
+   "# include <sched.h>",
+   "# include <sys/resource.h>",
+   "#include <string.h>",
+   "#include <stdarg.h>",
+   "#include <stdint.h>",
+   "#include <stdio.h>",
+   "#include <stdlib.h>",
+   "#include <time.h>",
+   "# include <mach/mach_time.h>",
+   "# include <sys/event.h>",
+   "# include <linux/ntsync.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ddk/wdm.h\"",
+   "#include \"wine/server.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"unix_private.h\"",
+   "#include <linux/futex.h>",
+   "#include <AvailabilityMacros.h>",
+   "#include <os/os_sync_wait_on_address.h>"
+  ],
+  "resolution": [
+   "ntdll!NtWaitForSingleObject [stdcall -syscall=0x0004]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntdll/tests/exception.c",
+   "dlls/ntdll/tests/reg.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 3
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winternl",
+   "path": "sdk-api-src/content/winternl/nf-winternl-ntwaitforsingleobject.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winternl/nf-winternl-ntwaitforsingleobject",
+   "documented_name": "ntwaitforsingleobject",
+   "file": "docs/0131_sdk-api_nf-winternl-ntwaitforsingleobject.md",
+   "text": "---\nUID: NF:winternl.NtWaitForSingleObject\ntitle: NtWaitForSingleObject function (winternl.h)\ndescription: Deprecated. Waits until the specified object attains a state of signaled. NtWaitForSingleObject is superseded by WaitForSingleObject.\nhelpviewer_keywords: [\"NtWaitForSingleObject\",\"FALSE\",\"NtWaitForSingleObject\",\"NtWaitForSingleObject function [Windows API]\",\"TRUE\",\"winprog.ntwaitforsingleobject\",\"winternl/NtWaitForSingleObject\",\"winui.ntwaitforsingleobject\"]\nold-location: winprog\\ntwaitforsingleobject.htm\ntech.root: winprog\nms.assetid: VS|winui|~\\winui\\windowsuserinterface\\lowlevelclientsupport\\misc\\ntwaitforsingleobject.htm\nms.date: 12/05/2018\nms.keywords: \"'NtWaitForSingleObject, FALSE, NtWaitForSingleObject, NtWaitForSingleObject function [Windows API], TRUE, winprog.ntwaitforsingleobject, winternl/NtWaitForSingleObject, winui.ntwaitforsingleobject\"\nreq.header: winternl.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: ntdll.lib\nreq.dll: ntdll.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - NtWaitForSingleObject\n - winternl/NtWaitForSingleObject\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Ntdll.dll\napi_name:\n - NtWaitForSingleObject\n---\n\n# NtWaitForSingleObject function\n\n\n## -description\n\nDeprecated. Waits until the specified object attains a state of\n    <code>signaled</code>. <b>NtWaitForSingleObject</b> is superseded by <a href=\"/windows/desktop/api/synchapi/nf-synchapi-waitforsingleobject\">WaitForSingleObject</a>.\n\n## -parameters\n\n### -param Handle [in]\n\nThe handle to the wait object.\n\n### -param Alertable [in]\n\nSpecifies whether an alert can be delivered when the object is waiting.\n\n\n\n#### TRUE\n\nThe alert can be delivered.\n\n\n\n#### FALSE\n\nThe alert cannot be delivered.\n\n### -param Timeout [in]\n\nA pointer to an absolute or relative time over\n        which the wait is to occur. Can be null. If a timeout is specified, and\n    the object has not attained a state of <code>signaled</code> when the timeout\n    expires, then the wait is automatically satisfied.  If an explicit\n    timeout value of zero is specified, then no wait occurs if the\n    wait cannot be satisfied immediately.\n\n## -returns\n\nThe wait completion status. The various NTSTATUS values are defined in NTSTATUS.H, which is distributed with the Windows DDK.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_SUCCESS</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe specified\n    object satisfied the wait. \n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_TIMEOUT</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA\n    timeout occurred.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_ALERTED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe\n    wait was aborted to deliver an alert to the current thread.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>STATUS_USER_APC</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe wait was aborted to deliver a user <a href=\"/windows/desktop/Sync/asynchronous-procedure-calls\">Asynchronous Procedure Call (APC)</a> to the current thread.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nBecause there is no import library for this function, you must use <a href=\"/windows/desktop/api/libloaderapi/nf-libloaderapi-getprocaddress\">GetProcAddress</a>."
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "debugstr_timeout",
+   "file": "dlls/ntdll/unix/sync.c",
+   "start_line": 80,
+   "end_line": 85,
+   "static": true,
+   "called_from": [
+    "NtWaitForSingleObject"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/sync.c:2320",
+    "dlls/ntdll/unix/sync.c:2380",
+    "dlls/ntdll/unix/sync.c:2684",
+    "dlls/ntdll/unix/sync.c:2705",
+    "dlls/ntdll/unix/sync.c:3591"
+   ],
+   "signature": "static const char *debugstr_timeout( const LARGE_INTEGER *timeout )",
+   "code": "static const char *debugstr_timeout( const LARGE_INTEGER *timeout )\n{\n    if (!timeout) return \"(infinite)\";\n    return wine_dbg_sprintf( \"%lld.%07ld\", (long long)(timeout->QuadPart / TICKSPERSEC),\n                             (long)(timeout->QuadPart % TICKSPERSEC) );\n}"
+  },
+  {
+   "name": "inproc_wait",
+   "file": "dlls/ntdll/unix/sync.c",
+   "start_line": 899,
+   "end_line": 925,
+   "static": true,
+   "called_from": [
+    "NtWaitForSingleObject"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/sync.c:2329"
+   ],
+   "signature": "static NTSTATUS inproc_wait( DWORD count, const HANDLE *handles, WAIT_TYPE type, BOOLEAN alertable, const LARGE_INTEGER *timeout )",
+   "code": "static NTSTATUS inproc_wait( DWORD count, const HANDLE *handles, WAIT_TYPE type,\n                             BOOLEAN alertable, const LARGE_INTEGER *timeout )\n{\n    struct inproc_sync *syncs[64], stack[ARRAY_SIZE(syncs)];\n    int objs[ARRAY_SIZE(syncs)], alert_fd = 0;\n    NTSTATUS ret;\n\n    if (inproc_device_fd < 0) return STATUS_NOT_IMPLEMENTED;\n\n    assert( count <= ARRAY_SIZE(syncs) );\n    objs[0] = -1;  /* make gcc happy, otherwise it thinks objs is not initialized */\n    for (int i = 0; i < count; ++i)\n    {\n        if ((ret = get_inproc_sync( handles[i], INPROC_SYNC_UNKNOWN, SYNCHRONIZE, &stack[i], &syncs[i] )))\n        {\n            while (i--) release_inproc_sync( syncs[i] );\n            return ret;\n        }\n        objs[i] = syncs[i]->fd;\n    }\n\n    if (alertable) alert_fd = get_inproc_alert_fd();\n    ret = linux_wait_objs( inproc_device_fd, count, objs, type, alert_fd, timeout );\n\n    while (count--) release_inproc_sync( syncs[count] );\n    return ret;\n}"
+  },
+  {
+   "name": "get_inproc_sync",
+   "file": "dlls/ntdll/unix/sync.c",
+   "start_line": 692,
+   "end_line": 738,
+   "static": true,
+   "called_from": [
+    "inproc_wait"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/sync.c:782",
+    "dlls/ntdll/unix/sync.c:794",
+    "dlls/ntdll/unix/sync.c:806",
+    "dlls/ntdll/unix/sync.c:818",
+    "dlls/ntdll/unix/sync.c:830"
+   ],
+   "signature": "static NTSTATUS get_inproc_sync( HANDLE handle, enum inproc_sync_type desired_type, ACCESS_MASK desired_access, struct inproc_sync *stack, struct inproc_sync **out )",
+   "code": "static NTSTATUS get_inproc_sync( HANDLE handle, enum inproc_sync_type desired_type, ACCESS_MASK desired_access,\n                                 struct inproc_sync *stack, struct inproc_sync **out )\n{\n    struct inproc_sync *sync;\n    sigset_t sigset;\n    NTSTATUS ret;\n\n    /* try to find it in the cache already */\n    if ((sync = get_cached_inproc_sync( handle ))) ret = STATUS_SUCCESS;\n    else\n    {\n        /* We need to use fd_cache_mutex here to protect against races with\n         * other threads trying to receive fds for the fd cache,\n         * and we need to use an uninterrupted section to prevent reentrancy.\n         * We also need fd_cache_mutex to protect against the same race with\n         * NtClose, that is, to prevent the object from being cached again between\n         * close_inproc_sync() and close_handle.\n         *\n         * The mutex also protects cache_inproc_sync(). Accessing the cache is\n         * done without a lock, but populating it currently is not. */\n        server_enter_uninterrupted_section( &fd_cache_mutex, &sigset );\n        if (!(sync = get_cached_inproc_sync( handle )))\n        {\n            if ((ret = get_server_inproc_sync( handle, stack )))\n            {\n                server_leave_uninterrupted_section( &fd_cache_mutex, &sigset );\n                return ret;\n            }\n            sync = cache_inproc_sync( handle, stack );\n        }\n        server_leave_uninterrupted_section( &fd_cache_mutex, &sigset );\n    }\n\n    if (desired_type != INPROC_SYNC_UNKNOWN && desired_type != sync->type)\n    {\n        release_inproc_sync( sync );\n        return STATUS_OBJECT_TYPE_MISMATCH;\n    }\n    if ((sync->access & desired_access) != desired_access)\n    {\n        release_inproc_sync( sync );\n        return STATUS_ACCESS_DENIED;\n    }\n\n    *out = sync;\n    return STATUS_SUCCESS;\n}"
+  },
+  {
+   "name": "release_inproc_sync",
+   "file": "dlls/ntdll/unix/sync.c",
+   "start_line": 629,
+   "end_line": 638,
+   "static": true,
+   "called_from": [
+    "get_cached_inproc_sync",
+    "get_inproc_sync",
+    "inproc_wait"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/sync.c:771",
+    "dlls/ntdll/unix/sync.c:772",
+    "dlls/ntdll/unix/sync.c:784",
+    "dlls/ntdll/unix/sync.c:796",
+    "dlls/ntdll/unix/sync.c:808"
+   ],
+   "signature": "static void release_inproc_sync( struct inproc_sync *sync )",
+   "code": "static void release_inproc_sync( struct inproc_sync *sync )\n{\n    /* save the fd now; as soon as the refcount hits 0 we cannot\n     * access the cache anymore */\n    int fd = sync->fd;\n    LONG ref = InterlockedDecrement( &sync->refcount );\n\n    assert( ref >= 0 );\n    if (!ref) close( fd );\n}"
+  },
+  {
+   "name": "get_inproc_alert_fd",
+   "file": "dlls/ntdll/unix/sync.c",
+   "start_line": 872,
+   "end_line": 897,
+   "static": true,
+   "called_from": [
+    "inproc_wait"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/sync.c:951"
+   ],
+   "signature": "static int get_inproc_alert_fd(void)",
+   "code": "static int get_inproc_alert_fd(void)\n{\n    struct thread_data *data = get_thread_data();\n    obj_handle_t token;\n    sigset_t sigset;\n    int fd;\n\n    if ((fd = data->alert_fd) < 0)\n    {\n        server_enter_uninterrupted_section( &fd_cache_mutex, &sigset );\n\n        SERVER_START_REQ( get_inproc_alert_fd )\n        {\n            if (!server_call_unlocked( req ))\n            {\n                data->alert_fd = fd = wine_server_receive_fd( &token );\n                assert( token == reply->handle );\n            }\n        }\n        SERVER_END_REQ;\n\n        server_leave_uninterrupted_section( &fd_cache_mutex, &sigset );\n    }\n\n    return fd;\n}"
+  },
+  {
+   "name": "linux_wait_objs",
+   "file": "dlls/ntdll/unix/sync.c",
+   "start_line": 494,
+   "end_line": 498,
+   "static": true,
+   "called_from": [
+    "inproc_wait"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/sync.c:399",
+    "dlls/ntdll/unix/sync.c:952"
+   ],
+   "signature": "static NTSTATUS linux_wait_objs( int device, DWORD count, const int *objs, WAIT_TYPE type, int alert_fd, const LARGE_INTEGER *timeout )",
+   "code": "static NTSTATUS linux_wait_objs( int device, DWORD count, const int *objs, WAIT_TYPE type,\n                                 int alert_fd, const LARGE_INTEGER *timeout )\n{\n    return STATUS_NOT_IMPLEMENTED;\n}"
+  },
+  {
+   "name": "get_cached_inproc_sync",
+   "file": "dlls/ntdll/unix/sync.c",
+   "start_line": 640,
+   "end_line": 664,
+   "static": true,
+   "called_from": [
+    "get_inproc_sync"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/sync.c:767"
+   ],
+   "signature": "static struct inproc_sync *get_cached_inproc_sync( HANDLE handle )",
+   "code": "static struct inproc_sync *get_cached_inproc_sync( HANDLE handle )\n{\n    unsigned int entry, idx = inproc_sync_handle_to_index( handle, &entry );\n    struct inproc_sync *cache;\n\n    if (entry >= INPROC_SYNC_CACHE_ENTRIES || !inproc_sync_cache[entry]) return NULL;\n\n    cache = &inproc_sync_cache[entry][idx];\n\n    /* this load needs acquire semantics [paired with the store in\n     * cache_inproc_sync()] */\n    if (!interlocked_inc_if_nonzero( &cache->refcount )) return NULL;\n\n    if (cache->closed)\n    {\n        /* The object is still being used, but \"handle\" has been closed. The\n         * handle value might have been reused for another object in the\n         * meantime, in which case we have to report that valid object, so\n         * force the caller to check the server. */\n        release_inproc_sync( cache );\n        return NULL;\n    }\n\n    return cache;\n}"
+  },
+  {
+   "name": "get_server_inproc_sync",
+   "file": "dlls/ntdll/unix/sync.c",
+   "start_line": 667,
+   "end_line": 688,
+   "static": true,
+   "called_from": [
+    "get_inproc_sync"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS get_server_inproc_sync( HANDLE handle, struct inproc_sync *sync )",
+   "code": "static NTSTATUS get_server_inproc_sync( HANDLE handle, struct inproc_sync *sync )\n{\n    NTSTATUS ret;\n\n    SERVER_START_REQ( get_inproc_sync_fd )\n    {\n        req->handle = wine_server_obj_handle( handle );\n        if (!(ret = wine_server_call( req )))\n        {\n            obj_handle_t fd_handle;\n            sync->refcount = 1;\n            sync->fd = wine_server_receive_fd( &fd_handle );\n            assert( wine_server_ptr_handle(fd_handle) == handle );\n            sync->access = reply->access;\n            sync->type = reply->type;\n            sync->closed = 0;\n        }\n    }\n    SERVER_END_REQ;\n\n    return ret;\n}"
+  },
+  {
+   "name": "cache_inproc_sync",
+   "file": "dlls/ntdll/unix/sync.c",
+   "start_line": 563,
+   "end_line": 615,
+   "static": true,
+   "called_from": [
+    "get_inproc_sync"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static struct inproc_sync *cache_inproc_sync( HANDLE handle, struct inproc_sync *sync )",
+   "code": "static struct inproc_sync *cache_inproc_sync( HANDLE handle, struct inproc_sync *sync )\n{\n    unsigned int entry, idx = inproc_sync_handle_to_index( handle, &entry );\n    struct inproc_sync *cache;\n    int refcount;\n\n    /* don't cache pseudo-handles; waiting on them is pointless anyway */\n    if (is_pseudo_handle( handle )) return sync;\n\n    if (entry >= INPROC_SYNC_CACHE_ENTRIES)\n    {\n        FIXME( \"too many allocated handles, not caching %p\\n\", handle );\n        return sync;\n    }\n\n    if (!inproc_sync_cache[entry])  /* do we need to allocate a new block of entries? */\n    {\n        if (!entry) inproc_sync_cache[0] = inproc_sync_cache_initial_block;\n        else\n        {\n            static const size_t size = INPROC_SYNC_CACHE_BLOCK_SIZE * sizeof(struct inproc_sync);\n            void *ptr = anon_mmap_alloc( size, PROT_READ | PROT_WRITE );\n            if (ptr == MAP_FAILED) return sync;\n            inproc_sync_cache[entry] = ptr;\n        }\n    }\n\n    cache = &inproc_sync_cache[entry][idx];\n\n    if (InterlockedCompareExchange( &cache->refcount, 0, 0 ))\n    {\n        /* The handle is currently being used for another object (i.e. it was\n         * closed and then reused, but some thread is waiting on the old handle\n         * or otherwise simultaneously using the old object). We can't cache\n         * this object until the old one is completely destroyed. */\n        return sync;\n    }\n\n    cache->fd = sync->fd;\n    cache->access = sync->access;\n    cache->type = sync->type;\n    cache->closed = sync->closed;\n    /* Make sure we set the other members before the refcount; this store needs\n     * release semantics [paired with the load in get_cached_inproc_sync()].\n     * Set the refcount to 2 (one for the handle, one for the caller). */\n    refcount = InterlockedExchange( &cache->refcount, 2 );\n    assert( !refcount );\n\n    assert( sync->refcount == 1 );\n    memset( sync, 0, sizeof(*sync) );\n\n    return cache;\n}"
+  },
+  {
+   "name": "inproc_sync_handle_to_index",
+   "file": "dlls/ntdll/unix/sync.c",
+   "start_line": 551,
+   "end_line": 556,
+   "static": true,
+   "called_from": [
+    "cache_inproc_sync",
+    "get_cached_inproc_sync"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static inline unsigned int inproc_sync_handle_to_index( HANDLE handle, unsigned int *entry )",
+   "code": "static inline unsigned int inproc_sync_handle_to_index( HANDLE handle, unsigned int *entry )\n{\n    unsigned int idx = (wine_server_obj_handle(handle) >> 2) - 1;\n    *entry = idx / INPROC_SYNC_CACHE_BLOCK_SIZE;\n    return idx % INPROC_SYNC_CACHE_BLOCK_SIZE;\n}"
+  },
+  {
+   "name": "interlocked_inc_if_nonzero",
+   "file": "dlls/ntdll/unix/sync.c",
+   "start_line": 618,
+   "end_line": 627,
+   "static": true,
+   "called_from": [
+    "get_cached_inproc_sync"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static inline LONG interlocked_inc_if_nonzero( LONG *dest )",
+   "code": "static inline LONG interlocked_inc_if_nonzero( LONG *dest )\n{\n    LONG val, tmp;\n    for (val = *dest;; val = tmp)\n    {\n        if (!val || (tmp = InterlockedCompareExchange( dest, val + 1, val )) == val)\n            break;\n    }\n    return val;\n}"
+  },
+  {
+   "name": "is_pseudo_handle",
+   "file": "dlls/ntdll/unix/sync.c",
+   "start_line": 558,
+   "end_line": 561,
+   "static": true,
+   "called_from": [
+    "cache_inproc_sync"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/unix/sync.c:2326"
+   ],
+   "signature": "static BOOL is_pseudo_handle( HANDLE handle )",
+   "code": "static BOOL is_pseudo_handle( HANDLE handle )\n{\n    return ((ULONG)(ULONG_PTR)handle >= 0xfffffffa);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "inproc_sync",
+    "kind": "struct_decl",
+    "start_line": 536,
+    "end_line": 543,
+    "code": "struct inproc_sync\n{\n    LONG           refcount;  /* reference count of the sync object */\n    int            fd;        /* unix file descriptor */\n    unsigned int   access;    /* handle access rights */\n    unsigned short type;      /* enum inproc_sync_type as short to save space */\n    unsigned short closed;    /* fd has been closed but sync is still referenced */\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 75,
+    "end_line": 75,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(sync);"
+   },
+   {
+    "name": "inproc_device_fd",
+    "type": "int",
+    "static": false,
+    "start_line": 78,
+    "end_line": 78,
+    "code": "int inproc_device_fd = -1;"
+   },
+   {
+    "name": "inproc_sync_cache",
+    "type": "struct inproc_sync *[128]",
+    "static": true,
+    "start_line": 548,
+    "end_line": 548,
+    "code": "static struct inproc_sync *inproc_sync_cache[INPROC_SYNC_CACHE_ENTRIES];"
+   },
+   {
+    "name": "inproc_sync_cache_initial_block",
+    "type": "struct inproc_sync[4096]",
+    "static": true,
+    "start_line": 549,
+    "end_line": 549,
+    "code": "static struct inproc_sync inproc_sync_cache_initial_block[INPROC_SYNC_CACHE_BLOCK_SIZE];"
+   }
+  ],
+  "macros": [
+   {
+    "name": "INPROC_SYNC_CACHE_BLOCK_SIZE",
+    "start_line": 545,
+    "end_line": 545,
+    "code": "#define INPROC_SYNC_CACHE_BLOCK_SIZE  (65536 / sizeof(struct inproc_sync))"
+   },
+   {
+    "name": "INPROC_SYNC_CACHE_ENTRIES",
+    "start_line": 546,
+    "end_line": 546,
+    "code": "#define INPROC_SYNC_CACHE_ENTRIES     128"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "anon_mmap_alloc",
+    "file": "dlls/ntdll/unix/virtual.c",
+    "start_line": 276
+   },
+   {
+    "name": "server_call_unlocked",
+    "file": "dlls/ntdll/unix/server.c",
+    "start_line": 285
+   },
+   {
+    "name": "server_enter_uninterrupted_section",
+    "file": "dlls/ntdll/unix/server.c",
+    "start_line": 327
+   },
+   {
+    "name": "server_leave_uninterrupted_section",
+    "file": "dlls/ntdll/unix/server.c",
+    "start_line": 337
+   },
+   {
+    "name": "server_wait",
+    "file": "dlls/ntdll/unix/server.c",
+    "start_line": 795
+   },
+   {
+    "name": "wine_server_receive_fd",
+    "file": "dlls/ntdll/unix/server.c",
+    "start_line": 988
+   }
+  ],
+  "same_module_exports": [
+   {
+    "name": "memset",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   },
+   {
+    "name": "wine_server_call",
+    "impl": [
+     "dlls/ntdll/loader.c:3436"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "_InterlockedCompareExchange",
+   "_InterlockedDecrement",
+   "_InterlockedExchange",
+   "wine_dbg_log",
+   "wine_dbg_sprintf",
+   "wine_server_obj_handle",
+   "wine_server_ptr_handle"
+  ],
+  "system": [
+   "__assert_fail",
+   "close"
+  ],
+  "unresolved": [
+   "get_thread_data"
+  ],
+  "server_requests": [
+   {
+    "request": "get_inproc_alert_fd",
+    "handler": "server/thread.c:2378"
+   },
+   {
+    "request": "get_inproc_sync_fd",
+    "handler": "server/inproc_sync.c:277"
+   }
+  ],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ntdll.NtWaitForSingleObject",
+  "category": {
+   "l1": "System services",
+   "l2": "Synchronization",
+   "header": "winternl.h",
+   "textbook": "Process control",
+   "basis": "name_rule"
+  },
+  "loc": {
+   "total": 21,
+   "body": 20,
+   "code": 13
+  },
+  "cyclomatic": 3,
+  "return_type": "NTSTATUS",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 3,
+   "n_tests": 4,
+   "n_tests_other": 1,
+   "own_test_functions": [
+    "dlls/ntdll/tests/exception.c::test_instrumentation_callback",
+    "dlls/ntdll/tests/exception.c::test_instrumentation_callback_thread",
+    "dlls/ntdll/tests/reg.c::test_notify"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winternl/nf-winternl-ntwaitforsingleobject",
+   "source": "win32",
+   "description": "Deprecated. Waits until the specified object attains a state of signaled. NtWaitForSingleObject is superseded by WaitForSingleObject.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "ntdll.dll"
+  },
+  "exports": [
+   "ntdll.NtWaitForSingleObject",
+   "ntdll.ZwWaitForSingleObject",
+   "ntoskrnl.exe.NtWaitForSingleObject",
+   "ntoskrnl.exe.ZwWaitForSingleObject"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.929,
+   "first_date": "2020-06-04",
+   "median_date": "2025-11-06",
+   "last_date": "2025-11-06",
+   "code_lines": 14
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "ntdll.NtOpenSection",
+  "share_after_cutoff": 0.929,
+  "last_date": "2025-11-06"
+ }
+}

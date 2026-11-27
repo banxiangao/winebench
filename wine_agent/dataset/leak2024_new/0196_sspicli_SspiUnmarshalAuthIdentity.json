@@ -1,0 +1,173 @@
+{
+ "id": "0196",
+ "function": {
+  "name": "SspiUnmarshalAuthIdentity",
+  "export_name": "SspiUnmarshalAuthIdentity",
+  "module": "sspicli",
+  "source_module": "sspicli",
+  "exported_by": [
+   "secur32",
+   "sspicli"
+  ],
+  "side": "PE",
+  "file": "dlls/sspicli/main.c",
+  "start_line": 419,
+  "end_line": 496,
+  "body_lines": 75,
+  "signature": "SECURITY_STATUS SEC_ENTRY SspiUnmarshalAuthIdentity( ULONG len, char *byte_array, PSEC_WINNT_AUTH_IDENTITY_OPAQUE *opaque_id )",
+  "header_comment": "/***********************************************************************\n *\t\tSspiUnmarshalAuthIdentity\n */",
+  "code": "SECURITY_STATUS SEC_ENTRY SspiUnmarshalAuthIdentity(\n        ULONG len, char *byte_array, PSEC_WINNT_AUTH_IDENTITY_OPAQUE *opaque_id )\n{\n    struct auth_identity_marshalled *marshalled = (struct auth_identity_marshalled *)byte_array;\n\n    TRACE( \"%lu %p %p\\n\", len, byte_array, opaque_id );\n\n    if (len < sizeof(*marshalled)) return SEC_E_INVALID_TOKEN;\n\n    if (marshalled->version == SEC_WINNT_AUTH_IDENTITY_VERSION)\n    {\n        SEC_WINNT_AUTH_IDENTITY_EXW *ret;\n        ULONG size, char_size;\n        BYTE *data;\n\n        if (marshalled->length != sizeof(*marshalled)) return SEC_E_INVALID_TOKEN;\n\n        char_size = marshalled->flags & SEC_WINNT_AUTH_IDENTITY_ANSI ? sizeof(char) : sizeof(WCHAR);\n        size = marshalled->user_len + marshalled->domain_len +\n            marshalled->password_len + marshalled->package_list_len;\n        size = sizeof(*ret) + size * char_size;\n        ret = LocalAlloc( LMEM_FIXED, size );\n        if (!ret) return SEC_E_INSUFFICIENT_MEMORY;\n        memset( ret, 0, size );\n\n        data = (BYTE *)(ret + 1);\n        ret->Version = SEC_WINNT_AUTH_IDENTITY_VERSION;\n        ret->Length = sizeof(*ret);\n        if (marshalled->user_off)\n        {\n            ret->User = (WCHAR *)data;\n            memcpy( data, (BYTE *)marshalled + marshalled->user_off, marshalled->user_len * char_size );\n            data += marshalled->user_len * char_size;\n        }\n        ret->UserLength = marshalled->user_len;\n        if (marshalled->domain_off)\n        {\n            ret->Domain = (WCHAR *)data;\n            memcpy( data, (BYTE *)marshalled + marshalled->domain_off, marshalled->domain_len * char_size );\n            data += marshalled->domain_len * char_size;\n        }\n        ret->DomainLength = marshalled->domain_len;\n        if (marshalled->password_off)\n        {\n            ret->Password = (WCHAR *)data;\n            memcpy( data, (BYTE *)marshalled + marshalled->password_off, marshalled->password_len * char_size );\n            data += marshalled->password_len * char_size;\n        }\n        ret->PasswordLength = marshalled->password_len;\n        ret->Flags = marshalled->flags | SEC_WINNT_AUTH_IDENTITY_MARSHALLED;\n        if (marshalled->package_list_off)\n        {\n            ret->PackageList = (WCHAR *)data;\n            memcpy( data, (BYTE *)marshalled + marshalled->package_list_off,\n                    marshalled->package_list_len * char_size );\n            data += marshalled->package_list_len * char_size;\n        }\n        ret->PackageListLength = marshalled->package_list_len;\n\n        *opaque_id = ret;\n        return SEC_E_OK;\n    }\n    else if (marshalled->version == SEC_WINNT_AUTH_IDENTITY_VERSION_2)\n    {\n        SEC_WINNT_AUTH_IDENTITY_EX2 *id, *ret;\n\n        id = (SEC_WINNT_AUTH_IDENTITY_EX2 *)marshalled;\n        if (id->cbStructureLength > len) return SEC_E_INVALID_TOKEN;\n        ret = LocalAlloc( LMEM_FIXED, sizeof(*ret) );\n        if (!ret) return SEC_E_INSUFFICIENT_MEMORY;\n        memcpy( ret, id, id->cbStructureLength );\n\n        *opaque_id = ret;\n        return SEC_E_OK;\n    }\n\n    return SEC_E_INVALID_TOKEN;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"rpc.h\"",
+   "#include \"sspi.h\"",
+   "#include \"wincred.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "secur32!SspiUnmarshalAuthIdentity [stdcall] -> forward sspicli.SspiUnmarshalAuthIdentity",
+   "sspicli!SspiUnmarshalAuthIdentity [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/secur32/tests/secur32.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "sspi",
+   "path": "sdk-api-src/content/sspi/nf-sspi-sspiunmarshalauthidentity.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/sspi/nf-sspi-sspiunmarshalauthidentity",
+   "documented_name": "sspiunmarshalauthidentity",
+   "file": "docs/0196_sdk-api_nf-sspi-sspiunmarshalauthidentity.md",
+   "text": "---\nUID: NF:sspi.SspiUnmarshalAuthIdentity\ntitle: SspiUnmarshalAuthIdentity function (sspi.h)\ndescription: Deserializes the specified array of byte values into an identity structure.\nhelpviewer_keywords: [\"SspiUnmarshalAuthIdentity\",\"SspiUnmarshalAuthIdentity function [Security]\",\"security.sspiunmarshalauthidentity\",\"sspi/SspiUnmarshalAuthIdentity\"]\nold-location: security\\sspiunmarshalauthidentity.htm\ntech.root: security\nms.assetid: 89798b37-808a-4174-8362-a2dc4ee1b460\nms.date: 12/05/2018\nms.keywords: SspiUnmarshalAuthIdentity, SspiUnmarshalAuthIdentity function [Security], security.sspiunmarshalauthidentity, sspi/SspiUnmarshalAuthIdentity\nreq.header: sspi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 7 [desktop apps only]\nreq.target-min-winversvr: Windows Server 2008 R2 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Secur32.lib\nreq.dll: SspiCli.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SspiUnmarshalAuthIdentity\n - sspi/SspiUnmarshalAuthIdentity\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - SspiCli.dll\n - secur32.dll\napi_name:\n - SspiUnmarshalAuthIdentity\n---\n\n# SspiUnmarshalAuthIdentity function\n\n\n## -description\n\nDeserializes the specified array of byte values into an identity structure.\n\n## -parameters\n\n### -param AuthIdentityLength [in]\n\nThe size, in bytes, of the <i>AuthIdentityByteArray</i> array.\n\n### -param AuthIdentityByteArray [in]\n\nThe array of byte values to deserialize.\n\n### -param ppAuthIdentity [out]\n\nThe deserialized identity structure.\n\n## -returns\n\nIf the function succeeds, it returns <b>SEC_E_OK</b>.\n\nIf the function fails, it returns a nonzero error code.\n\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "auth_identity_marshalled",
+    "kind": "struct_decl",
+    "start_line": 32,
+    "end_line": 45,
+    "code": "struct auth_identity_marshalled\n{\n    ULONG version;\n    ULONG length;\n    ULONG user_off;\n    ULONG user_len;\n    ULONG domain_off;\n    ULONG domain_len;\n    ULONG password_off;\n    ULONG password_len;\n    ULONG flags;\n    ULONG package_list_off;\n    ULONG package_list_len;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 30,
+    "end_line": 30,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(sspicli);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "LocalAlloc",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/memory.c:1047"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "sspicli.SspiUnmarshalAuthIdentity",
+  "category": {
+   "l1": "Security and identity",
+   "l2": "Authentication",
+   "header": "sspi.h",
+   "textbook": "Protection",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 78,
+   "body": 76,
+   "code": 52
+  },
+  "cyclomatic": 13,
+  "return_type": "SECURITY_STATUS SEC_ENTRY",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/secur32/tests/secur32.c::test_SspiMarshalAuthIdentity"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/sspi/nf-sspi-sspiunmarshalauthidentity",
+   "source": "win32",
+   "description": "Deserializes the specified array of byte values into an identity structure.",
+   "min_windows": "Windows 7 [desktop apps only]",
+   "documented_dll": "SspiCli.dll"
+  },
+  "exports": [
+   "secur32.SspiUnmarshalAuthIdentity",
+   "sspicli.SspiUnmarshalAuthIdentity"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 1.0,
+   "first_date": "2026-08-08",
+   "median_date": "2026-08-08",
+   "last_date": "2026-08-08",
+   "code_lines": 52
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "crypt32.CertAddEnhancedKeyUsageIdentifier",
+  "share_after_cutoff": 1.0,
+  "last_date": "2026-08-08"
+ }
+}

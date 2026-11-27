@@ -1,0 +1,189 @@
+{
+ "id": "0103",
+ "function": {
+  "name": "DeriveCapabilitySidsFromName",
+  "export_name": "DeriveCapabilitySidsFromName",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/security.c",
+  "start_line": 1523,
+  "end_line": 1564,
+  "body_lines": 39,
+  "signature": "BOOL WINAPI DeriveCapabilitySidsFromName( const WCHAR *cap_name, PSID **cap_group_sids, DWORD *cap_group_sid_count, PSID **cap_sids, DWORD *cap_sid_count )",
+  "header_comment": "/******************************************************************************\n * DeriveCapabilitySidsFromName    (kernelbase.@)\n */",
+  "code": "BOOL WINAPI DeriveCapabilitySidsFromName( const WCHAR *cap_name, PSID **cap_group_sids, DWORD *cap_group_sid_count,\n                                          PSID **cap_sids, DWORD *cap_sid_count )\n{\n    NTSTATUS status = STATUS_NO_MEMORY;\n    UNICODE_STRING name_us;\n    DWORD size;\n\n    TRACE( \"cap_name %s, cap_group_sids %p, cap_group_sid_count %p, cap_sids %p, cap_sid_count %p.\\n\",\n           debugstr_w(cap_name), cap_group_sids, cap_group_sid_count, cap_sids, cap_sid_count );\n\n    *cap_group_sid_count = 1;\n    *cap_sid_count = 1;\n    *cap_group_sids = NULL;\n    *cap_sids = NULL;\n\n    if (!(*cap_group_sids = RtlAllocateHeap( GetProcessHeap(), 0, *cap_group_sid_count * sizeof(**cap_group_sids) )))\n        goto done;\n    if (!(*cap_sids = RtlAllocateHeap( GetProcessHeap(), 0, *cap_sid_count * sizeof(**cap_sids) )))\n        goto done;\n\n    /* There is no obvious way to query returned subauthority count for RtlDeriveCapabilitySidsFromName,\n     * so let's reserve a bit more. */\n    size = RtlLengthRequiredSid( 16 );\n    if (!(**cap_group_sids = RtlAllocateHeap( GetProcessHeap(), 0, size ))) goto done;\n    if (!(**cap_sids = RtlAllocateHeap( GetProcessHeap(), 0, size ))) goto done;\n    RtlInitUnicodeString( &name_us, cap_name );\n    status = RtlDeriveCapabilitySidsFromName( &name_us, **cap_group_sids, **cap_sids );\n\ndone:\n    if (!status) return TRUE;\n    if (*cap_group_sids)\n    {\n        RtlFreeHeap( GetProcessHeap(), 0, **cap_group_sids );\n        RtlFreeHeap( GetProcessHeap(), 0, *cap_group_sids );\n    }\n    if (*cap_sids)\n    {\n        RtlFreeHeap( GetProcessHeap(), 0, **cap_sids );\n        RtlFreeHeap( GetProcessHeap(), 0, *cap_sids );\n    }\n    return set_ntstatus( status );\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernelbase!DeriveCapabilitySidsFromName [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernelbase/tests/security.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "securitybaseapi",
+   "path": "sdk-api-src/content/securitybaseapi/nf-securitybaseapi-derivecapabilitysidsfromname.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-derivecapabilitysidsfromname",
+   "documented_name": "derivecapabilitysidsfromname",
+   "file": "docs/0103_sdk-api_nf-securitybaseapi-derivecapabilitysidsfromname.md",
+   "text": "---\nUID: NF:securitybaseapi.DeriveCapabilitySidsFromName\ntitle: DeriveCapabilitySidsFromName function (securitybaseapi.h)\ndescription: This function constructs two arrays of SIDs out of a capability name. One is an array group SID with NT Authority, and the other is an array of capability SIDs with AppAuthority.\nhelpviewer_keywords: [\"DeriveCapabilitySidsFromName\",\"DeriveCapabilitySidsFromName function [Security]\",\"security.derivecapabilitysidsfromname\",\"securitybaseapi/DeriveCapabilitySidsFromName\"]\nold-location: security\\derivecapabilitysidsfromname.htm\ntech.root: security\nms.assetid: 1A911FCC-6D11-4185-B532-20FE6C7C4B0B\nms.date: 03/20/2025\nms.keywords: DeriveCapabilitySidsFromName, DeriveCapabilitySidsFromName function [Security], security.derivecapabilitysidsfromname, securitybaseapi/DeriveCapabilitySidsFromName\nreq.header: securitybaseapi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: OneCoreUAP.lib\nreq.dll: KernelBase.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - DeriveCapabilitySidsFromName\n - securitybaseapi/DeriveCapabilitySidsFromName\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-security-base-l1-2-2.dll\n - KernelBase.dll\napi_name:\n - DeriveCapabilitySidsFromName\n---\n\n# DeriveCapabilitySidsFromName function\n\n\n## -description\n\nThis function constructs two arrays of SIDs out of a capability name. One is an array group SID with NT Authority, and the other is an array of capability SIDs with AppAuthority.\n\n## -parameters\n\n### -param CapName [in]\n\nName of the capability in string form.\n\n### -param CapabilityGroupSids [out]\n\nThe GroupSids with NTAuthority.\n\n### -param CapabilityGroupSidCount [out]\n\nThe count of GroupSids in the array.\n\n### -param CapabilitySids [out]\n\nCapabilitySids with AppAuthority.\n\n### -param CapabilitySidCount [out]\n\nThe count of CapabilitySid with AppAuthority.\n\n## -returns\n\nIf the function succeeds, it returns **TRUE**.\n\nIf the function fails, it returns **FALSE**. To get extended error information, call [GetLastError](/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror).\n\n## -remarks\n\nThe caller is expected to free the individual SIDs returned in each array by calling `LocalFree`, as well as memory allocated for the array itself.\n\nThe SID computed for the application capability of legacy capabilities (published prior to Win10) will be the same as the published SIDs but the SID for the service group capability SID will be hash based."
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(security);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetProcessHeap",
+    "impl": [
+     "dlls/kernelbase/process.c:910"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "RtlAllocateHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "RtlDeriveCapabilitySidsFromName",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/sec.c:1916"
+    ]
+   },
+   {
+    "name": "RtlFreeHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "RtlInitUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:173"
+    ]
+   },
+   {
+    "name": "RtlLengthRequiredSid",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/sec.c:286"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_w",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "set_ntstatus"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "kernelbase.DeriveCapabilitySidsFromName",
+  "category": {
+   "l1": "Security and identity",
+   "l2": "Authorization",
+   "header": "securitybaseapi.h",
+   "textbook": "Protection",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 42,
+   "body": 40,
+   "code": 27
+  },
+  "cyclomatic": 8,
+  "return_type": "BOOL",
+  "n_params": 5,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/kernelbase/tests/security.c::test_DeriveCapabilitySidsFromName"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-derivecapabilitysidsfromname",
+   "source": "win32",
+   "description": "This function constructs two arrays of SIDs out of a capability name. One is an array group SID with NT Authority, and the other is an array of capability SIDs with AppAuthority.",
+   "min_windows": "Windows XP [desktop apps \\| UWP apps]",
+   "documented_dll": "KernelBase.dll"
+  },
+  "exports": [
+   "kernelbase.DeriveCapabilitySidsFromName"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.92,
+   "first_date": "2019-06-25",
+   "median_date": "2025-02-24",
+   "last_date": "2025-02-24",
+   "code_lines": 25
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "kernelbase.EqualDomainSid",
+  "share_after_cutoff": 0.92,
+  "last_date": "2025-02-24"
+ }
+}

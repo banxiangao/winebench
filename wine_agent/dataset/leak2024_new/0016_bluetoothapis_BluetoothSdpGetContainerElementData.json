@@ -1,0 +1,296 @@
+{
+ "id": "0016",
+ "function": {
+  "name": "BluetoothSdpGetContainerElementData",
+  "export_name": "BluetoothSdpGetContainerElementData",
+  "module": "bluetoothapis",
+  "source_module": "bluetoothapis",
+  "exported_by": [
+   "bluetoothapis",
+   "bthprops.cpl",
+   "irprops.cpl"
+  ],
+  "side": "PE",
+  "file": "dlls/bluetoothapis/sdp.c",
+  "start_line": 263,
+  "end_line": 315,
+  "body_lines": 50,
+  "signature": "DWORD WINAPI BluetoothSdpGetContainerElementData( BYTE *stream, ULONG stream_size, HBLUETOOTH_CONTAINER_ELEMENT *handle, SDP_ELEMENT_DATA *data )",
+  "header_comment": "/*********************************************************************\n *  BluetoothSdpGetContainerElementData\n */",
+  "code": "DWORD WINAPI BluetoothSdpGetContainerElementData( BYTE *stream, ULONG stream_size,\n                                                  HBLUETOOTH_CONTAINER_ELEMENT *handle,\n                                                  SDP_ELEMENT_DATA *data )\n{\n    BYTE *cursor;\n    DWORD result;\n    SIZE_T read = 0;\n\n    TRACE( \"(%p, %lu, %p, %p)\\n\", stream, stream_size, handle, data );\n\n    if (stream == NULL || stream_size < sizeof( BYTE ) || handle == NULL || data == NULL)\n        return ERROR_INVALID_PARAMETER;\n\n    cursor = (BYTE *)(*handle);\n\n    if (cursor == NULL)\n    {\n        BYTE header, type, size_desc;\n        UINT32 elems_size = 0;\n        SIZE_T read = 0;\n\n        header = *stream;\n        type = data_elem_type( header );\n        size_desc = data_elem_size_desc( header );\n\n        if (type != SDP_TYPE_SEQUENCE && type != SDP_TYPE_ALTERNATIVE)\n            return ERROR_INVALID_PARAMETER;\n        if (!(size_desc >= SDP_SIZE_DESC_NEXT_UINT8 && size_desc <= SDP_SIZE_DESC_NEXT_UINT32))\n            return ERROR_INVALID_PARAMETER;\n\n        stream++;\n        if (!sdp_elem_read_var_size( stream, stream_size, &read, size_desc, &elems_size ))\n            return ERROR_INVALID_PARAMETER;\n\n        stream += read;\n        stream_size -= read;\n    }\n    else\n    {\n        if (cursor < stream) return ERROR_INVALID_PARAMETER;\n        if (cursor == (stream + stream_size)) return ERROR_NO_MORE_ITEMS;\n\n        stream = cursor;\n        stream_size = stream_size - (cursor - stream);\n    }\n    result = sdp_read_element_data( stream, stream_size, data, &read );\n    if (result != ERROR_SUCCESS) return result;\n\n    stream += read;\n    TRACE( \"handle=%p\\n\", stream );\n    *handle = stream;\n    return ERROR_SUCCESS;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <windef.h>",
+   "#include <winbase.h>",
+   "#include <winternl.h>",
+   "#include \"wine/debug.h\"",
+   "#include \"bthsdpdef.h\"",
+   "#include \"bluetoothapis.h\""
+  ],
+  "resolution": [
+   "bluetoothapis!BluetoothSdpGetContainerElementData [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/bluetoothapis/tests/sdp.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "bluetoothapis",
+   "path": "sdk-api-src/content/bluetoothapis/nf-bluetoothapis-bluetoothsdpgetcontainerelementdata.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothsdpgetcontainerelementdata",
+   "documented_name": "bluetoothsdpgetcontainerelementdata",
+   "file": "docs/0016_sdk-api_nf-bluetoothapis-bluetoothsdpgetcontainerelementdata.md",
+   "text": "---\nUID: NF:bluetoothapis.BluetoothSdpGetContainerElementData\ntitle: BluetoothSdpGetContainerElementData function (bluetoothapis.h)\ndescription: Iterates a container stream and returns each element contained within the container element.\nhelpviewer_keywords: [\"BluetoothSdpGetContainerElementData\",\"BluetoothSdpGetContainerElementData function [Bluetooth]\",\"bluetooth.bluetoothsdpgetcontainerelementdata\",\"bluetoothapis/BluetoothSdpGetContainerElementData\"]\nold-location: bluetooth\\bluetoothsdpgetcontainerelementdata.htm\ntech.root: bluetooth\nms.assetid: 7dbf44f6-8a80-419e-9db7-60ada9ca9647\nms.date: 12/05/2018\nms.keywords: BluetoothSdpGetContainerElementData, BluetoothSdpGetContainerElementData function [Bluetooth], bluetooth.bluetoothsdpgetcontainerelementdata, bluetoothapis/BluetoothSdpGetContainerElementData\nreq.header: bluetoothapis.h\nreq.include-header: Bthsdpdef.h, BluetoothAPIs.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista, Windows XP with SP2 [desktop apps only]\nreq.target-min-winversvr: None supported\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Bthprops.lib\nreq.dll: bthprops.cpl\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - BluetoothSdpGetContainerElementData\n - bluetoothapis/BluetoothSdpGetContainerElementData\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - bthprops.cpl\n - BluetoothAPIs.dll\n - Ext-MS-Win-Bluetooth-APIs-l1-1-0.dll\napi_name:\n - BluetoothSdpGetContainerElementData\n---\n\n# BluetoothSdpGetContainerElementData function\n\n\n## -description\n\nThe <b>BluetoothSdpGetContainerElementData</b> function iterates a container stream and returns each element contained within the container element.\n\n## -parameters\n\n### -param pContainerStream [in]\n\nA pointer to valid SDP stream. The first element in the stream must be a sequence\nor an alternative.\n\n### -param cbContainerLength [in]\n\nThe size, in bytes, of the <i>pContainerStream</i> parameter.\n\n### -param pElement [in, out]\n\nA value used to track the  location in the stream.  The first\n          time the <b>BluetoothSdpGetContainerElementData</b> function is called for a  container, *<i>pElement</i> should be <b>NULL</b>.  For subsequent calls, the value should be\nunmodified.\n\n### -param pData [out]\n\nA pointer to a buffer filled with data from  the\ncurrent SDP element of <i>pContainerStream</i>.\n\n## -returns\n\nReturns <b>ERROR_SUCCESS</b> upon success, indicating that the <i>pData</i> parameter contains the data. Returns error codes upon failure. The following table describes common error codes associated with the <b>BluetoothSdpGetContainerElementData</b> function:\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_NO_MORE_ITEMS</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThere are no more items in the list. The caller should stop calling\nthe <a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothsdpgetcontainerelementdata\">BluetoothSdpGetContainerElementData</a> function for this container.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nA required pointer is <b>NULL</b>, or the container is not a valid SDP\nstream.\n\n</td>\n</tr>\n</table>\n\n## -see-also\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothsdpenumattributes\">BluetoothSdpEnumAttributes</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothsdpgetelementdata\">BluetoothSdpGetElementData</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothsdpgetstring\">BluetoothSdpGetString</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/ns-bluetoothapis-sdp_element_data\">SDP_ELEMENT_DATA</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/ns-bluetoothapis-sdp_string_type_data\">SDP_STRING_TYPE_DATA</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "data_elem_type",
+   "file": "dlls/bluetoothapis/sdp.c",
+   "start_line": 52,
+   "end_line": 52,
+   "static": true,
+   "called_from": [
+    "BluetoothSdpGetContainerElementData",
+    "sdp_read_element_data"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BYTE data_elem_type( BYTE elem ) { return (elem & 0xf8) >> 3; } static BYTE data_elem_size_desc( BYTE elem ) { return elem & 0x7; }  #define SDP_ELEMENT_IS_UINT16( d ) ( (d)->type == SDP_TYPE_UINT && (d)->specificType == SDP_ST_UINT16 ) #define SDP_ELEMENT_IS_ATTRID( d ) SDP_ELEMENT_IS_UINT16((d))  /* Read the data element's size/length as described by the size descriptor, starting from stream. Only * valid for SDP_SIZE_DESC_NEXT_* types. */ static BOOL sdp_elem_read_var_size( BYTE *stream, ULONG stream_size, SIZE_T *read, BYTE size_desc, UINT32 *size )",
+   "code": "static BYTE data_elem_type( BYTE elem ) { return (elem & 0xf8) >> 3; }"
+  },
+  {
+   "name": "data_elem_size_desc",
+   "file": "dlls/bluetoothapis/sdp.c",
+   "start_line": 53,
+   "end_line": 53,
+   "static": true,
+   "called_from": [
+    "BluetoothSdpGetContainerElementData",
+    "sdp_read_element_data"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BYTE data_elem_size_desc( BYTE elem ) { return elem & 0x7; }  #define SDP_ELEMENT_IS_UINT16( d ) ( (d)->type == SDP_TYPE_UINT && (d)->specificType == SDP_ST_UINT16 ) #define SDP_ELEMENT_IS_ATTRID( d ) SDP_ELEMENT_IS_UINT16((d))  /* Read the data element's size/length as described by the size descriptor, starting from stream. Only * valid for SDP_SIZE_DESC_NEXT_* types. */ static BOOL sdp_elem_read_var_size( BYTE *stream, ULONG stream_size, SIZE_T *read, BYTE size_desc, UINT32 *size )",
+   "code": "static BYTE data_elem_size_desc( BYTE elem ) { return elem & 0x7; }"
+  },
+  {
+   "name": "sdp_elem_read_var_size",
+   "file": "dlls/bluetoothapis/sdp.c",
+   "start_line": 60,
+   "end_line": 83,
+   "static": true,
+   "called_from": [
+    "BluetoothSdpGetContainerElementData",
+    "sdp_read_element_data"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL sdp_elem_read_var_size( BYTE *stream, ULONG stream_size, SIZE_T *read, BYTE size_desc, UINT32 *size )",
+   "code": "static BOOL sdp_elem_read_var_size( BYTE *stream, ULONG stream_size, SIZE_T *read, BYTE size_desc,\n                                    UINT32 *size )\n{\n    switch (size_desc)\n    {\n    case SDP_SIZE_DESC_NEXT_UINT8:\n        if (stream_size < sizeof( UINT8 )) return FALSE;\n        *size = *stream;\n        *read += sizeof( UINT8 );\n        return TRUE;\n    case SDP_SIZE_DESC_NEXT_UINT16:\n        if (stream_size < sizeof( UINT16 )) return FALSE;\n        *size = BTH_READ_UINT16( stream );\n        *read += sizeof( UINT16 );\n        return TRUE;\n    case SDP_SIZE_DESC_NEXT_UINT32:\n        if (stream_size < sizeof( UINT32 )) return FALSE;\n        *size = BTH_READ_UINT32( stream );\n        *read += sizeof( UINT32 );\n        return TRUE;\n    default:\n        return FALSE;\n    }\n}"
+  },
+  {
+   "name": "sdp_read_element_data",
+   "file": "dlls/bluetoothapis/sdp.c",
+   "start_line": 154,
+   "end_line": 243,
+   "static": true,
+   "called_from": [
+    "BluetoothSdpGetContainerElementData"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/bluetoothapis/sdp.c:257"
+   ],
+   "signature": "static DWORD sdp_read_element_data( BYTE *stream, ULONG stream_size, SDP_ELEMENT_DATA *data, SIZE_T *read )",
+   "code": "static DWORD sdp_read_element_data( BYTE *stream, ULONG stream_size, SDP_ELEMENT_DATA *data,\n                                    SIZE_T *read )\n{\n    BYTE type, size_desc, elem;\n    SDP_SPECIFICTYPE st;\n\n    if (stream_size < sizeof( BYTE )) return ERROR_INVALID_PARAMETER;\n\n    elem = *stream;\n    type = data_elem_type( elem );\n    size_desc = data_elem_size_desc( elem );\n\n    stream += sizeof( BYTE );\n    *read += sizeof( BYTE );\n    stream_size -= sizeof( BYTE );\n\n    memset( data, 0, sizeof( *data ) );\n    switch (type)\n    {\n    case SDP_TYPE_NIL:\n        if (size_desc != 0) return ERROR_INVALID_PARAMETER;\n\n        data->type = type;\n        data->specificType = SDP_ST_NONE;\n        break;\n    case SDP_TYPE_UINT:\n    case SDP_TYPE_INT:\n    case SDP_TYPE_UUID:\n        if (size_desc > SDP_SIZE_DESC_16_BYTES) return ERROR_INVALID_PARAMETER;\n\n        st = SDP_BASIC_TYPES[type][size_desc];\n        if (st == SDP_ST_NONE) return ERROR_INVALID_PARAMETER;\n\n        if (!sdp_read_specific_type( stream, stream_size, st, data, read ))\n            return ERROR_INVALID_PARAMETER;\n\n        data->type = type;\n        data->specificType = st;\n        break;\n    case SDP_TYPE_BOOLEAN:\n        if (size_desc != SDP_SIZE_DESC_1_BYTE) return ERROR_INVALID_PARAMETER;\n        if (stream_size < sizeof( BYTE )) return ERROR_INVALID_PARAMETER;\n\n        data->type = type;\n        data->specificType = SDP_ST_NONE;\n        data->data.booleanVal = *stream;\n        *read += sizeof( BYTE );\n        break;\n    case SDP_TYPE_STRING:\n    case SDP_TYPE_URL:\n    case SDP_TYPE_SEQUENCE:\n    case SDP_TYPE_ALTERNATIVE:\n    {\n        UINT32 elems_size;\n        SIZE_T size_read = 0;\n\n        if (!(size_desc >= SDP_SIZE_DESC_NEXT_UINT8 && size_desc <= SDP_SIZE_DESC_NEXT_UINT32))\n            return ERROR_INVALID_PARAMETER;\n        if (!sdp_elem_read_var_size( stream, stream_size, &size_read, size_desc, &elems_size ))\n            return ERROR_INVALID_PARAMETER;\n\n        stream_size -= size_read;\n        if (type == SDP_TYPE_STRING || type == SDP_TYPE_URL)\n            stream += size_read;\n\n        if (stream_size < elems_size) return ERROR_INVALID_PARAMETER;\n\n        data->type = type;\n        data->specificType = SDP_ST_NONE;\n        if (type == SDP_TYPE_STRING || type == SDP_TYPE_URL)\n        {\n            data->data.string.value = stream;\n            data->data.string.length = elems_size;\n        }\n        else\n        {\n            /* For sequence and alternative containers, the stream should begin at the container\n             * header. */\n            data->data.sequence.value = stream - sizeof( BYTE );\n            data->data.sequence.length = elems_size + *read + size_read;\n        }\n        *read += size_read + elems_size;\n        break;\n    }\n    default:\n        return ERROR_INVALID_PARAMETER;\n    }\n\n    return ERROR_SUCCESS;\n}"
+  },
+  {
+   "name": "sdp_read_specific_type",
+   "file": "dlls/bluetoothapis/sdp.c",
+   "start_line": 110,
+   "end_line": 152,
+   "static": true,
+   "called_from": [
+    "sdp_read_element_data"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL sdp_read_specific_type( BYTE *stream, ULONG stream_size, SDP_SPECIFICTYPE st, SDP_ELEMENT_DATA *data, SIZE_T *read )",
+   "code": "static BOOL sdp_read_specific_type( BYTE *stream, ULONG stream_size, SDP_SPECIFICTYPE st,\n                                    SDP_ELEMENT_DATA *data, SIZE_T *read )\n{\n    switch (st)\n    {\n    case SDP_ST_UINT8:\n    case SDP_ST_INT8:\n        if (stream_size < sizeof( UINT8 )) return FALSE;\n        data->data.uint8 = *stream;\n        *read += sizeof( UINT8 );\n        break;\n    case SDP_ST_UINT16:\n    case SDP_ST_INT16:\n    case SDP_ST_UUID16:\n        if (stream_size < sizeof( UINT16 )) return FALSE;\n        data->data.uint16 = BTH_READ_UINT16( stream );\n        *read += sizeof( UINT16 );\n        break;\n    case SDP_ST_UINT32:\n    case SDP_ST_INT32:\n        if (stream_size < sizeof( UINT32 )) return FALSE;\n        data->data.uint32 = BTH_READ_UINT32( stream );\n        *read += sizeof( UINT32 );\n        break;\n    case SDP_ST_UINT64:\n    case SDP_ST_INT64:\n        if (stream_size < sizeof( UINT64 )) return FALSE;\n        data->data.uint64 = BTH_READ_UINT64( stream );\n        *read += sizeof( UINT64 );\n        break;\n    case SDP_ST_UINT128:\n    case SDP_ST_INT128:\n    case SDP_ST_UUID128:\n        if (stream_size < sizeof( SDP_ULARGE_INTEGER_16 )) return FALSE;\n        bth_read_uint128( stream, &data->data.uint128 );\n        *read += sizeof( SDP_ULARGE_INTEGER_16 );\n        break;\n    default:\n        return FALSE;\n    }\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "bth_read_uint128",
+   "file": "dlls/bluetoothapis/sdp.c",
+   "start_line": 46,
+   "end_line": 50,
+   "static": true,
+   "called_from": [
+    "sdp_read_specific_type"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static void bth_read_uint128( BYTE *s, SDP_ULARGE_INTEGER_16 *v )",
+   "code": "static void bth_read_uint128( BYTE *s, SDP_ULARGE_INTEGER_16 *v )\n{\n    v->HighPart = BTH_READ_UINT64( s );\n    v->LowPart = BTH_READ_UINT64( s + 8 );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "SDP_BASIC_TYPES",
+    "type": "const SDP_SPECIFICTYPE[4][5]",
+    "static": true,
+    "start_line": 85,
+    "end_line": 108,
+    "code": "const static SDP_SPECIFICTYPE SDP_BASIC_TYPES[4][5] = {\n    [SDP_TYPE_UINT] =\n        {\n            [SDP_SIZE_DESC_1_BYTE] = SDP_ST_UINT8,\n            [SDP_SIZE_DESC_2_BYTES] = SDP_ST_UINT16,\n            [SDP_SIZE_DESC_4_BYTES] = SDP_ST_UINT32,\n            [SDP_SIZE_DESC_8_BYTES] = SDP_ST_UINT64,\n            [SDP_SIZE_DESC_16_BYTES] = SDP_ST_UINT128,\n        },\n    [SDP_TYPE_INT] =\n        {\n            [SDP_SIZE_DESC_1_BYTE] = SDP_ST_INT8,\n            [SDP_SIZE_DESC_2_BYTES] = SDP_ST_INT16,\n            [SDP_SIZE_DESC_4_BYTES] = SDP_ST_INT32,\n            [SDP_SIZE_DESC_8_BYTES] = SDP_ST_INT64,\n            [SDP_SIZE_DESC_16_BYTES] = SDP_ST_INT128,\n        },\n    [SDP_TYPE_UUID] =\n        {\n            [SDP_SIZE_DESC_2_BYTES] = SDP_ST_UUID16,\n            [SDP_SIZE_DESC_4_BYTES] = SDP_ST_UUID32,\n            [SDP_SIZE_DESC_16_BYTES] = SDP_ST_UUID128,\n        },\n};"
+   },
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 31,
+    "end_line": 31,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL( bluetoothapis );"
+   }
+  ],
+  "macros": [
+   {
+    "name": "BTH_READ_UINT16",
+    "start_line": 33,
+    "end_line": 33,
+    "code": "#define BTH_READ_UINT16( s ) RtlUshortByteSwap( *(USHORT *)(s) )"
+   },
+   {
+    "name": "BTH_READ_UINT32",
+    "start_line": 34,
+    "end_line": 34,
+    "code": "#define BTH_READ_UINT32( s ) RtlUlongByteSwap( *(ULONG *)(s) )"
+   },
+   {
+    "name": "BTH_READ_UINT64",
+    "start_line": 35,
+    "end_line": 35,
+    "code": "#define BTH_READ_UINT64( s ) RtlUlonglongByteSwap( *(ULONGLONG *)(s) )"
+   },
+   {
+    "name": "SDP_SIZE_DESC_16_BYTES",
+    "start_line": 41,
+    "end_line": 41,
+    "code": "#define SDP_SIZE_DESC_16_BYTES 4"
+   },
+   {
+    "name": "SDP_SIZE_DESC_1_BYTE",
+    "start_line": 37,
+    "end_line": 37,
+    "code": "#define SDP_SIZE_DESC_1_BYTE 0"
+   },
+   {
+    "name": "SDP_SIZE_DESC_NEXT_UINT16",
+    "start_line": 43,
+    "end_line": 43,
+    "code": "#define SDP_SIZE_DESC_NEXT_UINT16 6"
+   },
+   {
+    "name": "SDP_SIZE_DESC_NEXT_UINT32",
+    "start_line": 44,
+    "end_line": 44,
+    "code": "#define SDP_SIZE_DESC_NEXT_UINT32 7"
+   },
+   {
+    "name": "SDP_SIZE_DESC_NEXT_UINT8",
+    "start_line": 42,
+    "end_line": 42,
+    "code": "#define SDP_SIZE_DESC_NEXT_UINT8 5"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "RtlUlongByteSwap",
+   "RtlUlonglongByteSwap",
+   "RtlUshortByteSwap",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "bluetoothapis.BluetoothSdpGetContainerElementData",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "Wireless networking",
+   "header": "bluetoothapis.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 53,
+   "body": 50,
+   "code": 34
+  },
+  "cyclomatic": 14,
+  "return_type": "DWORD",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/bluetoothapis/tests/sdp.c::test_BluetoothSdpGetContainerElementData"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothsdpgetcontainerelementdata",
+   "source": "win32",
+   "description": "Iterates a container stream and returns each element contained within the container element.",
+   "min_windows": "Windows Vista, Windows XP with SP2 [desktop apps only]",
+   "documented_dll": "bthprops.cpl"
+  },
+  "exports": [
+   "bluetoothapis.BluetoothSdpGetContainerElementData",
+   "bthprops.cpl.BluetoothSdpGetContainerElementData",
+   "irprops.cpl.BluetoothSdpGetContainerElementData"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 1.0,
+   "first_date": "2024-09-23",
+   "median_date": "2024-09-23",
+   "last_date": "2024-09-23",
+   "code_lines": 36
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "rpcrt4.RpcMgmtWaitServerListen",
+  "share_after_cutoff": 1.0,
+  "last_date": "2024-09-23"
+ }
+}

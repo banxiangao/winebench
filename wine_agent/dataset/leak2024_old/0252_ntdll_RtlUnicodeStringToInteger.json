@@ -1,0 +1,141 @@
+{
+ "id": "0252",
+ "function": {
+  "name": "RtlUnicodeStringToInteger",
+  "export_name": "RtlUnicodeStringToInteger",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll",
+   "ntoskrnl.exe"
+  ],
+  "side": "PE",
+  "file": "dlls/ntdll/rtlstr.c",
+  "start_line": 1437,
+  "end_line": 1513,
+  "body_lines": 74,
+  "signature": "NTSTATUS WINAPI RtlUnicodeStringToInteger( const UNICODE_STRING *str, /* [I] Unicode string to be converted */ ULONG base,                /* [I] Number base for conversion (allowed 0, 2, 8, 10 or 16) */ ULONG *value)              /* [O] Destination for the converted value */",
+  "header_comment": "/**************************************************************************\n *      RtlUnicodeStringToInteger (NTDLL.@)\n *\n * Converts a unicode string into its integer equivalent.\n *\n * RETURNS\n *  Success: STATUS_SUCCESS. value contains the converted number\n *  Failure: STATUS_INVALID_PARAMETER, if base is not 0, 2, 8, 10 or 16.\n *           STATUS_ACCESS_VIOLATION, if value is NULL.\n *\n * NOTES\n *  For base 0 it uses 10 as base and the string should be in the format\n *      \"{whitespace} [+|-] [0[x|o|b]] {digits}\".\n *  For other bases the string should be in the format\n *      \"{whitespace} [+|-] {digits}\".\n *  No check is made for value overflow, only the lower 32 bits are assigned.\n *  If str is NULL it crashes, as the native function does.\n *\n * DIFFERENCES\n *  This function does not read garbage on string length 0 as the native\n *  version does.\n */",
+  "code": "NTSTATUS WINAPI RtlUnicodeStringToInteger(\n    const UNICODE_STRING *str, /* [I] Unicode string to be converted */\n    ULONG base,                /* [I] Number base for conversion (allowed 0, 2, 8, 10 or 16) */\n    ULONG *value)              /* [O] Destination for the converted value */\n{\n    LPWSTR lpwstr = str->Buffer;\n    USHORT CharsRemaining = str->Length / sizeof(WCHAR);\n    WCHAR wchCurrent;\n    int digit;\n    ULONG RunningTotal = 0;\n    BOOL bMinus = FALSE;\n\n    while (CharsRemaining >= 1 && *lpwstr <= ' ') {\n\tlpwstr++;\n\tCharsRemaining--;\n    } /* while */\n\n    if (CharsRemaining >= 1) {\n\tif (*lpwstr == '+') {\n\t    lpwstr++;\n\t    CharsRemaining--;\n\t} else if (*lpwstr == '-') {\n            bMinus = TRUE;\n\t    lpwstr++;\n\t    CharsRemaining--;\n\t} /* if */\n    } /* if */\n\n    if (base == 0) {\n\tbase = 10;\n\tif (CharsRemaining >= 2 && lpwstr[0] == '0') {\n\t    if (lpwstr[1] == 'b') {\n\t\tlpwstr += 2;\n\t\tCharsRemaining -= 2;\n\t\tbase = 2;\n\t    } else if (lpwstr[1] == 'o') {\n\t\tlpwstr += 2;\n\t\tCharsRemaining -= 2;\n\t\tbase = 8;\n\t    } else if (lpwstr[1] == 'x') {\n\t\tlpwstr += 2;\n\t\tCharsRemaining -= 2;\n\t\tbase = 16;\n\t    } /* if */\n\t} /* if */\n    } else if (base != 2 && base != 8 && base != 10 && base != 16) {\n\treturn STATUS_INVALID_PARAMETER;\n    } /* if */\n\n    if (value == NULL) {\n\treturn STATUS_ACCESS_VIOLATION;\n    } /* if */\n\n    while (CharsRemaining >= 1) {\n\twchCurrent = *lpwstr;\n\tif (wchCurrent >= '0' && wchCurrent <= '9') {\n\t    digit = wchCurrent - '0';\n\t} else if (wchCurrent >= 'A' && wchCurrent <= 'Z') {\n\t    digit = wchCurrent - 'A' + 10;\n\t} else if (wchCurrent >= 'a' && wchCurrent <= 'z') {\n\t    digit = wchCurrent - 'a' + 10;\n\t} else {\n\t    digit = -1;\n\t} /* if */\n\tif (digit < 0 || digit >= base) {\n\t    *value = bMinus ? -RunningTotal : RunningTotal;\n\t    return STATUS_SUCCESS;\n\t} /* if */\n\n\tRunningTotal = RunningTotal * base + digit;\n\tlpwstr++;\n\tCharsRemaining--;\n    } /* while */\n\n    *value = bMinus ? -RunningTotal : RunningTotal;\n    return STATUS_SUCCESS;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"winsock2.h\"",
+   "#include \"windef.h\"",
+   "#include \"winnt.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"in6addr.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"ntdll_misc.h\""
+  ],
+  "resolution": [
+   "ntdll!RtlUnicodeStringToInteger [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntdll/tests/rtlstr.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "wdm",
+   "path": "wdk-ddi-src/content/wdm/nf-wdm-rtlunicodestringtointeger.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlunicodestringtointeger",
+   "documented_name": "rtlunicodestringtointeger",
+   "file": "docs/0252_windows-driver-docs-ddi_nf-wdm-rtlunicodestringtointeger.md",
+   "text": "---\nUID: NF:wdm.RtlUnicodeStringToInteger\ntitle: RtlUnicodeStringToInteger function (wdm.h)\ndescription: The RtlUnicodeStringToInteger routine converts a Unicode string representation of a number to the equivalent integer value.\nold-location: kernel\\rtlunicodestringtointeger.htm\ntech.root: kernel\nms.date: 11/09/2021\nkeywords: [\"RtlUnicodeStringToInteger function\"]\nms.keywords: RtlUnicodeStringToInteger, RtlUnicodeStringToInteger routine [Kernel-Mode Driver Architecture], k109_862feacf-64af-4aae-87b5-264ef277ea22.xml, kernel.rtlunicodestringtointeger, wdm/RtlUnicodeStringToInteger\nreq.header: wdm.h\nreq.include-header: Wdm.h, Ntddk.h, Ntifs.h, Wudfwdm.h\nreq.target-type: Universal\nreq.target-min-winverclnt:\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib (kernel mode); Ntdll.lib (user mode)\nreq.dll: NtosKrnl.exe (kernel mode); Ntdll.dll (user mode)\nreq.irql: PASSIVE_LEVEL\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - RtlUnicodeStringToInteger\n - wdm/RtlUnicodeStringToInteger\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\n - Ntdll.dll\napi_name:\n - RtlUnicodeStringToInteger\n---\n\n# RtlUnicodeStringToInteger function\n\n## -description\n\nThe **RtlUnicodeStringToInteger** routine converts a Unicode string representation of a number to the equivalent integer value.\n\n## -parameters\n\n### -param String [in]\n\nA pointer to a [UNICODE_STRING](/windows/win32/api/ntdef/ns-ntdef-_unicode_string) structure that contains the number representation to convert to the equivalent integer value.\n\n### -param Base [in, optional]\n\nA numeric value that indicates the base (or radix) of the number that the Unicode string represents. This parameter value is optional and can be set to zero.\n\nIf *Base* is zero, **RtlUnicodeStringToInteger** checks the prefix of the Unicode string to determine the base of the number:\n\n- If the prefix is \"0x\", **RtlUnicodeStringToInteger** interprets the number in the string as a hexadecimal integer.\n\n- If the prefix is \"0o\", **RtlUnicodeStringToInteger** interprets the number in the string as an octal integer.\n\n- If the prefix is \"0b\", **RtlUnicodeStringToInteger** interprets the number in the string as a binary integer.\n\nIf the Unicode string does not contain any of these prefixes, **RtlUnicodeStringToInteger** treats the string as a base-10 integer.\n\n### -param Value [out]\n\nA pointer to a ULONG variable to which **RtlUnicodeStringToInteger** writes the integer value that results from conversion of the Unicode string.\n\n## -returns\n\nIf the conversion is successful, the **RtlUnicodeStringToInteger** routine returns STATUS_SUCCESS and sets **Value* to the integer value represented by the number in the Unicode string. If the string is not empty, but does not start with a valid number representation, the routine returns STATUS_SUCCESS and sets **Value* to zero. If the string is empty, the routine fails and returns STATUS_INVALID_PARAMETER.\n\n## -remarks\n\nThis routine skips any white space at the start of the input string to find the start of the number.\n\nIf the first non-white space character in the string is a hyphen (-), the integer value written to **Value* is negative; otherwise, if the first character is a \"+\" or there is no sign character, the integer value written to **Value* is positive.\n\n If the string does not contain a valid number, or if the first digit in the string is preceded by a non-white space character other than '+' or '-', the routine sets the output value to zero and returns STATUS_SUCCESS.\n\nA substring that contains one or more valid digits is terminated by any character that is not a valid digit. For example, if *Base* = 2, valid digits are '0' and '1'. If *Base* = 8, valid digits are '0' to '7'. If *Base* = 10, valid digits are '0' to '9'. If *Base* = 16, valid digits are '0' to '9', 'a' to 'f', and 'A' to 'F'.\n\nThe following table contains examples of output values that result from various combinations of input strings and *Base* parameter values.\n\n| Input string | Base | Output value |\n|--|--|--|\n| \"123\" | 10 | 123 |\n| \"-345\" | 10 | -345 |\n| \"xyz\" | 10 | 0 |\n| \"+678abc\" | 10 | 678 |\n| \"+678abc\" | 16 | 6785724 |\n| \"007\" | 10 | 7 |\n| \"789\" | 8 | 7 |\n| \"FGH\" | 16 | 15 |\n| \" \" | 10 | 0 |\n\nA related routine, [RtlIntegerToUnicodeString](./nf-wdm-rtlintegertounicodestring.md), converts an integer value to the equivalent Unicode string representation.\n\n## -see-also\n\n[RtlIntegerToUnicodeString](./nf-wdm-rtlintegertounicodestring.md)\n\n[UNICODE_STRING](/windows/win32/api/ntdef/ns-ntdef-_unicode_string)"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ntdll.RtlUnicodeStringToInteger",
+  "category": {
+   "l1": "System services",
+   "l2": "Run-time library (strings, bitmaps, utilities)",
+   "header": "wdm.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "name_rule"
+  },
+  "loc": {
+   "total": 77,
+   "body": 73,
+   "code": 54
+  },
+  "cyclomatic": 28,
+  "return_type": "NTSTATUS",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ntdll/tests/rtlstr.c::test_RtlUnicodeStringToInteger"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlunicodestringtointeger",
+   "source": "ddi",
+   "description": "The RtlUnicodeStringToInteger routine converts a Unicode string representation of a number to the equivalent integer value.",
+   "min_windows": "",
+   "documented_dll": "NtosKrnl.exe (kernel mode); Ntdll.dll (user mode)"
+  },
+  "exports": [
+   "ntdll.RtlUnicodeStringToInteger",
+   "ntoskrnl.exe.RtlUnicodeStringToInteger"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2002-11-12",
+   "median_date": "2003-02-19",
+   "last_date": "2013-11-01",
+   "code_lines": 53,
+   "pair": "wtsapi32.WTSQuerySessionInformationA",
+   "rank": 1,
+   "distance": 0.3
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "wtsapi32.WTSQuerySessionInformationA",
+  "share_after_cutoff": 0.0,
+  "last_date": "2013-11-01",
+  "partner_rank": 1,
+  "distance": 0.3
+ }
+}

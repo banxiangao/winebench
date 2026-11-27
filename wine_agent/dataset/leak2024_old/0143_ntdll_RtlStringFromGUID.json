@@ -1,0 +1,173 @@
+{
+ "id": "0143",
+ "function": {
+  "name": "RtlStringFromGUID",
+  "export_name": "RtlStringFromGUID",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll",
+   "ntoskrnl.exe"
+  ],
+  "side": "PE",
+  "file": "dlls/ntdll/rtlstr.c",
+  "start_line": 1685,
+  "end_line": 1703,
+  "body_lines": 16,
+  "signature": "NTSTATUS WINAPI RtlStringFromGUID(const GUID* guid, UNICODE_STRING *str)",
+  "header_comment": "/*************************************************************************\n * RtlStringFromGUID (NTDLL.@)\n *\n * Convert a GUID into a string representation of a GUID.\n *\n * PARAMS\n *  guid [I] GUID to convert\n *  str  [O] Destination for the converted string\n *\n * RETURNS\n *  Success: STATUS_SUCCESS. str contains the converted value.\n *  Failure: STATUS_NO_MEMORY, if memory for str cannot be allocated.\n *\n * SEE ALSO\n *  See RtlGUIDFromString.\n */",
+  "code": "NTSTATUS WINAPI RtlStringFromGUID(const GUID* guid, UNICODE_STRING *str)\n{\n  TRACE(\"(%p,%p)\\n\", guid, str);\n\n  str->Length = GUID_STRING_LENGTH * sizeof(WCHAR);\n  str->MaximumLength = str->Length + sizeof(WCHAR);\n  str->Buffer = RtlAllocateHeap(GetProcessHeap(), 0, str->MaximumLength);\n  if (!str->Buffer)\n  {\n    str->Length = str->MaximumLength = 0;\n    return STATUS_NO_MEMORY;\n  }\n  swprintf(str->Buffer, str->MaximumLength/sizeof(WCHAR),\n          L\"{%08lX-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}\", guid->Data1, guid->Data2, guid->Data3,\n          guid->Data4[0], guid->Data4[1], guid->Data4[2], guid->Data4[3],\n          guid->Data4[4], guid->Data4[5], guid->Data4[6], guid->Data4[7]);\n\n  return STATUS_SUCCESS;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"winsock2.h\"",
+   "#include \"windef.h\"",
+   "#include \"winnt.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ddk/ntddk.h\"",
+   "#include \"in6addr.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"ntdll_misc.h\""
+  ],
+  "resolution": [
+   "ntdll!RtlStringFromGUID [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntdll/tests/rtlstr.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "wdm",
+   "path": "wdk-ddi-src/content/wdm/nf-wdm-rtlstringfromguid.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlstringfromguid",
+   "documented_name": "rtlstringfromguid",
+   "file": "docs/0143_windows-driver-docs-ddi_nf-wdm-rtlstringfromguid.md",
+   "text": "---\nUID: NF:wdm.RtlStringFromGUID\ntitle: RtlStringFromGUID function (wdm.h)\ndescription: The RtlStringFromGUID routine converts a given GUID from binary format into a Unicode string.\nold-location: kernel\\rtlstringfromguid.htm\ntech.root: kernel\nms.date: 04/30/2018\nkeywords: [\"RtlStringFromGUID function\"]\nms.keywords: RtlStringFromGUID, RtlStringFromGUID routine [Kernel-Mode Driver Architecture], k109_8a3ac592-7ade-48fc-9536-d8a6c84fb033.xml, kernel.rtlstringfromguid, wdm/RtlStringFromGUID\nreq.header: wdm.h\nreq.include-header: Wdm.h, Ntddk.h, Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt: Available starting with Windows 2000.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe (kernel mode); Ntdll.dll (user mode)\nreq.irql: PASSIVE_LEVEL\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - RtlStringFromGUID\n - wdm/RtlStringFromGUID\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\n - Ntdll.dll\napi_name:\n - RtlStringFromGUID\n---\n\n# RtlStringFromGUID function\n\n\n## -description\n\nThe <b>RtlStringFromGUID</b> routine converts a given GUID from binary format into a Unicode string.\n\n## -parameters\n\n### -param Guid [in]\n\n\nSpecifies the binary-format GUID to convert.\n\n### -param GuidString [out]\n\n\nPointer to a caller-supplied variable in which a pointer to the converted GUID string is returned. <b>RtlStringFromGUID</b> allocates the buffer space for the string, which the caller must free by calling <b>RtlFreeUnicodeString</b>.  The returned string is in the form `{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}`, including the prepended and appended braces.\n\n## -returns\n\nIf the conversion succeeds, <b>RtlStringFromGUID</b> returns STATUS_SUCCESS. Otherwise, no storage was allocated, nor was the conversion performed.\n\n## -see-also\n\n<a href=\"/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlguidfromstring\">RtlGUIDFromString</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 38,
+    "end_line": 38,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ntdll);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "GUID_STRING_LENGTH",
+    "start_line": 40,
+    "end_line": 40,
+    "code": "#define GUID_STRING_LENGTH    38"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "RtlAllocateHeap",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "swprintf",
+    "impl": [
+     "dlls/ntdll/printf.c:256"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "GetProcessHeap",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ntdll.RtlStringFromGUID",
+  "category": {
+   "l1": "System services",
+   "l2": "Run-time library (strings, bitmaps, utilities)",
+   "header": "wdm.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "name_rule"
+  },
+  "loc": {
+   "total": 19,
+   "body": 18,
+   "code": 12
+  },
+  "cyclomatic": 2,
+  "return_type": "NTSTATUS",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ntdll/tests/rtlstr.c::test_RtlStringFromGUID"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlstringfromguid",
+   "source": "ddi",
+   "description": "The RtlStringFromGUID routine converts a given GUID from binary format into a Unicode string.",
+   "min_windows": "Available starting with Windows 2000.",
+   "documented_dll": "NtosKrnl.exe (kernel mode); Ntdll.dll (user mode)"
+  },
+  "exports": [
+   "ntdll.RtlStringFromGUID",
+   "ntoskrnl.exe.RtlStringFromGUID"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2003-03-14",
+   "median_date": "2003-12-12",
+   "last_date": "2020-12-04",
+   "code_lines": 13,
+   "pair": "ntdll.RtlRealPredecessor",
+   "rank": 1,
+   "distance": 0.16
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "ntdll.RtlRealPredecessor",
+  "share_after_cutoff": 0.0,
+  "last_date": "2020-12-04",
+  "partner_rank": 1,
+  "distance": 0.16
+ }
+}

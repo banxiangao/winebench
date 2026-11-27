@@ -1,0 +1,185 @@
+{
+ "id": "0252",
+ "function": {
+  "name": "WTSQuerySessionInformationA",
+  "export_name": "WTSQuerySessionInformationA",
+  "module": "wtsapi32",
+  "source_module": "wtsapi32",
+  "exported_by": [
+   "wtsapi32"
+  ],
+  "side": "PE",
+  "file": "dlls/wtsapi32/wtsapi32.c",
+  "start_line": 457,
+  "end_line": 542,
+  "body_lines": 83,
+  "signature": "BOOL WINAPI WTSQuerySessionInformationA(HANDLE server, DWORD session_id, WTS_INFO_CLASS class, char **buffer, DWORD *count)",
+  "header_comment": "/************************************************************\n *                WTSQuerySessionInformationA  (WTSAPI32.@)\n */",
+  "code": "BOOL WINAPI WTSQuerySessionInformationA(HANDLE server, DWORD session_id, WTS_INFO_CLASS class, char **buffer, DWORD *count)\n{\n    WCHAR *bufferW = NULL;\n\n    TRACE(\"%p 0x%08lx %d %p %p\\n\", server, session_id, class, buffer, count);\n\n    if (!buffer || !count)\n    {\n        SetLastError(ERROR_INVALID_USER_BUFFER);\n        return FALSE;\n    }\n\n    if (class == WTSClientProtocolType || class == WTSConnectState)\n        return WTSQuerySessionInformationW(server, session_id, class, (WCHAR **)buffer, count);\n\n    if (class == WTSSessionInfo)\n    {\n        DWORD size;\n        WTSINFOA *info;\n        WTSINFOW *infoW;\n\n        if (!WTSQuerySessionInformationW(server, session_id, class, (WCHAR **)&infoW, &size))\n            return FALSE;\n\n        if (!(info = malloc(sizeof(*info))))\n        {\n            WTSFreeMemory(infoW);\n            return FALSE;\n        }\n        memset(info, 0, sizeof(*info));\n        info->State = infoW->State;\n        info->SessionId = infoW->SessionId;\n        size = sizeof(info->WinStationName);\n        if (!WideCharToMultiByte(CP_ACP, 0, infoW->WinStationName, -1, info->WinStationName, size, NULL, NULL))\n        {\n            WTSFreeMemory(infoW);\n            free(info);\n            return FALSE;\n        }\n        size = sizeof(info->Domain);\n        if (!WideCharToMultiByte(CP_ACP, 0, infoW->Domain, -1, info->Domain, size, NULL, NULL))\n        {\n            WTSFreeMemory(infoW);\n            free(info);\n            return FALSE;\n        }\n        size = sizeof(info->UserName);\n        if (!WideCharToMultiByte(CP_ACP, 0, infoW->UserName, -1, info->UserName, size, NULL, NULL))\n        {\n            WTSFreeMemory(infoW);\n            free(info);\n            return FALSE;\n        }\n        info->CurrentTime = infoW->CurrentTime;\n        WTSFreeMemory(infoW);\n        *buffer = (char *)info;\n        *count = sizeof(*info);\n        return TRUE;\n    }\n\n    if (!WTSQuerySessionInformationW(server, session_id, class, &bufferW, count))\n        return FALSE;\n\n    *count = WideCharToMultiByte(CP_ACP, 0, bufferW, -1, NULL, 0, NULL, NULL);\n    if (!*count)\n    {\n        WTSFreeMemory(bufferW);\n        return FALSE;\n    }\n\n    if (!(*buffer = malloc(*count)))\n    {\n        WTSFreeMemory(bufferW);\n        return FALSE;\n    }\n\n    if (!(*count = WideCharToMultiByte(CP_ACP, 0, bufferW, -1, *buffer, *count, NULL, NULL)))\n    {\n        WTSFreeMemory(bufferW);\n        free(*buffer);\n        return FALSE;\n    }\n\n    WTSFreeMemory(bufferW);\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"lmcons.h\"",
+   "#include \"wtsapi32.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "wtsapi32!WTSQuerySessionInformationA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/wtsapi32/tests/wtsapi.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wtsapi32",
+   "path": "sdk-api-src/content/wtsapi32/nf-wtsapi32-wtsquerysessioninformationa.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wtsapi32/nf-wtsapi32-wtsquerysessioninformationa",
+   "documented_name": "wtsquerysessioninformationa",
+   "file": "docs/0252_sdk-api_nf-wtsapi32-wtsquerysessioninformationa.md",
+   "text": "---\nUID: NF:wtsapi32.WTSQuerySessionInformationA\ntitle: WTSQuerySessionInformationA function (wtsapi32.h)\ndescription: Retrieves session information for the specified session on the specified Remote Desktop Session Host (RD Session Host) server. (ANSI)\nhelpviewer_keywords: [\"WTSQuerySessionInformationA\", \"wtsapi32/WTSQuerySessionInformationA\"]\nold-location: termserv\\wtsquerysessioninformation.htm\ntech.root: TermServ\nms.assetid: d52345a4-0408-4ea9-ba71-349910143752\nms.date: 12/05/2018\nms.keywords: WTSQuerySessionInformation, WTSQuerySessionInformation function [Remote Desktop Services], WTSQuerySessionInformationA, WTSQuerySessionInformationW, _win32_wtsquerysessioninformation, termserv.wtsquerysessioninformation, wtsapi32/WTSQuerySessionInformation, wtsapi32/WTSQuerySessionInformationA, wtsapi32/WTSQuerySessionInformationW\nreq.header: wtsapi32.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista\nreq.target-min-winversvr: Windows Server 2008\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: WTSQuerySessionInformationW (Unicode) and WTSQuerySessionInformationA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Wtsapi32.lib\nreq.dll: Wtsapi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - WTSQuerySessionInformationA\n - wtsapi32/WTSQuerySessionInformationA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Wtsapi32.dll\n - Ext-MS-Win-Session-WtsApi32-l1-1-0.dll\napi_name:\n - WTSQuerySessionInformation\n - WTSQuerySessionInformationA\n - WTSQuerySessionInformationW\nreq.apiset: ext-ms-win-session-wtsapi32-l1-1-0 (introduced in Windows 8)\n---\n\n# WTSQuerySessionInformationA function\n\n\n## -description\n\nRetrieves session information for the specified session on the specified Remote Desktop Session Host (RD Session Host) server. It can be used \n    to query session information on local and remote RD Session Host servers.\n\n## -parameters\n\n### -param hServer [in]\n\nA handle to an RD Session Host server. Specify a handle opened by the \n      <a href=\"/windows/desktop/api/wtsapi32/nf-wtsapi32-wtsopenservera\">WTSOpenServer</a> function, or specify \n      <b>WTS_CURRENT_SERVER_HANDLE</b> to indicate the RD Session Host server on which your application \n      is running.\n\n### -param SessionId [in]\n\nA Remote Desktop Services session identifier. To indicate the session in which the calling application is running \n      (or the current session) specify <b>WTS_CURRENT_SESSION</b>. Only specify \n      <b>WTS_CURRENT_SESSION</b> when obtaining session information on the local server. If \n      <b>WTS_CURRENT_SESSION</b> is specified when querying session information on a remote server, \n      the returned session information will be inconsistent. Do not use the returned data.\n\nYou can use the <a href=\"/windows/desktop/api/wtsapi32/nf-wtsapi32-wtsenumeratesessionsa\">WTSEnumerateSessions</a> \n       function to retrieve the identifiers of all sessions on a specified RD Session Host server.\n\nTo query information for another user's session, you must have Query Information permission. For more \n       information, see <a href=\"/windows/desktop/TermServ/terminal-services-permissions\">Remote Desktop Services \n       Permissions</a>. To modify permissions on a session, use the Remote Desktop Services Configuration administrative \n       tool.\n\n### -param WTSInfoClass [in]\n\nA value of the <a href=\"/windows/desktop/api/wtsapi32/ne-wtsapi32-wts_info_class\">WTS_INFO_CLASS</a> enumeration that indicates the type of \n    session information to retrieve in a call to the \n    <b>WTSQuerySessionInformation</b> function.\n\n### -param ppBuffer [out]\n\nA pointer to a variable that receives a pointer to the requested information. The format and contents of the \n      data depend on the information class specified in the <i>WTSInfoClass</i> parameter. To free \n      the returned buffer, call the <a href=\"/windows/desktop/api/wtsapi32/nf-wtsapi32-wtsfreememory\">WTSFreeMemory</a> \n      function.\n\n### -param pBytesReturned [out]\n\nA pointer to a variable that receives the size, in bytes, of the data returned in \n      <i>ppBuffer</i>.\n\n## -returns\n\nIf the function succeeds, the return value is a nonzero value.\n\nIf the function fails, the return value is zero. To get extended error information, call \n       <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nTo retrieve the session ID for the current session when Remote Desktop Services is running, call \n    <b>WTSQuerySessionInformation</b> and specify \n    <b>WTS_CURRENT_SESSION</b> for the <i>SessionId</i> parameter and \n    <b>WTSSessionId</b> for the <i>WTSInfoClass</i> parameter. The session ID \n    will be returned in the <i>ppBuffer</i> parameter. If Remote Desktop Services is not running, calls \n    to <b>WTSQuerySessionInformation</b> fail. In \n    this situation, you can retrieve the current session ID by calling the \n    <a href=\"/windows/desktop/api/processthreadsapi/nf-processthreadsapi-processidtosessionid\">ProcessIdToSessionId</a> function.\n\nTo determine whether your application is running on the physical console, you must specify \n    <b>WTS_CURRENT_SESSION</b> for the <i>SessionId</i> parameter, and \n    <b>WTSClientProtocolType</b> as the <i>WTSInfoClass</i> parameter. \n    If <i>ppBuffer</i> is \"0\", the session is attached to the physical console.\n\n\n\n\n\n> [!NOTE]\n> The wtsapi32.h header defines WTSQuerySessionInformation as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/api/wtsapi32/ns-wtsapi32-wtsconfiginfoa\">WTSCONFIGINFO</a>\n\n\n\n<a href=\"/windows/desktop/api/wtsapi32/ns-wtsapi32-wtsinfoexa\">WTSINFOEX</a>\n\n\n\n<a href=\"/windows/desktop/api/wtsapi32/ns-wtsapi32-wts_client_address\">WTS_CLIENT_ADDRESS</a>\n\n\n\n<a href=\"/windows/desktop/api/wtsapi32/ns-wtsapi32-wts_client_display\">WTS_CLIENT_DISPLAY</a>\n\n\n\n<a href=\"/windows/desktop/api/wtsapi32/ne-wtsapi32-wts_connectstate_class\">WTS_CONNECTSTATE_CLASS</a>\n\n\n\n<a href=\"/windows/desktop/api/wtsapi32/ne-wtsapi32-wts_info_class\">WTS_INFO_CLASS</a>\n\n\n\n<a href=\"/windows/desktop/api/wtsapi32/ns-wtsapi32-wts_session_address\">WTS_SESSION_ADDRESS</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 29,
+    "end_line": 29,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(wtsapi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "WTSFreeMemory",
+    "impl": [
+     "dlls/wtsapi32/wtsapi32.c:377"
+    ]
+   },
+   {
+    "name": "WTSQuerySessionInformationW",
+    "impl": [
+     "dlls/wtsapi32/wtsapi32.c:547"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "wtsapi32.WTSQuerySessionInformationA",
+  "category": {
+   "l1": "System services",
+   "l2": "Remote Desktop Services",
+   "header": "wtsapi32.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 86,
+   "body": 85,
+   "code": 54
+  },
+  "cyclomatic": 15,
+  "return_type": "BOOL",
+  "n_params": 5,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/wtsapi32/tests/wtsapi.c::test_WTSQuerySessionInformation"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/wtsapi32/nf-wtsapi32-wtsquerysessioninformationa",
+   "source": "win32",
+   "description": "Retrieves session information for the specified session on the specified Remote Desktop Session Host (RD Session Host) server. (ANSI)",
+   "min_windows": "Windows Vista",
+   "documented_dll": "Wtsapi32.dll"
+  },
+  "exports": [
+   "wtsapi32.WTSQuerySessionInformationA"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.538,
+   "first_date": "2005-03-16",
+   "median_date": "2024-11-22",
+   "last_date": "2024-11-22",
+   "code_lines": 52
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "ntdll.RtlUnicodeStringToInteger",
+  "share_after_cutoff": 0.538,
+  "last_date": "2024-11-22"
+ }
+}

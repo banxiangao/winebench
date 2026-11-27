@@ -1,0 +1,178 @@
+{
+ "id": "0114",
+ "function": {
+  "name": "HeapSummary",
+  "export_name": "HeapSummary",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/memory.c",
+  "start_line": 790,
+  "end_line": 836,
+  "body_lines": 44,
+  "signature": "BOOL WINAPI HeapSummary( HANDLE heap, DWORD flags, LPHEAP_SUMMARY heap_summary )",
+  "header_comment": "/***********************************************************************\n *           HeapSummary   (kernelbase.@)\n */",
+  "code": "BOOL WINAPI HeapSummary( HANDLE heap, DWORD flags, LPHEAP_SUMMARY heap_summary )\n{\n    SIZE_T allocated = 0;\n    SIZE_T committed = 0;\n    SIZE_T uncommitted = 0;\n    PROCESS_HEAP_ENTRY entry;\n\n    if (heap_summary->cb != sizeof(*heap_summary))\n    {\n        /* needs to be set to the exact size by the caller */\n        SetLastError( ERROR_INVALID_PARAMETER );\n        return FALSE;\n    }\n\n    memset( &entry, 0, sizeof(entry) );\n\n    if (!HeapLock( heap ))\n        return FALSE;\n\n    while (HeapWalk( heap, &entry ))\n    {\n        if (entry.wFlags & PROCESS_HEAP_ENTRY_BUSY)\n        {\n            allocated += entry.cbData;\n        }\n        else if (entry.wFlags & PROCESS_HEAP_REGION)\n        {\n            committed += entry.Region.dwCommittedSize;\n            uncommitted += entry.Region.dwUnCommittedSize;\n        }\n    }\n\n    if (GetLastError() != ERROR_NO_MORE_ITEMS)\n    {\n        /* HeapWalk unsuccessful */\n        HeapUnlock( heap );\n        return FALSE;\n    }\n\n    HeapUnlock( heap );\n    heap_summary->cbAllocated = allocated;\n    heap_summary->cbCommitted = committed;\n    heap_summary->cbReserved = committed + uncommitted;\n    heap_summary->cbMaxReserve = heap_summary->cbReserved;\n\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include <limits.h>",
+   "#include <sys/types.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winerror.h\"",
+   "#include \"ddk/wdm.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!HeapSummary [stdcall -import] -> import from kernelbase",
+   "kernelbase!HeapSummary [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/heap.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "heapapi",
+   "path": "sdk-api-src/content/heapapi/nf-heapapi-heapsummary.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/heapapi/nf-heapapi-heapsummary",
+   "documented_name": "heapsummary",
+   "file": "docs/0114_sdk-api_nf-heapapi-heapsummary.md",
+   "text": "---\nUID: NF:heapapi.HeapSummary\ntitle: HeapSummary\ndescription: The HeapSummary function (heapapi.h) summarizes the specified heap.\nms.date: 08/04/2022\nms.keywords: HeapSummary\ntargetos: Windows\ntech.root: base\nreq.assembly: \nreq.construct-type: function\nreq.ddi-compliance:\nreq.dll: kernel32.dll\nreq.header: heapapi.h\nreq.idl:\nreq.include-header:\nreq.irql:\nreq.kmdf-ver:\nreq.lib: kernel32.lib\nreq.max-support:\nreq.namespace:\nreq.redist:\nreq.target-min-winverclnt: Windows 10 Build 20348\nreq.target-min-winversvr: Windows 10 Build 20348\nreq.target-type:\nreq.type-library:\nreq.umdf-ver:\nreq.unicode-ansi:\nf1_keywords:\n - HeapSummary\n - heapapi/HeapSummary\ndev_langs:\n - c++\ntopic_type:\n - apiref\napi_type:\n - DllExport\napi_location:\n - kernel32.dll\n - api-ms-win-core-heap-l1-1-0.dll\n - kernelbase.dll\napi_name:\n - HeapSummary\n---\n\n## -description\n\nSummarizes the specified heap.\n\n## -parameters\n\n### -param hHeap [in]\n\nA handle to the heap to be summarized. This handle is returned by either the\n      <a href=\"/windows/desktop/api/heapapi/nf-heapapi-heapcreate\">HeapCreate</a> or\n      <a href=\"/windows/desktop/api/heapapi/nf-heapapi-getprocessheap\">GetProcessHeap</a> function.\n\n### -param dwFlags [in]\n\nThe heap summary options.  No options are currently defined, pass zero for this parameter.\n\n### -param lpSummary [in, out]\n\nA pointer to a [HEAP_SUMMARY](ns-heapapi-heap_summary.md) structure that receives the information.  Note that you must set the <b>cbSize</b> member to <code>sizeof(HEAP_SUMMARY)</code> before calling this function.\n\n## -returns\n\nReturns TRUE on success, FALSE on failure.\n\n## -remarks\n\n## -see-also\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetLastError",
+    "impl": [
+     "dlls/kernelbase/thread.c:231"
+    ]
+   },
+   {
+    "name": "HeapLock",
+    "impl": [
+     "dlls/kernelbase/memory.c:762"
+    ]
+   },
+   {
+    "name": "HeapUnlock",
+    "impl": [
+     "dlls/kernelbase/memory.c:842"
+    ]
+   },
+   {
+    "name": "HeapWalk",
+    "impl": [
+     "dlls/kernelbase/memory.c:893"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "kernelbase.HeapSummary",
+  "category": {
+   "l1": "System services",
+   "l2": "Memory management",
+   "header": "heapapi.h",
+   "textbook": "Process control",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 47,
+   "body": 46,
+   "code": 25
+  },
+  "cyclomatic": 7,
+  "return_type": "BOOL",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/kernel32/tests/heap.c::test_HeapSummary"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/heapapi/nf-heapapi-heapsummary",
+   "source": "win32",
+   "description": "The HeapSummary function (heapapi.h) summarizes the specified heap.",
+   "min_windows": "Windows 10 Build 20348",
+   "documented_dll": "kernel32.dll"
+  },
+  "exports": [
+   "kernel32.HeapSummary",
+   "kernelbase.HeapSummary"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.923,
+   "first_date": "2000-09-29",
+   "median_date": "2025-06-16",
+   "last_date": "2025-06-16",
+   "code_lines": 26
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "kernelbase.GetStartupInfoW",
+  "share_after_cutoff": 0.923,
+  "last_date": "2025-06-16"
+ }
+}

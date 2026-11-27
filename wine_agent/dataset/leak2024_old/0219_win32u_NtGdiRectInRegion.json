@@ -1,0 +1,186 @@
+{
+ "id": "0219",
+ "function": {
+  "name": "NtGdiRectInRegion",
+  "export_name": "RectInRegion",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "gdi.exe16",
+   "gdi32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/region.c",
+  "start_line": 997,
+  "end_line": 1033,
+  "body_lines": 34,
+  "signature": "BOOL WINAPI NtGdiRectInRegion( HRGN hrgn, const RECT *rect )",
+  "header_comment": "/***********************************************************************\n *           NtGdiRectInRegion    (win32u.@)\n *\n * Tests if a rectangle is at least partly inside the specified region.\n *\n * PARAMS\n *   hrgn [I] Region to test.\n *   rect [I] Rectangle to test.\n *\n * RETURNS\n *   Non-zero if the rectangle is partially inside the region or\n *   zero otherwise.\n */",
+  "code": "BOOL WINAPI NtGdiRectInRegion( HRGN hrgn, const RECT *rect )\n{\n    WINEREGION *obj;\n    BOOL ret = FALSE;\n    RECT rc;\n    int i;\n\n    /* swap the coordinates to make right >= left and bottom >= top */\n    /* (region building rectangles are normalized the same way) */\n    rc = *rect;\n    order_rect( &rc );\n\n    if ((obj = GDI_GetObjPtr( hrgn, NTGDI_OBJ_REGION )))\n    {\n\tif ((obj->numRects > 0) && overlapping(&obj->extents, &rc))\n\t{\n\t    for (i = region_find_pt( obj, rc.left, rc.top, &ret ); !ret && i < obj->numRects; i++ )\n\t    {\n\t        if (obj->rects[i].bottom <= rc.top)\n\t\t    continue;             /* not far enough down yet */\n\n\t\tif (obj->rects[i].top >= rc.bottom)\n\t\t    break;                /* too far down */\n\n\t\tif (obj->rects[i].right <= rc.left)\n\t\t    continue;              /* not far enough over yet */\n\n\t\tif (obj->rects[i].left >= rc.right)\n\t\t    continue;\n\n\t\tret = TRUE;\n\t    }\n\t}\n\tGDI_ReleaseObj(hrgn);\n    }\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include \"ntgdi_private.h\"",
+   "#include \"ntuser_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "gdi32!RectInRegion [stdcall] -> NtGdiRectInRegion implicitly imported from win32u",
+   "win32u!NtGdiRectInRegion [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdi32/tests/gdiobj.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "gdi.exe16",
+   "source_module": "gdi.exe16",
+   "exported_by": [
+    "gdi.exe16"
+   ],
+   "file": "dlls/gdi.exe16/gdi.c",
+   "start_line": 3024,
+   "resolution": [
+    "gdi.exe16!RectInRegion [pascal -ret16] -> internal symbol RectInRegion16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 3033,
+   "signature": "BOOL16 WINAPI RectInRegion16( HRGN16 hrgn, const RECT16 *rect )",
+   "code": "BOOL16 WINAPI RectInRegion16( HRGN16 hrgn, const RECT16 *rect )\n{\n    RECT r32;\n\n    r32.left   = rect->left;\n    r32.top    = rect->top;\n    r32.right  = rect->right;\n    r32.bottom = rect->bottom;\n    return RectInRegion( HRGN_32(hrgn), &r32 );\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-rectinregion.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-rectinregion",
+   "documented_name": "rectinregion",
+   "file": "docs/0219_sdk-api_nf-wingdi-rectinregion.md",
+   "text": "---\nUID: NF:wingdi.RectInRegion\ntitle: RectInRegion function (wingdi.h)\ndescription: The RectInRegion function determines whether any part of the specified rectangle is within the boundaries of a region.\nhelpviewer_keywords: [\"RectInRegion\",\"RectInRegion function [Windows GDI]\",\"_win32_RectInRegion\",\"gdi.rectinregion\",\"wingdi/RectInRegion\"]\nold-location: gdi\\rectinregion.htm\ntech.root: gdi\nms.assetid: 198a02f1-120c-4f65-aa7c-a41f2e5e81a9\nms.date: 12/05/2018\nms.keywords: RectInRegion, RectInRegion function [Windows GDI], _win32_RectInRegion, gdi.rectinregion, wingdi/RectInRegion\nreq.header: wingdi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - RectInRegion\n - wingdi/RectInRegion\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - gdi32.dll\n - Ext-MS-Win-RTCore-GDI-rgn-l1-1-0.dll\n - api-ms-win-gdi-ie-rgn-l1-1-0.dll\n - ie_shims.dll\n - ext-ms-win-rtcore-gdi-rgn-l1-1-1.dll\napi_name:\n - RectInRegion\n---\n\n# RectInRegion function\n\n\n## -description\n\nThe <b>RectInRegion</b> function determines whether any part of the specified rectangle is within the boundaries of a region.\n\n## -parameters\n\n### -param hrgn [in]\n\nHandle to the region.\n\n### -param lprect [in]\n\nPointer to a <a href=\"/windows/desktop/api/windef/ns-windef-rect\">RECT</a> structure containing the coordinates of the rectangle in logical units. The lower and right edges of the rectangle are not included.\n\n## -returns\n\nIf any part of the specified rectangle lies within the boundaries of the region, the return value is nonzero.\n\nIf no part of the specified rectangle lies within the boundaries of the region, the return value is zero.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-ptinregion\">PtInRegion</a>\n\n\n\n<a href=\"/windows/desktop/api/windef/ns-windef-rect\">RECT</a>\n\n\n\n<a href=\"/windows/desktop/gdi/region-functions\">Region Functions</a>\n\n\n\n<a href=\"/windows/desktop/gdi/regions\">Regions Overview</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "overlapping",
+   "file": "dlls/win32u/region.c",
+   "start_line": 119,
+   "end_line": 123,
+   "static": true,
+   "called_from": [
+    "NtGdiRectInRegion"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/region.c:1573",
+    "dlls/win32u/region.c:1574",
+    "dlls/win32u/region.c:1589",
+    "dlls/win32u/region.c:1590",
+    "dlls/win32u/region.c:1859"
+   ],
+   "signature": "static inline BOOL overlapping( const RECT *r1, const RECT *r2 )",
+   "code": "static inline BOOL overlapping( const RECT *r1, const RECT *r2 )\n{\n    return (r1->right > r2->left && r1->left < r2->right &&\n            r1->bottom > r2->top && r1->top < r2->bottom);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "GDI_GetObjPtr",
+    "file": "dlls/win32u/gdiobj.c",
+    "start_line": 821
+   },
+   {
+    "name": "GDI_ReleaseObj",
+    "file": "dlls/win32u/gdiobj.c",
+    "start_line": 837
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [
+   "order_rect",
+   "region_find_pt"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "win32u.NtGdiRectInRegion",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI",
+   "header": "wingdi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 37,
+   "body": 36,
+   "code": 20
+  },
+  "cyclomatic": 10,
+  "return_type": "BOOL",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/gdi32/tests/gdiobj.c::test_region"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-rectinregion",
+   "source": "win32",
+   "description": "The RectInRegion function determines whether any part of the specified rectangle is within the boundaries of a region.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Gdi32.dll"
+  },
+  "exports": [
+   "gdi32.RectInRegion",
+   "win32u.NtGdiRectInRegion"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "1998-01-18",
+   "median_date": "2012-12-14",
+   "last_date": "2021-07-08",
+   "code_lines": 18,
+   "pair": "win32u.NtGdiDdDDIDestroyAllocation2",
+   "rank": 1,
+   "distance": 0.0
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "win32u.NtGdiDdDDIDestroyAllocation2",
+  "share_after_cutoff": 0.0,
+  "last_date": "2021-07-08",
+  "partner_rank": 1,
+  "distance": 0.0
+ }
+}

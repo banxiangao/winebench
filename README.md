@@ -177,6 +177,7 @@ Test files that crash or time out on the baseline itself are left out.
 | `container/` | definition of the container image (`wine-agent.def`) and the script that builds Wine |
 | `results/` | metrics tables |
 | `figures/` | cost figures and the script that draws them |
+| `leakage/` | leakage experiment: gpt-oss-20b on functions written before and after its training cutoff (see its README) |
 | `runs_archive/` | every raw output, packed: prompts, replies, patches, agent trajectories, per-task evaluations (see its README) |
 | `incoming/` | the full WineBench set and the subset as they were delivered |
 
@@ -222,7 +223,22 @@ What should be known when the numbers are read:
     may be too high, and it may be too low (some tasks put their code into another tree, left their own untouched and
     count as no code). Its OpenHands run shows none of this.
   - These counts are upper bounds taken from the text of the commands; whether the submitted code was actually copied
-    has not been checked task by task. The commands of 6 further tasks name the project directory or the dataset.
+    has not been checked task by task.
+- **The project directory and the scratch space were mounted in the agent containers.** The cluster's Apptainer
+  module binds `/project` and `/scratch` into every container by default, so the dataset (which holds the original
+  code of every function), the results of other runs and the Wine trees outside the task were reachable, not only
+  the sibling trees. The commands of 33 tasks name one of these places (column `project`: glm-4.7-flash 20,
+  qwen3.8-27b 10, claude-haiku-5-5 2, deepseek-v4-flash 1); six of those tasks passed. Again an upper bound from the
+  text of the commands.
+- **Agent shells could reach the cluster's web proxy.** Apptainer hands the proxy variables on to the container, so
+  a command of the agent could download from the hosts the proxy allows (github.com, raw.githubusercontent.com, PyPI
+  and the model APIs). In all trajectories four commands tried to fetch something (two documentation pages of
+  learn.microsoft.com, a gist, an `apt-get`); none of them fetched Wine code.
+- **These three openings are closed since 2026-11-27** (`wine_agent/vulcan/run_setting.sbatch`): every worker runs in
+  a container of its own that holds one source tree, its own copy of the dataset (deleted once it has been loaded),
+  the scripts and the prompts read-only, and nothing else of the project or of scratch; proxy variables and API keys
+  are blanked for the agent's commands. The settings in the tables above were run before this change; the leakage
+  experiment (`leakage/`) was run after it. `vulcan/run_api.sbatch` (API models) has not been converted yet.
 - **deepseek-v4-flash was not run on the cluster.** The cluster's proxy does not let its API through, so its replies
   and its agent runs were produced on another machine, with the same scripts, the same prompts, the same container
   image and the same packed trees; the evaluation was done on the cluster. That machine has direct internet access,

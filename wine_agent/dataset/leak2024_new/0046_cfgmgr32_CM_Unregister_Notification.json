@@ -1,0 +1,169 @@
+{
+ "id": "0046",
+ "function": {
+  "name": "CM_Unregister_Notification",
+  "export_name": "CM_Unregister_Notification",
+  "module": "cfgmgr32",
+  "source_module": "cfgmgr32",
+  "exported_by": [
+   "cfgmgr32"
+  ],
+  "side": "PE",
+  "file": "dlls/cfgmgr32/notification.c",
+  "start_line": 196,
+  "end_line": 222,
+  "body_lines": 24,
+  "signature": "CONFIGRET WINAPI CM_Unregister_Notification( HCMNOTIFICATION notify )",
+  "header_comment": "/***********************************************************************\n *           CM_Unregister_Notification (cfgmgr32.@)\n */",
+  "code": "CONFIGRET WINAPI CM_Unregister_Notification( HCMNOTIFICATION notify )\n{\n    struct cm_notify_context *ctx = notify;\n    CONFIGRET ret = CR_SUCCESS;\n\n    TRACE( \"(%p)\\n\", notify );\n\n    if (!notify) return CR_INVALID_DATA;\n\n    __TRY\n    {\n        if (ctx->magic == CM_NOTIFY_CONTEXT_MAGIC)\n        {\n            I_ScUnregisterDeviceNotification( ctx->notify );\n            free( ctx );\n        }\n        else\n            ret = CR_INVALID_DATA;\n    }\n    __EXCEPT_PAGE_FAULT\n    {\n        ret = CR_FAILURE;\n    }\n    __ENDTRY\n\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"cfgmgr32_private.h\"",
+   "#include \"wine/exception.h\""
+  ],
+  "resolution": [
+   "cfgmgr32!CM_Unregister_Notification [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/cfgmgr32/tests/cfgmgr32.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "cfgmgr32",
+   "path": "sdk-api-src/content/cfgmgr32/nf-cfgmgr32-cm_unregister_notification.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/cfgmgr32/nf-cfgmgr32-cm_unregister_notification",
+   "documented_name": "cm_unregister_notification",
+   "file": "docs/0046_sdk-api_nf-cfgmgr32-cm_unregister_notification.md",
+   "text": "---\nUID: NF:cfgmgr32.CM_Unregister_Notification\ntitle: CM_Unregister_Notification function (cfgmgr32.h)\ndescription: Use UnregisterDeviceNotification instead of CM_Unregister_Notification if your code targets Windows 7 or earlier versions of Windows.\nhelpviewer_keywords: [\"CM_Unregister_Notification\",\"CM_Unregister_Notification function [Device and Driver Installation]\",\"cfgmgr32/CM_Unregister_Notification\",\"devinst.cm_unregister_notification\"]\nold-location: devinst\\cm_unregister_notification.htm\ntech.root: devinst\nms.assetid: 1634ECC5-96A2-4B1C-8DCA-64682C8C1444\nms.date: 12/05/2018\nms.keywords: CM_Unregister_Notification, CM_Unregister_Notification function [Device and Driver Installation], cfgmgr32/CM_Unregister_Notification, devinst.cm_unregister_notification\nreq.header: cfgmgr32.h\nreq.include-header: Cfgmgr32.h\nreq.target-type: Universal\nreq.target-min-winverclnt: Available in Microsoft Windows 8 and later versions of Windows.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Cfgmgr32.lib; OneCoreUAP.lib on Windows 10\nreq.dll: CfgMgr32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CM_Unregister_Notification\n - cfgmgr32/CM_Unregister_Notification\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-devices-config-l1-1-2.dll\n - CfgMgr32.dll\n - API-MS-Win-devices-config-l1-1-0.dll\n - API-MS-Win-devices-config-l1-1-1.dll\napi_name:\n - CM_Unregister_Notification\n---\n\n# CM_Unregister_Notification function\n\n\n## -description\n\nUse <a href=\"/windows/desktop/api/winuser/nf-winuser-unregisterdevicenotification\">UnregisterDeviceNotification</a> instead of <b>CM_Unregister_Notification</b> if your code targets Windows 7 or earlier versions of Windows.\n\nThe <b>CM_Unregister_Notification</b> function closes the specified HCMNOTIFICATION handle.\n\n## -parameters\n\n### -param NotifyContext [in]\n\nThe HCMNOTIFICATION handle returned by the <a href=\"/windows/desktop/api/cfgmgr32/nf-cfgmgr32-cm_register_notification\">CM_Register_Notification</a> function.\n\n## -returns\n\nIf the operation succeeds, the function returns CR_SUCCESS. Otherwise, it returns one of the CR_-prefixed error codes defined in <i>Cfgmgr32.h</i>.\n\n## -remarks\n\nDo not call <b>CM_Unregister_Notification</b> from a notification callback. Doing so may cause a deadlock because <b>CM_Unregister_Notification</b> waits for pending callbacks to finish.\n\nInstead, if you want to unregister from the notification callback, you must do so asynchronously.       The following sequence shows one way to do this:\n\n<ol>\n<li>Allocate a context structure to use with your notifications.      Include a pointer to a threadpool work structure (<b>PTP_WORK</b>) and any other information you would like to pass to the notification callback.</li>\n<li>Call <a href=\"/windows/desktop/api/threadpoolapiset/nf-threadpoolapiset-createthreadpoolwork\">CreateThreadpoolWork</a>.   Provide a callback function that calls  <b>CM_Unregister_Notification</b>.      Add the returned work structure to the previously allocated context structure.</li>\n<li>Call <a href=\"/windows/desktop/api/cfgmgr32/nf-cfgmgr32-cm_register_notification\">CM_Register_Notification</a> and provide the context structure as the <i>pContext</i> parameter.</li>\n<li>Do work, get notifications, etc.</li>\n<li>Call <a href=\"/windows/desktop/api/threadpoolapiset/nf-threadpoolapiset-submitthreadpoolwork\">SubmitThreadpoolWork</a> from within the notification callback, providing the pointer to a threadpool work structure (<b>PTP_WORK</b>) stored in your context structure.</li>\n<li>When the threadpool thread runs, the work item calls <b>CM_Unregister_Notification</b>.</li>\n<li>Call <a href=\"/windows/desktop/api/threadpoolapiset/nf-threadpoolapiset-closethreadpoolwork\">CloseThreadpoolWork</a> to release the work object.</li>\n</ol>\nIf you are finished with the context structure, don't forget to release resources and free the structure.\n\n<div class=\"alert\"><b>Caution</b>  Do not free the context structure until after the work item has called <b>CM_Unregister_Notification</b>.  You can still receive notifications after submitting the threadpool work item and before the work item calls <b>CM_Unregister_Notification</b>.</div>\n<div> </div>\n\n#### Examples\n\nThe following example shows how to unregister from the notification callback, as described in the Remarks section.\n\n\n```\ntypedef struct _CALLBACK_CONTEXT {\n    BOOL bUnregister;\n    PTP_WORK pWork;\n    HCMNOTIFICATION hNotify;\n    CRITICAL_SECTION lock;\n} CALLBACK_CONTEXT, *PCALLBACK_CONTEXT;\n\nDWORD\nWINAPI\nEventCallback(\n    __in HCMNOTIFICATION hNotification,\n    __in PVOID Context,\n    __in CM_NOTIFY_ACTION Action,\n    __in PCM_NOTIFY_EVENT_DATA EventData,\n    __in DWORD EventDataSize\n    )\n{\n    PCALLBACK_CONTEXT pCallbackContext = (PCALLBACK_CONTEXT)Context;\n\n   // unregister from the callback\n    EnterCriticalSection(&(pCallbackContext->lock));\n\n    // in case this callback fires before the registration call returns, make sure the notification handle is properly set\n    Context->hNotify = hNotification;\n\n    if (!pCallbackContext->bUnregister) {\n        pCallbackContext->bUnregister = TRUE;\n        SubmitThreadpoolWork(pCallbackContext->pWork);\n    }\n\n    LeaveCriticalSection(&(pCallbackContext->lock));\n\n    return ERROR_SUCCESS;\n};\n\nVOID\nCALLBACK\nWorkCallback(\n    _Inout_ PTP_CALLBACK_INSTANCE Instance,\n    _Inout_opt_ PVOID Context,\n    _Inout_ PTP_WORK pWork\n    )\n{\n    PCALLBACK_CONTEXT pCallbackContext = (PCALLBACK_CONTEXT)Context;\n\n    CM_Unregister_Notification(pCallbackContext->hNotify);\n}\n\nVOID NotificationFunction()\n{\n    CONFIGRET cr = CR_SUCCESS;\n    HRESULT hr = S_OK;\n    CM_NOTIFY_FILTER NotifyFilter = { 0 };\n    BOOL bShouldUnregister = FALSE;\n    PCALLBACK_CONTEXT context;\n\n    context = (PCALLBACK_CONTEXT)HeapAlloc(GetProcessHeap(),\n                                           HEAP_ZERO_MEMORY,\n                                           sizeof(CALLBACK_CONTEXT));\n    if (context == NULL) {\n        goto end;\n    }\n\n    InitializeCriticalSection(&(context->lock));\n\n    NotifyFilter.cbSize = sizeof(NotifyFilter);\n    NotifyFilter.Flags = 0;\n    NotifyFilter.FilterType = CM_NOTIFY_FILTER_TYPE_DEVICEINSTANCE;\n    NotifyFilter.Reserved = 0;\n\n    hr = StringCchCopy(NotifyFilter.u.DeviceInstance.InstanceId,\n                       MAX_DEVICE_ID_LEN,\n                       TEST_DEVICE_INSTANCE_ID);\n    if (FAILED(hr)) {\n        goto end;\n    }\n\n    context->pWork = CreateThreadpoolWork(WorkCallback, context, NULL);\n    if (context->pWork == NULL) {\n        goto end;\n    }\n\n    cr = CM_Register_Notification(&NotifyFilter,\n                                  context,\n                                  EventCallback,\n                                  &context->hNotify);\n   if (cr != CR_SUCCESS) {\n        goto end;\n    }\n\n    // ... do work here ...\n\n    EnterCriticalSection(&(context->lock));\n\n    if (!context->bUnregister) {\n        // unregister not from the callback\n        bShouldUnregister = TRUE;\n        context->bUnregister = TRUE;\n    }\n\n    LeaveCriticalSection(&(context->lock));\n\n    if (bShouldUnregister) {\n        cr = CM_Unregister_Notification(context->hNotify);\n        if (cr != CR_SUCCESS) {\n            goto end;\n        }\n    } else {\n        // if the callback is the one performing the unregister, wait for the threadpool work item to complete the unregister\n        WaitForThreadpoolWorkCallbacks(context->pWork, FALSE);\n    }\n\nend:\n\n    if (context != NULL) {\n        if (context->pWork != NULL) {\n            CloseThreadpoolWork(context->pWork);\n        }\n\n        DeleteCriticalSection(&(context->lock));\n\n        HeapFree(GetProcessHeap(), 0, context);\n    }\n\n    return;\n}\n\n```\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winuser/nf-winuser-unregisterdevicenotification\">UnregisterDeviceNotification</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "cm_notify_context",
+    "kind": "struct_decl",
+    "start_line": 47,
+    "end_line": 53,
+    "code": "struct cm_notify_context\n{\n    DWORD magic;\n    HDEVNOTIFY notify;\n    void *user_data;\n    PCM_NOTIFY_CALLBACK callback;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 23,
+    "end_line": 23,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(setupapi);"
+   }
+  ],
+  "macros": [
+   {
+    "name": "CM_NOTIFY_CONTEXT_MAGIC",
+    "start_line": 45,
+    "end_line": 45,
+    "code": "#define CM_NOTIFY_CONTEXT_MAGIC 0xbeef4dad"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "I_ScUnregisterDeviceNotification",
+    "module": "sechost",
+    "impl": [
+     "dlls/sechost/service.c:2188"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   }
+  ],
+  "header_inline": [
+   "__wine_pop_frame",
+   "__wine_push_frame",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "__wine_exception_handler_page_fault",
+   "__wine_setjmpex"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "cfgmgr32.CM_Unregister_Notification",
+  "category": {
+   "l1": "Devices",
+   "l2": "Device management and installation",
+   "header": "cfgmgr32.h",
+   "textbook": "Device management",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 27,
+   "body": 26,
+   "code": 14
+  },
+  "cyclomatic": 3,
+  "return_type": "CONFIGRET",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/cfgmgr32/tests/cfgmgr32.c::test_CM_Register_Notification"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/cfgmgr32/nf-cfgmgr32-cm_unregister_notification",
+   "source": "win32",
+   "description": "Use UnregisterDeviceNotification instead of CM_Unregister_Notification if your code targets Windows 7 or earlier versions of Windows.",
+   "min_windows": "Available in Microsoft Windows 8 and later versions of Windows.",
+   "documented_dll": "CfgMgr32.dll"
+  },
+  "exports": [
+   "cfgmgr32.CM_Unregister_Notification"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 1.0,
+   "first_date": "2025-03-19",
+   "median_date": "2026-05-01",
+   "last_date": "2026-05-01",
+   "code_lines": 15
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "winspool.drv.EnumPrintersA",
+  "share_after_cutoff": 1.0,
+  "last_date": "2026-05-01"
+ }
+}

@@ -1,0 +1,203 @@
+{
+ "id": "0197",
+ "function": {
+  "name": "GetPerformanceInfo",
+  "export_name": "GetPerformanceInfo",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernelbase",
+   "psapi"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/debug.c",
+  "start_line": 1553,
+  "end_line": 1617,
+  "body_lines": 62,
+  "signature": "BOOL WINAPI DECLSPEC_HOTPATCH GetPerformanceInfo( PPERFORMANCE_INFORMATION info, DWORD size )",
+  "header_comment": "/***********************************************************************\n *         GetPerformanceInfo   (kernelbase.@)\n *         K32GetPerformanceInfo   (kernelbase.@)\n */",
+  "code": "BOOL WINAPI DECLSPEC_HOTPATCH GetPerformanceInfo( PPERFORMANCE_INFORMATION info, DWORD size )\n{\n    SYSTEM_PERFORMANCE_INFORMATION perf;\n    SYSTEM_BASIC_INFORMATION basic;\n    SYSTEM_PROCESS_INFORMATION *process, *spi;\n    DWORD info_size;\n    NTSTATUS status;\n\n    TRACE( \"(%p, %ld)\\n\", info, size );\n\n    if (size < sizeof(*info))\n    {\n        SetLastError( ERROR_BAD_LENGTH );\n        return FALSE;\n    }\n\n    status = NtQuerySystemInformation( SystemPerformanceInformation, &perf, sizeof(perf), NULL );\n    if (!set_ntstatus( status )) return FALSE;\n    status = NtQuerySystemInformation( SystemBasicInformation, &basic, sizeof(basic), NULL );\n    if (!set_ntstatus( status )) return FALSE;\n\n    info->cb                 = sizeof(*info);\n    info->CommitTotal        = perf.TotalCommittedPages;\n    info->CommitLimit        = perf.TotalCommitLimit;\n    info->CommitPeak         = perf.PeakCommitment;\n    info->PhysicalTotal      = basic.MmNumberOfPhysicalPages;\n    info->PhysicalAvailable  = perf.AvailablePages;\n    info->SystemCache        = 0;\n    info->KernelTotal        = perf.PagedPoolUsage + perf.NonPagedPoolUsage;\n    info->KernelPaged        = perf.PagedPoolUsage;\n    info->KernelNonpaged     = perf.NonPagedPoolUsage;\n    info->PageSize           = basic.PageSize;\n\n    /* fields from SYSTEM_PROCESS_INFORMATION */\n    NtQuerySystemInformation( SystemProcessInformation, NULL, 0, &info_size );\n    for (;;)\n    {\n        process = HeapAlloc( GetProcessHeap(), 0, info_size );\n        if (!process)\n        {\n            SetLastError( ERROR_OUTOFMEMORY );\n            return FALSE;\n        }\n        status = NtQuerySystemInformation( SystemProcessInformation, process, info_size, &info_size );\n        if (!status) break;\n        HeapFree( GetProcessHeap(), 0, process );\n        if (status != STATUS_INFO_LENGTH_MISMATCH)\n        {\n            SetLastError( RtlNtStatusToDosError( status ) );\n            return FALSE;\n        }\n    }\n    info->HandleCount = info->ProcessCount = info->ThreadCount = 0;\n    spi = process;\n    for (;;)\n    {\n        info->ProcessCount++;\n        info->HandleCount += spi->HandleCount;\n        info->ThreadCount += spi->dwThreadCount;\n        if (spi->NextEntryOffset == 0) break;\n        spi = (SYSTEM_PROCESS_INFORMATION *)((char *)spi + spi->NextEntryOffset);\n    }\n    HeapFree( GetProcessHeap(), 0, process );\n    return TRUE;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdio.h>",
+   "#include <string.h>",
+   "#include <stdlib.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winuser.h\"",
+   "#include \"psapi.h\"",
+   "#include \"werapi.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/asm.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "psapi!GetPerformanceInfo [stdcall -import] -> K32GetPerformanceInfo implicitly imported from kernelbase",
+   "kernelbase!K32GetPerformanceInfo [stdcall] -> alias of kernelbase!GetPerformanceInfo",
+   "kernelbase!GetPerformanceInfo [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/psapi/tests/psapi_main.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "psapi",
+   "path": "sdk-api-src/content/psapi/nf-psapi-getperformanceinfo.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/psapi/nf-psapi-getperformanceinfo",
+   "documented_name": "getperformanceinfo",
+   "file": "docs/0197_sdk-api_nf-psapi-getperformanceinfo.md",
+   "text": "---\nUID: NF:psapi.GetPerformanceInfo\ntitle: GetPerformanceInfo function (psapi.h)\ndescription: Retrieves the performance values contained in the PERFORMANCE_INFORMATION structure.\nhelpviewer_keywords: [\"GetPerformanceInfo\",\"GetPerformanceInfo function [PSAPI]\",\"K32GetPerformanceInfo\",\"_win32_getperformanceinfo\",\"base.getperformanceinfo\",\"psapi.getperformanceinfo\",\"psapi/GetPerformanceInfo\",\"psapi/K32GetPerformanceInfo\"]\nold-location: psapi\\getperformanceinfo.htm\ntech.root: psapi\nms.assetid: 21655278-49da-4e63-a4f9-0ee9f6179f4a\nms.date: 12/05/2018\nms.keywords: GetPerformanceInfo, GetPerformanceInfo function [PSAPI], K32GetPerformanceInfo, _win32_getperformanceinfo, base.getperformanceinfo, psapi.getperformanceinfo, psapi/GetPerformanceInfo, psapi/K32GetPerformanceInfo\nreq.header: psapi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib on Windows 7 and Windows Server 2008 R2; Psapi.lib (if PSAPI_VERSION=1) on Windows 7 and Windows Server 2008 R2; Psapi.lib on Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP\nreq.dll: Kernel32.dll on Windows 7 and Windows Server 2008 R2; Psapi.dll (if PSAPI_VERSION=1) on Windows 7 and Windows Server 2008 R2; Psapi.dll on Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetPerformanceInfo\n - psapi/GetPerformanceInfo\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Kernel32.dll\n - Psapi.dll\n - Psapi.dll\n - API-MS-Win-Core-PsAPI-L1-1-0.dll\n - KernelBase.dll\napi_name:\n - GetPerformanceInfo\n - K32GetPerformanceInfo\n---\n\n# GetPerformanceInfo function\n\n\n## -description\n\nRetrieves the performance values contained in the \n    <a href=\"/windows/desktop/api/psapi/ns-psapi-performance_information\">PERFORMANCE_INFORMATION</a> \n    structure.\n\n## -parameters\n\n### -param pPerformanceInformation [out]\n\nA pointer to a \n      <a href=\"/windows/desktop/api/psapi/ns-psapi-performance_information\">PERFORMANCE_INFORMATION</a> \n      structure that receives the performance information.\n\n### -param cb [in]\n\nThe size of the \n      <a href=\"/windows/desktop/api/psapi/ns-psapi-performance_information\">PERFORMANCE_INFORMATION</a> structure, in \n      bytes.\n\n## -returns\n\nIf the function succeeds, the return value is TRUE. If the function fails, the return value is FALSE. To get \n       extended error information, call <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\nStarting with Windows 7 and Windows Server 2008 R2, Psapi.h establishes version numbers for \n    the PSAPI functions. The PSAPI version number affects the name used to call the function and the library that a \n    program must load.\n\nIf PSAPI_VERSION is 2 or greater, this function is defined as \n    <b>K32GetPerformanceInfo</b> in Psapi.h and exported in Kernel32.lib and Kernel32.dll. If \n    PSAPI_VERSION is 1, this function is defined as \n    <b>GetPerformanceInfo</b> in Psapi.h and exported in \n    Psapi.lib and Psapi.dll as a wrapper that calls <b>K32GetPerformanceInfo</b>.\n\nPrograms that must run on earlier versions of Windows as well as Windows 7 and later versions \n    should always call this function as \n    <b>GetPerformanceInfo</b>. To ensure correct resolution \n    of symbols, add Psapi.lib to the TARGETLIBS macro and compile the program with \n    –DPSAPI_VERSION=1. To use run-time dynamic linking, load Psapi.dll.\n\n## -see-also\n\n<a href=\"/previous-versions/windows/desktop/legacy/aa965225(v=vs.85)\">Memory Performance Information</a>\n\n\n\n<a href=\"/windows/desktop/api/psapi/ns-psapi-performance_information\">PERFORMANCE_INFORMATION</a>\n\n\n\n<a href=\"/windows/desktop/psapi/psapi-functions\">PSAPI Functions</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 41,
+    "end_line": 41,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(seh);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetProcessHeap",
+    "impl": [
+     "dlls/kernelbase/process.c:910"
+    ]
+   },
+   {
+    "name": "SetLastError",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtQuerySystemInformation",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/system.c:3352"
+    ]
+   },
+   {
+    "name": "RtlAllocateHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "RtlFreeHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "RtlNtStatusToDosError",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:77"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "set_ntstatus"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "kernelbase.GetPerformanceInfo",
+  "category": {
+   "l1": "Diagnostics",
+   "l2": "Process Status (PSAPI)",
+   "header": "psapi.h",
+   "textbook": "Information maintenance",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 65,
+   "body": 64,
+   "code": 46
+  },
+  "cyclomatic": 10,
+  "return_type": "BOOL",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/psapi/tests/psapi_main.c::test_GetPerformanceInfo"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/psapi/nf-psapi-getperformanceinfo",
+   "source": "win32",
+   "description": "Retrieves the performance values contained in the PERFORMANCE_INFORMATION structure.",
+   "min_windows": "Windows XP [desktop apps only]",
+   "documented_dll": "Kernel32.dll on Windows 7 and Windows Server 2008 R2; Psapi.dll (if PSAPI_VERSION=1) on Windows 7 and Windows Server 2008 R2; Psapi.dll on Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP"
+  },
+  "exports": [
+   "kernel32.K32GetPerformanceInfo",
+   "kernelbase.GetPerformanceInfo",
+   "kernelbase.K32GetPerformanceInfo",
+   "psapi.GetPerformanceInfo"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2002-09-17",
+   "median_date": "2019-05-30",
+   "last_date": "2022-02-11",
+   "code_lines": 47,
+   "pair": "ucrtbase.__C_specific_handler",
+   "rank": 1,
+   "distance": 0.435
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "ucrtbase.__C_specific_handler",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-02-11",
+  "partner_rank": 1,
+  "distance": 0.435
+ }
+}

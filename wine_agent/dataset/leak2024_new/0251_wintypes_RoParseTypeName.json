@@ -1,0 +1,234 @@
+{
+ "id": "0251",
+ "function": {
+  "name": "RoParseTypeName",
+  "export_name": "RoParseTypeName",
+  "module": "wintypes",
+  "source_module": "wintypes",
+  "exported_by": [
+   "wintypes"
+  ],
+  "side": "PE",
+  "file": "dlls/wintypes/main.c",
+  "start_line": 2121,
+  "end_line": 2152,
+  "body_lines": 29,
+  "signature": "HRESULT WINAPI RoParseTypeName(HSTRING type_name, DWORD *parts_count, HSTRING **parts)",
+  "header_comment": null,
+  "code": "HRESULT WINAPI RoParseTypeName(HSTRING type_name, DWORD *parts_count, HSTRING **parts)\n{\n    struct parse_type_context context = {0};\n    const WCHAR *input;\n    unsigned int i;\n    HRESULT hr;\n\n    TRACE(\"%s %p %p.\\n\", debugstr_hstring(type_name), parts_count, parts);\n\n    /* Empty string */\n    if (!WindowsGetStringLen(type_name))\n        return E_INVALIDARG;\n\n    input = WindowsGetStringRawBuffer(type_name, NULL);\n    /* The string has a leading space */\n    if (input[0] == ' ')\n        return RO_E_METADATA_INVALID_TYPE_FORMAT;\n\n    *parts_count = 0;\n    *parts = NULL;\n    if (FAILED(hr = parse_type(&context, input, wcslen(input))))\n    {\n        for (i = 0; i < context.parts_count; i++)\n            WindowsDeleteString(context.parts[i]);\n        CoTaskMemFree(context.parts);\n        return hr;\n    }\n\n    *parts_count = context.parts_count;\n    *parts = context.parts;\n    return S_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"initguid.h\"",
+   "#include \"private.h\"",
+   "#include \"pathcch.h\""
+  ],
+  "resolution": [
+   "wintypes!RoParseTypeName [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/wintypes/tests/wintypes.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "rometadataresolution",
+   "path": "sdk-api-src/content/rometadataresolution/nf-rometadataresolution-roparsetypename.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/rometadataresolution/nf-rometadataresolution-roparsetypename",
+   "documented_name": "roparsetypename",
+   "file": "docs/0251_sdk-api_nf-rometadataresolution-roparsetypename.md",
+   "text": "---\nUID: NF:rometadataresolution.RoParseTypeName\ntitle: RoParseTypeName function (rometadataresolution.h)\ndescription: Parses a type name and existing type parameters, in the case of parameterized types.\nhelpviewer_keywords: [\"RoParseTypeName\",\"RoParseTypeName function [Windows Runtime]\",\"rometadataresolution/RoParseTypeName\",\"winrt.roparsetypename\"]\nold-location: winrt\\roparsetypename.htm\ntech.root: WinRT\nms.assetid: AF007D43-7BAC-4753-9D2B-8F397B4A464A\nms.date: 12/05/2018\nms.keywords: RoParseTypeName, RoParseTypeName function [Windows Runtime], rometadataresolution/RoParseTypeName, winrt.roparsetypename\nreq.header: rometadataresolution.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 8 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2012 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: WinTypes.lib\nreq.dll: WinTypes.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - RoParseTypeName\n - rometadataresolution/RoParseTypeName\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - ext-ms-win-ro-typeresolution-l1-1-1.dll\n - api-ms-win-ro-typeresolution-l1-1-1.dll\n - WinTypes.dll\n - API-MS-Win-ro-typeresolution-l1-1-0.dll\n - Ext-MS-Win-Ro-TypeResolution-L1-1-0.dll\napi_name:\n - RoParseTypeName\n---\n\n# RoParseTypeName function\n\n\n## -description\n\nParses a type name and existing type parameters, in the case of parameterized types.\n\n## -parameters\n\n### -param typeName [in]\n\nType: <b><a href=\"/windows/desktop/WinRT/hstring\">HSTRING</a></b>\n\nString-encoded typename. The typename can be a non-namespace-qualified type, a non-parameterized namespace-qualified type or a fully instantiated namespace-qualified parameterized type.\n\n### -param partsCount [out]\n\nType: <b>DWORD*</b>\n\nNumber of elements in the <i>typenameParts</i> array.\n\n### -param typeNameParts\n\nType: <b><a href=\"/windows/desktop/WinRT/hstring\">HSTRING</a>**</b>\n\nThe first element of the array is the specified type, and the remaining array elements are the type parameters (if any) in prewalk tree order.\n\n## -returns\n\nType: <b>HRESULT</b>\n\nThis function can return one of these values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>S_OK</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nParsing was successful.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_INVALIDARG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\n<i>typeName</i> contains embedded nulls or is empty.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>RO_E_METADATA_INVALID_TYPE_FORMAT</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\n<i>typename</i> is not well formed.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe <b>RoParseTypeName</b> function parses the string-encoded  type name and returns an array of <b>HSTRING</b> values. The first element of the array is the base type, and the remaining array elements are the type parameters, if any, in pre-order tree traversal order. <b>S_OK</b> is returned if the parsing was successful. \n\nHere are examples of different possible input typenames:\n\n<ul>\n<li>\nExample 1 (non-namespace-qualified type)\n\n<ul>\n<li>\n<b>Input typename</b>\n\nString\n\n</li>\n<li>\n<b>Output</b>\n\nArray element 0: String\n\n</li>\n</ul>\n</li>\n<li>\nExample 2 (non-parameterized namespace-qualified type)\n\n<ul>\n<li>\n<b>Input typename</b>\n\nWindows.Foundation.IExtensionInformation\n\n</li>\n<li>\n<b>Output</b>\n\nArray element 0: Windows.Foundation.IExtensionInformation\n\n</li>\n</ul>\n</li>\n<li>\nExample 3 (instantiated parameterized interface type)\n\n<ul>\n<li>\n<b>Input typename</b>\n\nWindows.Foundation.Collections.IIterator\\`1&lt;Windows.Foundation.Collections.IMapView\\`2&lt;Windows.Foundation.Collections.IVector\\`1&lt;String&gt;, String&gt;&gt;\n\n</li>\n<li>\n<b>Output</b>\n\nArray element 0: Windows.Foundation.Collections.IIterator`1\n\nArray element 1: Windows.Foundation.Collections.IMapView`2\n\nArray element 2: Windows.Foundation.Collections.IVector`1\n\nArray element 3: String\n\nArray element 4: String\n\n</li>\n</ul>\n</li>\n</ul>\nWhen parsing a non-parameterized type, the <b>RoParseTypeName</b> function returns an array that has one element. Please refer to example 1 and example 2 above.\n\nThe input string must be non-empty and it must not contain any embedded null characters. Otherwise, the API fails with <b>E_INVALIDARG</b>.  If the <i>typename</i> is ill-formed, like  IVector`1&lt;, then the API will fail with  the <b>RO_E_METADATA_INVALID_TYPE_FORMAT</b> error code.\n\nThe <b>RoParseTypeName</b> function validates only the format of the <i>typename</i> and not its syntax. For example, the function validates that a namespace-qualified parameterized interface <i>typename</i> follows the format shown in the following table, but it does not impose any requirements on what characters/symbols can be used in the <i>typename</i>, except that it should not contain ` , &lt;, or &gt; characters.\n\nThe format for a string-encoded instantiated parameterized interface is as follows:\n\n<table>\n<tr>\n<td>\nName of parameterized interface\n\n</td>\n<td>\nBacktick character\n(`)\n\n</td>\n<td>\nNumber of type parameters\n\n</td>\n<td>\nLeft angle bracket (&lt;)\n\n</td>\n<td>\nNamespace qualified name of each type parameter, separated by commas.\n\n</td>\n<td>\nRight angle bracket\n(&gt;)\n\n</td>\n</tr>\n</table>\n \n\nType parameters may be:\n\n<ul>\n<li>Non-parameterized, non-namespace-qualified types, like  WinRT fundamental types.</li>\n<li>Non-parameterized namespace-qualified types.</li>\n<li>Fully-instantiated namespace-qualified parameterized interfaces.</li>\n</ul>\nOn success, the caller is responsible for deallocating the <i>typenameParts</i> array returned by <b>RoParseTypeName</b> by using <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-cotaskmemfree\">CoTaskMemFree</a> to free the array and <a href=\"/windows/desktop/api/winstring/nf-winstring-windowsdeletestring\">WindowsDeleteString</a> to free the <b>HSTRING</b> values.\n\n\n#### Examples\n\nThe following C++ example shows how to use the <b>RoParseTypeName</b> function to find the direct child namespaces for a specified type name.\n\n\n```cpp\n#include <windows.h>\n#include <stdio.h>\n#include <WinRTString.h>\n#include <TypeResolution.h>\n\nHRESULT PrintParameterizedInterfaceParts(PCWSTR pszTypename);\n\nint ShowUsage()\n{\n    wprintf(L\"Usage: RoParseTypeNameSample \\\"TypeName\\\"\\n\");\n    return -1;\n}\n\nint __cdecl wmain(int argc, WCHAR **argv)\n{\n    if (argc != 2)\n    {\n        return ShowUsage();\n    }\n\n    HRESULT hr = PrintParameterizedInterfaceParts(argv[1]);\n\n    if (SUCCEEDED(hr))\n    {\n        return 0;\n    }\n    else\n    {\n        return -1;\n    }\n}\n\nHRESULT PrintParameterizedInterfaceParts(PCWSTR pszTypename)\n{\n    HRESULT hr;\n    HSTRING hstrTypeName = nullptr;\n    HSTRING *phstrNameParts = nullptr;\n    DWORD cRetrievedNameParts = 0;\n\n    hr = WindowsCreateString(\n        pszTypename,\n        static_cast<UINT32>(wcslen(pszTypename)),\n        &hstrTypeName);\n\n    if (SUCCEEDED(hr))\n    {\n        hr = RoParseTypeName(\n            hstrTypeName,\n            &cRetrievedNameParts,\n            &phstrNameParts);\n    }\n\n    if (SUCCEEDED(hr))\n    {\n        wprintf(L\"Parameterized interface %s is composed of:\\n\", pszTypename);\n\n        for (UINT32 i = 0; i < cRetrievedNameParts; i++)\n        {\n            wprintf(L\"Element %d: %s\\n\", i, WindowsGetStringRawBuffer(phstrNameParts[i], nullptr));\n        }\n    }\n    else\n    {\n        wprintf(L\"Invalid parameterized interface syntax: %s!\\n\", pszTypename);\n    }\n\n    // Clean up resources.\n    if (hstrTypeName != nullptr)\n    {\n        WindowsDeleteString(hstrTypeName);\n    }\n\n    for (UINT32 i = 0; i < cRetrievedNameParts; i++)\n    {\n        WindowsDeleteString(phstrNameParts[i]);\n    }\n\n    CoTaskMemFree(phstrNameParts);\n\n    return hr;\n}\n\n```"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "parse_type",
+   "file": "dlls/wintypes/main.c",
+   "start_line": 2006,
+   "end_line": 2119,
+   "static": true,
+   "called_from": [
+    "RoParseTypeName"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static HRESULT parse_type(struct parse_type_context *context, const WCHAR *input, unsigned int length)",
+   "code": "static HRESULT parse_type(struct parse_type_context *context, const WCHAR *input, unsigned int length)\n{\n    unsigned int i, parameter_count, nested_level;\n    const WCHAR *start, *end, *part_start, *ptr;\n    HRESULT hr;\n\n    start = input;\n    end = start + length;\n    part_start = start;\n    ptr = start;\n\n    /* Read until the end of input or '`' or '<' or '>' or ',' */\n    while (ptr < end && *ptr != '`' && *ptr != '<' && *ptr != '>' && *ptr != ',')\n        ptr++;\n\n    /* If the type name has '`' and there are characters before '`' */\n    if (ptr > start && ptr < end && *ptr == '`')\n    {\n        /* Move past the '`' */\n        ptr++;\n\n        /* Read the number of type parameters, expecting '1' to '9' */\n        if (!(ptr < end && *ptr >= '1' && *ptr <= '9'))\n            return RO_E_METADATA_INVALID_TYPE_FORMAT;\n        parameter_count = *ptr - '0';\n\n        /* Move past the number of type parameters, expecting '<' */\n        ptr++;\n        if (!(ptr < end && *ptr == '<'))\n            return RO_E_METADATA_INVALID_TYPE_FORMAT;\n\n        /* Add the name of parameterized interface, e.g., the \"interface`1\" in \"interface`1<parameter>\" */\n        if (FAILED(hr = parse_part(context, part_start, ptr - part_start)))\n            return hr;\n\n        /* Move past the '<' */\n        ptr++;\n        nested_level = 1;\n\n        /* Read parameters inside brackets, e.g., the \"p1\" and \"p2\" in \"interface`2<p1, p2>\" */\n        for (i = 0; i < parameter_count; i++)\n        {\n            /* Read a new parameter */\n            part_start = ptr;\n\n            /* Read until ','. The comma must be at the same nested bracket level */\n            while (ptr < end)\n            {\n                if (*ptr == '<')\n                {\n                    nested_level++;\n                    ptr++;\n                }\n                else if (*ptr == '>')\n                {\n                    /* The last parameter before '>' */\n                    if (i == parameter_count - 1 && nested_level == 1)\n                    {\n                        if (FAILED(hr = parse_type(context, part_start, ptr - part_start)))\n                            return hr;\n\n                        nested_level--;\n                        ptr++;\n\n                        /* Finish reading all parameters */\n                        break;\n                    }\n\n                    nested_level--;\n                    ptr++;\n                }\n                else if (*ptr == ',' && nested_level == 1)\n                {\n                    /* Parse the parameter, which can be another parameterized type */\n                    if (FAILED(hr = parse_type(context, part_start, ptr - part_start)))\n                        return hr;\n\n                    /* Move past the ',' */\n                    ptr++;\n\n                    /* Finish reading one parameter */\n                    break;\n                }\n                else\n                {\n                    ptr++;\n                }\n            }\n        }\n\n        /* Mismatching brackets or not enough parameters */\n        if (nested_level != 0 || i != parameter_count)\n            return RO_E_METADATA_INVALID_TYPE_FORMAT;\n\n        /* The remaining characters must be spaces */\n        while (ptr < end)\n        {\n            if (*ptr++ != ' ')\n                return RO_E_METADATA_INVALID_TYPE_FORMAT;\n        }\n\n        return S_OK;\n    }\n    /* Contain invalid '`', '<', '>' or ',' */\n    else if (ptr != end)\n    {\n        return RO_E_METADATA_INVALID_TYPE_FORMAT;\n    }\n    /* Non-parameterized */\n    else\n    {\n        return parse_part(context, part_start, ptr - part_start);\n    }\n}"
+  },
+  {
+   "name": "parse_part",
+   "file": "dlls/wintypes/main.c",
+   "start_line": 1977,
+   "end_line": 2004,
+   "static": true,
+   "called_from": [
+    "parse_type"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static HRESULT parse_part(struct parse_type_context *context, const WCHAR *input, unsigned int length)",
+   "code": "static HRESULT parse_part(struct parse_type_context *context, const WCHAR *input, unsigned int length)\n{\n    const WCHAR *start, *end, *ptr;\n\n    start = input;\n    end = start + length;\n\n    /* Remove leading spaces */\n    while (start < end && *start == ' ')\n        start++;\n\n    /* Remove trailing spaces */\n    while (end - 1 >= start && end[-1] == ' ')\n        end--;\n\n    /* Only contains spaces */\n    if (start == end)\n        return RO_E_METADATA_INVALID_TYPE_FORMAT;\n\n    /* Has spaces in the middle */\n    for (ptr = start; ptr < end; ptr++)\n    {\n        if (*ptr == ' ')\n            return RO_E_METADATA_INVALID_TYPE_FORMAT;\n    }\n\n    return add_part(context, start, end - start);\n}"
+  },
+  {
+   "name": "add_part",
+   "file": "dlls/wintypes/main.c",
+   "start_line": 1953,
+   "end_line": 1975,
+   "static": true,
+   "called_from": [
+    "parse_part"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static HRESULT add_part(struct parse_type_context *context, const WCHAR *part, size_t length)",
+   "code": "static HRESULT add_part(struct parse_type_context *context, const WCHAR *part, size_t length)\n{\n    DWORD new_parts_count;\n    HSTRING *new_parts;\n    HRESULT hr;\n\n    if (context->parts_count == context->allocated_parts_count)\n    {\n        new_parts_count = context->allocated_parts_count ? context->allocated_parts_count * 2 : 4;\n        new_parts = CoTaskMemRealloc(context->parts, new_parts_count * sizeof(*context->parts));\n        if (!new_parts)\n            return E_OUTOFMEMORY;\n\n        context->allocated_parts_count = new_parts_count;\n        context->parts = new_parts;\n    }\n\n    if (FAILED(hr = WindowsCreateString(part, length, &context->parts[context->parts_count])))\n        return hr;\n\n    context->parts_count++;\n    return S_OK;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "parse_type_context",
+    "kind": "struct_decl",
+    "start_line": 1946,
+    "end_line": 1951,
+    "code": "struct parse_type_context\n{\n    DWORD allocated_parts_count;\n    DWORD parts_count;\n    HSTRING *parts;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 23,
+    "end_line": 23,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(wintypes);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "CoTaskMemFree",
+    "module": "combase",
+    "impl": [
+     "dlls/combase/malloc.c:389"
+    ]
+   },
+   {
+    "name": "CoTaskMemRealloc",
+    "module": "combase",
+    "impl": [
+     "dlls/combase/malloc.c:397"
+    ]
+   },
+   {
+    "name": "WindowsCreateString",
+    "module": "combase",
+    "impl": [
+     "dlls/combase/string.c:87"
+    ]
+   },
+   {
+    "name": "WindowsDeleteString",
+    "module": "combase",
+    "impl": [
+     "dlls/combase/string.c:143"
+    ]
+   },
+   {
+    "name": "WindowsGetStringLen",
+    "module": "combase",
+    "impl": [
+     "dlls/combase/string.c:249"
+    ]
+   },
+   {
+    "name": "WindowsGetStringRawBuffer",
+    "module": "combase",
+    "impl": [
+     "dlls/combase/string.c:263"
+    ]
+   },
+   {
+    "name": "wcslen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:215"
+    ]
+   }
+  ],
+  "header_inline": [
+   "debugstr_hstring",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "wintypes.RoParseTypeName",
+  "category": {
+   "l1": "System services",
+   "l2": "Windows Runtime (WinRT)",
+   "header": "rometadataresolution.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 32,
+   "body": 31,
+   "code": 20
+  },
+  "cyclomatic": 5,
+  "return_type": "HRESULT",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/wintypes/tests/wintypes.c::test_RoParseTypeName"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/rometadataresolution/nf-rometadataresolution-roparsetypename",
+   "source": "win32",
+   "description": "Parses a type name and existing type parameters, in the case of parameterized types.",
+   "min_windows": "Windows 8 [desktop apps \\| UWP apps]",
+   "documented_dll": "WinTypes.dll"
+  },
+  "exports": [
+   "wintypes.RoParseTypeName"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 1.0,
+   "first_date": "2024-11-18",
+   "median_date": "2024-11-18",
+   "last_date": "2024-11-18",
+   "code_lines": 17
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "kernelbase.LocalUnlock",
+  "share_after_cutoff": 1.0,
+  "last_date": "2024-11-18"
+ }
+}

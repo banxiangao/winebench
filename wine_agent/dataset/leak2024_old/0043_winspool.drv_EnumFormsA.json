@@ -1,0 +1,253 @@
+{
+ "id": "0043",
+ "function": {
+  "name": "EnumFormsA",
+  "export_name": "EnumFormsA",
+  "module": "winspool.drv",
+  "source_module": "winspool.drv",
+  "exported_by": [
+   "winspool.drv"
+  ],
+  "side": "PE",
+  "file": "dlls/winspool.drv/info.c",
+  "start_line": 6689,
+  "end_line": 6703,
+  "body_lines": 12,
+  "signature": "BOOL WINAPI EnumFormsA( HANDLE printer, DWORD level, BYTE *form, DWORD size, DWORD *needed, DWORD *count )",
+  "header_comment": "/******************************************************************************\n *      EnumFormsA (WINSPOOL.@)\n */",
+  "code": "BOOL WINAPI EnumFormsA( HANDLE printer, DWORD level, BYTE *form, DWORD size, DWORD *needed, DWORD *count )\n{\n    const DWORD *string_info = form_string_info( level );\n    BOOL ret;\n    DWORD i;\n\n    if (!string_info) return FALSE;\n\n    ret = EnumFormsW( printer, level, form, size, needed, count );\n    if (ret)\n        for (i = 0; i < *count; i++)\n            packed_struct_WtoA( form + i * string_info[0], string_info );\n\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include <ctype.h>",
+   "#include <stddef.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winreg.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winspool.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wine/windef16.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/rbtree.h\"",
+   "#include <wine/unixlib.h>",
+   "#include \"ddk/compstui.h\"",
+   "#include \"ddk/winsplp.h\"",
+   "#include \"wspool.h\""
+  ],
+  "resolution": [
+   "winspool.drv!EnumFormsA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/winspool.drv/tests/info.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "",
+   "path": "desktop-src/printdocs/enumforms.md",
+   "url": "https://learn.microsoft.com/windows/win32/printdocs/enumforms",
+   "documented_name": "enumformsa",
+   "file": "docs/0043_win32_enumforms.md",
+   "text": "---\ndescription: The EnumForms function enumerates the forms supported by the specified printer.\nms.assetid: b13b515a-c764-4a80-ab85-95fb4abb2a6b\ntitle: EnumForms function (Winspool.h)\nms.topic: reference\nms.date: 05/31/2018\ntopic_type: \n- APIRef\n- kbSyntax\napi_name: \n- EnumForms\n- EnumFormsA\n- EnumFormsW\napi_type: \n- DllExport\napi_location: \n- Winspool.drv\n---\n\n# EnumForms function\n\nThe **EnumForms** function enumerates the forms supported by the specified printer.\n\n## Syntax\n\n\n```C++\nBOOL EnumForms(\n  _In_  HANDLE  hPrinter,\n  _In_  DWORD   Level,\n  _Out_ LPBYTE  pForm,\n  _In_  DWORD   cbBuf,\n  _Out_ LPDWORD pcbNeeded,\n  _Out_ LPDWORD pcReturned\n);\n```\n\n\n\n## Parameters\n\n<dl> <dt>\n\n*hPrinter* \\[in\\]\n</dt> <dd>\n\nHandle to the printer for which the forms should be enumerated. Use the [**OpenPrinter**](openprinter.md) or [**AddPrinter**](addprinter.md) function to retrieve a printer handle.\n\n</dd> <dt>\n\n*Level* \\[in\\]\n</dt> <dd>\n\nSpecifies the version of the structure to which *pForm* points. This value must be 1 or 2.\n\n</dd> <dt>\n\n*pForm* \\[out\\]\n</dt> <dd>\n\nPointer to one or more [**FORM\\_INFO\\_1**](form-info-1.md) structures or to one or more [**FORM\\_INFO\\_2**](form-info-2.md) structures. All the structures will have the same level.\n\n</dd> <dt>\n\n*cbBuf* \\[in\\]\n</dt> <dd>\n\nSpecifies the size, in bytes, of the buffer to which *pForm* points.\n\n</dd> <dt>\n\n*pcbNeeded* \\[out\\]\n</dt> <dd>\n\nPointer to a variable that receives the number of bytes copied to the array to which *pForm* points (if the operation succeeds) or the number of bytes required (if it fails because *cbBuf* is too small).\n\n</dd> <dt>\n\n*pcReturned* \\[out\\]\n</dt> <dd>\n\nPointer to a variable that receives the number of structures copied into the array to which *pForm* points.\n\n</dd> </dl>\n\n## Return value\n\nIf the function succeeds, the return value is a nonzero value.\n\nIf the function fails, the return value is zero.\n\n## Remarks\n\n> [!Note]  \n> This is a blocking or synchronous function and might not return immediately. How quickly this function returns depends on run-time factors such as network status, print server configuration, and printer driver implementation factors that are difficult to predict when writing an application. Calling this function from a thread that manages interaction with the user interface could make the application appear to be unresponsive.\n\n \n\nIf the caller is remote, and the *Level* is 2, the **StringType** value of the returned [**FORM\\_INFO\\_2**](form-info-2.md) structures will always be **STRING\\_LANGPAIR**.\n\nIn Windows Vista, the form data returned by **EnumForms** is retrieved from a local cache when *hPrinter* refers to a remote print server or a printer hosted by a print server and there is at least one open connection to a printer on the remote print server. In all other configurations, the form data is queried from the remote print server.\n\n## Requirements\n\n\n\n| Requirement | Value |\n|-------------------------------------|-----------------------------------------------------------------------------------------------------------|\n| Minimum supported client<br/> | Windows 2000 Professional \\[desktop apps only\\]<br/>                                                |\n| Minimum supported server<br/> | Windows 2000 Server \\[desktop apps only\\]<br/>                                                      |\n| Header<br/>                   | <dl> <dt>Winspool.h (include Windows.h)</dt> </dl> |\n| Library<br/>                  | <dl> <dt>Winspool.lib</dt> </dl>                   |\n| DLL<br/>                      | <dl> <dt>Winspool.drv</dt> </dl>                   |\n| Unicode and ANSI names<br/>   | **EnumFormsW** (Unicode) and **EnumFormsA** (ANSI)<br/>                                             |\n\n\n\n## See also\n\n<dl> <dt>\n\n[Printing](printdocs-printing.md)\n</dt> <dt>\n\n[Print Spooler API Functions](printing-and-print-spooler-functions.md)\n</dt> <dt>\n\n[**AddPrinter**](addprinter.md)\n</dt> <dt>\n\n[**FORM\\_INFO\\_1**](form-info-1.md)\n</dt> <dt>\n\n[**OpenPrinter**](openprinter.md)\n</dt> </dl>\n\n \n\n \n\n\n\n\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "form_string_info",
+   "file": "dlls/winspool.drv/info.c",
+   "start_line": 287,
+   "end_line": 309,
+   "static": true,
+   "called_from": [
+    "EnumFormsA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winspool.drv/info.c:3190"
+   ],
+   "signature": "static inline const DWORD *form_string_info( DWORD level )",
+   "code": "static inline const DWORD *form_string_info( DWORD level )\n{\n    static const DWORD info_1[] =\n    {\n        sizeof( FORM_INFO_1W ),\n        FIELD_OFFSET( FORM_INFO_1W, pName ),\n        ~0u\n    };\n    static const DWORD info_2[] =\n    {\n        sizeof( FORM_INFO_2W ),\n        FIELD_OFFSET( FORM_INFO_2W, pName ),\n        FIELD_OFFSET( FORM_INFO_2W, pMuiDll ),\n        FIELD_OFFSET( FORM_INFO_2W, pDisplayName ),\n        ~0u\n    };\n\n    if (level == 1) return info_1;\n    if (level == 2) return info_2;\n\n    SetLastError( ERROR_INVALID_LEVEL );\n    return NULL;\n}"
+  },
+  {
+   "name": "packed_struct_WtoA",
+   "file": "dlls/winspool.drv/info.c",
+   "start_line": 274,
+   "end_line": 285,
+   "static": true,
+   "called_from": [
+    "EnumFormsA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winspool.drv/info.c:3198",
+    "dlls/winspool.drv/info.c:7335"
+   ],
+   "signature": "static void packed_struct_WtoA( BYTE *data, const DWORD *string_info )",
+   "code": "static void packed_struct_WtoA( BYTE *data, const DWORD *string_info )\n{\n    WCHAR *strW;\n\n    string_info++; /* sizeof */\n    while (*string_info != ~0u)\n    {\n        strW = *(WCHAR **)(data + *string_info);\n        if (strW) stringWtoA( strW, (char *)strW, (wcslen(strW) + 1) * sizeof(WCHAR) );\n        string_info++;\n    }\n}"
+  },
+  {
+   "name": "stringWtoA",
+   "file": "dlls/winspool.drv/info.c",
+   "start_line": 215,
+   "end_line": 228,
+   "static": true,
+   "called_from": [
+    "packed_struct_WtoA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/winspool.drv/info.c:248",
+    "dlls/winspool.drv/info.c:259"
+   ],
+   "signature": "static void stringWtoA( const WCHAR *strW, char *strA, size_t size )",
+   "code": "static void stringWtoA( const WCHAR *strW, char *strA, size_t size )\n{\n    DWORD ret;\n    char *str;\n\n    str = (char *)strW == strA ? malloc( size ) : strA;\n    ret = WideCharToMultiByte( CP_ACP, 0, strW, -1, str, size, NULL, NULL );\n    if (str != strA)\n    {\n        memcpy( strA, str, ret );\n        free( str );\n    }\n    memset( strA + ret, 0, size - ret );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "EnumFormsW",
+    "impl": [
+     "dlls/winspool.drv/info.c:6708"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memcpy",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:104"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   },
+   {
+    "name": "wcslen",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/wcstring.c:215"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "winspool.drv.EnumFormsA",
+  "category": {
+   "l1": "Devices",
+   "l2": "Printing",
+   "header": "",
+   "textbook": "Device management",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 15,
+   "body": 14,
+   "code": 9
+  },
+  "cyclomatic": 4,
+  "return_type": "BOOL",
+  "n_params": 6,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/winspool.drv/tests/info.c::test_EnumForms"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/printdocs/enumforms",
+   "source": "win32-conceptual",
+   "description": "The EnumForms function enumerates the forms supported by the specified printer.",
+   "min_windows": "",
+   "documented_dll": ""
+  },
+  "exports": [
+   "winspool.drv.EnumFormsA"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2021-05-19",
+   "median_date": "2021-05-19",
+   "last_date": "2021-05-19",
+   "code_lines": 10,
+   "pair": "cfgmgr32.CM_Open_DevNode_Key",
+   "rank": 1,
+   "distance": 4.694
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "cfgmgr32.CM_Open_DevNode_Key",
+  "share_after_cutoff": 0.0,
+  "last_date": "2021-05-19",
+  "partner_rank": 1,
+  "distance": 4.694
+ }
+}

@@ -1,0 +1,148 @@
+{
+ "id": "0115",
+ "function": {
+  "name": "CompareObjectHandles",
+  "export_name": "CompareObjectHandles",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/process.c",
+  "start_line": 1907,
+  "end_line": 1910,
+  "body_lines": 1,
+  "signature": "BOOL WINAPI DECLSPEC_HOTPATCH CompareObjectHandles( HANDLE first, HANDLE second )",
+  "header_comment": "/***********************************************************************\n *              CompareObjectHandles   (kernelbase.@)\n */",
+  "code": "BOOL WINAPI DECLSPEC_HOTPATCH CompareObjectHandles( HANDLE first, HANDLE second )\n{\n    return set_ntstatus( NtCompareObjects( first, second ));\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wincontypes.h\"",
+   "#include \"winternl.h\"",
+   "#include \"processsnapshot.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/condrv.h\""
+  ],
+  "resolution": [
+   "kernelbase!CompareObjectHandles [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernelbase/tests/process.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "handleapi",
+   "path": "sdk-api-src/content/handleapi/nf-handleapi-compareobjecthandles.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/handleapi/nf-handleapi-compareobjecthandles",
+   "documented_name": "compareobjecthandles",
+   "file": "docs/0115_sdk-api_nf-handleapi-compareobjecthandles.md",
+   "text": "---\nUID: NF:handleapi.CompareObjectHandles\ntitle: CompareObjectHandles function (handleapi.h)\ndescription: Compares two object handles to determine if they refer to the same underlying kernel object.\nhelpviewer_keywords: [\"CompareObjectHandles\",\"CompareObjectHandles function\",\"base.compareobjecthandles\",\"handleapi/CompareObjectHandles\"]\nold-location: base\\compareobjecthandles.htm\ntech.root: winprog\nms.assetid: 06F22A46-0999-4622-8D62-23465C92A997\nms.date: 12/05/2018\nms.keywords: CompareObjectHandles, CompareObjectHandles function, base.compareobjecthandles, handleapi/CompareObjectHandles\nreq.header: handleapi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 10 [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2016 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernelbase.lib\nreq.dll: Kernelbase.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CompareObjectHandles\n - handleapi/CompareObjectHandles\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Kernelbase.dll\n - api-ms-win-core-handle-l1-1-0.lib\n - api-ms-win-core-handle-l1-1-0.dll\n - Kernel32.dll\napi_name:\n - CompareObjectHandles\n---\n\n# CompareObjectHandles function\n\n\n## -description\n\nCompares two object handles to determine if they refer to the same underlying kernel object.\n\n## -parameters\n\n### -param hFirstObjectHandle [in]\n\nThe first object handle to compare.\n\n### -param hSecondObjectHandle [in]\n\nThe second object handle to compare.\n\n## -returns\n\nA Boolean value that indicates if the two handles refer to the same underlying kernel object. TRUE if the same, otherwise FALSE.\n\n## -remarks\n\nThe <b>CompareObjectHandles</b> function is useful to determine if two kernel handles refer to the same kernel object without imposing a requirement that specific access rights be granted to either handle in order to perform the comparison.  For example, if a process desires to determine whether a process handle is a handle to the current process, a call to <b>CompareObjectHandles</b> (GetCurrentProcess (), hProcess) can be used to determine if hProcess refers to the current process.  Notably, this does not require the use of object-specific access rights, whereas in this example, calling <a href=\"/windows/desktop/api/processthreadsapi/nf-processthreadsapi-getprocessid\">GetProcessId</a> to check the process IDs of two process handles imposes a requirement that the handles grant PROCESS_QUERY_LIMITED_INFORMATION access. However it is legal for a process handle to not have that access right granted depending on how the handle is intended to be used.\n\n\n#### Examples\n\nThe following code sample creates three handles, two of which refer to the same object, then compares them to show that identical underlying kernel objects will return TRUE, while non-identical objects will return FALSE.\n\n\n``` syntax\n#include <windows.h>\n#include <stdio.h>\n#include <wchar.h>\n\nHANDLE Event1;\nHANDLE Event2;\nHANDLE Event3;\n\n\t// Create a handle to a named event.\nEvent1 = CreateEventW (NULL, TRUE, FALSE, L\"{75A520B7-2C11-4809-B43A-0D31FB1FDD19}\");\nif (Event1 == NULL) {\tExitProcess (0);\t}\n\n\t// Create a handle to the same event.\nEvent2 = CreateEventW (NULL, TRUE, FALSE, L\"{75A520B7-2C11-4809-B43A-0D31FB1FDD19}\");\nif (Event2 == NULL) {\tExitProcess (0);\t}\n\n\t// Create a handle to an anonymous, unnamed event.\nEvent3 = CreateEventW (NULL, TRUE, FALSE, NULL);\nif (Event3 == NULL) {\tExitProcess (0);\t}\n\n\t// Compare two handles to the same kernel object.\nif (CompareObjectHandles (Event1, Event2) != FALSE) \n\t{\t// This message should be printed by the program.\n\t\twprintf (L\"Event1 and Event2 refer to the same underlying event object.\\n\");\n\t}\n\n\t// Compare two handles to different kernel objects.\nif (CompareObjectHandles (Event1, Event3) == FALSE) \n\t{\t// This message should be printed by the program.\n\t\twprintf (L\"Event1 and Event3 refer to different underlying event objects.  (Error %lu)\\n\", GetLastError ());\t\t\n\t}\n\n\t// Compare two handles to different kernel objects, each of a different type of kernel object.\n\t// The comparison is legal to make, though the function will always return FALSE and indicate \n\t// a last error status of ERROR_NOT_SAME_OBJECT.\nif (CompareObjectHandles (Event1, GetCurrentProcess ()) == FALSE) \n\t{\t// This message should be printed by the program.\n\t\twprintf (L\"Event1 and the current process refer to different underlying kernel objects.  (Error %lu)\\n\", GetLastError ());\n\t}\n\n```\n\n\n## -see-also\n\n<a href=\"/windows/desktop/SysInfo/handle-and-object-functions\">Handle and Object Functions</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "NtCompareObjects",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/server.c:1911"
+    ]
+   }
+  ],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [
+   "set_ntstatus"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "kernelbase.CompareObjectHandles",
+  "category": {
+   "l1": "System services",
+   "l2": "Handles and objects",
+   "header": "handleapi.h",
+   "textbook": "Information maintenance",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 4,
+   "body": 3,
+   "code": 1
+  },
+  "cyclomatic": 1,
+  "return_type": "BOOL",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/kernelbase/tests/process.c::test_CompareObjectHandles"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/handleapi/nf-handleapi-compareobjecthandles",
+   "source": "win32",
+   "description": "Compares two object handles to determine if they refer to the same underlying kernel object.",
+   "min_windows": "Windows 10 [desktop apps \\| UWP apps]",
+   "documented_dll": "Kernelbase.dll"
+  },
+  "exports": [
+   "kernelbase.CompareObjectHandles"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2021-11-29",
+   "median_date": "2021-11-29",
+   "last_date": "2021-11-29",
+   "code_lines": 2,
+   "pair": "kernelbase.IsThreadAFiber",
+   "rank": 1,
+   "distance": 0.0
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "kernelbase.IsThreadAFiber",
+  "share_after_cutoff": 0.0,
+  "last_date": "2021-11-29",
+  "partner_rank": 1,
+  "distance": 0.0
+ }
+}

@@ -1,0 +1,346 @@
+{
+ "id": "0071",
+ "function": {
+  "name": "D3DXCreateCylinder",
+  "export_name": "D3DXCreateCylinder",
+  "module": "d3dx9_36",
+  "source_module": "d3dx9_36",
+  "exported_by": [
+   "d3dx9_24",
+   "d3dx9_25",
+   "d3dx9_26",
+   "d3dx9_27",
+   "d3dx9_28",
+   "d3dx9_29",
+   "d3dx9_30",
+   "d3dx9_31",
+   "d3dx9_32",
+   "d3dx9_33",
+   "d3dx9_34",
+   "d3dx9_35",
+   "d3dx9_36",
+   "d3dx9_37",
+   "d3dx9_38",
+   "d3dx9_39",
+   "d3dx9_40",
+   "d3dx9_41",
+   "d3dx9_42",
+   "d3dx9_43"
+  ],
+  "side": "PE",
+  "file": "dlls/d3dx9_36/mesh.c",
+  "start_line": 4913,
+  "end_line": 5105,
+  "body_lines": 190,
+  "signature": "HRESULT WINAPI D3DXCreateCylinder(struct IDirect3DDevice9 *device, float radius1, float radius2, float length, UINT slices, UINT stacks, struct ID3DXMesh **mesh, struct ID3DXBuffer **adjacency)",
+  "header_comment": null,
+  "code": "HRESULT WINAPI D3DXCreateCylinder(struct IDirect3DDevice9 *device, float radius1, float radius2,\n        float length, UINT slices, UINT stacks, struct ID3DXMesh **mesh, struct ID3DXBuffer **adjacency)\n{\n    DWORD number_of_vertices, number_of_faces;\n    HRESULT hr;\n    ID3DXMesh *cylinder;\n    struct vertex *vertices;\n    face *faces;\n    float theta_step, theta_start;\n    struct sincos_table theta;\n    float delta_radius, radius, radius_step;\n    float z, z_step, z_normal;\n    DWORD vertex, face, slice, stack;\n\n    TRACE(\"(%p, %f, %f, %f, %u, %u, %p, %p)\\n\", device, radius1, radius2, length, slices, stacks, mesh, adjacency);\n\n    if (device == NULL || radius1 < 0.0f || radius2 < 0.0f || length < 0.0f || slices < 2 || stacks < 1 || mesh == NULL)\n    {\n        return D3DERR_INVALIDCALL;\n    }\n\n    number_of_vertices = 2 + (slices * (3 + stacks));\n    number_of_faces = 2 * slices + stacks * (2 * slices);\n\n    hr = D3DXCreateMeshFVF(number_of_faces, number_of_vertices, D3DXMESH_MANAGED,\n                           D3DFVF_XYZ | D3DFVF_NORMAL, device, &cylinder);\n    if (FAILED(hr))\n    {\n        return hr;\n    }\n\n    if (FAILED(hr = cylinder->lpVtbl->LockVertexBuffer(cylinder, 0, (void **)&vertices)))\n    {\n        cylinder->lpVtbl->Release(cylinder);\n        return hr;\n    }\n\n    if (FAILED(hr = cylinder->lpVtbl->LockIndexBuffer(cylinder, 0, (void **)&faces)))\n    {\n        cylinder->lpVtbl->UnlockVertexBuffer(cylinder);\n        cylinder->lpVtbl->Release(cylinder);\n        return hr;\n    }\n\n    /* theta = angle on xy plane wrt x axis */\n    theta_step = -2.0f * D3DX_PI / slices;\n    theta_start = D3DX_PI / 2.0f;\n\n    if (!compute_sincos_table(&theta, theta_start, theta_step, slices))\n    {\n        cylinder->lpVtbl->UnlockIndexBuffer(cylinder);\n        cylinder->lpVtbl->UnlockVertexBuffer(cylinder);\n        cylinder->lpVtbl->Release(cylinder);\n        return E_OUTOFMEMORY;\n    }\n\n    vertex = 0;\n    face = 0;\n\n    delta_radius = radius1 - radius2;\n    radius = radius1;\n    radius_step = delta_radius / stacks;\n\n    z = -length / 2;\n    z_step = length / stacks;\n    z_normal = delta_radius / length;\n    if (isnan(z_normal))\n    {\n        z_normal = 0.0f;\n    }\n\n    vertices[vertex].normal.x = 0.0f;\n    vertices[vertex].normal.y = 0.0f;\n    vertices[vertex].normal.z = -1.0f;\n    vertices[vertex].position.x = 0.0f;\n    vertices[vertex].position.y = 0.0f;\n    vertices[vertex++].position.z = z;\n\n    for (slice = 0; slice < slices; slice++, vertex++)\n    {\n        vertices[vertex].normal.x = 0.0f;\n        vertices[vertex].normal.y = 0.0f;\n        vertices[vertex].normal.z = -1.0f;\n        vertices[vertex].position.x = radius * theta.cos[slice];\n        vertices[vertex].position.y = radius * theta.sin[slice];\n        vertices[vertex].position.z = z;\n\n        if (slice > 0)\n        {\n            faces[face][0] = 0;\n            faces[face][1] = slice;\n            faces[face++][2] = slice + 1;\n        }\n    }\n\n    faces[face][0] = 0;\n    faces[face][1] = slice;\n    faces[face++][2] = 1;\n\n    for (stack = 1; stack <= stacks+1; stack++)\n    {\n        for (slice = 0; slice < slices; slice++, vertex++)\n        {\n            vertices[vertex].normal.x = theta.cos[slice];\n            vertices[vertex].normal.y = theta.sin[slice];\n            vertices[vertex].normal.z = z_normal;\n            D3DXVec3Normalize(&vertices[vertex].normal, &vertices[vertex].normal);\n            vertices[vertex].position.x = radius * theta.cos[slice];\n            vertices[vertex].position.y = radius * theta.sin[slice];\n            vertices[vertex].position.z = z;\n\n            if (stack > 1 && slice > 0)\n            {\n                faces[face][0] = vertex_index(slices, slice-1, stack-1);\n                faces[face][1] = vertex_index(slices, slice-1, stack);\n                faces[face++][2] = vertex_index(slices, slice, stack-1);\n\n                faces[face][0] = vertex_index(slices, slice, stack-1);\n                faces[face][1] = vertex_index(slices, slice-1, stack);\n                faces[face++][2] = vertex_index(slices, slice, stack);\n            }\n        }\n\n        if (stack > 1)\n        {\n            faces[face][0] = vertex_index(slices, slice-1, stack-1);\n            faces[face][1] = vertex_index(slices, slice-1, stack);\n            faces[face++][2] = vertex_index(slices, 0, stack-1);\n\n            faces[face][0] = vertex_index(slices, 0, stack-1);\n            faces[face][1] = vertex_index(slices, slice-1, stack);\n            faces[face++][2] = vertex_index(slices, 0, stack);\n        }\n\n        if (stack < stacks + 1)\n        {\n            z += z_step;\n            radius -= radius_step;\n        }\n    }\n\n    for (slice = 0; slice < slices; slice++, vertex++)\n    {\n        vertices[vertex].normal.x = 0.0f;\n        vertices[vertex].normal.y = 0.0f;\n        vertices[vertex].normal.z = 1.0f;\n        vertices[vertex].position.x = radius * theta.cos[slice];\n        vertices[vertex].position.y = radius * theta.sin[slice];\n        vertices[vertex].position.z = z;\n\n        if (slice > 0)\n        {\n            faces[face][0] = vertex_index(slices, slice-1, stack);\n            faces[face][1] = number_of_vertices - 1;\n            faces[face++][2] = vertex_index(slices, slice, stack);\n        }\n    }\n\n    vertices[vertex].position.x = 0.0f;\n    vertices[vertex].position.y = 0.0f;\n    vertices[vertex].position.z = z;\n    vertices[vertex].normal.x = 0.0f;\n    vertices[vertex].normal.y = 0.0f;\n    vertices[vertex].normal.z = 1.0f;\n\n    faces[face][0] = vertex_index(slices, slice-1, stack);\n    faces[face][1] = number_of_vertices - 1;\n    faces[face][2] = vertex_index(slices, 0, stack);\n\n    free_sincos_table(&theta);\n    cylinder->lpVtbl->UnlockIndexBuffer(cylinder);\n    cylinder->lpVtbl->UnlockVertexBuffer(cylinder);\n\n    if (adjacency)\n    {\n        if (FAILED(hr = D3DXCreateBuffer(number_of_faces * sizeof(DWORD) * 3, adjacency)))\n        {\n            cylinder->lpVtbl->Release(cylinder);\n            return hr;\n        }\n\n        if (FAILED(hr = cylinder->lpVtbl->GenerateAdjacency(cylinder, 0.0f, (*adjacency)->lpVtbl->GetBufferPointer(*adjacency))))\n        {\n            (*adjacency)->lpVtbl->Release(*adjacency);\n            cylinder->lpVtbl->Release(cylinder);\n            return hr;\n        }\n    }\n\n    *mesh = cylinder;\n\n    return D3D_OK;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <float.h>",
+   "#include \"d3dx9_private.h\"",
+   "#include \"dxfile.h\"",
+   "#include \"rmxfguid.h\"",
+   "#include \"rmxftmpl.h\"",
+   "#include \"wine/list.h\""
+  ],
+  "resolution": [
+   "d3dx9_36!D3DXCreateCylinder [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/d3dx9_36/tests/mesh.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 2
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "",
+   "path": "desktop-src/direct3d9/d3dxcreatecylinder.md",
+   "url": "https://learn.microsoft.com/windows/win32/direct3d9/d3dxcreatecylinder",
+   "documented_name": "d3dxcreatecylinder",
+   "file": "docs/0071_win32_d3dxcreatecylinder.md",
+   "text": "---\ndescription: Uses a left-handed coordinate system to create a mesh containing a cylinder.\nms.assetid: 54b8a59e-d13f-44cb-84c0-f63c7b1ffb1b\ntitle: D3DXCreateCylinder function (D3dx9shape.h)\nms.topic: reference\nms.date: 05/31/2018\ntopic_type:\n- APIRef\n- kbSyntax\napi_name:\n- D3DXCreateCylinder\napi_type:\n- LibDef\napi_location:\n- d3dx9.lib\n- d3dx9.dll\n---\n\n# D3DXCreateCylinder function\n\nUses a left-handed coordinate system to create a mesh containing a cylinder.\n\n## Syntax\n\n\n```C++\nHRESULT D3DXCreateCylinder(\n  _In_  LPDIRECT3DDEVICE9 pDevice,\n  _In_  FLOAT             Radius1,\n  _In_  FLOAT             Radius2,\n  _In_  FLOAT             Length,\n  _In_  UINT              Slices,\n  _In_  UINT              Stacks,\n  _Out_ LPD3DXMESH        *ppMesh,\n  _Out_ LPD3DXBUFFER      *ppAdjacency\n);\n```\n\n\n\n## Parameters\n\n<dl> <dt>\n\n*pDevice* \\[in\\]\n</dt> <dd>\n\nType: **[**LPDIRECT3DDEVICE9**](/windows/win32/api/d3d9helper/nn-d3d9helper-idirect3ddevice9)**\n\nPointer to an [**IDirect3DDevice9**](/windows/win32/api/d3d9helper/nn-d3d9helper-idirect3ddevice9) interface, representing the device associated with the created cylinder mesh.\n\n</dd> <dt>\n\n*Radius1* \\[in\\]\n</dt> <dd>\n\nType: **[**FLOAT**](../winprog/windows-data-types.md)**\n\nRadius at the negative Z end. Value should be greater than or equal to 0.0f.\n\n</dd> <dt>\n\n*Radius2* \\[in\\]\n</dt> <dd>\n\nType: **[**FLOAT**](../winprog/windows-data-types.md)**\n\nRadius at the positive Z end. Value should be greater than or equal to 0.0f.\n\n</dd> <dt>\n\n*Length* \\[in\\]\n</dt> <dd>\n\nType: **[**FLOAT**](../winprog/windows-data-types.md)**\n\nLength of the cylinder along the z-axis.\n\n</dd> <dt>\n\n*Slices* \\[in\\]\n</dt> <dd>\n\nType: **[**UINT**](../winprog/windows-data-types.md)**\n\nNumber of slices about the main axis.\n\n</dd> <dt>\n\n*Stacks* \\[in\\]\n</dt> <dd>\n\nType: **[**UINT**](../winprog/windows-data-types.md)**\n\nNumber of stacks along the main axis.\n\n</dd> <dt>\n\n*ppMesh* \\[out\\]\n</dt> <dd>\n\nType: **[**LPD3DXMESH**](id3dxmesh.md)\\***\n\nAddress of a pointer to the output shape, an [**ID3DXMesh**](id3dxmesh.md) interface.\n\n</dd> <dt>\n\n*ppAdjacency* \\[out\\]\n</dt> <dd>\n\nType: **[**LPD3DXBUFFER**](id3dxbuffer.md)\\***\n\nAddress of a pointer to an [**ID3DXBuffer**](id3dxbuffer.md) interface. When the method returns, this parameter is filled with an array of three DWORDs per face that specify the three neighbors for each face in the mesh. **NULL** can be specified.\n\n</dd> </dl>\n\n## Return value\n\nType: **[**HRESULT**](https://msdn.microsoft.com/library/Bb401631(v=MSDN.10).aspx)**\n\nIf the function succeeds, the return value is D3D\\_OK. If the function fails, the return value can be one of the following: D3DERR\\_INVALIDCALL, D3DXERR\\_INVALIDDATA, E\\_OUTOFMEMORY.\n\n## Remarks\n\nThe created cylinder is centered at the origin, and its axis is aligned with the z-axis.\n\nThis function creates a mesh with the D3DXMESH\\_MANAGED creation option and [D3DFVF\\_XYZ \\| D3DFVF\\_NORMAL](d3dfvf.md) flexible vertex format (FVF).\n\n## Requirements\n\n\n\n| Requirement | Value |\n|--------------------|-----------------------------------------------------------------------------------------|\n| Header<br/>  | <dl> <dt>D3dx9shape.h</dt> </dl> |\n| Library<br/> | <dl> <dt>D3dx9.lib</dt> </dl>    |\n\n\n\n## See also\n\n<dl> <dt>\n\n[Shape Drawing Functions](dx9-graphics-reference-d3dx-functions-shape.md)\n</dt> </dl>\n\n \n\n \n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "compute_sincos_table",
+   "file": "dlls/d3dx9_36/mesh.c",
+   "start_line": 4700,
+   "end_line": 4726,
+   "static": true,
+   "called_from": [
+    "D3DXCreateCylinder"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/d3dx9_36/mesh.c:4780"
+   ],
+   "signature": "static BOOL compute_sincos_table(struct sincos_table *sincos_table, float angle_start, float angle_step, int n)",
+   "code": "static BOOL compute_sincos_table(struct sincos_table *sincos_table, float angle_start, float angle_step, int n)\n{\n    float angle;\n    int i;\n\n    sincos_table->sin = malloc(n * sizeof(*sincos_table->sin));\n    if (!sincos_table->sin)\n    {\n        return FALSE;\n    }\n    sincos_table->cos = malloc(n * sizeof(*sincos_table->cos));\n    if (!sincos_table->cos)\n    {\n        free(sincos_table->sin);\n        return FALSE;\n    }\n\n    angle = angle_start;\n    for (i = 0; i < n; i++)\n    {\n        sincos_table->sin[i] = sinf(angle);\n        sincos_table->cos[i] = cosf(angle);\n        angle += angle_step;\n    }\n\n    return TRUE;\n}"
+  },
+  {
+   "name": "vertex_index",
+   "file": "dlls/d3dx9_36/mesh.c",
+   "start_line": 4728,
+   "end_line": 4731,
+   "static": true,
+   "called_from": [
+    "D3DXCreateCylinder"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/d3dx9_36/mesh.c:1201",
+    "dlls/d3dx9_36/mesh.c:1261",
+    "dlls/d3dx9_36/mesh.c:1273",
+    "dlls/d3dx9_36/mesh.c:1334",
+    "dlls/d3dx9_36/mesh.c:1575"
+   ],
+   "signature": "static WORD vertex_index(UINT slices, int slice, int stack)",
+   "code": "static WORD vertex_index(UINT slices, int slice, int stack)\n{\n    return stack*slices+slice+1;\n}"
+  },
+  {
+   "name": "free_sincos_table",
+   "file": "dlls/d3dx9_36/mesh.c",
+   "start_line": 4693,
+   "end_line": 4697,
+   "static": true,
+   "called_from": [
+    "D3DXCreateCylinder"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/d3dx9_36/mesh.c:4887"
+   ],
+   "signature": "static void free_sincos_table(struct sincos_table *sincos_table)",
+   "code": "static void free_sincos_table(struct sincos_table *sincos_table)\n{\n    free(sincos_table->cos);\n    free(sincos_table->sin);\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "face",
+    "kind": "typedef_decl",
+    "start_line": 4685,
+    "end_line": 4685,
+    "code": "typedef WORD face[3];"
+   },
+   {
+    "name": "sincos_table",
+    "kind": "struct_decl",
+    "start_line": 4687,
+    "end_line": 4691,
+    "code": "struct sincos_table\n{\n    float *sin;\n    float *cos;\n};"
+   },
+   {
+    "name": "vertex",
+    "kind": "struct_decl",
+    "start_line": 4495,
+    "end_line": 4499,
+    "code": "struct vertex\n{\n    D3DXVECTOR3 position;\n    D3DXVECTOR3 normal;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 38,
+    "end_line": 38,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(d3dx);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "D3DXCreateBuffer",
+    "impl": [
+     "dlls/d3dx9_36/core.c:127"
+    ]
+   },
+   {
+    "name": "D3DXCreateMeshFVF",
+    "impl": [
+     "dlls/d3dx9_36/mesh.c:2401"
+    ]
+   },
+   {
+    "name": "D3DXVec3Normalize",
+    "impl": [
+     "dlls/d3dx9_36/math.c:1805"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "_dclass",
+    "module": "ucrtbase",
+    "impl": []
+   },
+   {
+    "name": "_fdclass",
+    "module": "ucrtbase",
+    "impl": []
+   },
+   {
+    "name": "cosf",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/mathf.c:51"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "sinf",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/mathf.c:50"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "cylinder->lpVtbl->LockVertexBuffer",
+    "in_function": "D3DXCreateCylinder",
+    "at": "dlls/d3dx9_36/mesh.c:4944",
+    "candidates": []
+   },
+   {
+    "expr": "cylinder->lpVtbl->Release",
+    "in_function": "D3DXCreateCylinder",
+    "at": "dlls/d3dx9_36/mesh.c:4946",
+    "candidates": []
+   },
+   {
+    "expr": "cylinder->lpVtbl->LockIndexBuffer",
+    "in_function": "D3DXCreateCylinder",
+    "at": "dlls/d3dx9_36/mesh.c:4950",
+    "candidates": []
+   },
+   {
+    "expr": "cylinder->lpVtbl->UnlockVertexBuffer",
+    "in_function": "D3DXCreateCylinder",
+    "at": "dlls/d3dx9_36/mesh.c:4952",
+    "candidates": []
+   },
+   {
+    "expr": "cylinder->lpVtbl->UnlockIndexBuffer",
+    "in_function": "D3DXCreateCylinder",
+    "at": "dlls/d3dx9_36/mesh.c:4963",
+    "candidates": []
+   },
+   {
+    "expr": "cylinder->lpVtbl->GenerateAdjacency",
+    "in_function": "D3DXCreateCylinder",
+    "at": "dlls/d3dx9_36/mesh.c:5094",
+    "candidates": []
+   },
+   {
+    "expr": "(*adjacency)->lpVtbl->GetBufferPointer",
+    "in_function": "D3DXCreateCylinder",
+    "at": "dlls/d3dx9_36/mesh.c:5094",
+    "candidates": []
+   },
+   {
+    "expr": "(*adjacency)->lpVtbl->Release",
+    "in_function": "D3DXCreateCylinder",
+    "at": "dlls/d3dx9_36/mesh.c:5096",
+    "candidates": []
+   }
+  ]
+ },
+ "winebench": {
+  "id": "d3dx9_36.D3DXCreateCylinder",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "Direct3D",
+   "header": "",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 193,
+   "body": 191,
+   "code": 122
+  },
+  "cyclomatic": 26,
+  "return_type": "HRESULT",
+  "n_params": 8,
+  "tests": {
+   "n_tests_own": 2,
+   "n_tests": 2,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/d3dx9_36/tests/mesh.c::D3DXCreateCylinderTest",
+    "dlls/d3dx9_36/tests/mesh.c::test_cylinder"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/direct3d9/d3dxcreatecylinder",
+   "source": "win32-conceptual",
+   "description": "Uses a left-handed coordinate system to create a mesh containing a cylinder.",
+   "min_windows": "",
+   "documented_dll": "d3dx9.dll"
+  },
+  "exports": [
+   "d3dx9_36.D3DXCreateCylinder"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2010-08-02",
+   "median_date": "2010-09-28",
+   "last_date": "2015-10-27",
+   "code_lines": 123,
+   "pair": "d3dx9_36.D3DXSaveTextureToFileInMemory",
+   "rank": 1,
+   "distance": 0.318
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "d3dx9_36.D3DXSaveTextureToFileInMemory",
+  "share_after_cutoff": 0.0,
+  "last_date": "2015-10-27",
+  "partner_rank": 1,
+  "distance": 0.318
+ }
+}

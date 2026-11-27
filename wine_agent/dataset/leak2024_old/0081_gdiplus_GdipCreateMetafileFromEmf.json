@@ -1,0 +1,176 @@
+{
+ "id": "0081",
+ "function": {
+  "name": "GdipCreateMetafileFromEmf",
+  "export_name": "GdipCreateMetafileFromEmf",
+  "module": "gdiplus",
+  "source_module": "gdiplus",
+  "exported_by": [
+   "gdiplus"
+  ],
+  "side": "PE",
+  "file": "dlls/gdiplus/metafile.c",
+  "start_line": 4252,
+  "end_line": 4296,
+  "body_lines": 42,
+  "signature": "GpStatus WINGDIPAPI GdipCreateMetafileFromEmf(HENHMETAFILE hemf, BOOL delete, GpMetafile **metafile)",
+  "header_comment": null,
+  "code": "GpStatus WINGDIPAPI GdipCreateMetafileFromEmf(HENHMETAFILE hemf, BOOL delete,\n    GpMetafile **metafile)\n{\n    GpStatus stat;\n    MetafileHeader header;\n\n    TRACE(\"(%p,%i,%p)\\n\", hemf, delete, metafile);\n\n    if(!hemf || !metafile)\n        return InvalidParameter;\n\n    stat = GdipGetMetafileHeaderFromEmf(hemf, &header);\n    if (stat != Ok)\n        return stat;\n\n    *metafile = calloc(1, sizeof(GpMetafile));\n    if (!*metafile)\n        return OutOfMemory;\n\n    (*metafile)->image.type = ImageTypeMetafile;\n    (*metafile)->image.format = ImageFormatEMF;\n    (*metafile)->image.frame_count = 1;\n    (*metafile)->image.xres = header.DpiX;\n    (*metafile)->image.yres = header.DpiY;\n    (*metafile)->bounds.X = (REAL)header.EmfHeader.rclFrame.left / 2540.0 * header.DpiX;\n    (*metafile)->bounds.Y = (REAL)header.EmfHeader.rclFrame.top / 2540.0 * header.DpiY;\n    (*metafile)->bounds.Width = (REAL)(header.EmfHeader.rclFrame.right - header.EmfHeader.rclFrame.left)\n                                / 2540.0 * header.DpiX;\n    (*metafile)->bounds.Height = (REAL)(header.EmfHeader.rclFrame.bottom - header.EmfHeader.rclFrame.top)\n                                 / 2540.0 * header.DpiY;\n    (*metafile)->unit = UnitPixel;\n    (*metafile)->metafile_type = header.Type;\n    (*metafile)->hemf = hemf;\n    (*metafile)->preserve_hemf = !delete;\n    /* If the 31th bit of EmfPlusFlags was set, metafile was recorded with a DC for a video display.\n     * If clear, metafile was recorded with a DC for a printer */\n    (*metafile)->printer_display = !(header.EmfPlusFlags & (1u << 31));\n    (*metafile)->logical_dpix = header.LogicalDpiX;\n    (*metafile)->logical_dpiy = header.LogicalDpiY;\n    list_init(&(*metafile)->containers);\n\n    TRACE(\"<-- %p\\n\", *metafile);\n\n    return Ok;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <math.h>",
+   "#include <assert.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"objbase.h\"",
+   "#include \"ocidl.h\"",
+   "#include \"olectl.h\"",
+   "#include \"ole2.h\"",
+   "#include \"winreg.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"gdiplus.h\"",
+   "#include \"gdiplus_private.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\""
+  ],
+  "resolution": [
+   "gdiplus!GdipCreateMetafileFromEmf [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdiplus/tests/metafile.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 4
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "gdiplusflat",
+   "path": "desktop-src/gdiplus/-gdiplus-graphics-flat.md",
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-graphics-flat",
+   "documented_name": "gdipcreatemetafilefromemf",
+   "excerpt": {
+    "note": "GDI+ flat API page: one table row per function; only the page introduction, the table header and this function's row are kept",
+    "full_page_chars": 212688
+   },
+   "file": "docs/0081_win32_-gdiplus-graphics-flat.md",
+   "text": "---\ndescription: Windows GDI+ exposes a flat API that consists of about 600 functions. These flat API functions are wrapped by the Graphics C++ class.\nms.assetid: 0d10b3cc-6d1d-4e14-80c9-fd3b8b3880d7\ntitle: Graphics Functions\nms.topic: reference\nms.date: 05/31/2018\n---\n\n# Graphics Functions\n\nWindows GDI+ exposes a flat API that consists of about 600 functions, which are implemented in Gdiplus.dll and declared in Gdiplusflat.h. The functions in the GDI+ flat API are wrapped by a collection of about 40 C++ classes. It is recommended that you do not directly call the functions in the flat API. Whenever you make calls to GDI+, you should do so by calling the methods and functions provided by the C++ wrappers. Microsoft Product Support Services will not provide support for code that calls the flat API directly. For more information on using these wrapper methods, see [GDI+ Flat API](-gdiplus-flatapi-flat.md).\n\nThe following flat API functions are wrapped by the [**Graphics**](/windows/win32/api/gdiplusgraphics/nl-gdiplusgraphics-graphics) C++ class.\n\n## Graphics Functions and Corresponding Wrapper Methods\n\n\n\n| Flat function                                                                                                                                                                                                                                                                                                               | Wrapper method                                                                                                                                                                                                                                                                                                                                                                                                              | Remarks                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |\n|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|\n| GpStatus WINGDIPAPI GdipCreateMetafileFromEmf(HENHMETAFILE hEmf, BOOL deleteEmf, GpMetafile \\*\\*metafile)<br/>                                                                                                                                                                                                        | [**Metafile::Metafile(IN HENHMETAFILE hEmf, IN BOOL deleteEmf = **FALSE**)**](/windows/win32/api/gdiplusheaders/nf-gdiplusheaders-metafile-metafile(inhenhmetafile_inbool))                                                                                                                                                                                                                                                                                         | Creates a Windows GDI+ [**Metafile::Metafile**](/windows/win32/api/gdiplusheaders/nl-gdiplusheaders-metafile) object for playback based on a Windows Graphics Device Interface (GDI) Enhanced Metafile (EMF) file.                                                                                                                                                                                                                                                                                       |\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 41,
+    "end_line": 41,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(gdiplus);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GdipGetMetafileHeaderFromEmf",
+    "impl": [
+     "dlls/gdiplus/metafile.c:4136"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "calloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:386"
+    ]
+   }
+  ],
+  "header_inline": [
+   "list_init",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "gdiplus.GdipCreateMetafileFromEmf",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI+",
+   "header": "gdiplusflat.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 45,
+   "body": 43,
+   "code": 32
+  },
+  "cyclomatic": 5,
+  "return_type": "GpStatus",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 4,
+   "n_tests": 4,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/gdiplus/tests/metafile.c::sync_metafile",
+    "dlls/gdiplus/tests/metafile.c::test_drawimage",
+    "dlls/gdiplus/tests/metafile.c::test_emfonly",
+    "dlls/gdiplus/tests/metafile.c::test_empty"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/gdiplus/-gdiplus-graphics-flat",
+   "source": "win32-gdiplus-flat",
+   "description": "",
+   "min_windows": "",
+   "documented_dll": "gdiplus.dll"
+  },
+  "exports": [
+   "gdiplus.GdipCreateMetafileFromEmf"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2011-05-23",
+   "median_date": "2015-11-01",
+   "last_date": "2023-07-13",
+   "code_lines": 33,
+   "pair": "gdiplus.GdipGetRegionHRgn",
+   "rank": 1,
+   "distance": 0.063
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "gdiplus.GdipGetRegionHRgn",
+  "share_after_cutoff": 0.0,
+  "last_date": "2023-07-13",
+  "partner_rank": 1,
+  "distance": 0.063
+ }
+}

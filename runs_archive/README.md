@@ -73,3 +73,21 @@ The scenarios were numbered 1.3, 1.4, 3.1 and 3.2 while the experiments ran and 
 1.3 → 1.1, 1.4 → 1.2, 3.1 → 2.1, 3.2 → 2.2.  Archive names and the paths inside the archives use the new numbers.
 The job records (`jobs/<model>.jsonl`, field `scenario` and the job names) were left as written by the jobs and carry
 the old ones.
+
+## Leakage experiment (added 2026-11-27)
+
+gpt-oss-20b on the two datasets of the leakage experiment, `wine_agent/dataset/leak2024_new` and `leak2024_old`
+(252 tasks each, see `leakage/README.md`). The archives follow the naming above with the scenario written as
+`<S>-new` or `<S>-old`; they unpack to `wine_bench/runs/scenario<S>-new/...` and so on. 25 archives, 15,812 files:
+
+| archive | content |
+|---|---|
+| `oneshot_<S>-new_prompts`, `oneshot_<S>-old_prompts` | the prompt of every task, S = 1.1, 1.2 |
+| `oneshot_<S>-new_samples_gpt-oss-20b-n100`, `..-old_..` | 100 replies per task, their evaluation, job record |
+| `agent_<S>-new_<harness>_prompts`, `..-old_..` | the task text given to the agent, S = 2.1, 2.2 |
+| `agent_<S>-new_<harness>_gpt-oss-20b`, `..-old_..` | per task: result, patch, trajectory, evaluation; job record |
+| `baseline_wine11.19_leak2024` | the 76 test files these datasets use beyond those of `baseline_wine11.19`, on the untouched Wine tree |
+
+These agent settings ran with one source tree per container and without the project directory mounted. Checked
+before packing: no key in any file; no command that lists or walks the file system of the cluster; no directory name
+of another user. Nothing was redacted.

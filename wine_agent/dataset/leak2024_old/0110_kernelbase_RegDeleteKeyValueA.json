@@ -1,0 +1,506 @@
+{
+ "id": "0110",
+ "function": {
+  "name": "RegDeleteKeyValueA",
+  "export_name": "RegDeleteKeyValueA",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "advapi32",
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/registry.c",
+  "start_line": 2371,
+  "end_line": 2397,
+  "body_lines": 24,
+  "signature": "LONG WINAPI RegDeleteKeyValueA( HKEY hkey, LPCSTR subkey, LPCSTR name )",
+  "header_comment": "/******************************************************************************\n * RegDeleteKeyValueA   (kernelbase.@)\n */",
+  "code": "LONG WINAPI RegDeleteKeyValueA( HKEY hkey, LPCSTR subkey, LPCSTR name )\n{\n    UNICODE_STRING nameW;\n    HKEY hsubkey = 0;\n    ANSI_STRING nameA;\n    NTSTATUS status;\n\n    if (!(hkey = get_special_root_hkey( hkey ))) return ERROR_INVALID_HANDLE;\n\n    if (subkey)\n    {\n        LONG ret = RegOpenKeyExA( hkey, subkey, 0, KEY_SET_VALUE, &hsubkey );\n        if (ret)\n            return ret;\n        hkey = hsubkey;\n    }\n\n    RtlInitAnsiString( &nameA, name );\n    if (!(status = RtlAnsiStringToUnicodeString( &nameW, &nameA, TRUE )))\n    {\n        status = NtDeleteValueKey( hkey, &nameW );\n        RtlFreeUnicodeString( &nameW );\n    }\n\n    if (hsubkey) RegCloseKey( hsubkey );\n    return RtlNtStatusToDosError( status );\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdlib.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winperf.h\"",
+   "#include \"winuser.h\"",
+   "#include \"shlwapi.h\"",
+   "#include \"sddl.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"wine/list.h\""
+  ],
+  "resolution": [
+   "advapi32!RegDeleteKeyValueA [stdcall -import] -> import from kernelbase",
+   "kernelbase!RegDeleteKeyValueA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/advapi32/tests/registry.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winreg",
+   "path": "sdk-api-src/content/winreg/nf-winreg-regdeletekeyvaluea.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winreg/nf-winreg-regdeletekeyvaluea",
+   "documented_name": "regdeletekeyvaluea",
+   "file": "docs/0110_sdk-api_nf-winreg-regdeletekeyvaluea.md",
+   "text": "---\nUID: NF:winreg.RegDeleteKeyValueA\ntitle: RegDeleteKeyValueA function (winreg.h)\ndescription: Removes the specified value from the specified registry key and subkey. (ANSI)\nhelpviewer_keywords: [\"RegDeleteKeyValueA\", \"winreg/RegDeleteKeyValueA\"]\nold-location: base\\regdeletekeyvalue.htm\ntech.root: winprog\nms.assetid: a4a082c2-8cf3-41eb-87c0-a6c453821f8b\nms.date: 12/05/2018\nms.keywords: RegDeleteKeyValue, RegDeleteKeyValue function, RegDeleteKeyValueA, RegDeleteKeyValueW, base.regdeletekeyvalue, winreg/RegDeleteKeyValue, winreg/RegDeleteKeyValueA, winreg/RegDeleteKeyValueW\nreq.header: winreg.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps only]\nreq.target-min-winversvr: Windows Server 2008 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: RegDeleteKeyValueW (Unicode) and RegDeleteKeyValueA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Advapi32.lib\nreq.dll: Advapi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - RegDeleteKeyValueA\n - winreg/RegDeleteKeyValueA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-registry-l1-1-2.dll\n - Advapi32.dll\n - API-MS-Win-Core-Registry-l2-1-0.dll\n - advapi32legacy.dll\n - API-MS-Win-Core-Registry-l1-1-1.dll\n - KernelBase.dll\n - MinKernelBase.dll\n - kernel32.dll\napi_name:\n - RegDeleteKeyValue\n - RegDeleteKeyValueA\n - RegDeleteKeyValueW\n---\n\n# RegDeleteKeyValueA function\n\n\n## -description\n\nRemoves the specified  value from the specified registry key and subkey.\n\n## -parameters\n\n### -param hKey [in]\n\nA handle to an open registry key. The key must have been opened with the KEY_SET_VALUE access right. For more information, see \n<a href=\"/windows/desktop/SysInfo/registry-key-security-and-access-rights\">Registry Key Security and Access Rights</a>. \n\n\n\n\nThis handle is returned by the \n<a href=\"/windows/desktop/api/winreg/nf-winreg-regcreatekeyexa\">RegCreateKeyEx</a> or \n<a href=\"/windows/desktop/api/winreg/nf-winreg-regopenkeyexa\">RegOpenKeyEx</a> function, or it can be one of the following \n<a href=\"/windows/desktop/SysInfo/predefined-keys\">predefined keys</a>:\n\n\n<pre><b></b>\n   <b>HKEY_CLASSES_ROOT</b>\n   <b>HKEY_CURRENT_CONFIG</b>\n   <b>HKEY_CURRENT_USER</b>\n   <b>HKEY_LOCAL_MACHINE</b>\n   <b>HKEY_USERS</b></pre>\n\n### -param lpSubKey [in, optional]\n\nThe name of the registry key. This key must be a subkey of the key identified by the <i>hKey</i> parameter.\n\n### -param lpValueName [in, optional]\n\nThe registry value to be removed from the key.\n\n## -returns\n\nIf the function succeeds, the return value is ERROR_SUCCESS.\n\nIf the function fails, the return value is a nonzero error code defined in Winerror.h. You can use the \n<a href=\"/windows/desktop/api/winbase/nf-winbase-formatmessage\">FormatMessage</a> function with the FORMAT_MESSAGE_FROM_SYSTEM flag to get a generic description of the error.\n\n## -remarks\n\nTo compile an application that uses this function, define _WIN32_WINNT as 0x0600 or later. For more information, see \n<a href=\"/windows/desktop/WinProg/using-the-windows-headers\">Using the Windows Headers</a>.\n\n\n\n> [!NOTE] \n> On legacy versions of Windows, this API is also exposed by kernel32.dll.\n\n> [!NOTE]\n> The winreg.h header defines RegDeleteKeyValue as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winreg/nf-winreg-regsetkeyvaluea\">RegSetKeyValue</a>\n\n\n\n<a href=\"/windows/desktop/SysInfo/registry-functions\">Registry Functions</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_special_root_hkey",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 480,
+   "end_line": 499,
+   "static": true,
+   "called_from": [
+    "RegDeleteKeyValueA"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/registry.c:574",
+    "dlls/kernelbase/registry.c:621",
+    "dlls/kernelbase/registry.c:661",
+    "dlls/kernelbase/registry.c:708",
+    "dlls/kernelbase/registry.c:813"
+   ],
+   "signature": "static inline HKEY get_special_root_hkey( HKEY hkey )",
+   "code": "static inline HKEY get_special_root_hkey( HKEY hkey )\n{\n    unsigned int index = HandleToUlong(hkey) - HandleToUlong(HKEY_SPECIAL_ROOT_FIRST);\n\n    switch (HandleToUlong(hkey))\n    {\n        case (LONG)(LONG_PTR)HKEY_CLASSES_ROOT:\n        case (LONG)(LONG_PTR)HKEY_CURRENT_USER:\n        case (LONG)(LONG_PTR)HKEY_LOCAL_MACHINE:\n        case (LONG)(LONG_PTR)HKEY_USERS:\n        case (LONG)(LONG_PTR)HKEY_CURRENT_CONFIG:\n        case (LONG)(LONG_PTR)HKEY_DYN_DATA:\n            if (special_root_keys[index])\n                return special_root_keys[index];\n            return create_special_root_hkey( hkey, MAXIMUM_ALLOWED );\n\n        default:\n            return hkey;\n    }\n}"
+  },
+  {
+   "name": "create_special_root_hkey",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 448,
+   "end_line": 477,
+   "static": true,
+   "called_from": [
+    "get_special_root_hkey"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HKEY create_special_root_hkey( HKEY hkey, DWORD access )",
+   "code": "static HKEY create_special_root_hkey( HKEY hkey, DWORD access )\n{\n    HKEY ret = 0;\n    int idx = HandleToUlong(hkey) - HandleToUlong(HKEY_SPECIAL_ROOT_FIRST);\n\n    if (HandleToUlong(hkey) == HandleToUlong(HKEY_CURRENT_USER))\n    {\n        if (RtlOpenCurrentUser( access, (HANDLE *)&hkey )) return 0;\n        TRACE( \"HKEY_CURRENT_USER -> %p\\n\", hkey );\n    }\n    else\n    {\n        UNICODE_STRING name;\n\n        RtlInitUnicodeString( &name, root_key_names[idx] );\n        if (create_key( &hkey, 0, name, 0, access, NULL, NULL )) return 0;\n        TRACE( \"%s -> %p\\n\", debugstr_w(name.Buffer), hkey );\n    }\n\n    if (!cache_disabled[idx])\n    {\n        if (!(ret = InterlockedCompareExchangePointer( (void **)&special_root_keys[idx], hkey, 0 )))\n            ret = hkey;\n        else\n            NtClose( hkey );  /* somebody beat us to it */\n    }\n    else\n        ret = hkey;\n    return ret;\n}"
+  },
+  {
+   "name": "create_key",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 394,
+   "end_line": 445,
+   "static": true,
+   "called_from": [
+    "create_special_root_hkey",
+    "create_subkey"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/registry.c:360",
+    "dlls/kernelbase/registry.c:579",
+    "dlls/kernelbase/registry.c:631"
+   ],
+   "signature": "static NTSTATUS create_key( HKEY *retkey, HKEY root, UNICODE_STRING name, ULONG options, ACCESS_MASK access, const UNICODE_STRING *class, PULONG dispos )",
+   "code": "static NTSTATUS create_key( HKEY *retkey, HKEY root, UNICODE_STRING name, ULONG options, ACCESS_MASK access,\n                            const UNICODE_STRING *class, PULONG dispos )\n{\n    NTSTATUS status = STATUS_OBJECT_NAME_NOT_FOUND;\n    HKEY subkey, subkey_root = root;\n\n    *retkey = NULL;\n\n    if (!(is_win64 && (access & KEY_WOW64_32KEY)))\n    {\n        OBJECT_ATTRIBUTES attr;\n\n        InitializeObjectAttributes( &attr, &name, 0, root, NULL );\n        if (options & REG_OPTION_OPEN_LINK) attr.Attributes |= OBJ_OPENLINK;\n\n        status = NtCreateKey( (HANDLE *)retkey, access, &attr, 0, class, options, dispos );\n        if (status == STATUS_PREDEFINED_HANDLE)\n        {\n            *retkey = get_perflib_key( *retkey );\n            status = STATUS_SUCCESS;\n        }\n\n        if (!status || status != STATUS_OBJECT_NAME_NOT_FOUND)\n            return status;\n    }\n\n    status = open_key( &subkey_root, root, &name, options & REG_OPTION_OPEN_LINK, access, TRUE );\n    if (!status && (options & REG_OPTION_CREATE_LINK))\n    {\n        NtClose( subkey_root );\n        status = STATUS_OBJECT_NAME_COLLISION;\n    }\n\n    if (!status)\n        if (dispos) *dispos = REG_OPENED_EXISTING_KEY;\n\n    if (status == STATUS_OBJECT_NAME_NOT_FOUND)\n    {\n        status = STATUS_SUCCESS;\n        while (!status && name.Length)\n        {\n            status = create_subkey( &subkey, subkey_root, &name, options, access, class, dispos );\n            if (subkey_root && subkey_root != root) NtClose( subkey_root );\n            subkey_root = subkey;\n        }\n    }\n\n    if (!status)\n        *retkey = subkey_root;\n\n    return status;\n}"
+  },
+  {
+   "name": "get_perflib_key",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 178,
+   "end_line": 195,
+   "static": true,
+   "called_from": [
+    "create_key",
+    "open_key"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HKEY get_perflib_key( HANDLE key )",
+   "code": "static HKEY get_perflib_key( HANDLE key )\n{\n    static const WCHAR performance_text[] =\n            L\"\\\\Registry\\\\Machine\\\\Software\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Perflib\\\\009\";\n    char buffer[200];\n    OBJECT_NAME_INFORMATION *info = (OBJECT_NAME_INFORMATION *)buffer;\n\n    if (!NtQueryObject( key, ObjectNameInformation, buffer, sizeof(buffer), NULL ))\n    {\n        if (!wcsicmp( info->Name.Buffer, performance_text ))\n        {\n            NtClose( key );\n            return HKEY_PERFORMANCE_TEXT;\n        }\n    }\n\n    return key;\n}"
+  },
+  {
+   "name": "open_key",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 301,
+   "end_line": 358,
+   "static": true,
+   "called_from": [
+    "create_key",
+    "open_subkey"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/kernelbase/registry.c:664",
+    "dlls/kernelbase/registry.c:715"
+   ],
+   "signature": "static NTSTATUS open_key( HKEY *retkey, HKEY root, UNICODE_STRING *name, DWORD options, ACCESS_MASK access, BOOL create )",
+   "code": "static NTSTATUS open_key( HKEY *retkey, HKEY root, UNICODE_STRING *name, DWORD options, ACCESS_MASK access, BOOL create )\n{\n    BOOL is_wow64_key = (is_win64 && (access & KEY_WOW64_32KEY)) || (is_wow64 && !(access & KEY_WOW64_64KEY));\n    HKEY subkey = 0, subkey_root = root;\n    NTSTATUS status = STATUS_SUCCESS;\n    BOOL was_wow6432node = TRUE;\n\n    *retkey = NULL;\n\n    if (!(is_win64 && (access & KEY_WOW64_32KEY)) && !create)\n    {\n        OBJECT_ATTRIBUTES attr;\n\n        InitializeObjectAttributes( &attr, name, 0, root, NULL );\n        if (options & REG_OPTION_OPEN_LINK) attr.Attributes |= OBJ_OPENLINK;\n        status = NtOpenKeyEx( (HANDLE *)retkey, access, &attr, options );\n        if (status == STATUS_PREDEFINED_HANDLE)\n        {\n            *retkey = get_perflib_key( *retkey );\n            status = STATUS_SUCCESS;\n        }\n        return status;\n    }\n\n    if (root && (access & KEY_WOW64_32KEY) && !is_wow6432node( name ))\n        status = open_wow6432node_parent( &subkey_root, root, options, access );\n    else if (root && is_wow64 && !(access & KEY_WOW64_64KEY) && !is_wow6432node( name ))\n    {\n        subkey_root = open_wow6432node( root );\n        if (!is_classes_wow6432node( subkey_root ) && subkey_root != root)\n        {\n            NtClose( subkey_root );\n            subkey_root = root;\n        }\n    }\n\n    while (!status && (name->Length || !subkey))\n    {\n        was_wow6432node = is_wow6432node( name );\n        status = open_subkey( &subkey, subkey_root, name, options, access );\n        if (subkey && subkey_root && subkey_root != root) NtClose( subkey_root );\n        if (subkey) subkey_root = subkey;\n    }\n\n    /* Return the shared parent if we didn't explicitly look for the Wow6432Node */\n    if (!status && !was_wow6432node && is_wow64_key && is_classes_wow6432node( subkey_root ))\n    {\n        if (subkey_root && subkey_root != root) NtClose( subkey_root );\n        subkey_root = open_classes_root();\n    }\n\n    if (!status || (status == STATUS_OBJECT_NAME_NOT_FOUND && create))\n        *retkey = subkey_root;\n    else if (subkey_root && subkey_root != root)\n        NtClose( subkey_root );\n\n    return status;\n}"
+  },
+  {
+   "name": "create_subkey",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 363,
+   "end_line": 391,
+   "static": true,
+   "called_from": [
+    "create_key"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS create_subkey( HKEY *subkey, HKEY root, UNICODE_STRING *name, DWORD options, ACCESS_MASK access, const UNICODE_STRING *class, PULONG dispos )",
+   "code": "static NTSTATUS create_subkey( HKEY *subkey, HKEY root, UNICODE_STRING *name, DWORD options, ACCESS_MASK access,\n                               const UNICODE_STRING *class, PULONG dispos )\n{\n    ACCESS_MASK access_64 = access & ~KEY_WOW64_32KEY;\n    DWORD i = 0, len = name->Length / sizeof(WCHAR);\n    WCHAR *buffer = name->Buffer;\n    UNICODE_STRING str;\n    NTSTATUS status;\n\n    if (i < len && buffer[i] == '\\\\') return STATUS_OBJECT_PATH_INVALID;\n    while (i < len && buffer[i] != '\\\\') i++;\n\n    str.Buffer = name->Buffer;\n    str.Length = i * sizeof(WCHAR);\n\n    if (i < len)\n        options &= ~REG_OPTION_CREATE_LINK;\n\n    status = create_key( subkey, root, str, options, access_64, class, dispos );\n    if (!status)\n    {\n        while (i < len && buffer[i] == '\\\\') i++;\n\n        name->Buffer += i;\n        name->Length -= i * sizeof(WCHAR);\n    }\n\n    return status;\n}"
+  },
+  {
+   "name": "is_wow6432node",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 99,
+   "end_line": 103,
+   "static": true,
+   "called_from": [
+    "is_classes_wow6432node",
+    "open_key",
+    "open_subkey"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL is_wow6432node( const UNICODE_STRING *name )",
+   "code": "static BOOL is_wow6432node( const UNICODE_STRING *name )\n{\n    DWORD len = name->Length / sizeof(WCHAR);\n    return (len >= 11 && !wcsnicmp( name->Buffer, L\"Wow6432Node\\\\\", min( len, 12 ) ));\n}"
+  },
+  {
+   "name": "open_wow6432node_parent",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 255,
+   "end_line": 298,
+   "static": true,
+   "called_from": [
+    "open_key"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS open_wow6432node_parent( HKEY *retkey, HKEY root, DWORD options, ACCESS_MASK access )",
+   "code": "static NTSTATUS open_wow6432node_parent( HKEY *retkey, HKEY root, DWORD options, ACCESS_MASK access )\n{\n    char buffer[256], *buf_ptr = buffer;\n    KEY_NAME_INFORMATION *info = (KEY_NAME_INFORMATION *)buffer;\n    DWORD len = sizeof(buffer);\n    UNICODE_STRING name;\n    NTSTATUS status;\n\n    /* Obtain the name of the root key */\n    status = NtQueryKey( root, KeyNameInformation, info, len, &len );\n    if (status && status != STATUS_BUFFER_OVERFLOW) return status;\n\n    /* Retry with a dynamically allocated buffer */\n    while (status == STATUS_BUFFER_OVERFLOW)\n    {\n        if (buf_ptr != buffer) HeapFree( GetProcessHeap(), 0, buf_ptr );\n        if (!(buf_ptr = HeapAlloc( GetProcessHeap(), 0, len )))\n            return STATUS_NO_MEMORY;\n        info = (KEY_NAME_INFORMATION *)buf_ptr;\n        status = NtQueryKey( root, KeyNameInformation, info, len, &len );\n    }\n\n    if (status)\n    {\n        if (buf_ptr != buffer) HeapFree( GetProcessHeap(), 0, buf_ptr );\n        return status;\n    }\n\n    name.Buffer = info->Name;\n    name.Length = info->NameLength;\n    root = 0;\n\n    /* Obtain the parent Wow6432Node if it exists */\n    while (!status && name.Length)\n    {\n        status = open_subkey( retkey, root, &name, options & ~REG_OPTION_OPEN_LINK, access );\n        if (root) NtClose( root );\n        root = *retkey;\n    }\n\n    if (buf_ptr != buffer) HeapFree( GetProcessHeap(), 0, buf_ptr );\n\n    return status;\n}"
+  },
+  {
+   "name": "open_wow6432node",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 154,
+   "end_line": 163,
+   "static": true,
+   "called_from": [
+    "open_key",
+    "open_subkey"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HANDLE open_wow6432node( HANDLE key )",
+   "code": "static HANDLE open_wow6432node( HANDLE key )\n{\n    UNICODE_STRING nameW = RTL_CONSTANT_STRING( L\"Wow6432Node\" );\n    OBJECT_ATTRIBUTES attr;\n    HANDLE ret;\n\n    InitializeObjectAttributes( &attr, &nameW, 0, key, NULL );\n    if (NtOpenKeyEx( &ret, MAXIMUM_ALLOWED | KEY_WOW64_64KEY, &attr, 0 )) return key;\n    return ret;\n}"
+  },
+  {
+   "name": "is_classes_wow6432node",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 113,
+   "end_line": 151,
+   "static": true,
+   "called_from": [
+    "open_key",
+    "open_subkey"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL is_classes_wow6432node( HKEY key )",
+   "code": "static BOOL is_classes_wow6432node( HKEY key )\n{\n    char buffer[256], *buf_ptr = buffer;\n    KEY_NAME_INFORMATION *info = (KEY_NAME_INFORMATION *)buffer;\n    DWORD len = sizeof(buffer);\n    UNICODE_STRING name;\n    NTSTATUS status;\n    BOOL ret = FALSE;\n\n    /* Obtain the name of the root key */\n    status = NtQueryKey( key, KeyNameInformation, info, len, &len );\n    if (status && status != STATUS_BUFFER_OVERFLOW) return FALSE;\n\n    /* Retry with a dynamically allocated buffer */\n    while (status == STATUS_BUFFER_OVERFLOW)\n    {\n        if (buf_ptr != buffer) HeapFree( GetProcessHeap(), 0, buf_ptr );\n        if (!(buf_ptr = HeapAlloc( GetProcessHeap(), 0, len ))) return FALSE;\n        info = (KEY_NAME_INFORMATION *)buf_ptr;\n        status = NtQueryKey( key, KeyNameInformation, info, len, &len );\n    }\n\n    /* Check if the key ends in Wow6432Node and if the root is the Classes key*/\n    if (!status && info->NameLength / sizeof(WCHAR) >= 11)\n    {\n        name.Buffer = info->Name + info->NameLength / sizeof(WCHAR) - 11;\n        name.Length = 11 * sizeof(WCHAR);\n        if (is_wow6432node( &name ))\n        {\n            name.Buffer = info->Name;\n            name.Length = info->NameLength;\n            ret = is_classes_root( &name );\n        }\n    }\n\n    if (buf_ptr != buffer) HeapFree( GetProcessHeap(), 0, buf_ptr );\n\n    return ret;\n}"
+  },
+  {
+   "name": "open_subkey",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 199,
+   "end_line": 253,
+   "static": true,
+   "called_from": [
+    "open_key",
+    "open_wow6432node_parent"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS open_subkey( HKEY *subkey, HKEY root, UNICODE_STRING *name, DWORD options, ACCESS_MASK access )",
+   "code": "static NTSTATUS open_subkey( HKEY *subkey, HKEY root, UNICODE_STRING *name, DWORD options, ACCESS_MASK access )\n{\n    BOOL is_wow64_key = (is_win64 && (access & KEY_WOW64_32KEY)) || (is_wow64 && !(access & KEY_WOW64_64KEY));\n    ACCESS_MASK access_64 = (access & ~KEY_WOW64_32KEY) | KEY_WOW64_64KEY;\n    DWORD i = 0, len = name->Length / sizeof(WCHAR);\n    WCHAR *buffer = name->Buffer;\n    UNICODE_STRING str;\n    NTSTATUS status;\n\n    if (!root && len > 10 && !wcsnicmp( buffer, L\"\\\\Registry\\\\\", 10 )) i += 10;\n    if (i < len && buffer[i] == '\\\\') return STATUS_OBJECT_PATH_INVALID;\n    while (i < len && buffer[i] != '\\\\') i++;\n\n    str.Buffer = name->Buffer;\n    str.Length = i * sizeof(WCHAR);\n\n    if (i < len)\n        options &= ~REG_OPTION_OPEN_LINK;\n\n    status = open_key( subkey, root, &str, options, access_64, FALSE );\n    if (status == STATUS_OBJECT_NAME_NOT_FOUND && root && is_wow64_key)\n    {\n        /* Try to open the shared parent if we can't find the key in the Wow6432Node */\n        if (!is_classes_wow6432node( root ))\n            return STATUS_OBJECT_NAME_NOT_FOUND;\n\n        root = open_classes_root();\n        status = open_key( subkey, root, &str, options, access_64, FALSE );\n\n        if (!status)\n            NtClose( root );\n        else\n            *subkey = root;\n    }\n\n    if (!status)\n    {\n        while (i < len && buffer[i] == '\\\\') i++;\n\n        name->Buffer += i;\n        name->Length -= i * sizeof(WCHAR);\n\n        if (is_wow64_key && !is_wow6432node( name ))\n        {\n            HKEY wow6432node = open_wow6432node( *subkey );\n            if (wow6432node != *subkey)\n            {\n                NtClose( *subkey );\n                *subkey = wow6432node;\n            }\n        }\n    }\n\n    return status;\n}"
+  },
+  {
+   "name": "open_classes_root",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 166,
+   "end_line": 176,
+   "static": true,
+   "called_from": [
+    "open_key",
+    "open_subkey"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HANDLE open_classes_root( void )",
+   "code": "static HANDLE open_classes_root( void )\n{\n    OBJECT_ATTRIBUTES attr;\n    UNICODE_STRING nameW;\n    HANDLE ret = 0;\n\n    InitializeObjectAttributes( &attr, &nameW, 0, 0, NULL );\n    RtlInitUnicodeString( &nameW, root_key_names[0] );\n    NtOpenKeyEx( &ret, MAXIMUM_ALLOWED, &attr, 0 );\n    return ret;\n}"
+  },
+  {
+   "name": "is_classes_root",
+   "file": "dlls/kernelbase/registry.c",
+   "start_line": 105,
+   "end_line": 111,
+   "static": true,
+   "called_from": [
+    "is_classes_wow6432node"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static BOOL is_classes_root( const UNICODE_STRING *name )",
+   "code": "static BOOL is_classes_root( const UNICODE_STRING *name )\n{\n    static const WCHAR classes_root[] = L\"\\\\Registry\\\\Machine\\\\Software\\\\Classes\\\\\";\n    DWORD classes_root_len = ARRAY_SIZE( classes_root ) - 1;\n    DWORD len = name->Length / sizeof(WCHAR);\n    return (len >= classes_root_len - 1 && !wcsnicmp( name->Buffer, classes_root, min( len, classes_root_len ) ));\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 46,
+    "end_line": 46,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(reg);"
+   },
+   {
+    "name": "cache_disabled",
+    "type": "BOOL[7]",
+    "static": true,
+    "start_line": 63,
+    "end_line": 63,
+    "code": "static BOOL cache_disabled[ARRAY_SIZE(root_key_names)];"
+   },
+   {
+    "name": "root_key_names",
+    "type": "const WCHAR *const[7]",
+    "static": true,
+    "start_line": 51,
+    "end_line": 60,
+    "code": "static const WCHAR * const root_key_names[] =\n{\n    L\"\\\\Registry\\\\Machine\\\\Software\\\\Classes\",\n    NULL,         /* HKEY_CURRENT_USER is determined dynamically */\n    L\"\\\\Registry\\\\Machine\",\n    L\"\\\\Registry\\\\User\",\n    NULL,         /* HKEY_PERFORMANCE_DATA is not a real key */\n    L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Hardware Profiles\\\\Current\",\n    L\"\\\\Registry\\\\DynData\"\n};"
+   },
+   {
+    "name": "special_root_keys",
+    "type": "HKEY[7]",
+    "static": true,
+    "start_line": 62,
+    "end_line": 62,
+    "code": "static HKEY special_root_keys[ARRAY_SIZE(root_key_names)];"
+   }
+  ],
+  "macros": [
+   {
+    "name": "HKEY_SPECIAL_ROOT_FIRST",
+    "start_line": 48,
+    "end_line": 48,
+    "code": "#define HKEY_SPECIAL_ROOT_FIRST   HKEY_CLASSES_ROOT"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetProcessHeap",
+    "impl": [
+     "dlls/kernelbase/process.c:910"
+    ]
+   },
+   {
+    "name": "RegCloseKey",
+    "impl": [
+     "dlls/kernelbase/registry.c:1129"
+    ]
+   },
+   {
+    "name": "RegOpenKeyExA",
+    "impl": [
+     "dlls/kernelbase/registry.c:688"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "NtClose",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/server.c:1940"
+    ]
+   },
+   {
+    "name": "NtCreateKey",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/registry.c:74"
+    ]
+   },
+   {
+    "name": "NtDeleteValueKey",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/registry.c:600"
+    ]
+   },
+   {
+    "name": "NtOpenKeyEx",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/registry.c:133"
+    ]
+   },
+   {
+    "name": "NtQueryKey",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/registry.c:369"
+    ]
+   },
+   {
+    "name": "NtQueryObject",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/file.c:7808"
+    ]
+   },
+   {
+    "name": "RtlAllocateHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "RtlAnsiStringToUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:563"
+    ]
+   },
+   {
+    "name": "RtlFreeHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "RtlFreeUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:272"
+    ]
+   },
+   {
+    "name": "RtlInitAnsiString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:56"
+    ]
+   },
+   {
+    "name": "RtlInitUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:173"
+    ]
+   },
+   {
+    "name": "RtlNtStatusToDosError",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:77"
+    ]
+   },
+   {
+    "name": "RtlOpenCurrentUser",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/reg.c:223"
+    ]
+   }
+  ],
+  "header_inline": [
+   "HandleToULong",
+   "_InterlockedCompareExchangePointer",
+   "debugstr_w",
+   "wcsicmp",
+   "wcsnicmp",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "kernelbase.RegDeleteKeyValueA",
+  "category": {
+   "l1": "System services",
+   "l2": "Registry",
+   "header": "winreg.h",
+   "textbook": "Information maintenance",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 27,
+   "body": 26,
+   "code": 16
+  },
+  "cyclomatic": 6,
+  "return_type": "LONG",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/advapi32/tests/registry.c::test_delete_key_value"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winreg/nf-winreg-regdeletekeyvaluea",
+   "source": "win32",
+   "description": "Removes the specified value from the specified registry key and subkey. (ANSI)",
+   "min_windows": "Windows Vista [desktop apps only]",
+   "documented_dll": "Advapi32.dll"
+  },
+  "exports": [
+   "advapi32.RegDeleteKeyValueA",
+   "kernelbase.RegDeleteKeyValueA"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2019-06-25",
+   "median_date": "2019-06-25",
+   "last_date": "2023-03-29",
+   "code_lines": 17,
+   "pair": "kernelbase.GetMachineTypeAttributes",
+   "rank": 1,
+   "distance": 0.0
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "kernelbase.GetMachineTypeAttributes",
+  "share_after_cutoff": 0.0,
+  "last_date": "2023-03-29",
+  "partner_rank": 1,
+  "distance": 0.0
+ }
+}

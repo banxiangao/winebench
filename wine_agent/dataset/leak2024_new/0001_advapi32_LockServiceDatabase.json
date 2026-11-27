@@ -1,0 +1,188 @@
+{
+ "id": "0001",
+ "function": {
+  "name": "LockServiceDatabase",
+  "export_name": "LockServiceDatabase",
+  "module": "advapi32",
+  "source_module": "advapi32",
+  "exported_by": [
+   "advapi32"
+  ],
+  "side": "PE",
+  "file": "dlls/advapi32/service.c",
+  "start_line": 60,
+  "end_line": 86,
+  "body_lines": 24,
+  "signature": "SC_LOCK WINAPI LockServiceDatabase( SC_HANDLE manager )",
+  "header_comment": "/******************************************************************************\n * LockServiceDatabase  [ADVAPI32.@]\n */",
+  "code": "SC_LOCK WINAPI LockServiceDatabase( SC_HANDLE manager )\n{\n    SC_LOCK handle = NULL;\n    DWORD err;\n\n    TRACE(\"%p\\n\", manager);\n\n    if (!manager)\n    {\n        SetLastError( ERROR_INVALID_HANDLE );\n        return NULL;\n    }\n\n    __TRY\n    {\n        err = svcctl_LockServiceDatabase( manager, &handle );\n    }\n    __EXCEPT(rpc_filter)\n    {\n        err = map_exception_code( GetExceptionCode() );\n    }\n    __ENDTRY\n\n    if (!err) return handle;\n    SetLastError( err );\n    return 0;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winsvc.h\"",
+   "#include \"svcctl.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"advapi32_misc.h\""
+  ],
+  "resolution": [
+   "advapi32!LockServiceDatabase [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/advapi32/tests/service.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "winsvc",
+   "path": "sdk-api-src/content/winsvc/nf-winsvc-lockservicedatabase.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/winsvc/nf-winsvc-lockservicedatabase",
+   "documented_name": "lockservicedatabase",
+   "file": "docs/0001_sdk-api_nf-winsvc-lockservicedatabase.md",
+   "text": "---\nUID: NF:winsvc.LockServiceDatabase\ntitle: LockServiceDatabase function (winsvc.h)\ndescription: Requests ownership of the service control manager (SCM) database lock. Only one process can own the lock at any specified time.\nhelpviewer_keywords: [\"LockServiceDatabase\",\"LockServiceDatabase function\",\"_win32_lockservicedatabase\",\"base.lockservicedatabase\",\"winsvc/LockServiceDatabase\"]\nold-location: base\\lockservicedatabase.htm\ntech.root: security\nms.assetid: 87861465-c966-479a-b906-27ae36cc83c8\nms.date: 12/05/2018\nms.keywords: LockServiceDatabase, LockServiceDatabase function, _win32_lockservicedatabase, base.lockservicedatabase, winsvc/LockServiceDatabase\nreq.header: winsvc.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows XP [desktop apps only]\nreq.target-min-winversvr: Windows Server 2003 [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Advapi32.lib\nreq.dll: Advapi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - LockServiceDatabase\n - winsvc/LockServiceDatabase\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Advapi32.dll\napi_name:\n - LockServiceDatabase\n---\n\n# LockServiceDatabase function\n\n\n## -description\n\n<p class=\"CCE_Message\">[As of Windows Vista, this function is provided  for application compatibility and has no effect on the database.]\n\nRequests ownership of the service control manager (SCM) database lock. Only one process can own the lock at any specified time.\n\n## -parameters\n\n### -param hSCManager [in]\n\nA handle to the SCM database. This handle is returned by the \n<a href=\"/windows/desktop/api/winsvc/nf-winsvc-openscmanagera\">OpenSCManager</a> function, and must have the <b>SC_MANAGER_LOCK</b> access right. For more information, see \n<a href=\"/windows/desktop/Services/service-security-and-access-rights\">Service Security and Access Rights</a>.\n\n## -returns\n\nIf the function succeeds, the return value is a lock to the specified SCM database.\n\nIf the function fails, the return value is NULL. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\nThe following error codes can be set by the SCM. Other error codes can be set by registry functions that are called by the SCM.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_ACCESS_DENIED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe handle does not have the <b>SC_MANAGER_LOCK</b> access right.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_HANDLE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe specified handle is not valid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_SERVICE_DATABASE_LOCKED</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe database is locked.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nA lock is a protocol used by setup and configuration programs and the SCM to serialize access to the service tree in the registry. The only time the SCM requests ownership of the lock is when it is starting a service.\n\nA program that acquires the SCM database lock and fails to release it prevents the SCM from starting other services. Because of the severity of this issue, processes are no longer allowed to lock the database. For compatibility with older applications, the <b>LockServiceDatabase</b> function returns a lock but has no other effect. \n\n<b>Windows Server 2003 and Windows XP:  </b>Acquiring the SCM database lock prevents the SCM from starting a service until the lock is released. For example, a program that must configure several related services before any of them starts could call \n<b>LockServiceDatabase</b> before configuring the first service. Alternatively, it could ensure that none of the services are started until the configuration has been completed.\n\nA call to the \n<a href=\"/windows/desktop/api/winsvc/nf-winsvc-startservicea\">StartService</a> function to start a service in a locked database fails. No other SCM functions are affected by a lock.\n\nThe lock is held until the <b>SC_LOCK</b> handle is specified in a subsequent call to the \n<a href=\"/windows/desktop/api/winsvc/nf-winsvc-unlockservicedatabase\">UnlockServiceDatabase</a> function. If a process that owns a lock terminates, the SCM automatically cleans up and releases ownership of the lock. \n\nFailing to release the lock can cause system problems. A process that acquires  the lock should release it as soon as possible.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/winsvc/nf-winsvc-changeserviceconfiga\">ChangeServiceConfig</a>\n\n\n\n<a href=\"/windows/desktop/api/winsvc/nf-winsvc-openscmanagera\">OpenSCManager</a>\n\n\n\n<a href=\"/windows/desktop/api/winsvc/nf-winsvc-queryservicelockstatusa\">QueryServiceLockStatus</a>\n\n\n\n<a href=\"/windows/desktop/Services/service-configuration\">Service Configuration</a>\n\n\n\n<a href=\"/windows/desktop/Services/service-functions\">Service Functions</a>\n\n\n\n<a href=\"/windows/desktop/api/winsvc/nf-winsvc-setserviceobjectsecurity\">SetServiceObjectSecurity</a>\n\n\n\n<a href=\"/windows/desktop/api/winsvc/nf-winsvc-startservicea\">StartService</a>\n\n\n\n<a href=\"/windows/desktop/api/winsvc/nf-winsvc-unlockservicedatabase\">UnlockServiceDatabase</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "rpc_filter",
+   "file": "dlls/advapi32/service.c",
+   "start_line": 35,
+   "end_line": 38,
+   "static": true,
+   "called_from": [
+    "LockServiceDatabase"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/advapi32/service.c:107"
+   ],
+   "signature": "static LONG WINAPI rpc_filter( EXCEPTION_POINTERS *eptr )",
+   "code": "static LONG WINAPI rpc_filter( EXCEPTION_POINTERS *eptr )\n{\n    return I_RpcExceptionFilter( eptr->ExceptionRecord->ExceptionCode );\n}"
+  },
+  {
+   "name": "map_exception_code",
+   "file": "dlls/advapi32/service.c",
+   "start_line": 40,
+   "end_line": 55,
+   "static": true,
+   "called_from": [
+    "LockServiceDatabase"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/advapi32/service.c:114"
+   ],
+   "signature": "static DWORD map_exception_code( DWORD exception_code )",
+   "code": "static DWORD map_exception_code( DWORD exception_code )\n{\n    switch (exception_code)\n    {\n    case RPC_X_NULL_REF_POINTER:\n        return ERROR_INVALID_ADDRESS;\n    case RPC_X_ENUM_VALUE_OUT_OF_RANGE:\n    case RPC_X_BYTE_COUNT_TOO_SMALL:\n        return ERROR_INVALID_PARAMETER;\n    case RPC_S_INVALID_BINDING:\n    case RPC_X_SS_IN_NULL_CONTEXT:\n        return ERROR_INVALID_HANDLE;\n    default:\n        return exception_code;\n    }\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 33,
+    "end_line": 33,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(service);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "I_RpcExceptionFilter",
+    "module": "rpcrt4",
+    "impl": [
+     "dlls/rpcrt4/rpcrt4_main.c:871"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "__wine_pop_frame",
+   "__wine_push_frame",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [
+   "__wine_exception_handler",
+   "__wine_setjmpex",
+   "svcctl_LockServiceDatabase"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "advapi32.LockServiceDatabase",
+  "category": {
+   "l1": "System services",
+   "l2": "Services",
+   "header": "winsvc.h",
+   "textbook": "Process control",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 27,
+   "body": 26,
+   "code": 14
+  },
+  "cyclomatic": 3,
+  "return_type": "SC_LOCK",
+  "n_params": 1,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/advapi32/tests/service.c::test_LockServiceDatabase"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/winsvc/nf-winsvc-lockservicedatabase",
+   "source": "win32",
+   "description": "Requests ownership of the service control manager (SCM) database lock. Only one process can own the lock at any specified time.",
+   "min_windows": "Windows XP [desktop apps only]",
+   "documented_dll": "Advapi32.dll"
+  },
+  "exports": [
+   "advapi32.LockServiceDatabase"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.733,
+   "first_date": "2005-01-14",
+   "median_date": "2026-03-26",
+   "last_date": "2026-03-26",
+   "code_lines": 15
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "combase.CoMarshalInterThreadInterfaceInStream",
+  "share_after_cutoff": 0.733,
+  "last_date": "2026-03-26"
+ }
+}

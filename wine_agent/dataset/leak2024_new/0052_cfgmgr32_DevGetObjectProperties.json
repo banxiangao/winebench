@@ -1,0 +1,143 @@
+{
+ "id": "0052",
+ "function": {
+  "name": "DevGetObjectProperties",
+  "export_name": "DevGetObjectProperties",
+  "module": "cfgmgr32",
+  "source_module": "cfgmgr32",
+  "exported_by": [
+   "cfgmgr32"
+  ],
+  "side": "PE",
+  "file": "dlls/cfgmgr32/devobject.c",
+  "start_line": 1067,
+  "end_line": 1072,
+  "body_lines": 3,
+  "signature": "HRESULT WINAPI DevGetObjectProperties( DEV_OBJECT_TYPE type, const WCHAR *id, ULONG flags, ULONG props_len, const DEVPROPCOMPKEY *props, ULONG *buf_len, const DEVPROPERTY **buf )",
+  "header_comment": null,
+  "code": "HRESULT WINAPI DevGetObjectProperties( DEV_OBJECT_TYPE type, const WCHAR *id, ULONG flags, ULONG props_len,\n                                       const DEVPROPCOMPKEY *props, ULONG *buf_len, const DEVPROPERTY **buf )\n{\n    TRACE( \"(%d, %s, %#lx, %lu, %p, %p, %p)\\n\", type, debugstr_w( id ), flags, props_len, props, buf_len, buf );\n    return DevGetObjectPropertiesEx( type, id, flags, props_len, props, 0, NULL, buf_len, buf );\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"cfgmgr32_private.h\"",
+   "#include \"devpkey.h\""
+  ],
+  "resolution": [
+   "cfgmgr32!DevGetObjectProperties [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/cfgmgr32/tests/cfgmgr32.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 2
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "devquery",
+   "path": "sdk-api-src/content/devquery/nf-devquery-devgetobjectproperties.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/devquery/nf-devquery-devgetobjectproperties",
+   "documented_name": "devgetobjectproperties",
+   "file": "docs/0052_sdk-api_nf-devquery-devgetobjectproperties.md",
+   "text": "---\nUID: NF:devquery.DevGetObjectProperties\ntech.root: devinst\ntitle: DevGetObjectProperties\nms.date: 11/06/2024\ntargetos: Windows\ndescription: Synchronously retrieve a set of properties for a specified object.\nprerelease: false\nreq.assembly: \nreq.construct-type: function\nreq.ddi-compliance: \nreq.dll: Cfgmgr32.dll\nreq.header: devquery.h\nreq.idl: \nreq.include-header: \nreq.irql: \nreq.kmdf-ver: \nreq.lib: Onecore.lib\nreq.max-support: \nreq.namespace: \nreq.redist: \nreq.target-min-winverclnt: Windows 10 version 1809\nreq.target-min-winversvr: Windows Server 2019\nreq.target-type: \nreq.type-library: \nreq.umdf-ver: \nreq.unicode-ansi: \ntopic_type:\n - apiref\napi_type:\n - DllExport\napi_location:\n - api-ms-win-devices-query-l1-1-1.dll\n - api-ms-win-devices-query-l1-1-0.dll\n - Cfgmgr32.dll\napi_name:\n - DevGetObjectProperties\nf1_keywords:\n - DevGetObjectProperties\n - devquery/DevGetObjectProperties\ndev_langs:\n - c++\nhelpviewer_keywords:\n - DevGetObjectProperties\n---\n\n## -description\n\nSynchronously retrieve a set of properties for a specified object\n\n## -parameters\n\n### -param ObjectType [in]\n\nA value from the [DEV_OBJECT_TYPE](../devquerydef/ne-devquerydef-dev_object_type.md) that determines the type of object for which properties are to be retrieved.\n\n### -param pszObjectId [in]\n\nThe identity of the object for which properties are to be retrieved.\n\n### -param QueryFlags [in]\n\nA combination of [DEV_QUERY_FLAGS](../devquerydef/ne-devquerydef-dev_query_flags.md) values that are combined by using a bitwise OR operation. It is not valid to pass either **DevQueryFlagUpdateResults** or **DevQueryFlagAsyncClose** to this function.\n\n### -param cRequestedProperties [in]\n\nThe number of [DEVPROPCOMPKEY](/windows-hardware/drivers/install/devpropcompkey) structures provided in *pRequestedProperties*. If [DevQueryFlagAllProperties](../devquerydef/ne-devquerydef-dev_query_flags.md) is specified, this must be set to 0.\n\n### -param pRequestedProperties [in]\n\nProvides an array of **DEVPROPCOMPKEY** structures that specify the properties that should be retrieved for the specified object.\n\nThe *LocaleName* field of the **DEVPROPCOMPKEY** structure is ignored and must be set to NULL.\n\nIf *cRequestedProperties* is 0, this must be NULL.\n\n### -param pcPropertyCount [out]\n\nThe number of [DEVPROPERTY](/windows-hardware/drivers/install/devproperty) structures returned in *ppProperties*.\n\n### -param ppProperties [out]\n\nPointer that receives the newly allocated array of **DEVPROPERTY** results. Callers must free the pointer using [DevFreeObjectProperties](nf-devquery-devfreeobjectproperties.md).\n\n## -returns\n\nS_OK is returned if the function successfully evaluated the search criteria and returned matching objects; otherwise, an appropriate error value.\n\n## -remarks\n\nThis function is an efficient way to synchronously retrieve a set of properties from an object given its type and identity. The array of properties that are returned must be freed using **DevFreeObjectProperties**. If a requested property does not exist, *ppProperties* will still contain an entry for that property but the entry will have a type of [DEVPROP_TYPE_EMPTY](/windows-hardware/drivers/install/devprop-type-empty).\n\n## Example\n\nThe following example demonstrates calling **DevGetObjectProperties** to retrieve a set of requested properties and then calling [DevFindProperty](nf-devquery-devfindproperty.md) to find a particular property within an array of **DEVPROPERTY** structures.\n\n```cpp\nvoid\nExample1(PCWSTR DeviceInstancePath)\n{\n    HRESULT hr = S_OK;\n    const DEVPROPERTY* TempProperty = NULL;\n    ULONG PropertyCount = 0;\n    const DEVPROPERTY* PropertyList = NULL;\n    DEVPROPCOMPKEY RequestedProperties[] =\n    {\n        { DEVPKEY_Device_HardwareIds, DEVPROP_STORE_SYSTEM, NULL },\n        { DEVPKEY_Device_CompatibleIds, DEVPROP_STORE_SYSTEM, NULL }\n    };\n\n    hr = DevGetObjectProperties(DevObjectTypeDevice,\n                                DeviceInstancePath,\n                                DevQueryFlagNone,\n                                RTL_NUMBER_OF(RequestedProperties),\n                                RequestedProperties,\n                                &PropertyCount,\n                                &PropertyList);\n\n    if (FAILED(hr))\n    {\n        wprintf(L\"Failed to retrieve properties. hr = 0x%08x\\n\", hr);\n        goto exit;\n    }\n\n    wprintf(L\"Hardware IDs:\\n\");\n    TempProperty = DevFindProperty(&DEVPKEY_Device_HardwareIds,\n                                   DEVPROP_STORE_SYSTEM,\n                                   NULL,\n                                   PropertyCount,\n                                   PropertyList);\n\n    if ((TempProperty == NULL) ||\n        (TempProperty->Type == DEVPROP_TYPE_EMPTY) ||\n        (TempProperty->Buffer == NULL))\n    {\n        wprintf(L\"<none>\\n\");\n    }\n    else if ((TempProperty->Type != DEVPROP_TYPE_STRING_LIST) ||\n             (TempProperty->BufferSize < sizeof(WCHAR)))\n    {\n        wprintf(L\"Device '%ws' has a corrupted Hardware IDs property.\\n\",\n                DeviceInstancePath);\n    }\n    else\n    {\n        for (PCWSTR CurrentId = (PCWSTR)TempProperty->Buffer;\n             *CurrentId != L'\\0';\n             CurrentId += wcslen(CurrentId) + 1)\n        {\n            wprintf(L\"%ws\\n\", CurrentId);\n        }\n    }\n\n    wprintf(L\"\\nCompatible IDs:\\n\");\n    TempProperty = DevFindProperty(&DEVPKEY_Device_CompatibleIds,\n                                   DEVPROP_STORE_SYSTEM,\n                                   NULL,\n                                   PropertyCount,\n                                   PropertyList);\n\n    if ((TempProperty == NULL) ||\n        (TempProperty->Type == DEVPROP_TYPE_EMPTY) ||\n        (TempProperty->Buffer == NULL))\n    {\n        wprintf(L\"<none>\\n\");\n    }\n    else if ((TempProperty->Type != DEVPROP_TYPE_STRING_LIST) ||\n             (TempProperty->BufferSize < sizeof(WCHAR)))\n    {\n        wprintf(L\"Device '%ws' has a corrupted Compatible IDs property.\\n\",\n                DeviceInstancePath);\n    }\n    else\n    {\n        for (PCWSTR CurrentId = (PCWSTR)TempProperty->Buffer;\n             *CurrentId != L'\\0';\n             CurrentId += wcslen(CurrentId) + 1)\n        {\n            wprintf(L\"%ws\\n\", CurrentId);\n        }\n    }\n\n  exit:\n\n    if (PropertyList != NULL)\n    {\n        DevFreeObjectProperties(PropertyCount, PropertyList);\n    }\n\n    return;\n}\n```\n\n## -see-also\n\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 23,
+    "end_line": 23,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(setupapi);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "DevGetObjectPropertiesEx",
+    "impl": [
+     "dlls/cfgmgr32/devobject.c:1074"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "debugstr_w",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "cfgmgr32.DevGetObjectProperties",
+  "category": {
+   "l1": "Devices",
+   "l2": "Device management and installation",
+   "header": "devquery.h",
+   "textbook": "Device management",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 6,
+   "body": 4,
+   "code": 2
+  },
+  "cyclomatic": 1,
+  "return_type": "HRESULT",
+  "n_params": 7,
+  "tests": {
+   "n_tests_own": 2,
+   "n_tests": 2,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/cfgmgr32/tests/cfgmgr32.c::test_DevGetObjectProperties",
+    "dlls/cfgmgr32/tests/cfgmgr32.c::test_DevGetObjectProperties_invalid"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/devquery/nf-devquery-devgetobjectproperties",
+   "source": "win32",
+   "description": "Synchronously retrieve a set of properties for a specified object.",
+   "min_windows": "Windows 10 version 1809",
+   "documented_dll": "Cfgmgr32.dll"
+  },
+  "exports": [
+   "cfgmgr32.DevGetObjectProperties"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 1.0,
+   "first_date": "2025-08-03",
+   "median_date": "2025-08-03",
+   "last_date": "2025-08-03",
+   "code_lines": 4
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "setupapi.SetupDiSetDeviceInstallParamsA",
+  "share_after_cutoff": 1.0,
+  "last_date": "2025-08-03"
+ }
+}

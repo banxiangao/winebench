@@ -1,0 +1,201 @@
+{
+ "id": "0186",
+ "function": {
+  "name": "AddMonitorA",
+  "export_name": "AddMonitorA",
+  "module": "winspool.drv",
+  "source_module": "winspool.drv",
+  "exported_by": [
+   "winspool.drv"
+  ],
+  "side": "PE",
+  "file": "dlls/winspool.drv/info.c",
+  "start_line": 2069,
+  "end_line": 2124,
+  "body_lines": 53,
+  "signature": "BOOL WINAPI AddMonitorA(LPSTR pName, DWORD Level, LPBYTE pMonitors)",
+  "header_comment": "/******************************************************************\n *              AddMonitorA        [WINSPOOL.@]\n *\n * See AddMonitorW.\n *\n */",
+  "code": "BOOL WINAPI AddMonitorA(LPSTR pName, DWORD Level, LPBYTE pMonitors)\n{\n    LPWSTR  nameW = NULL;\n    INT     len;\n    BOOL    res;\n    LPMONITOR_INFO_2A mi2a;\n    MONITOR_INFO_2W mi2w;\n\n    mi2a = (LPMONITOR_INFO_2A) pMonitors;\n    TRACE(\"(%s, %ld, %p) :  %s %s %s\\n\", debugstr_a(pName), Level, pMonitors,\n          debugstr_a(mi2a ? mi2a->pName : NULL),\n          debugstr_a(mi2a ? mi2a->pEnvironment : NULL),\n          debugstr_a(mi2a ? mi2a->pDLLName : NULL));\n\n    if  (Level != 2) {\n        SetLastError(ERROR_INVALID_LEVEL);\n        return FALSE;\n    }\n\n    /* XP: unchanged, win9x: ERROR_INVALID_ENVIRONMENT */\n    if (mi2a == NULL) {\n        return FALSE;\n    }\n\n    if (pName) {\n        len = MultiByteToWideChar(CP_ACP, 0, pName, -1, NULL, 0);\n        nameW = malloc(len * sizeof(WCHAR));\n        MultiByteToWideChar(CP_ACP, 0, pName, -1, nameW, len);\n    }\n\n    memset(&mi2w, 0, sizeof(MONITOR_INFO_2W));\n    if (mi2a->pName) {\n        len = MultiByteToWideChar(CP_ACP, 0, mi2a->pName, -1, NULL, 0);\n        mi2w.pName = malloc(len * sizeof(WCHAR));\n        MultiByteToWideChar(CP_ACP, 0, mi2a->pName, -1, mi2w.pName, len);\n    }\n    if (mi2a->pEnvironment) {\n        len = MultiByteToWideChar(CP_ACP, 0, mi2a->pEnvironment, -1, NULL, 0);\n        mi2w.pEnvironment = malloc(len * sizeof(WCHAR));\n        MultiByteToWideChar(CP_ACP, 0, mi2a->pEnvironment, -1, mi2w.pEnvironment, len);\n    }\n    if (mi2a->pDLLName) {\n        len = MultiByteToWideChar(CP_ACP, 0, mi2a->pDLLName, -1, NULL, 0);\n        mi2w.pDLLName = malloc(len * sizeof(WCHAR));\n        MultiByteToWideChar(CP_ACP, 0, mi2a->pDLLName, -1, mi2w.pDLLName, len);\n    }\n\n    res = AddMonitorW(nameW, Level, (LPBYTE) &mi2w);\n\n    free(mi2w.pName);\n    free(mi2w.pEnvironment);\n    free(mi2w.pDLLName);\n\n    free(nameW);\n    return (res);\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include <ctype.h>",
+   "#include <stddef.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winuser.h\"",
+   "#include \"winerror.h\"",
+   "#include \"winreg.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winspool.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wine/windef16.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/rbtree.h\"",
+   "#include <wine/unixlib.h>",
+   "#include \"ddk/compstui.h\"",
+   "#include \"ddk/winsplp.h\"",
+   "#include \"wspool.h\""
+  ],
+  "resolution": [
+   "winspool.drv!AddMonitorA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/winspool.drv/tests/info.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 3
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "win32",
+   "header": "",
+   "path": "desktop-src/printdocs/addmonitor.md",
+   "url": "https://learn.microsoft.com/windows/win32/printdocs/addmonitor",
+   "documented_name": "addmonitora",
+   "file": "docs/0186_win32_addmonitor.md",
+   "text": "---\ndescription: The AddMonitor function installs a local port monitor and links the configuration, data, and monitor files.\nms.assetid: 6a556422-5360-42d2-b177-dba0498c06d8\ntitle: AddMonitor function (Winspool.h)\nms.topic: reference\nms.date: 05/31/2018\ntopic_type: \n- APIRef\n- kbSyntax\napi_name: \n- AddMonitor\n- AddMonitorA\n- AddMonitorW\napi_type: \n- DllExport\napi_location: \n- Winspool.drv\n---\n\n# AddMonitor function\n\nThe **AddMonitor** function installs a local port monitor and links the configuration, data, and monitor files.\n\n## Syntax\n\n\n```C++\nBOOL AddMonitor(\n  _In_ LPTSTR pName,\n  _In_ DWORD  Level,\n  _In_ LPBYTE pMonitors\n);\n```\n\n\n\n## Parameters\n\n<dl> <dt>\n\n*pName* \\[in\\]\n</dt> <dd>\n\nA pointer to a null-terminated string that specifies the name of the server on which the monitor should be installed. For systems that support only local installation of monitors, this string should be **NULL**.\n\n</dd> <dt>\n\n*Level* \\[in\\]\n</dt> <dd>\n\nThe version of the structure to which *pMonitors* points. This value must be 2.\n\n</dd> <dt>\n\n*pMonitors* \\[in\\]\n</dt> <dd>\n\nA pointer to a [**MONITOR\\_INFO\\_2**](monitor-info-2.md) structure. If the **pEnvironment** member of the *pMonitors* structure is **NULL**, the current environment of the caller (client), not of the destination (server), is used.\n\nNote that the call will fail if the environment does not match the environment of the server, that is, you can only add a monitor that was written for the architecture of the server.\n\n</dd> </dl>\n\n## Return value\n\nIf the function succeeds, the return value is a nonzero value.\n\nIf the function fails, the return value is zero.\n\n## Remarks\n\n> [!Note]  \n> This is a blocking or synchronous function and might not return immediately. How quickly this function returns depends on run-time factors such as network status, print server configuration, and printer driver implementation factors that are difficult to predict when writing an application. Calling this function from a thread that manages interaction with the user interface could make the application appear to be unresponsive.\n\n \n\nThe caller must have the [SeLoadDriverPrivilege](/windows/desktop/SecAuthZ/authorization-constants).\n\nBefore an application calls the **AddMonitor** function, all files required by the monitor must be copied to the SYSTEM32 directory.\n\nTo determine the port monitors that are currently installed, call the [**EnumMonitors**](enummonitors.md) function.\n\nTo remove a monitor added by **AddMonitor**, call the [**DeleteMonitor**](deletemonitor.md) function.\n\n## Requirements\n\n\n\n| Requirement | Value |\n|-------------------------------------|-----------------------------------------------------------------------------------------------------------|\n| Minimum supported client<br/> | Windows 2000 Professional \\[desktop apps only\\]<br/>                                                |\n| Minimum supported server<br/> | Windows 2000 Server \\[desktop apps only\\]<br/>                                                      |\n| Header<br/>                   | <dl> <dt>Winspool.h (include Windows.h)</dt> </dl> |\n| Library<br/>                  | <dl> <dt>Winspool.lib</dt> </dl>                   |\n| DLL<br/>                      | <dl> <dt>Winspool.drv</dt> </dl>                   |\n| Unicode and ANSI names<br/>   | **AddMonitorW** (Unicode) and **AddMonitorA** (ANSI)<br/>                                           |\n\n\n\n## See also\n\n<dl> <dt>\n\n[Printing](printdocs-printing.md)\n</dt> <dt>\n\n[Print Spooler API Functions](printing-and-print-spooler-functions.md)\n</dt> <dt>\n\n[**DeleteMonitor**](deletemonitor.md)\n</dt> <dt>\n\n[**EnumMonitors**](enummonitors.md)\n</dt> <dt>\n\n[**MONITOR\\_INFO\\_2**](monitor-info-2.md)\n</dt> </dl>\n\n \n\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 53,
+    "end_line": 53,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(winspool);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "AddMonitorW",
+    "impl": [
+     "dlls/winspool.drv/info.c:2144"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "MultiByteToWideChar",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7070"
+    ]
+   },
+   {
+    "name": "free",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:412"
+    ]
+   },
+   {
+    "name": "malloc",
+    "module": "msvcrt",
+    "impl": [
+     "dlls/msvcrt/heap.c:430"
+    ]
+   },
+   {
+    "name": "memset",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:197"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "debugstr_a",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "winspool.drv.AddMonitorA",
+  "category": {
+   "l1": "Devices",
+   "l2": "Printing",
+   "header": "",
+   "textbook": "Device management",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 56,
+   "body": 55,
+   "code": 38
+  },
+  "cyclomatic": 10,
+  "return_type": "BOOL",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 3,
+   "n_tests": 3,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/winspool.drv/tests/info.c::find_installed_monitor",
+    "dlls/winspool.drv/tests/info.c::test_AddMonitor",
+    "dlls/winspool.drv/tests/info.c::test_DeleteMonitor"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/printdocs/addmonitor",
+   "source": "win32-conceptual",
+   "description": "The AddMonitor function installs a local port monitor and links the configuration, data, and monitor files.",
+   "min_windows": "",
+   "documented_dll": ""
+  },
+  "exports": [
+   "winspool.drv.AddMonitorA"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "1999-05-22",
+   "median_date": "2006-04-12",
+   "last_date": "2022-11-14",
+   "code_lines": 39,
+   "pair": "setupapi.SetupDiGetDeviceRegistryPropertyA",
+   "rank": 1,
+   "distance": 1.214
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "setupapi.SetupDiGetDeviceRegistryPropertyA",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-11-14",
+  "partner_rank": 1,
+  "distance": 1.214
+ }
+}

@@ -1,0 +1,174 @@
+{
+ "id": "0136",
+ "function": {
+  "name": "RtlDeleteNoSplay",
+  "export_name": "RtlDeleteNoSplay",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "ntdll",
+   "ntoskrnl.exe"
+  ],
+  "side": "PE",
+  "file": "dlls/ntdll/rtl.c",
+  "start_line": 441,
+  "end_line": 468,
+  "body_lines": 25,
+  "signature": "void WINAPI RtlDeleteNoSplay(RTL_SPLAY_LINKS *links, RTL_SPLAY_LINKS **root)",
+  "header_comment": "/******************************************************************************\n *  RtlDeleteNoSplay           [NTDLL.@]\n */",
+  "code": "void WINAPI RtlDeleteNoSplay(RTL_SPLAY_LINKS *links, RTL_SPLAY_LINKS **root)\n{\n    TRACE(\"(%p, %p)\\n\", links, root);\n\n    if (RtlIsRoot(links) && !RtlLeftChild(links) && !RtlRightChild(links))\n    {\n        *root = NULL;\n    }\n    else  if (!links->LeftChild)\n    {\n        rtl_splay_replace(links, links->RightChild, root);\n    }\n    else if (!links->RightChild)\n    {\n        rtl_splay_replace(links, links->LeftChild, root);\n    }\n    else\n    {\n        RTL_SPLAY_LINKS *predecessor = RtlSubtreePredecessor(links);\n        if (predecessor->Parent != links)\n        {\n            rtl_splay_replace(predecessor, predecessor->LeftChild, root);\n            RtlInsertAsLeftChild(predecessor, links->LeftChild);\n        }\n        rtl_splay_replace(links, predecessor, root);\n        RtlInsertAsRightChild(predecessor, links->RightChild);\n    }\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ntuser.h\"",
+   "#include \"zlib.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\"",
+   "#include \"ntdll_misc.h\"",
+   "#include \"ddk/ntifs.h\""
+  ],
+  "resolution": [
+   "ntdll!RtlDeleteNoSplay [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ntdll/tests/rtl.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "ntddk",
+   "path": "wdk-ddi-src/content/ntddk/nf-ntddk-rtldeletenosplay.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtldeletenosplay",
+   "documented_name": "rtldeletenosplay",
+   "file": "docs/0136_windows-driver-docs-ddi_nf-ntddk-rtldeletenosplay.md",
+   "text": "---\nUID: NF:ntddk.RtlDeleteNoSplay\ntitle: RtlDeleteNoSplay function (ntddk.h)\ndescription: The RtlDeleteNoSplay routine deletes the specified node from the splay link tree.\nold-location: ifsk\\rtldeletenosplay.htm\ntech.root: ifsk\nms.date: 04/16/2018\nkeywords: [\"RtlDeleteNoSplay function\"]\nms.keywords: RtlDeleteNoSplay, RtlDeleteNoSplay routine [Installable File System Drivers], ifsk.rtldeletenosplay, ntddk/RtlDeleteNoSplay, rtlref_def5bfa8-367a-410e-8e3c-fdbf11cce05e.xml\nreq.header: ntddk.h\nreq.include-header: Ntddk.h, Ntifs.h\nreq.target-type: Universal\nreq.target-min-winverclnt: \nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: NtosKrnl.lib\nreq.dll: NtosKrnl.exe\nreq.irql: See Remarks section.\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - RtlDeleteNoSplay\n - ntddk/RtlDeleteNoSplay\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - NtosKrnl.exe\napi_name:\n - RtlDeleteNoSplay\n---\n\n# RtlDeleteNoSplay function\n\n\n## -description\n\nThe <b>RtlDeleteNoSplay</b> routine deletes the specified node from the splay link tree.\n\n## -parameters\n\n### -param Links [in]\n\n\nA pointer to the node to be deleted. The node must have been initialized by calling <b>RtlInitializeSplayLinks</b>.\n\n### -param Root [in, out]\n\n\nA pointer to the caller's pointer to the root node of the splay link tree. The caller's pointer is updated after the node is deleted.\n\n## -returns\n\nNone\n\n## -remarks\n\nUnlike <b>RtlDelete</b>, <b>RtlDeleteNoSplay</b> does not rebalance the splay link tree after the node is deleted. \n\nCallers of the <b>Rtl</b> splay link routines are responsible for synchronizing access to the splay link tree. A fast mutex is the most efficient synchronization mechanism to use for this purpose. \n\nCallers of <b>RtlDeleteNoSplay</b> must be running at IRQL <= DISPATCH_LEVEL if the splay link tree is nonpaged. Usually, callers are running at IRQL PASSIVE_LEVEL.\n\n## -see-also\n\n<a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtldelete\">RtlDelete</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlinitializesplaylinks\">RtlInitializeSplayLinks</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlinsertasleftchild\">RtlInsertAsLeftChild</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlinsertasrightchild\">RtlInsertAsRightChild</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtlsplay\">RtlSplay</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "rtl_splay_replace",
+   "file": "dlls/ntdll/rtl.c",
+   "start_line": 234,
+   "end_line": 245,
+   "static": true,
+   "called_from": [
+    "RtlDeleteNoSplay"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/ntdll/rtl.c:485",
+    "dlls/ntdll/rtl.c:493",
+    "dlls/ntdll/rtl.c:504",
+    "dlls/ntdll/rtl.c:517"
+   ],
+   "signature": "static void rtl_splay_replace(RTL_SPLAY_LINKS *x, RTL_SPLAY_LINKS *y, RTL_SPLAY_LINKS **root)",
+   "code": "static void rtl_splay_replace(RTL_SPLAY_LINKS *x, RTL_SPLAY_LINKS *y, RTL_SPLAY_LINKS **root)\n{\n    if (RtlIsRoot(x))\n        *root = y;\n    else if (RtlIsLeftChild(x))\n        x->Parent->LeftChild = y;\n    else\n        x->Parent->RightChild = y;\n\n    if (y)\n        y->Parent = RtlIsRoot(x) ? y : x->Parent;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 40,
+    "end_line": 40,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ntdll);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "RtlSubtreePredecessor",
+    "impl": [
+     "dlls/ntdll/rtl.c:302"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "RtlInsertAsLeftChild",
+   "RtlInsertAsRightChild",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ntdll.RtlDeleteNoSplay",
+  "category": {
+   "l1": "System services",
+   "l2": "Run-time library (strings, bitmaps, utilities)",
+   "header": "ntddk.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "name_rule"
+  },
+  "loc": {
+   "total": 28,
+   "body": 27,
+   "code": 14
+  },
+  "cyclomatic": 7,
+  "return_type": "void",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/ntdll/tests/rtl.c::test_RtlDeleteNoSplay"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/ntddk/nf-ntddk-rtldeletenosplay",
+   "source": "ddi",
+   "description": "The RtlDeleteNoSplay routine deletes the specified node from the splay link tree.",
+   "min_windows": "",
+   "documented_dll": "NtosKrnl.exe"
+  },
+  "exports": [
+   "ntdll.RtlDeleteNoSplay",
+   "ntoskrnl.exe.RtlDeleteNoSplay"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 1.0,
+   "first_date": "2025-02-05",
+   "median_date": "2025-02-05",
+   "last_date": "2025-02-05",
+   "code_lines": 14
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "ntdll.RtlFindLeastSignificantBit",
+  "share_after_cutoff": 1.0,
+  "last_date": "2025-02-05"
+ }
+}

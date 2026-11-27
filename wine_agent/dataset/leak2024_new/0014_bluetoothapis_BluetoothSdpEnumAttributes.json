@@ -1,0 +1,173 @@
+{
+ "id": "0014",
+ "function": {
+  "name": "BluetoothSdpEnumAttributes",
+  "export_name": "BluetoothSdpEnumAttributes",
+  "module": "bluetoothapis",
+  "source_module": "bluetoothapis",
+  "exported_by": [
+   "bluetoothapis",
+   "bthprops.cpl",
+   "irprops.cpl"
+  ],
+  "side": "PE",
+  "file": "dlls/bluetoothapis/sdp.c",
+  "start_line": 320,
+  "end_line": 375,
+  "body_lines": 53,
+  "signature": "BOOL WINAPI BluetoothSdpEnumAttributes( BYTE *stream, ULONG stream_size, PFN_BLUETOOTH_ENUM_ATTRIBUTES_CALLBACK callback, void *param )",
+  "header_comment": "/*********************************************************************\n *  BluetoothSdpEnumAttributes\n */",
+  "code": "BOOL WINAPI BluetoothSdpEnumAttributes( BYTE *stream, ULONG stream_size,\n                                        PFN_BLUETOOTH_ENUM_ATTRIBUTES_CALLBACK callback, void *param )\n{\n    SDP_ELEMENT_DATA data = {0};\n    DWORD result;\n    HBLUETOOTH_CONTAINER_ELEMENT cursor = NULL;\n\n    TRACE( \"(%p, %ld, %p, %p)\\n\", stream, stream_size, callback, param );\n\n    if (stream == NULL || callback == NULL) return ERROR_INVALID_PARAMETER;\n\n    result = BluetoothSdpGetElementData( stream, stream_size, &data );\n    if (result != ERROR_SUCCESS)\n    {\n        SetLastError( ERROR_INVALID_DATA );\n        return FALSE;\n    }\n\n    switch (data.type)\n    {\n    case SDP_TYPE_SEQUENCE:\n    case SDP_TYPE_ALTERNATIVE:\n        break;\n    default:\n        SetLastError( ERROR_INVALID_DATA );\n        return FALSE;\n    }\n\n    for (;;)\n    {\n        SDP_ELEMENT_DATA attrid = {0};\n        SDP_ELEMENT_DATA attr = {0};\n        BYTE *raw_attr_stream;\n\n        result = BluetoothSdpGetContainerElementData( data.data.sequence.value,\n                                                      data.data.sequence.length, &cursor, &attrid );\n        if (result == ERROR_NO_MORE_ITEMS) return TRUE;\n        if (result || !SDP_ELEMENT_IS_ATTRID( &attrid ))\n        {\n            SetLastError( ERROR_INVALID_DATA );\n            return FALSE;\n        }\n\n        raw_attr_stream = cursor;\n        result = BluetoothSdpGetContainerElementData( data.data.sequence.value,\n                                                      data.data.sequence.length, &cursor, &attr );\n        if (result != ERROR_SUCCESS)\n        {\n            SetLastError( ERROR_INVALID_DATA );\n            return FALSE;\n        }\n        if (!callback( attrid.data.uint16, raw_attr_stream, ((BYTE *)cursor - raw_attr_stream),\n                       param ))\n            return TRUE;\n    }\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <windef.h>",
+   "#include <winbase.h>",
+   "#include <winternl.h>",
+   "#include \"wine/debug.h\"",
+   "#include \"bthsdpdef.h\"",
+   "#include \"bluetoothapis.h\""
+  ],
+  "resolution": [
+   "bluetoothapis!BluetoothSdpEnumAttributes [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/bluetoothapis/tests/sdp.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "bluetoothapis",
+   "path": "sdk-api-src/content/bluetoothapis/nf-bluetoothapis-bluetoothsdpenumattributes.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothsdpenumattributes",
+   "documented_name": "bluetoothsdpenumattributes",
+   "file": "docs/0014_sdk-api_nf-bluetoothapis-bluetoothsdpenumattributes.md",
+   "text": "---\nUID: NF:bluetoothapis.BluetoothSdpEnumAttributes\ntitle: BluetoothSdpEnumAttributes function (bluetoothapis.h)\ndescription: The BluetoothSdpEnumAttributes function enumerates through the SDP record stream, and calls the callback function for each attribute in the record.\nhelpviewer_keywords: [\"BluetoothSdpEnumAttributes\",\"BluetoothSdpEnumAttributes function [Bluetooth]\",\"bluetooth.bluetoothsdpenumattributes\",\"bluetoothapis/BluetoothSdpEnumAttributes\"]\nold-location: bluetooth\\bluetoothsdpenumattributes.htm\ntech.root: bluetooth\nms.assetid: 3113db03-a32f-47ad-a442-3769f41ee8e7\nms.date: 12/05/2018\nms.keywords: BluetoothSdpEnumAttributes, BluetoothSdpEnumAttributes function [Bluetooth], bluetooth.bluetoothsdpenumattributes, bluetoothapis/BluetoothSdpEnumAttributes\nreq.header: bluetoothapis.h\nreq.include-header: Bthsdpdef.h, BluetoothAPIs.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista, Windows XP with SP2 [desktop apps only]\nreq.target-min-winversvr: None supported\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Bthprops.lib\nreq.dll: bthprops.cpl\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - BluetoothSdpEnumAttributes\n - bluetoothapis/BluetoothSdpEnumAttributes\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - bthprops.cpl\n - BluetoothAPIs.dll\n - Ext-MS-Win-Bluetooth-APIs-l1-1-0.dll\napi_name:\n - BluetoothSdpEnumAttributes\n---\n\n# BluetoothSdpEnumAttributes function\n\n\n## -description\n\nThe <b>BluetoothSdpEnumAttributes</b> function enumerates through the SDP record stream, and  calls the callback function\nfor each attribute in the record.\n\n## -parameters\n\n### -param pSDPStream\n\nPointer to a valid record stream that is formatted as a single SDP record.\n\n### -param cbStreamSize\n\nSize of the stream pointed to by <i>pSDPStream</i>, in bytes.\n\n### -param pfnCallback\n\nPointer to the callback routine. See <a href=\"/windows/desktop/api/bluetoothapis/nc-bluetoothapis-pfn_bluetooth_enum_attributes_callback\">PFN_BLUETOOTH_ENUM_ATTRIBUTES_CALLBACK</a> for more information about the callback.\n\n### -param pvParam\n\nOptional parameter to be passed to the callback routine.\n\n## -returns\n\nReturns <b>TRUE</b> if an enumeration occurred. Returns <b>FALSE</b> upon failure. Call the <a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a> function for more information. The following table describes common error codes associated with the <b>BluetoothSdpEnumAttributes</b> function:\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_PARAMETER</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <i>pSDPStream</i> or <i>pfnCallback</i> parameter is <b>NULL</b>.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>ERROR_INVALID_DATA</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe SDP stream is corrupt.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nIf the callback function returns\n<b>FALSE</b>, the enumeration initiated by the <b>BluetoothSdpEnumAttributes</b> function is stopped.\n\nThe record stream in <i>pSDPStream</i> must be an SDP stream formatted as an SDP record, a SEQUENCE\ncontaining attribute ID (UINT16) plus attribute value (any SDP element type) pairs.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothsdpgetcontainerelementdata\">BluetoothSdpGetContainerElementData</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothsdpgetelementdata\">BluetoothSdpGetElementData</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nf-bluetoothapis-bluetoothsdpgetstring\">BluetoothSdpGetString</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/nc-bluetoothapis-pfn_bluetooth_enum_attributes_callback\">PFN_BLUETOOTH_ENUM_ATTRIBUTES_CALLBACK</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/ns-bluetoothapis-sdp_element_data\">SDP_ELEMENT_DATA</a>\n\n\n\n<a href=\"/windows/desktop/api/bluetoothapis/ns-bluetoothapis-sdp_string_type_data\">SDP_STRING_TYPE_DATA</a>"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 31,
+    "end_line": 31,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL( bluetoothapis );"
+   }
+  ],
+  "macros": [
+   {
+    "name": "SDP_ELEMENT_IS_ATTRID",
+    "start_line": 56,
+    "end_line": 56,
+    "code": "#define SDP_ELEMENT_IS_ATTRID( d ) SDP_ELEMENT_IS_UINT16((d))"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "BluetoothSdpGetContainerElementData",
+    "impl": [
+     "dlls/bluetoothapis/sdp.c:263"
+    ]
+   },
+   {
+    "name": "BluetoothSdpGetElementData",
+    "impl": [
+     "dlls/bluetoothapis/sdp.c:248"
+    ]
+   }
+  ],
+  "other_dll_exports": [],
+  "header_inline": [
+   "SetLastError",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "callback",
+    "in_function": "BluetoothSdpEnumAttributes",
+    "at": "dlls/bluetoothapis/sdp.c:371",
+    "candidates": [
+     "callback @ dlls/bluetoothapis/main.c:938"
+    ]
+   }
+  ]
+ },
+ "winebench": {
+  "id": "bluetoothapis.BluetoothSdpEnumAttributes",
+  "category": {
+   "l1": "Networking and internet",
+   "l2": "Wireless networking",
+   "header": "bluetoothapis.h",
+   "textbook": "Communications",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 56,
+   "body": 54,
+   "code": 35
+  },
+  "cyclomatic": 12,
+  "return_type": "BOOL",
+  "n_params": 4,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/bluetoothapis/tests/sdp.c::test_BluetoothSdpEnumAttributes"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothsdpenumattributes",
+   "source": "win32",
+   "description": "The BluetoothSdpEnumAttributes function enumerates through the SDP record stream, and calls the callback function for each attribute in the record.",
+   "min_windows": "Windows Vista, Windows XP with SP2 [desktop apps only]",
+   "documented_dll": "bthprops.cpl"
+  },
+  "exports": [
+   "bluetoothapis.BluetoothSdpEnumAttributes",
+   "bthprops.cpl.BluetoothSdpEnumAttributes",
+   "irprops.cpl.BluetoothSdpEnumAttributes"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 1.0,
+   "first_date": "2024-09-23",
+   "median_date": "2024-09-23",
+   "last_date": "2024-09-23",
+   "code_lines": 37
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "iphlpapi.GetIpNetTable2",
+  "share_after_cutoff": 1.0,
+  "last_date": "2024-09-23"
+ }
+}

@@ -9,4 +9,4 @@
 type module >/dev/null 2>&1 || source /cvmfs/soft.computecanada.ca/config/profile/bash.sh
 module load StdEnv/2023 python/3.12.4 scipy-stack/2025a
 export MPLCONFIGDIR=${SLURM_TMPDIR:-/tmp}/mpl
-cd "${SLURM_SUBMIT_DIR:-$PWD}" && python3 figures/make_figures.py
+cd "${SLURM_SUBMIT_DIR:-$PWD}" && python3 figures/make_figures.py && python3 figures/make_leakage_figure.py

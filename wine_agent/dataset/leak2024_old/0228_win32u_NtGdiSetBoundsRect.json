@@ -1,0 +1,284 @@
+{
+ "id": "0228",
+ "function": {
+  "name": "NtGdiSetBoundsRect",
+  "export_name": "SetBoundsRect",
+  "module": "win32u",
+  "source_module": "win32u",
+  "exported_by": [
+   "gdi.exe16",
+   "gdi32"
+  ],
+  "side": "unix",
+  "file": "dlls/win32u/dc.c",
+  "start_line": 1464,
+  "end_line": 1499,
+  "body_lines": 33,
+  "signature": "UINT WINAPI NtGdiSetBoundsRect( HDC hdc, const RECT *rect, UINT flags )",
+  "header_comment": "/***********************************************************************\n *           NtGdiSetBoundsRect    (win32u.@)\n */",
+  "code": "UINT WINAPI NtGdiSetBoundsRect( HDC hdc, const RECT *rect, UINT flags )\n{\n    PHYSDEV physdev;\n    UINT ret;\n    DC *dc;\n\n    if ((flags & DCB_ENABLE) && (flags & DCB_DISABLE)) return 0;\n    if (!(dc = get_dc_ptr( hdc ))) return 0;\n\n    physdev = GET_DC_PHYSDEV( dc, pSetBoundsRect );\n    ret = physdev->funcs->pSetBoundsRect( physdev, &dc->bounds, flags );\n    if (!ret)\n    {\n        release_dc_ptr( dc );\n        return 0;\n    }\n\n    ret = (dc->bounds_enabled ? DCB_ENABLE : DCB_DISABLE) |\n          (IsRectEmpty( &dc->bounds ) ? ret & DCB_SET : DCB_SET);\n\n    if (flags & DCB_RESET) reset_bounds( &dc->bounds );\n\n    if ((flags & DCB_ACCUMULATE) && rect)\n    {\n        RECT rc = *rect;\n\n        lp_to_dp( dc, (POINT *)&rc, 2 );\n        add_bounds_rect( &dc->bounds, &rc );\n    }\n\n    if (flags & DCB_ENABLE) dc->bounds_enabled = TRUE;\n    if (flags & DCB_DISABLE) dc->bounds_enabled = FALSE;\n\n    release_dc_ptr( dc );\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <assert.h>",
+   "#include <stdarg.h>",
+   "#include <stdlib.h>",
+   "#include <string.h>",
+   "#include <pthread.h>",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"wingdi.h\"",
+   "#include \"winreg.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winerror.h\"",
+   "#include \"ntgdi_private.h\"",
+   "#include \"wine/opengl_driver.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "gdi32!SetBoundsRect [stdcall] -> NtGdiSetBoundsRect implicitly imported from win32u",
+   "win32u!NtGdiSetBoundsRect [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdi32/tests/dc.c",
+   "dlls/gdi32/tests/dib.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 3
+ },
+ "same_name_in_other_dlls": [
+  {
+   "module": "gdi.exe16",
+   "source_module": "gdi.exe16",
+   "exported_by": [
+    "gdi.exe16"
+   ],
+   "file": "dlls/gdi.exe16/gdi.c",
+   "start_line": 2117,
+   "resolution": [
+    "gdi.exe16!SetBoundsRect [pascal -ret16] -> internal symbol SetBoundsRect16"
+   ],
+   "macro_generated": false,
+   "win16": true,
+   "end_line": 2129,
+   "signature": "UINT16 WINAPI SetBoundsRect16( HDC16 hdc, const RECT16* rect, UINT16 flags )",
+   "code": "UINT16 WINAPI SetBoundsRect16( HDC16 hdc, const RECT16* rect, UINT16 flags )\n{\n    if (rect)\n    {\n        RECT rect32;\n        rect32.left   = rect->left;\n        rect32.top    = rect->top;\n        rect32.right  = rect->right;\n        rect32.bottom = rect->bottom;\n        return SetBoundsRect( HDC_32( hdc ), &rect32, flags );\n    }\n    else return SetBoundsRect( HDC_32( hdc ), NULL, flags );\n}"
+  }
+ ],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-setboundsrect.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-setboundsrect",
+   "documented_name": "setboundsrect",
+   "file": "docs/0228_sdk-api_nf-wingdi-setboundsrect.md",
+   "text": "---\nUID: NF:wingdi.SetBoundsRect\ntitle: SetBoundsRect function (wingdi.h)\ndescription: The SetBoundsRect function controls the accumulation of bounding rectangle information for the specified device context.\nhelpviewer_keywords: [\"DCB_ACCUMULATE\",\"DCB_DISABLE\",\"DCB_ENABLE\",\"DCB_RESET\",\"SetBoundsRect\",\"SetBoundsRect function [Windows GDI]\",\"_win32_SetBoundsRect\",\"gdi.setboundsrect\",\"wingdi/SetBoundsRect\"]\nold-location: gdi\\setboundsrect.htm\ntech.root: gdi\nms.assetid: ad361e78-42e8-4945-9395-fab983e396df\nms.date: 12/05/2018\nms.keywords: DCB_ACCUMULATE, DCB_DISABLE, DCB_ENABLE, DCB_RESET, SetBoundsRect, SetBoundsRect function [Windows GDI], _win32_SetBoundsRect, gdi.setboundsrect, wingdi/SetBoundsRect\nreq.header: wingdi.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - SetBoundsRect\n - wingdi/SetBoundsRect\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - gdi32.dll\n - Ext-MS-Win-GDI-Internal-Desktop-L1-1-0.dll\n - GDI32Full.dll\napi_name:\n - SetBoundsRect\n---\n\n# SetBoundsRect function\n\n\n## -description\n\nThe <b>SetBoundsRect</b> function controls the accumulation of bounding rectangle information for the specified device context. The system can maintain a bounding rectangle for all drawing operations. An application can examine and set this rectangle. The drawing boundaries are useful for invalidating bitmap caches.\n\n## -parameters\n\n### -param hdc [in]\n\nA handle to the device context for which to accumulate bounding rectangles.\n\n### -param lprect [in]\n\nA pointer to a <a href=\"/windows/desktop/api/windef/ns-windef-rect\">RECT</a> structure used to set the bounding rectangle. Rectangle dimensions are in logical coordinates. This parameter can be <b>NULL</b>.\n\n### -param flags [in]\n\nSpecifies how the new rectangle will be combined with the accumulated rectangle. This parameter can be one of more of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"DCB_ACCUMULATE\"></a><a id=\"dcb_accumulate\"></a><dl>\n<dt><b>DCB_ACCUMULATE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nAdds the rectangle specified by the <i>lprcBounds</i> parameter to the bounding rectangle (using a rectangle union operation). Using both DCB_RESET and DCB_ACCUMULATE sets the bounding rectangle to the rectangle specified by the <i>lprcBounds</i> parameter.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"DCB_DISABLE\"></a><a id=\"dcb_disable\"></a><dl>\n<dt><b>DCB_DISABLE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nTurns off boundary accumulation.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"DCB_ENABLE\"></a><a id=\"dcb_enable\"></a><dl>\n<dt><b>DCB_ENABLE</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nTurns on boundary accumulation, which is disabled by default.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\"><a id=\"DCB_RESET\"></a><a id=\"dcb_reset\"></a><dl>\n<dt><b>DCB_RESET</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nClears the bounding rectangle.\n\n</td>\n</tr>\n</table>\n\n## -returns\n\nIf the function succeeds, the return value specifies the previous state of the bounding rectangle. This state can be a combination of the following values.\n\n<table>\n<tr>\n<th>Value</th>\n<th>Meaning</th>\n</tr>\n<tr>\n<td>DCB_DISABLE</td>\n<td>Boundary accumulation is off.</td>\n</tr>\n<tr>\n<td>DCB_ENABLE</td>\n<td>Boundary accumulation is on. DCB_ENABLE and DCB_DISABLE are mutually exclusive.</td>\n</tr>\n<tr>\n<td>DCB_RESET</td>\n<td>Bounding rectangle is empty.</td>\n</tr>\n<tr>\n<td>DCB_SET</td>\n<td>Bounding rectangle is not empty. DCB_SET and DCB_RESET are mutually exclusive.</td>\n</tr>\n</table>\n \n\nIf the function fails, the return value is zero.\n\n## -remarks\n\nThe DCB_SET value is a combination of the bit values DCB_ACCUMULATE and DCB_RESET. Applications that check the DCB_RESET bit to determine whether the bounding rectangle is empty must also check the DCB_ACCUMULATE bit. The bounding rectangle is empty only if the DCB_RESET bit is 1 and the DCB_ACCUMULATE bit is 0.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/wingdi/nf-wingdi-getboundsrect\">GetBoundsRect</a>\n\n\n\n<a href=\"/windows/desktop/gdi/painting-and-drawing-functions\">Painting and Drawing Functions</a>\n\n\n\n<a href=\"/windows/desktop/gdi/painting-and-drawing\">Painting and Drawing Overview</a>\n\n\n\n<a href=\"/windows/desktop/api/windef/ns-windef-rect\">RECT</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_dc_ptr",
+   "file": "dlls/win32u/dc.c",
+   "start_line": 289,
+   "end_line": 313,
+   "static": false,
+   "called_from": [
+    "NtGdiSetBoundsRect"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/path.c:563",
+    "dlls/win32u/path.c:581",
+    "dlls/win32u/path.c:599",
+    "dlls/win32u/path.c:617",
+    "dlls/win32u/path.c:635"
+   ],
+   "signature": "DC *get_dc_ptr( HDC hdc )",
+   "code": "DC *get_dc_ptr( HDC hdc )\n{\n    DC *dc = get_dc_obj( hdc );\n    if (!dc) return NULL;\n    if (dc->attr->disabled)\n    {\n        GDI_ReleaseObj( hdc );\n        return NULL;\n    }\n\n    if (!InterlockedCompareExchange( &dc->refcount, 1, 0 ))\n    {\n        dc->thread = GetCurrentThreadId();\n    }\n    else if (dc->thread != GetCurrentThreadId())\n    {\n        WARN( \"dc %p belongs to thread %04x\\n\", hdc, dc->thread );\n        GDI_ReleaseObj( hdc );\n        return NULL;\n    }\n    else InterlockedIncrement( &dc->refcount );\n\n    GDI_ReleaseObj( hdc );\n    return dc;\n}"
+  },
+  {
+   "name": "release_dc_ptr",
+   "file": "dlls/win32u/dc.c",
+   "start_line": 319,
+   "end_line": 327,
+   "static": false,
+   "called_from": [
+    "NtGdiSetBoundsRect"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/path.c:569",
+    "dlls/win32u/path.c:587",
+    "dlls/win32u/path.c:605",
+    "dlls/win32u/path.c:623",
+    "dlls/win32u/path.c:664"
+   ],
+   "signature": "void release_dc_ptr( DC *dc )",
+   "code": "void release_dc_ptr( DC *dc )\n{\n    LONG ref;\n\n    dc->thread = 0;\n    ref = InterlockedDecrement( &dc->refcount );\n    assert( ref >= 0 );\n    if (ref) dc->thread = GetCurrentThreadId();  /* we still own it */\n}"
+  },
+  {
+   "name": "get_dc_obj",
+   "file": "dlls/win32u/dc.c",
+   "start_line": 67,
+   "end_line": 84,
+   "static": true,
+   "called_from": [
+    "get_dc_ptr"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/win32u/dc.c:1234",
+    "dlls/win32u/dc.c:1251",
+    "dlls/win32u/dc.c:1266"
+   ],
+   "signature": "static inline DC *get_dc_obj( HDC hdc )",
+   "code": "static inline DC *get_dc_obj( HDC hdc )\n{\n    DWORD type;\n    DC *dc = get_any_obj_ptr( hdc, &type );\n    if (!dc) return NULL;\n\n    switch (type)\n    {\n    case NTGDI_OBJ_DC:\n    case NTGDI_OBJ_MEMDC:\n    case NTGDI_OBJ_ENHMETADC:\n        return dc;\n    default:\n        GDI_ReleaseObj( hdc );\n        RtlSetLastWin32Error( ERROR_INVALID_HANDLE );\n        return NULL;\n    }\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 43,
+    "end_line": 43,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(dc);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [
+   {
+    "name": "GDI_ReleaseObj",
+    "file": "dlls/win32u/gdiobj.c",
+    "start_line": 837
+   },
+   {
+    "name": "get_any_obj_ptr",
+    "file": "dlls/win32u/gdiobj.c",
+    "start_line": 797
+   },
+   {
+    "name": "lp_to_dp",
+    "file": "dlls/win32u/mapping.c",
+    "start_line": 265
+   }
+  ],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "PsGetCurrentThreadId",
+    "module": "ntoskrnl.exe",
+    "impl": [
+     "dlls/ntoskrnl.exe/ntoskrnl.c:3454"
+    ]
+   },
+   {
+    "name": "RtlSetLastWin32Error",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:121"
+    ]
+   }
+  ],
+  "header_inline": [
+   "HandleToULong",
+   "IsRectEmpty",
+   "_InterlockedCompareExchange",
+   "_InterlockedDecrement",
+   "_InterlockedIncrement",
+   "get_physdev_entry_point",
+   "wine_dbg_log"
+  ],
+  "system": [
+   "__assert_fail"
+  ],
+  "unresolved": [
+   "add_bounds_rect",
+   "reset_bounds"
+  ],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": [
+   {
+    "expr": "physdev->funcs->pSetBoundsRect",
+    "in_function": "NtGdiSetBoundsRect",
+    "at": "dlls/win32u/dc.c:1474",
+    "candidates": []
+   }
+  ]
+ },
+ "winebench": {
+  "id": "win32u.NtGdiSetBoundsRect",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "GDI",
+   "header": "wingdi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 36,
+   "body": 35,
+   "code": 21
+  },
+  "cyclomatic": 12,
+  "return_type": "UINT",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 3,
+   "n_tests": 3,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/gdi32/tests/dc.c::test_boundsrect",
+    "dlls/gdi32/tests/dc.c::test_device_caps",
+    "dlls/gdi32/tests/dib.c::reset_bounds"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-setboundsrect",
+   "source": "win32",
+   "description": "The SetBoundsRect function controls the accumulation of bounding rectangle information for the specified device context.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Gdi32.dll"
+  },
+  "exports": [
+   "gdi32.SetBoundsRect",
+   "win32u.NtGdiSetBoundsRect"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2004-03-03",
+   "median_date": "2012-04-10",
+   "last_date": "2022-04-18",
+   "code_lines": 22,
+   "pair": "win32u.NtGdiDdDDIOpenResource2",
+   "rank": 1,
+   "distance": 0.863
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "win32u.NtGdiDdDDIOpenResource2",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-04-18",
+  "partner_rank": 1,
+  "distance": 0.863
+ }
+}

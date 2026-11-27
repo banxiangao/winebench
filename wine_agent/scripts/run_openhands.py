@@ -31,6 +31,9 @@ def main():
     ap.add_argument('--jobs', type=int, default=0, help='make -j per ./compile (default: CPUs / workers)')
     ap.add_argument('--redo-bad', action='store_true', help='re-run records that errored or submitted nothing')
     ap.add_argument('--sample', type=int, default=0); ap.add_argument('--seed', type=int, default=20261102)
+    ap.add_argument('--shard', default='', help='i/n: only the tasks whose position in the task list is i modulo n (one runner per tree: vulcan/run_setting.sbatch)')
+    ap.add_argument('--consume-dataset', action='store_true', help='delete the dataset records once they are loaded, so that the agent cannot read them '
+                    '(they hold the original implementations).  Refused unless WB_DATASET_IS_COPY=1: the directory must be a throw-away copy')
     ap.add_argument('--gen-attempts', type=int, default=0, help='N > 0 (API models): a task whose run was cut short by an API / network / runner error '
                                                                 'is run once more, at most N runs in total; still failing -> generation_failed (bench/swe.py: gen_failed)')
     a = ap.parse_args()
@@ -65,7 +68,14 @@ def main():
     if not prompts: sys.exit(f'no prompts in {pdir}: run  python3 scripts/build_prompts.py --scenario {a.scenario} --stage {a.stage}')
     ids = select_ids(a.ids, a.limit, prompts.keys())
     if a.sample: import random; ids = sorted(random.Random(a.seed).sample(ids, min(a.sample, len(ids))))
+    if a.shard:
+        si, sn = (int(x) for x in a.shard.split('/')); ids = [x for k, x in enumerate(ids) if k % sn == si]
     records = {r['id']: r for r in load_records(scn.dataset)}
+    if a.consume_dataset:
+        if os.environ.get('WB_DATASET_IS_COPY') != '1': sys.exit('--consume-dataset: WB_DATASET_IS_COPY=1 is not set - refusing to delete ' + scn.dataset)
+        import shutil
+        for x in os.listdir(scn.dataset): shutil.rmtree(os.path.join(scn.dataset, x), ignore_errors=True) if os.path.isdir(os.path.join(scn.dataset, x)) else os.remove(os.path.join(scn.dataset, x))
+        print(f'dataset copy consumed: {len(records)} records in memory, {scn.dataset} emptied', flush=True)
     models = {m['name']: m for m in scn.models}
     free = queue.Queue(); [free.put(t) for t in trees]
 

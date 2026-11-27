@@ -1,0 +1,393 @@
+{
+ "id": "0054",
+ "function": {
+  "name": "CoGetPSClsid",
+  "export_name": "CoGetPSClsid",
+  "module": "combase",
+  "source_module": "combase",
+  "exported_by": [
+   "combase",
+   "ole32"
+  ],
+  "side": "PE",
+  "file": "dlls/combase/combase.c",
+  "start_line": 2307,
+  "end_line": 2367,
+  "body_lines": 58,
+  "signature": "HRESULT WINAPI CoGetPSClsid(REFIID riid, CLSID *pclsid)",
+  "header_comment": "/*****************************************************************************\n *             CoGetPSClsid        (combase.@)\n */",
+  "code": "HRESULT WINAPI CoGetPSClsid(REFIID riid, CLSID *pclsid)\n{\n    static const WCHAR interfaceW[] = L\"Interface\\\\\";\n    static const WCHAR psW[] = L\"\\\\ProxyStubClsid32\";\n    WCHAR path[ARRAY_SIZE(interfaceW) - 1 + CHARS_IN_GUID - 1 + ARRAY_SIZE(psW)];\n    ACTCTX_SECTION_KEYED_DATA data;\n    struct registered_ps *cur;\n    REGSAM opposite = (sizeof(void*) > sizeof(int)) ? KEY_WOW64_32KEY : KEY_WOW64_64KEY;\n    BOOL is_wow64;\n    HRESULT hr;\n\n    TRACE(\"%s, %p\\n\", debugstr_guid(riid), pclsid);\n\n    if (!InternalIsProcessInitialized())\n    {\n        ERR(\"apartment not initialised\\n\");\n        return CO_E_NOTINITIALIZED;\n    }\n\n    if (!pclsid)\n        return E_INVALIDARG;\n\n    EnterCriticalSection(&cs_registered_ps);\n\n    LIST_FOR_EACH_ENTRY(cur, &registered_proxystubs, struct registered_ps, entry)\n    {\n        if (IsEqualIID(&cur->iid, riid))\n        {\n            *pclsid = cur->clsid;\n            LeaveCriticalSection(&cs_registered_ps);\n            return S_OK;\n        }\n    }\n\n    LeaveCriticalSection(&cs_registered_ps);\n\n    data.cbSize = sizeof(data);\n    if (FindActCtxSectionGuid(0, NULL, ACTIVATION_CONTEXT_SECTION_COM_INTERFACE_REDIRECTION,\n            riid, &data))\n    {\n        struct ifacepsredirect_data *ifaceps = (struct ifacepsredirect_data *)data.lpData;\n        *pclsid = ifaceps->iid;\n        return S_OK;\n    }\n\n    /* Interface\\\\{string form of riid}\\\\ProxyStubClsid32 */\n    lstrcpyW(path, interfaceW);\n    StringFromGUID2(riid, path + ARRAY_SIZE(interfaceW) - 1, CHARS_IN_GUID);\n    lstrcpyW(path + ARRAY_SIZE(interfaceW) - 1 + CHARS_IN_GUID - 1, psW);\n\n    hr = get_ps_clsid_from_registry(path, KEY_READ, pclsid);\n    if (FAILED(hr) && (opposite == KEY_WOW64_32KEY || (IsWow64Process(GetCurrentProcess(), &is_wow64) && is_wow64)))\n        hr = get_ps_clsid_from_registry(path, opposite | KEY_READ, pclsid);\n\n    if (hr == S_OK)\n        TRACE(\"() Returning CLSID %s\\n\", debugstr_guid(pclsid));\n    else\n        WARN(\"No PSFactoryBuffer object is registered for IID %s\\n\", debugstr_guid(riid));\n\n    return hr;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"ntstatus.h\"",
+   "#include \"objbase.h\"",
+   "#include \"comsvcs.h\"",
+   "#include \"ctxtcall.h\"",
+   "#include \"oleauto.h\"",
+   "#include \"dde.h\"",
+   "#include \"winternl.h\"",
+   "#include \"dcom.h\"",
+   "#include \"combase_private.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/exception.h\""
+  ],
+  "resolution": [
+   "ole32!CoGetPSClsid [stdcall] -> forward combase.CoGetPSClsid",
+   "combase!CoGetPSClsid [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/ole32/tests/compobj.c",
+   "dlls/ole32/tests/marshal.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 7
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "combaseapi",
+   "path": "sdk-api-src/content/combaseapi/nf-combaseapi-cogetpsclsid.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/combaseapi/nf-combaseapi-cogetpsclsid",
+   "documented_name": "cogetpsclsid",
+   "file": "docs/0054_sdk-api_nf-combaseapi-cogetpsclsid.md",
+   "text": "---\nUID: NF:combaseapi.CoGetPSClsid\ntitle: CoGetPSClsid function (combaseapi.h)\ndescription: Returns the CLSID of the DLL that implements the proxy and stub for the specified interface.\nhelpviewer_keywords: [\"CoGetPSClsid\",\"CoGetPSClsid function [COM]\",\"_com_CoGetPSClsid\",\"com.cogetpsclsid\",\"combaseapi/CoGetPSClsid\"]\nold-location: com\\cogetpsclsid.htm\ntech.root: com\nms.assetid: dfe6b514-a80a-4adb-bf43-d9a7d0e5f4a3\nms.date: 12/05/2018\nms.keywords: CoGetPSClsid, CoGetPSClsid function [COM], _com_CoGetPSClsid, com.cogetpsclsid, combaseapi/CoGetPSClsid\nreq.header: combaseapi.h\nreq.include-header: Objbase.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Ole32.lib\nreq.dll: Ole32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - CoGetPSClsid\n - combaseapi/CoGetPSClsid\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-downlevel-ole32-l1-1-0.dll\n - api-ms-win-core-com-l1-1-3.dll\n - api-ms-win-core-com-l1-1-2.dll\n - Ole32.dll\n - API-MS-Win-Core-Com-l1-1-0.dll\n - ComBase.dll\n - API-MS-Win-Core-Com-l1-1-1.dll\n - API-MS-Win-DownLevel-Ole32-l1-1-1.dll\napi_name:\n - CoGetPSClsid\n---\n\n# CoGetPSClsid function\n\n\n## -description\n\nReturns the CLSID of the DLL that implements the proxy and stub for the specified interface.\n\n## -parameters\n\n### -param riid [in]\n\nThe interface whose proxy/stub CLSID is to be returned.\n\n### -param pClsid [out]\n\nSpecifies where to store the proxy/stub CLSID for the interface specified by <i>riid</i>.\n\n## -returns\n\nThis function can return the following values.\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>S_OK</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe proxy/stub CLSID was successfully returned.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_INVALIDARG</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nOne of the parameters is invalid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>E_OUTOFMEMORY</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThere is insufficient memory to complete this operation.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe <b>CoGetPSClsid</b> function looks at the <b>HKEY_CLASSES_ROOT</b>&#92;<b>Interfaces</b>&#92;<i>{string form of riid}</i>&#92;<b>ProxyStubClsid32</b> key in the registry to determine the CLSID of the DLL to load in order to create the proxy and stub for the interface specified by <i>riid</i>. This function also returns the CLSID for any interface IID registered by <a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-coregisterpsclsid\">CoRegisterPSClsid</a> within the current process.\n\n## -see-also\n\n<a href=\"/windows/desktop/api/combaseapi/nf-combaseapi-coregisterpsclsid\">CoRegisterPSClsid</a>"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "get_ps_clsid_from_registry",
+   "file": "dlls/combase/combase.c",
+   "start_line": 2282,
+   "end_line": 2302,
+   "static": true,
+   "called_from": [
+    "CoGetPSClsid"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static HRESULT get_ps_clsid_from_registry(const WCHAR* path, REGSAM access, CLSID *pclsid)",
+   "code": "static HRESULT get_ps_clsid_from_registry(const WCHAR* path, REGSAM access, CLSID *pclsid)\n{\n    WCHAR value[CHARS_IN_GUID];\n    HKEY hkey;\n    DWORD len;\n\n    access |= KEY_READ;\n\n    if (open_classes_key(HKEY_CLASSES_ROOT, path, access, &hkey))\n        return REGDB_E_IIDNOTREG;\n\n    len = sizeof(value);\n    if (ERROR_SUCCESS != RegQueryValueExW(hkey, NULL, NULL, NULL, (BYTE *)value, &len))\n        return REGDB_E_IIDNOTREG;\n    RegCloseKey(hkey);\n\n    if (CLSIDFromString(value, pclsid) != NOERROR)\n        return REGDB_E_IIDNOTREG;\n\n    return S_OK;\n}"
+  },
+  {
+   "name": "open_classes_key",
+   "file": "dlls/combase/combase.c",
+   "start_line": 287,
+   "end_line": 304,
+   "static": true,
+   "called_from": [
+    "get_ps_clsid_from_registry"
+   ],
+   "exclusive_to_target": false,
+   "used_outside": [
+    "dlls/combase/combase.c:315",
+    "dlls/combase/combase.c:327",
+    "dlls/combase/combase.c:364",
+    "dlls/combase/combase.c:1426"
+   ],
+   "signature": "static LSTATUS open_classes_key(HKEY hkey, const WCHAR *name, REGSAM access, HKEY *retkey)",
+   "code": "static LSTATUS open_classes_key(HKEY hkey, const WCHAR *name, REGSAM access, HKEY *retkey)\n{\n    OBJECT_ATTRIBUTES attr;\n    UNICODE_STRING nameW;\n\n    if (!(hkey = get_classes_root_hkey(hkey, access)))\n        return ERROR_INVALID_HANDLE;\n\n    attr.Length = sizeof(attr);\n    attr.RootDirectory = hkey;\n    attr.ObjectName = &nameW;\n    attr.Attributes = 0;\n    attr.SecurityDescriptor = NULL;\n    attr.SecurityQualityOfService = NULL;\n    RtlInitUnicodeString( &nameW, name );\n\n    return RtlNtStatusToDosError(NtOpenKey((HANDLE *)retkey, access, &attr));\n}"
+  },
+  {
+   "name": "get_classes_root_hkey",
+   "file": "dlls/combase/combase.c",
+   "start_line": 267,
+   "end_line": 285,
+   "static": true,
+   "called_from": [
+    "create_classes_key",
+    "open_classes_key"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HKEY get_classes_root_hkey(HKEY hkey, REGSAM access)",
+   "code": "static HKEY get_classes_root_hkey(HKEY hkey, REGSAM access)\n{\n    HKEY ret = hkey;\n    const BOOL is_win64 = sizeof(void*) > sizeof(int);\n    const BOOL force_wow32 = is_win64 && (access & KEY_WOW64_32KEY);\n\n    if (hkey == HKEY_CLASSES_ROOT &&\n        ((access & KEY_WOW64_64KEY) || !(ret = classes_root_hkey)))\n        ret = create_classes_root_hkey(MAXIMUM_ALLOWED | (access & KEY_WOW64_64KEY));\n    if (force_wow32 && ret && ret == classes_root_hkey)\n    {\n        access &= ~KEY_WOW64_32KEY;\n        if (create_classes_key(classes_root_hkey, L\"Wow6432Node\", access, &hkey))\n            return 0;\n        ret = hkey;\n    }\n\n    return ret;\n}"
+  },
+  {
+   "name": "create_classes_root_hkey",
+   "file": "dlls/combase/combase.c",
+   "start_line": 218,
+   "end_line": 244,
+   "static": true,
+   "called_from": [
+    "get_classes_root_hkey"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static HKEY create_classes_root_hkey(DWORD access)",
+   "code": "static HKEY create_classes_root_hkey(DWORD access)\n{\n    HKEY hkey, ret = 0;\n    OBJECT_ATTRIBUTES attr;\n    UNICODE_STRING name = RTL_CONSTANT_STRING(L\"\\\\Registry\\\\Machine\\\\Software\\\\Classes\");\n\n    attr.Length = sizeof(attr);\n    attr.RootDirectory = 0;\n    attr.ObjectName = &name;\n    attr.Attributes = 0;\n    attr.SecurityDescriptor = NULL;\n    attr.SecurityQualityOfService = NULL;\n\n    if (create_key( &hkey, access, &attr )) return 0;\n    TRACE( \"%s -> %p\\n\", debugstr_w(attr.ObjectName->Buffer), hkey );\n\n    if (!(access & KEY_WOW64_64KEY))\n    {\n        if (!(ret = InterlockedCompareExchangePointer( (void **)&classes_root_hkey, hkey, 0 )))\n            ret = hkey;\n        else\n            NtClose( hkey );  /* somebody beat us to it */\n    }\n    else\n        ret = hkey;\n    return ret;\n}"
+  },
+  {
+   "name": "create_classes_key",
+   "file": "dlls/combase/combase.c",
+   "start_line": 248,
+   "end_line": 265,
+   "static": true,
+   "called_from": [
+    "get_classes_root_hkey"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static LSTATUS create_classes_key(HKEY hkey, const WCHAR *name, REGSAM access, HKEY *retkey)",
+   "code": "static LSTATUS create_classes_key(HKEY hkey, const WCHAR *name, REGSAM access, HKEY *retkey)\n{\n    OBJECT_ATTRIBUTES attr;\n    UNICODE_STRING nameW;\n\n    if (!(hkey = get_classes_root_hkey(hkey, access)))\n        return ERROR_INVALID_HANDLE;\n\n    attr.Length = sizeof(attr);\n    attr.RootDirectory = hkey;\n    attr.ObjectName = &nameW;\n    attr.Attributes = 0;\n    attr.SecurityDescriptor = NULL;\n    attr.SecurityQualityOfService = NULL;\n    RtlInitUnicodeString( &nameW, name );\n\n    return RtlNtStatusToDosError(create_key(retkey, access, &attr));\n}"
+  },
+  {
+   "name": "create_key",
+   "file": "dlls/combase/combase.c",
+   "start_line": 179,
+   "end_line": 214,
+   "static": true,
+   "called_from": [
+    "create_classes_key",
+    "create_classes_root_hkey"
+   ],
+   "exclusive_to_target": false,
+   "signature": "static NTSTATUS create_key(HKEY *retkey, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr)",
+   "code": "static NTSTATUS create_key(HKEY *retkey, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr)\n{\n    NTSTATUS status = NtCreateKey((HANDLE *)retkey, access, attr, 0, NULL, 0, NULL);\n\n    if (status == STATUS_OBJECT_NAME_NOT_FOUND)\n    {\n        HANDLE subkey;\n        WCHAR *buffer = attr->ObjectName->Buffer;\n        DWORD pos = 0, i = 0, len = attr->ObjectName->Length / sizeof(WCHAR);\n        UNICODE_STRING str;\n        OBJECT_ATTRIBUTES attr2 = *attr;\n\n        while (i < len && buffer[i] != '\\\\') i++;\n        if (i == len) return status;\n\n        attr2.ObjectName = &str;\n\n        while (i < len)\n        {\n            str.Buffer = buffer + pos;\n            str.Length = (i - pos) * sizeof(WCHAR);\n            status = NtCreateKey(&subkey, access, &attr2, 0, NULL, 0, NULL);\n            if (attr2.RootDirectory != attr->RootDirectory) NtClose(attr2.RootDirectory);\n            if (status) return status;\n            attr2.RootDirectory = subkey;\n            while (i < len && buffer[i] == '\\\\') i++;\n            pos = i;\n            while (i < len && buffer[i] != '\\\\') i++;\n        }\n        str.Buffer = buffer + pos;\n        str.Length = (i - pos) * sizeof(WCHAR);\n        status = NtCreateKey((HANDLE *)retkey, access, &attr2, 0, NULL, 0, NULL);\n        if (attr2.RootDirectory != attr->RootDirectory) NtClose(attr2.RootDirectory);\n    }\n    return status;\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [
+   {
+    "name": "ifacepsredirect_data",
+    "kind": "struct_decl",
+    "start_line": 75,
+    "end_line": 85,
+    "code": "struct ifacepsredirect_data\n{\n    ULONG size;\n    DWORD mask;\n    GUID  iid;\n    ULONG nummethods;\n    GUID  tlbid;\n    GUID  base;\n    ULONG name_len;\n    ULONG name_offset;\n};"
+   },
+   {
+    "name": "registered_ps",
+    "kind": "struct_decl",
+    "start_line": 101,
+    "end_line": 106,
+    "code": "struct registered_ps\n{\n    struct list entry;\n    IID iid;\n    CLSID clsid;\n};"
+   }
+  ],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(ole);"
+   },
+   {
+    "name": "classes_root_hkey",
+    "type": "HKEY",
+    "static": true,
+    "start_line": 216,
+    "end_line": 216,
+    "code": "static HKEY classes_root_hkey;"
+   },
+   {
+    "name": "cs_registered_ps",
+    "type": "CRITICAL_SECTION",
+    "static": true,
+    "start_line": 117,
+    "end_line": 117,
+    "code": "static CRITICAL_SECTION cs_registered_ps = { &psclsid_cs_debug, -1, 0, 0, 0, 0 };"
+   },
+   {
+    "name": "registered_proxystubs",
+    "type": "struct list",
+    "static": true,
+    "start_line": 108,
+    "end_line": 108,
+    "code": "static struct list registered_proxystubs = LIST_INIT(registered_proxystubs);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "CLSIDFromString",
+    "impl": [
+     "dlls/combase/combase.c:1480"
+    ]
+   },
+   {
+    "name": "InternalIsProcessInitialized",
+    "impl": [
+     "dlls/combase/combase.c:376"
+    ]
+   },
+   {
+    "name": "StringFromGUID2",
+    "impl": [
+     "dlls/combase/combase.c:1535"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "EnterCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:351"
+    ]
+   },
+   {
+    "name": "FindActCtxSectionGuid",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/loader.c:1208"
+    ]
+   },
+   {
+    "name": "IsWow64Process",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/process.c:1064"
+    ]
+   },
+   {
+    "name": "LeaveCriticalSection",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/ntdll/sync.c:433"
+    ]
+   },
+   {
+    "name": "NtClose",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/server.c:1940"
+    ]
+   },
+   {
+    "name": "NtCreateKey",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/registry.c:74"
+    ]
+   },
+   {
+    "name": "NtOpenKey",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/unix/registry.c:166"
+    ]
+   },
+   {
+    "name": "RegCloseKey",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1129"
+    ]
+   },
+   {
+    "name": "RegQueryValueExW",
+    "module": "advapi32",
+    "impl": [
+     "dlls/kernelbase/registry.c:1636"
+    ]
+   },
+   {
+    "name": "RtlInitUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:173"
+    ]
+   },
+   {
+    "name": "RtlNtStatusToDosError",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/error.c:77"
+    ]
+   },
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   }
+  ],
+  "header_inline": [
+   "GetCurrentProcess",
+   "_InterlockedCompareExchangePointer",
+   "debugstr_guid",
+   "debugstr_w",
+   "lstrcpyW",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "combase.CoGetPSClsid",
+  "category": {
+   "l1": "System services",
+   "l2": "COM",
+   "header": "combaseapi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 61,
+   "body": 60,
+   "code": 38
+  },
+  "cyclomatic": 11,
+  "return_type": "HRESULT",
+  "n_params": 2,
+  "tests": {
+   "n_tests_own": 7,
+   "n_tests": 8,
+   "n_tests_other": 1,
+   "own_test_functions": [
+    "dlls/ole32/tests/compobj.c::implicit_mta_proc",
+    "dlls/ole32/tests/compobj.c::register_ps_clsid_thread",
+    "dlls/ole32/tests/compobj.c::test_CoGetPSClsid",
+    "dlls/ole32/tests/compobj.c::test_CoRegisterPSClsid",
+    "dlls/ole32/tests/marshal.c::test_marshal_channel_buffer",
+    "dlls/ole32/tests/marshal.c::test_proxybuffer",
+    "dlls/ole32/tests/marshal.c::test_stubbuffer"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/combaseapi/nf-combaseapi-cogetpsclsid",
+   "source": "win32",
+   "description": "Returns the CLSID of the DLL that implements the proxy and stub for the specified interface.",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Ole32.dll"
+  },
+  "exports": [
+   "combase.CoGetPSClsid",
+   "ole32.CoGetPSClsid"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2004-12-27",
+   "median_date": "2020-08-20",
+   "last_date": "2022-03-16",
+   "code_lines": 37,
+   "pair": "combase.CoGetContextToken",
+   "rank": 1,
+   "distance": 0.642
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "combase.CoGetContextToken",
+  "share_after_cutoff": 0.0,
+  "last_date": "2022-03-16",
+  "partner_rank": 1,
+  "distance": 0.642
+ }
+}

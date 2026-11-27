@@ -1,0 +1,158 @@
+{
+ "id": "0226",
+ "function": {
+  "name": "GetICMProfileA",
+  "export_name": "GetICMProfileA",
+  "module": "gdi32",
+  "source_module": "gdi32",
+  "exported_by": [
+   "gdi32"
+  ],
+  "side": "PE",
+  "file": "dlls/gdi32/icm.c",
+  "start_line": 100,
+  "end_line": 129,
+  "body_lines": 27,
+  "signature": "BOOL WINAPI GetICMProfileA(HDC hdc, LPDWORD size, LPSTR filename)",
+  "header_comment": "/**********************************************************************\n *           GetICMProfileA   (GDI32.@)\n *\n * Returns the filename of the specified device context's color\n * management profile, even if color management is not enabled\n * for that DC.\n *\n * RETURNS\n *    TRUE if filename is copied successfully.\n *    FALSE if the buffer length pointed to by size is too small.\n *\n * FIXME\n *    How does Windows assign these? Some registry key?\n */",
+  "code": "BOOL WINAPI GetICMProfileA(HDC hdc, LPDWORD size, LPSTR filename)\n{\n    WCHAR filenameW[MAX_PATH];\n    DWORD buflen = MAX_PATH;\n    BOOL ret = FALSE;\n\n    TRACE(\"%p, %p, %p\\n\", hdc, size, filename);\n\n    if (!hdc || !size) return FALSE;\n\n    if (GetICMProfileW(hdc, &buflen, filenameW))\n    {\n        int len = WideCharToMultiByte(CP_ACP, 0, filenameW, -1, NULL, 0, NULL, NULL);\n\n        if (!filename)\n        {\n            *size = len;\n            return FALSE;\n        }\n\n        if (*size >= len)\n        {\n            WideCharToMultiByte(CP_ACP, 0, filenameW, -1, filename, *size, NULL, NULL);\n            ret = TRUE;\n        }\n        else SetLastError(ERROR_INSUFFICIENT_BUFFER);\n        *size = len;\n    }\n    return ret;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"gdi_private.h\"",
+   "#include \"winnls.h\"",
+   "#include \"winreg.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "gdi32!GetICMProfileA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/gdi32/tests/icm.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 2
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "wingdi",
+   "path": "sdk-api-src/content/wingdi/nf-wingdi-geticmprofilea.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-geticmprofilea",
+   "documented_name": "geticmprofilea",
+   "file": "docs/0226_sdk-api_nf-wingdi-geticmprofilea.md",
+   "text": "---\nUID: NF:wingdi.GetICMProfileA\ntitle: GetICMProfileA function (wingdi.h)\ndescription: The GetICMProfile function retrieves the file name of the current output color profile for a specified device context. (ANSI)\nhelpviewer_keywords: [\"GetICMProfileA\", \"wingdi/GetICMProfileA\"]\nold-location: wcs\\geticmprofile.htm\ntech.root: WCS\nms.assetid: 1e16771a-80c5-47bb-9c98-14169d4dd773\nms.date: 12/05/2018\nms.keywords: GetICMProfile, GetICMProfile function [Windows Color System], GetICMProfileA, GetICMProfileW, _color_GetICMProfile, wcs.geticmprofile, wingdi/GetICMProfile, wingdi/GetICMProfileA, wingdi/GetICMProfileW\nreq.header: wingdi.h\nreq.include-header: \nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps only]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps only]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: GetICMProfileW (Unicode) and GetICMProfileA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Gdi32.lib\nreq.dll: Gdi32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - GetICMProfileA\n - wingdi/GetICMProfileA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Gdi32.dll\n - Ext-MS-Win-GDI-Internal-Desktop-L1-1-0.dll\n - GDI32Full.dll\napi_name:\n - GetICMProfile\n - GetICMProfileA\n - GetICMProfileW\n---\n\n# GetICMProfileA function\n\n\n## -description\n\nThe <b>GetICMProfile</b> function retrieves the file name of the current output color profile for a specified device context.\n\n## -parameters\n\n### -param hdc\n\nSpecifies a device context from which to retrieve the color profile.\n\n### -param pBufSize\n\nPointer to a <b>DWORD</b> that contains the size of the buffer pointed to by <i>lpszFilename</i>. For the ANSI version of this function, the size is in bytes. For the Unicode version, the size is in WCHARs. If this function is successful, on return this parameter contains the size of the buffer actually used. However, if the buffer is not large enough, this function returns <b>FALSE</b>. In this case, the <b>GetLastError()</b> function returns ERROR_INSUFFICIENT_BUFFER and the <b>DWORD</b> pointed to by this parameter contains the size needed for the <i>lpszFilename</i> buffer.\n\n### -param pszFilename\n\nPoints to the buffer that receives the path name of the profile.\n\n## -returns\n\nIf this function succeeds, the return value is <b>TRUE</b>. It also returns <b>TRUE</b> if the <i>lpszFilename</i> parameter is <b>NULL</b> and the size required for the buffer is copied into <i>lpcbName.</i>\n\nIf this function fails, the return value is <b>FALSE</b>.\n\n## -remarks\n\n<b>GetICMProfile</b> obtains the file name of the current output profile regardless of whether or not color management is enabled for the device context.\n\nGiven a device context, <b>GetICMProfile</b> will output, through the parameter <i>lpszFilename</i>, the path name of the file containing the color profile currently being used by the device context. It will also output, through the parameter <i>lpcbName</i>, the length of the string containing the path name.\n\nIt is possible that the profile name returned by <b>GetICMProfile</b> will not be in the list of profiles returned by <a href=\"/windows/desktop/api/wingdi/nf-wingdi-enumicmprofilesa\">EnumICMProfiles</a>. The <b>EnumICMProfiles</b> function returns all color space profiles that are associated with a device context (DC) whose settings match that of the DC. If the <a href=\"/windows/desktop/api/wingdi/nf-wingdi-seticmprofilea\">SetICMProfile</a> function is used to set the current profile, a profile may be associated with the DC that does not match its settings. For instance, the <b>SetICMProfile</b> function can be used to associate the device-independent sRGB profile with a DC. This profile will be used as the current WCS profile for that DC, and calls to <b>GetICMProfile</b> will return its file name. However, the profile will not appear in the list of profiles that is returned from <b>EnumICMProfiles</b>.\n\nIf this function is called before any calls to the <b>SetICMProfile</b> function, it can be used to get the default profile for a device context.\n\n<b>Windows 95/98/Me: </b><b>GetICMProfileW</b> is supported by the Microsoft Layer for Unicode. To use this, you must add certain files to your application, as outlined in <a href=\"https://msdn.microsoft.com/library?url=/library/mslu/winprog/microsoft_layer_for_unicode_on_windows_95_98_me_systems.asp\">Microsoft Layer for Unicode on Windows 95/98/Me Systems</a>.\n\n\n\n\n\n> [!NOTE]\n> The wingdi.h header defines GetICMProfile as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n* [Basic color management concepts](/windows/win32/wcs/basic-color-management-concepts)\n* [Functions](/windows/win32/wcs/functions)\n* [DeleteColorSpaceW](/windows/win32/api/wingdi/nf-wingdi-deletecolorspace)\n* [ICMENUMPROCA callback function](/windows/win32/api/wingdi/nc-wingdi-icmenumproca)\n* [EnumICMProfilesW](/windows/win32/api/wingdi/nf-wingdi-enumicmprofilesw)\n* [SetICMProfileW](/windows/win32/api/wingdi/nf-wingdi-seticmprofilew)\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 28,
+    "end_line": 28,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(icm);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "GetICMProfileW",
+    "impl": [
+     "dlls/gdi32/icm.c:134"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "WideCharToMultiByte",
+    "module": "kernelbase",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   }
+  ],
+  "header_inline": [
+   "SetLastError",
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "gdi32.GetICMProfileA",
+  "category": {
+   "l1": "Graphics and multimedia",
+   "l2": "Windows Color System",
+   "header": "wingdi.h",
+   "textbook": "N/A (not an OS kernel service)",
+   "basis": "tech_root"
+  },
+  "loc": {
+   "total": 30,
+   "body": 29,
+   "code": 16
+  },
+  "cyclomatic": 6,
+  "return_type": "BOOL",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 2,
+   "n_tests": 2,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/gdi32/tests/icm.c::test_GetICMProfileA",
+    "dlls/gdi32/tests/icm.c::test_SetICMProfileA"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-geticmprofilea",
+   "source": "win32",
+   "description": "The GetICMProfile function retrieves the file name of the current output color profile for a specified device context. (ANSI)",
+   "min_windows": "Windows 2000 Professional [desktop apps only]",
+   "documented_dll": "Gdi32.dll"
+  },
+  "exports": [
+   "gdi32.GetICMProfileA"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2008-01-22",
+   "median_date": "2008-01-22",
+   "last_date": "2015-12-21",
+   "code_lines": 15,
+   "pair": "win32u.NtGdiDdDDIOpenNtHandleFromName",
+   "rank": 1,
+   "distance": 1.1
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "win32u.NtGdiDdDDIOpenNtHandleFromName",
+  "share_after_cutoff": 0.0,
+  "last_date": "2015-12-21",
+  "partner_rank": 1,
+  "distance": 1.1
+ }
+}

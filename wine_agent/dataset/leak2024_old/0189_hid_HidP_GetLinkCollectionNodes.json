@@ -1,0 +1,157 @@
+{
+ "id": "0189",
+ "function": {
+  "name": "HidP_GetLinkCollectionNodes",
+  "export_name": "HidP_GetLinkCollectionNodes",
+  "module": "hid",
+  "source_module": "hid",
+  "exported_by": [
+   "hid",
+   "hidparse.sys"
+  ],
+  "side": "PE",
+  "file": "dlls/hid/hidp.c",
+  "start_line": 1004,
+  "end_line": 1030,
+  "body_lines": 24,
+  "signature": "NTSTATUS WINAPI HidP_GetLinkCollectionNodes( HIDP_LINK_COLLECTION_NODE *nodes, ULONG *nodes_len, PHIDP_PREPARSED_DATA preparsed_data )",
+  "header_comment": null,
+  "code": "NTSTATUS WINAPI HidP_GetLinkCollectionNodes( HIDP_LINK_COLLECTION_NODE *nodes, ULONG *nodes_len, PHIDP_PREPARSED_DATA preparsed_data )\n{\n    struct hid_preparsed_data *preparsed = (struct hid_preparsed_data *)preparsed_data;\n    struct hid_collection_node *collections = HID_COLLECTION_NODES( preparsed );\n    ULONG i, count, capacity = *nodes_len;\n\n    TRACE( \"nodes %p, nodes_len %p, preparsed_data %p.\\n\", nodes, nodes_len, preparsed_data );\n\n    if (!preparsed || memcmp( preparsed->magic, \"HidP KDR\", 8 )) return HIDP_STATUS_INVALID_PREPARSED_DATA;\n\n    count = *nodes_len = preparsed->number_link_collection_nodes;\n    if (capacity < count) return HIDP_STATUS_BUFFER_TOO_SMALL;\n\n    for (i = 0; i < count; ++i)\n    {\n        nodes[i].LinkUsagePage = collections[i].usage_page;\n        nodes[i].LinkUsage = collections[i].usage;\n        nodes[i].Parent = collections[i].parent;\n        nodes[i].CollectionType = collections[i].collection_type;\n        nodes[i].FirstChild = collections[i].first_child;\n        nodes[i].NextSibling = collections[i].next_sibling;\n        nodes[i].NumberOfChildren = collections[i].number_of_children;\n        nodes[i].IsAlias = 0;\n    }\n\n    return HIDP_STATUS_SUCCESS;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winternl.h\"",
+   "#include \"winioctl.h\"",
+   "#include \"ddk/wdm.h\"",
+   "#include \"hidusage.h\"",
+   "#include \"ddk/hidpi.h\"",
+   "#include \"wine/hid.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "hid!HidP_GetLinkCollectionNodes [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/hid/tests/device.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "windows-driver-docs-ddi",
+   "header": "hidpi",
+   "path": "wdk-ddi-src/content/hidpi/nf-hidpi-hidp_getlinkcollectionnodes.md",
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/hidpi/nf-hidpi-hidp_getlinkcollectionnodes",
+   "documented_name": "hidp_getlinkcollectionnodes",
+   "file": "docs/0189_windows-driver-docs-ddi_nf-hidpi-hidp_getlinkcollectionnodes.md",
+   "text": "---\nUID: NF:hidpi.HidP_GetLinkCollectionNodes\ntitle: HidP_GetLinkCollectionNodes function (hidpi.h)\ndescription: The HidP_GetLinkCollectionNodes routine returns a top-level collection's link collection array.\nold-location: hid\\hidp_getlinkcollectionnodes.htm\ntech.root: hid\nms.date: 04/30/2018\nkeywords: [\"HidP_GetLinkCollectionNodes function\"]\nms.keywords: HidP_GetLinkCollectionNodes, HidP_GetLinkCollectionNodes routine [Human Input Devices], hid.hidp_getlinkcollectionnodes, hidfunc_cbcd531f-dc4d-4a27-96bd-bfa3589af9a7.xml, hidpi/HidP_GetLinkCollectionNodes\nreq.header: hidpi.h\nreq.include-header: Hidpi.h\nreq.target-type: Universal\nreq.target-min-winverclnt: Available in Windows 2000 and later versions of Windows.\nreq.target-min-winversvr: \nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Hidparse.lib\nreq.dll: \nreq.irql: <= DISPATCH_LEVEL\ntargetos: Windows\nreq.typenames: \nf1_keywords:\n - HidP_GetLinkCollectionNodes\n - hidpi/HidP_GetLinkCollectionNodes\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - LibDef\napi_location:\n - Hidparse.lib\n - Hidparse.dll\napi_name:\n - HidP_GetLinkCollectionNodes\n---\n\n# HidP_GetLinkCollectionNodes function\n\n\n## -description\n\nThe <b>HidP_GetLinkCollectionNodes</b> routine returns a <a href=\"/windows-hardware/drivers/hid/top-level-collections\">top-level collection's</a> <a href=\"/windows-hardware/drivers/hid/link-collections\">link collection array</a>.\n\n## -parameters\n\n### -param LinkCollectionNodes [out]\n\n\nPointer to a caller-allocated array of HIDP_LINK_COLLECTION_NODE structures in which <b>HidP_GetLinkCollectionNodes</b> returns a top-level collection's link collection array.\n\n### -param LinkCollectionNodesLength [in, out]\n\n\nSpecifies, on input, the length, in array elements, of the <i>LinkCollectionNodes</i> buffer. On output, the routine sets <i>LinkCollectionNodesLength</i> to the number of entries in the array that it set.\n\n### -param PreparsedData [in]\n\n\nPointer to the preparsed data of the top-level collection for which this routine returns a link collection array.\n\n## -returns\n\n<b>HidP_GetLinkCollectionNodes</b> returns one of the following status codes:\n\n<table>\n<tr>\n<th>Return code</th>\n<th>Description</th>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>HIDP_STATUS_SUCCESS</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe routine successfully returned the specified collection's link collection array.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>HIDP_STATUS_INVALID_PREPARSED_DATA</b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe preparsed data is not valid.\n\n</td>\n</tr>\n<tr>\n<td width=\"40%\">\n<dl>\n<dt><b>HIDP_STATUS_BUFFER_TOO_SMALL </b></dt>\n</dl>\n</td>\n<td width=\"60%\">\nThe <i>LinkCollectionNodes</i> buffer is too small to hold the entire link collection array.\n\n</td>\n</tr>\n</table>\n\n## -remarks\n\nThe required length of the <i>LinkCollectionNodes</i> buffer is specified by the <b>NumberLinkCollectionNodes</b> member of a collection's <a href=\"/windows-hardware/drivers/ddi/hidpi/ns-hidpi-_hidp_caps\">HIDP_CAPS</a> structure.\n\nIf <b>HidP_GetLinkCollectionNodes</b> returns the status value HIDP_STATUS_BUFFER_TOO_SMALL, it also sets <i>LinkCollectionNodesLength</i> to the length, in array elements, required to hold the link collection nodes information.\n\nFor more information, see <a href=\"/windows-hardware/drivers/hid/hid-collections\">HID Collections</a>.\n\n## -see-also\n\n<a href=\"/windows-hardware/drivers/ddi/hidpi/ns-hidpi-_hidp_caps\">HIDP_CAPS</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/hidpi/ns-hidpi-_hidp_link_collection_node\">HIDP_LINK_COLLECTION_NODE</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/hidpi/nf-hidpi-hidp_getcaps\">HidP_GetCaps</a>\n\n\n\n<a href=\"/windows-hardware/drivers/ddi/hidsdi/nf-hidsdi-hidd_getpreparseddata\">_HIDP_PREPARSED_DATA</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 36,
+    "end_line": 36,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(hid);"
+   }
+  ],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [
+   {
+    "name": "memcmp",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/string.c:85"
+    ]
+   }
+  ],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "hid.HidP_GetLinkCollectionNodes",
+  "category": {
+   "l1": "Devices",
+   "l2": "Human Interface Devices",
+   "header": "hidpi.h",
+   "textbook": "Device management",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 27,
+   "body": 26,
+   "code": 17
+  },
+  "cyclomatic": 5,
+  "return_type": "NTSTATUS",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/hid/tests/device.c::test_device_info"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows-hardware/drivers/ddi/hidpi/nf-hidpi-hidp_getlinkcollectionnodes",
+   "source": "ddi",
+   "description": "The HidP_GetLinkCollectionNodes routine returns a top-level collection's link collection array.",
+   "min_windows": "Available in Windows 2000 and later versions of Windows.",
+   "documented_dll": ""
+  },
+  "exports": [
+   "hid.HidP_GetLinkCollectionNodes"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, OLD group: no code line committed after 2024-06-30; matched to a NEW function",
+   "group": "old",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.0,
+   "first_date": "2015-07-01",
+   "median_date": "2021-09-22",
+   "last_date": "2021-09-22",
+   "code_lines": 18,
+   "pair": "setupapi.SetupDiOpenDeviceInterfaceA",
+   "rank": 1,
+   "distance": 0.3
+  }
+ },
+ "leakage": {
+  "group": "old",
+  "cutoff": "2024-06-30",
+  "partner": "setupapi.SetupDiOpenDeviceInterfaceA",
+  "share_after_cutoff": 0.0,
+  "last_date": "2021-09-22",
+  "partner_rank": 1,
+  "distance": 0.3
+ }
+}

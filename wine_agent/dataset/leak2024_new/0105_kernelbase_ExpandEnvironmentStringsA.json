@@ -1,0 +1,186 @@
+{
+ "id": "0105",
+ "function": {
+  "name": "ExpandEnvironmentStringsA",
+  "export_name": "ExpandEnvironmentStringsA",
+  "module": "kernelbase",
+  "source_module": "kernelbase",
+  "exported_by": [
+   "kernel32",
+   "kernelbase"
+  ],
+  "side": "PE",
+  "file": "dlls/kernelbase/process.c",
+  "start_line": 1484,
+  "end_line": 1514,
+  "body_lines": 28,
+  "signature": "DWORD WINAPI DECLSPEC_HOTPATCH ExpandEnvironmentStringsA( LPCSTR src, LPSTR dst, DWORD count )",
+  "header_comment": "/***********************************************************************\n *           ExpandEnvironmentStringsA   (kernelbase.@)\n */",
+  "code": "DWORD WINAPI DECLSPEC_HOTPATCH ExpandEnvironmentStringsA( LPCSTR src, LPSTR dst, DWORD count )\n{\n    UNICODE_STRING us_src;\n    PWSTR dstW = NULL;\n    DWORD count_neededW;\n    DWORD count_neededA = 0;\n\n    RtlCreateUnicodeStringFromAsciiz( &us_src, src );\n\n    /* We always need to call ExpandEnvironmentStringsW, since we need the result to calculate the needed buffer size */\n    count_neededW = ExpandEnvironmentStringsW( us_src.Buffer, NULL, 0 );\n    if (!(dstW = HeapAlloc( GetProcessHeap(), HEAP_ZERO_MEMORY, count_neededW * sizeof(WCHAR) ))) goto cleanup;\n    count_neededW = ExpandEnvironmentStringsW( us_src.Buffer, dstW, count_neededW );\n\n    /* Calculate needed buffer */\n    count_neededA = WideCharToMultiByte( CP_ACP, 0, dstW, count_neededW, NULL, 0, NULL, NULL );\n\n    /* If provided buffer is enough, do actual conversion */\n    if (count > count_neededA)\n        count_neededA = WideCharToMultiByte( CP_ACP, 0, dstW, count_neededW, dst, count, NULL, NULL );\n    else if(dst)\n        *dst = 0;\n\ncleanup:\n    RtlFreeUnicodeString( &us_src );\n    HeapFree( GetProcessHeap(), 0, dstW );\n\n    if (count_neededA >= count) /* When the buffer is too small, native over-reports by one byte */\n        return count_neededA + 1;\n    return count_neededA;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include <stdarg.h>",
+   "#include <string.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winbase.h\"",
+   "#include \"winnls.h\"",
+   "#include \"wincontypes.h\"",
+   "#include \"winternl.h\"",
+   "#include \"processsnapshot.h\"",
+   "#include \"kernelbase.h\"",
+   "#include \"wine/debug.h\"",
+   "#include \"wine/condrv.h\""
+  ],
+  "resolution": [
+   "kernel32!ExpandEnvironmentStringsA [stdcall -import] -> import from kernelbase",
+   "kernelbase!ExpandEnvironmentStringsA [stdcall]"
+  ],
+  "arch": "x86_64"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/environ.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "processenv",
+   "path": "sdk-api-src/content/processenv/nf-processenv-expandenvironmentstringsa.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/processenv/nf-processenv-expandenvironmentstringsa",
+   "documented_name": "expandenvironmentstringsa",
+   "file": "docs/0105_sdk-api_nf-processenv-expandenvironmentstringsa.md",
+   "text": "---\nUID: NF:processenv.ExpandEnvironmentStringsA\ntitle: ExpandEnvironmentStringsA function (processenv.h)\ndescription: Expands environment-variable strings and replaces them with the values defined for the current user. (ANSI)\nhelpviewer_keywords: [\"ExpandEnvironmentStringsA\", \"processenv/ExpandEnvironmentStringsA\"]\nold-location: base\\expandenvironmentstrings.htm\ntech.root: winprog\nms.assetid: b563e8ed-311d-4971-94f3-9c9fde4a2f30\nms.date: 12/05/2018\nms.keywords: ExpandEnvironmentStrings, ExpandEnvironmentStrings function, ExpandEnvironmentStringsA, ExpandEnvironmentStringsW, _win32_expandenvironmentstrings, base.expandenvironmentstrings, processenv/ExpandEnvironmentStrings, processenv/ExpandEnvironmentStringsA, processenv/ExpandEnvironmentStringsW\nreq.header: processenv.h\nreq.include-header: Windows.h\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows 2000 Professional [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows 2000 Server [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: ExpandEnvironmentStringsW (Unicode) and ExpandEnvironmentStringsA (ANSI)\nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - ExpandEnvironmentStringsA\n - processenv/ExpandEnvironmentStringsA\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - Kernel32.dll\n - API-MS-Win-Core-ProcessEnvironment-l1-1-0.dll\n - KernelBase.dll\n - API-MS-Win-Core-ProcessEnvironment-l1-2-0.dll\n - API-MS-Win-DownLevel-Kernel32-l1-1-0.dll\n - MinKernelBase.dll\napi_name:\n - ExpandEnvironmentStrings\n - ExpandEnvironmentStringsA\n - ExpandEnvironmentStringsW\n---\n\n# ExpandEnvironmentStringsA function\n\n\n## -description\n\nExpands environment-variable strings and replaces them with the values defined for the current user.\n\nTo specify the environment block for a particular user or the system, use the <a href=\"/windows/win32/api/userenv/nf-userenv-expandenvironmentstringsforusera\">ExpandEnvironmentStringsForUser</a> function.\n\n## -parameters\n\n### -param lpSrc [in]\n\nA buffer that contains one or more environment-variable strings in the form: %<i>variableName</i>%. For each such reference, the %<i>variableName</i>% portion is replaced with the current value of that environment variable. \n\n\n\n\nCase is ignored when looking up the environment-variable name. If the name is not found, the %<i>variableName</i>% portion is left unexpanded.\n\nNote that this function does not support all the features that Cmd.exe supports. For example, it does not support %<i>variableName</i>:<i>str1</i>=<i>str2</i>% or %<i>variableName</i>:~<i>offset</i>,<i>length</i>%.\n\n### -param lpDst [out, optional]\n\nA pointer to a buffer that receives the result of expanding the environment variable strings in the <i>lpSrc</i> buffer. Note that this buffer cannot be the same as the <i>lpSrc</i> buffer.\n\n### -param nSize [in]\n\nThe maximum number of characters that can be stored in the buffer pointed to by the <i>lpDst</i> parameter. When using ANSI strings, the buffer size should be the string length, plus terminating null character, plus one. When using Unicode strings, the buffer size should be the string length plus the terminating null character.\n\n## -returns\n\nIf the function succeeds, the return value is the number of <b>TCHARs</b> stored in the destination buffer, including the terminating null character. If the destination buffer is too small to hold the expanded string, the return value is the required buffer size, in characters.\n\nIf the function fails, the return value is zero. To get extended error information, call \n<a href=\"/windows/desktop/api/errhandlingapi/nf-errhandlingapi-getlasterror\">GetLastError</a>.\n\n## -remarks\n\n**Windows Server 2003 and Windows XP:** The size of the <i>lpSrc</i> and <i>lpDst</i> buffers is limited to 32K.\n\nTo replace folder names in a fully qualified path with their associated environment-variable strings, use the <a href=\"/windows/desktop/api/shlwapi/nf-shlwapi-pathunexpandenvstringsa\">PathUnExpandEnvStrings</a> function.\n\nTo retrieve the list of environment variables for a process, use the <a href=\"/windows/win32/api/processenv/nf-processenv-getenvironmentstrings\">GetEnvironmentStrings</a> function.\n\n\n#### Examples\n\nFor an example, see \n<a href=\"/windows/desktop/SysInfo/getting-system-information\">Getting System Information</a>.\n\n<div class=\"code\"></div>\n\n\n\n\n> [!NOTE]\n> The processenv.h header defines ExpandEnvironmentStrings as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see [Conventions for Function Prototypes](/windows/win32/intl/conventions-for-function-prototypes).\n\n## -see-also\n\n<a href=\"/windows/desktop/ProcThread/environment-variables\">Environment Variables</a>\n\n\n\n<a href=\"/windows/desktop/SysInfo/system-information-functions\">System\n\t\t  Information Functions</a>\n"
+  }
+ ],
+ "same_file_dependencies": [],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [],
+  "macros": []
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [
+   {
+    "name": "ExpandEnvironmentStringsW",
+    "impl": [
+     "dlls/kernelbase/process.c:1520"
+    ]
+   },
+   {
+    "name": "GetProcessHeap",
+    "impl": [
+     "dlls/kernelbase/process.c:910"
+    ]
+   },
+   {
+    "name": "WideCharToMultiByte",
+    "impl": [
+     "dlls/kernelbase/locale.c:7426"
+    ]
+   }
+  ],
+  "other_dll_exports": [
+   {
+    "name": "RtlAllocateHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2038"
+    ]
+   },
+   {
+    "name": "RtlCreateUnicodeStringFromAsciiz",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:255"
+    ]
+   },
+   {
+    "name": "RtlFreeHeap",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/heap.c:2078"
+    ]
+   },
+   {
+    "name": "RtlFreeUnicodeString",
+    "module": "ntdll",
+    "impl": [
+     "dlls/ntdll/rtlstr.c:272"
+    ]
+   }
+  ],
+  "header_inline": [],
+  "system": [],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "kernelbase.ExpandEnvironmentStringsA",
+  "category": {
+   "l1": "System services",
+   "l2": "Processes and threads",
+   "header": "processenv.h",
+   "textbook": "Process control",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 31,
+   "body": 30,
+   "code": 19
+  },
+  "cyclomatic": 5,
+  "return_type": "DWORD",
+  "n_params": 3,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 5,
+   "n_tests_other": 4,
+   "own_test_functions": [
+    "dlls/kernel32/tests/environ.c::test_ExpandEnvironmentStringsA"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/processenv/nf-processenv-expandenvironmentstringsa",
+   "source": "win32",
+   "description": "Expands environment-variable strings and replaces them with the values defined for the current user. (ANSI)",
+   "min_windows": "Windows 2000 Professional [desktop apps \\| UWP apps]",
+   "documented_dll": "Kernel32.dll"
+  },
+  "exports": [
+   "kernel32.ExpandEnvironmentStringsA",
+   "kernelbase.ExpandEnvironmentStringsA",
+   "kernelbase.SHExpandEnvironmentStringsA",
+   "shlwapi.SHExpandEnvironmentStringsA"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.667,
+   "first_date": "2003-06-18",
+   "median_date": "2024-11-05",
+   "last_date": "2024-11-05",
+   "code_lines": 18
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "kernelbase.CreateFiberEx",
+  "share_after_cutoff": 0.667,
+  "last_date": "2024-11-05"
+ }
+}

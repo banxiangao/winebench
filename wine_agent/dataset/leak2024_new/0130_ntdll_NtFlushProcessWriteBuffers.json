@@ -1,0 +1,229 @@
+{
+ "id": "0130",
+ "function": {
+  "name": "NtFlushProcessWriteBuffers",
+  "export_name": "FlushProcessWriteBuffers",
+  "module": "ntdll",
+  "source_module": "ntdll",
+  "exported_by": [
+   "kernel32",
+   "kernelbase"
+  ],
+  "side": "unix",
+  "file": "dlls/ntdll/unix/virtual.c",
+  "start_line": 7077,
+  "end_line": 7101,
+  "body_lines": 22,
+  "signature": "NTSTATUS WINAPI NtFlushProcessWriteBuffers(void)",
+  "header_comment": "/**********************************************************************\n *           NtFlushProcessWriteBuffers  (NTDLL.@)\n */",
+  "code": "NTSTATUS WINAPI NtFlushProcessWriteBuffers(void)\n{\n    /* Taken from https://github.com/dotnet/runtime/blob/7be37908e5a1cbb83b1062768c1649827eeaceaa/src/coreclr/pal/src/thread/process.cpp#L2799 */\n    mach_msg_type_number_t count, i;\n    thread_act_array_t threads;\n\n    pthread_once( &tgrpvs_init_once, tgrpvs_init );\n    if (!p_thread_get_register_pointer_values) return STATUS_SUCCESS;\n\n    /* Get references to all threads of this process */\n    if (task_threads( mach_task_self(), &threads, &count )) return STATUS_SUCCESS;\n\n    for (i = 0; i < count; i++)\n    {\n        uintptr_t reg_values[128];\n        size_t reg_count = ARRAY_SIZE( reg_values );\n        uintptr_t sp;\n\n        /* Request the thread's register pointer values to force the thread to go through a memory barrier */\n        p_thread_get_register_pointer_values( threads[i], &sp, &reg_count, reg_values );\n        mach_port_deallocate( mach_task_self(), threads[i] );\n    }\n    vm_deallocate( mach_task_self(), (vm_address_t)threads, count * sizeof(threads[0]) );\n    return STATUS_SUCCESS;\n}",
+  "has_fixme": false,
+  "file_includes": [
+   "#include \"config.h\"",
+   "#include <assert.h>",
+   "#include <errno.h>",
+   "#include <fcntl.h>",
+   "#include <stdarg.h>",
+   "#include <stdio.h>",
+   "#include <string.h>",
+   "#include <stdlib.h>",
+   "#include <signal.h>",
+   "#include <sys/types.h>",
+   "#include <sys/socket.h>",
+   "#include <sys/stat.h>",
+   "#include <sys/mman.h>",
+   "#include <sys/ioctl.h>",
+   "# include <sys/sysinfo.h>",
+   "# include <sys/syscall.h>",
+   "# include <sys/sysctl.h>",
+   "# include <sys/param.h>",
+   "# include <sys/queue.h>",
+   "# include <sys/user.h>",
+   "# include <libprocstat.h>",
+   "#include <unistd.h>",
+   "#include <dlfcn.h>",
+   "# include <valgrind/valgrind.h>",
+   "# include <mach/mach_init.h>",
+   "# include <mach/mach_vm.h>",
+   "# include <mach/task.h>",
+   "# include <mach/thread_state.h>",
+   "# include <mach/vm_map.h>",
+   "# include <linux/userfaultfd.h>",
+   "# include <linux/fs.h>",
+   "#include \"ntstatus.h\"",
+   "#include \"windef.h\"",
+   "#include \"winnt.h\"",
+   "#include \"winternl.h\"",
+   "#include \"ddk/wdm.h\"",
+   "#include \"wine/list.h\"",
+   "#include \"wine/rbtree.h\"",
+   "#include \"unix_private.h\"",
+   "#include \"wine/debug.h\""
+  ],
+  "resolution": [
+   "kernel32!FlushProcessWriteBuffers [stdcall] -> forward NTDLL.NtFlushProcessWriteBuffers",
+   "ntdll!NtFlushProcessWriteBuffers [stdcall -syscall]"
+  ],
+  "arch": "host"
+ },
+ "native_tests": {
+  "files": [
+   "dlls/kernel32/tests/virtual.c"
+  ],
+  "source": "WineBench: own-module test files with a direct, non-todo call confirmed by the relay trace",
+  "n_test_functions": 1
+ },
+ "same_name_in_other_dlls": [],
+ "meta": {
+  "deps_analysed": true,
+  "parse_errors": 0,
+  "parse_error_samples": []
+ },
+ "docs": [
+  {
+   "repo": "sdk-api",
+   "header": "processthreadsapi",
+   "path": "sdk-api-src/content/processthreadsapi/nf-processthreadsapi-flushprocesswritebuffers.md",
+   "url": "https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-flushprocesswritebuffers",
+   "documented_name": "flushprocesswritebuffers",
+   "file": "docs/0130_sdk-api_nf-processthreadsapi-flushprocesswritebuffers.md",
+   "text": "---\nUID: NF:processthreadsapi.FlushProcessWriteBuffers\ntitle: FlushProcessWriteBuffers function (processthreadsapi.h)\ndescription: Flushes the write queue of each processor that is running a thread of the current process.\nhelpviewer_keywords: [\"FlushProcessWriteBuffers\",\"FlushProcessWriteBuffers function\",\"base.flushprocesswritebuffers\",\"processthreadsapi/FlushProcessWriteBuffers\",\"winbase/FlushProcessWriteBuffers\"]\nold-location: base\\flushprocesswritebuffers.htm\ntech.root: processthreadsapi\nms.assetid: 6dcf6851-59ee-4f6e-b2cb-e36ac5328b92\nms.date: 12/05/2018\nms.keywords: FlushProcessWriteBuffers, FlushProcessWriteBuffers function, base.flushprocesswritebuffers, processthreadsapi/FlushProcessWriteBuffers, winbase/FlushProcessWriteBuffers\nreq.header: processthreadsapi.h\nreq.include-header: Windows.h on Windows 7, Windows Server 2008  Windows Server 2008 R2\nreq.target-type: Windows\nreq.target-min-winverclnt: Windows Vista [desktop apps \\| UWP apps]\nreq.target-min-winversvr: Windows Server 2008 [desktop apps \\| UWP apps]\nreq.kmdf-ver: \nreq.umdf-ver: \nreq.ddi-compliance: \nreq.unicode-ansi: \nreq.idl: \nreq.max-support: \nreq.namespace: \nreq.assembly: \nreq.type-library: \nreq.lib: Kernel32.lib\nreq.dll: Kernel32.dll\nreq.irql: \ntargetos: Windows\nreq.typenames: \nreq.redist: \nms.custom: 19H1\nf1_keywords:\n - FlushProcessWriteBuffers\n - processthreadsapi/FlushProcessWriteBuffers\ndev_langs:\n - c++\ntopic_type:\n - APIRef\n - kbSyntax\napi_type:\n - DllExport\napi_location:\n - api-ms-win-core-processthreads-l1-1-8.dll\n - api-ms-win-core-processthreads-l1-1-7.dll\n - api-ms-win-core-processthreads-l1-1-6.dll\n - api-ms-win-core-processthreads-l1-1-5.dll\n - api-ms-win-core-processthreads-l1-1-4.dll\n - Kernel32.dll\n - API-MS-Win-Core-ProcessThreads-l1-1-0.dll\n - KernelBase.dll\n - MinKernelBase.dll\n - API-MS-Win-Core-ProcessThreads-l1-1-1.dll\n - API-MS-Win-Core-ProcessThreads-l1-1-2.dll\n - api-ms-win-downlevel-kernel32-l1-1-0.dll\n - API-MS-Win-Core-ProcessThreads-L1-1-3.dll\napi_name:\n - FlushProcessWriteBuffers\n---\n\n# FlushProcessWriteBuffers function\n\n\n## -description\n\nFlushes the write queue of each processor that is running a thread of the current process.\n\n\n\n## -remarks\n\nThe function generates an interprocessor interrupt (IPI) to all processors that are part of the current process affinity. It guarantees the visibility of write operations performed on one processor to the other processors.\n\n## -see-also\n\n<a href=\"/windows/desktop/ProcThread/process-and-thread-functions\">Process and Thread Functions</a>\n"
+  }
+ ],
+ "same_file_dependencies": [
+  {
+   "name": "membarrier_init",
+   "file": "dlls/ntdll/unix/virtual.c",
+   "start_line": 7115,
+   "end_line": 7119,
+   "static": true,
+   "called_from": [
+    "NtFlushProcessWriteBuffers"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static void membarrier_init(void)",
+   "code": "static void membarrier_init(void)\n{\n    if (membarrier( MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED, 0, 0 ))\n        FIXME( \"membarrier not supported for NtFlushProcessWriteBuffers\\n\" );\n}"
+  },
+  {
+   "name": "membarrier",
+   "file": "dlls/ntdll/unix/virtual.c",
+   "start_line": 7110,
+   "end_line": 7113,
+   "static": true,
+   "called_from": [
+    "NtFlushProcessWriteBuffers",
+    "membarrier_init"
+   ],
+   "exclusive_to_target": true,
+   "signature": "static int membarrier( int cmd, unsigned int flags, int cpu_id )",
+   "code": "static int membarrier( int cmd, unsigned int flags, int cpu_id )\n{\n    return syscall( __NR_membarrier, cmd, flags, cpu_id );\n}"
+  }
+ ],
+ "same_file_definitions": {
+  "types": [],
+  "globals": [
+   {
+    "name": "__wine_dbch___default",
+    "type": "struct __wine_debug_channel *const",
+    "static": true,
+    "start_line": 94,
+    "end_line": 94,
+    "code": "WINE_DEFAULT_DEBUG_CHANNEL(virtual);"
+   },
+   {
+    "name": "membarrier_init_once",
+    "type": "pthread_once_t",
+    "static": true,
+    "start_line": 7108,
+    "end_line": 7108,
+    "code": "static pthread_once_t membarrier_init_once = PTHREAD_ONCE_INIT;"
+   }
+  ],
+  "macros": [
+   {
+    "name": "MEMBARRIER_CMD_PRIVATE_EXPEDITED",
+    "start_line": 7105,
+    "end_line": 7105,
+    "code": "#define MEMBARRIER_CMD_PRIVATE_EXPEDITED            0x08"
+   },
+   {
+    "name": "MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED",
+    "start_line": 7106,
+    "end_line": 7106,
+    "code": "#define MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED   0x10"
+   }
+  ]
+ },
+ "other_dependencies": {
+  "same_module_other_files": [],
+  "same_module_exports": [],
+  "other_dll_exports": [],
+  "header_inline": [
+   "wine_dbg_log"
+  ],
+  "system": [
+   "pthread_once",
+   "syscall"
+  ],
+  "unresolved": [],
+  "server_requests": [],
+  "unix_calls": [],
+  "indirect_calls": []
+ },
+ "winebench": {
+  "id": "ntdll.NtFlushProcessWriteBuffers",
+  "category": {
+   "l1": "System services",
+   "l2": "Processes and threads",
+   "header": "processthreadsapi.h",
+   "textbook": "Process control",
+   "basis": "header"
+  },
+  "loc": {
+   "total": 25,
+   "body": 24,
+   "code": 13
+  },
+  "cyclomatic": 4,
+  "return_type": "NTSTATUS",
+  "n_params": 0,
+  "tests": {
+   "n_tests_own": 1,
+   "n_tests": 1,
+   "n_tests_other": 0,
+   "own_test_functions": [
+    "dlls/kernel32/tests/virtual.c::test_FlushProcessWriteBuffers"
+   ]
+  },
+  "doc": {
+   "url": "https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-flushprocesswritebuffers",
+   "source": "win32",
+   "description": "Flushes the write queue of each processor that is running a thread of the current process.",
+   "min_windows": "Windows Vista [desktop apps \\| UWP apps]",
+   "documented_dll": "Kernel32.dll"
+  },
+  "exports": [
+   "kernel32.FlushProcessWriteBuffers",
+   "kernelbase.FlushProcessWriteBuffers",
+   "ntdll.NtFlushProcessWriteBuffers",
+   "ntdll.ZwFlushProcessWriteBuffers"
+  ],
+  "subset": {
+   "selected_by": "leakage experiment, NEW group: >= 50% of the code lines committed after 2024-06-30",
+   "group": "new",
+   "cutoff": "2024-06-30",
+   "share_after_cutoff": 0.929,
+   "first_date": "2023-10-11",
+   "median_date": "2025-02-14",
+   "last_date": "2025-02-14",
+   "code_lines": 14
+  }
+ },
+ "leakage": {
+  "group": "new",
+  "cutoff": "2024-06-30",
+  "partner": "ntdll.RtlCompareString",
+  "share_after_cutoff": 0.929,
+  "last_date": "2025-02-14"
+ }
+}
