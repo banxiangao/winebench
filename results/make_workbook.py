@@ -48,7 +48,7 @@ BASE = {'font_name': 'Arial', 'font_size': 10, 'valign': 'vcenter'}
 def F(**kw): return wb.add_format({**BASE, **kw})
 f_title = F(bold=True, font_size=14); f_sub = F(italic=True, font_color='#555555'); f_h = F(bold=True, bg_color='#DDE5EE', border=1, text_wrap=True, align='center')
 f_hl = F(bold=True, bg_color='#DDE5EE', border=1, text_wrap=True); f_t = F(border=1); f_tc = F(border=1, align='center'); f_i = F(border=1, num_format='#,##0')
-f_p = F(border=1, num_format='0.0%'); f_d1 = F(border=1, num_format='#,##0.0'); f_b = F(bold=True); f_wrap = F(text_wrap=True, valign='top'); f_note = F(font_color='#555555', text_wrap=True, valign='top')
+f_p = F(border=1, num_format='0.0%'); f_d2 = F(border=1, num_format='0.00'); f_d1 = F(border=1, num_format='#,##0.0'); f_b = F(bold=True); f_wrap = F(text_wrap=True, valign='top'); f_note = F(font_color='#555555', text_wrap=True, valign='top')
 f_pass = F(border=1, align='center', bg_color='#D9EAD3'); f_sec = F(bold=True, font_size=11, bottom=1)
 f_ib = F(border=1, num_format='#,##0', bold=True, bg_color='#F2F2F2'); f_tb = F(border=1, bold=True, bg_color='#F2F2F2')
 
@@ -62,7 +62,7 @@ ws = wb.add_worksheet('Overview'); ws.set_column(0, 0, 24); ws.set_column(1, 1, 
 ws.write(0, 0, 'WineBench: results of the experiments', f_title)
 ws.write(1, 0, f'Wine 11.19, 205 tasks, 30 settings.  Generated {datetime.date.today().isoformat()} by results/make_workbook.py from the result files of the repository.', f_sub)
 r = 3; ws.write(r, 0, 'Sheets', f_sec); ws.write(r, 1, '', f_sec); r += 1
-for a, b in [('Agent', 'Scenarios 2.1 and 2.2: one line per setting (scenario x harness x model) with the outcome of the 205 tasks; below it the pass counts as a matrix.'),
+for a, b in [('Agent', 'Scenarios 2.1 and 2.2: one line per setting (scenario x harness x model) with the outcome of the 205 tasks and the ./compile runs of the agent; below it the pass counts as a matrix.'),
              ('One-shot', 'Scenarios 1.1 and 1.2. Table A: API models, one reply per task. Table B: local models, 100 samples per task (pass@1 / pass@10 / pass@100).'),
              ('Cost', 'Wall time, tokens and agent steps of every setting.'),
              ('Agent per task', 'One line per task: the outcome in each of the 18 agent settings.'),
@@ -88,8 +88,9 @@ ws = wb.add_worksheet('Agent'); ws.freeze_panes(3, 3)
 ws.write(0, 0, 'Agent settings: outcome of the 205 tasks', f_title)
 ws.write(1, 0, 'Every task ends in exactly one of the seven outcomes (columns F to L); see the sheet Notes for their meaning and for the tree-access columns.', f_sub)
 H = ['Scenario', 'Harness', 'Model', 'Model type', 'Tasks', 'Pass', 'Test fail', 'Crash', 'Timeout', 'Compile fail', 'Splice fail', 'No code', 'Outcomes (check)',
-     'With code', 'Compiled', 'Compile rate', 'Pass rate', 'Identical to the original', 'Tasks that named another tree', '... and read their target file there', '... of which passed']
-header(ws, 2, H, [9, 11, 20, 9, 7, 7, 8, 7, 8, 9, 8, 8, 10, 8, 9, 9, 9, 10, 11, 12, 10], left=(0, 1, 2, 3))
+     'With code', 'Compiled', 'Compile rate', 'Pass rate', 'Identical to the original', 'Tasks that named another tree', '... and read their target file there', '... of which passed',
+     './compile runs, total', '... successful', './compile runs per task', 'Share of ./compile runs that succeeded', 'Tasks without a ./compile run', 'Tasks whose last ./compile run succeeded']
+header(ws, 2, H, [9, 11, 20, 9, 7, 7, 8, 7, 8, 9, 8, 8, 10, 8, 9, 9, 9, 10, 11, 12, 10, 10, 10, 10, 12, 11, 12], left=(0, 1, 2, 3))
 arows = sorted(AGENT, key=lambda a: (a['scenario'], a['stage'], order(a['model']))); r0 = 3; pos = {}
 for k, a in enumerate(arows):
     r = r0 + k; sc = status_counts(a['scenario'], a['stage'], a['model']); tr = tree.get((a['scenario'], a['stage'], a['model']), {})
@@ -102,6 +103,12 @@ for k, a in enumerate(arows):
     ws.write_formula(r, 16, f'={cell(r, 5)}/{cell(r, 4)}', f_p, sc['pass'] / int(a['records']))
     ws.write(r, 17, int(a['identical']), f_i)
     for j, key in enumerate(('sibling', 'sibling_target', 'sibling_target_passed')): ws.write(r, 18 + j, int(tr.get(key, 0)), f_i)
+    mine = [t for t in TASKS if t['scenario'] == a['scenario'] and t['harness'] == a['stage'] and t['model'] == a['model']]
+    runs = sum(int(t['compile_runs'] or 0) for t in mine); oks = sum(int(t['compile_runs_ok'] or 0) for t in mine)
+    ws.write(r, 21, runs, f_i); ws.write(r, 22, oks, f_i)
+    ws.write_formula(r, 23, f'={cell(r, 21)}/{cell(r, 4)}', f_d2, runs / int(a['records']))
+    ws.write_formula(r, 24, f'=IF({cell(r, 21)}=0,0,{cell(r, 22)}/{cell(r, 21)})', f_p, oks / runs if runs else 0)
+    ws.write(r, 25, sum(1 for t in mine if int(t['compile_runs'] or 0) == 0), f_i); ws.write(r, 26, sum(1 for t in mine if t['last_compile_ok'] == '1'), f_i)
     pos[(a['scenario'], a['stage'], a['model'])] = r
 r = r0 + len(arows) + 2; ws.write(r, 0, 'Tasks passed (of 205)', f_sec)
 for c in range(1, 8): ws.write(r, c, '', f_sec)
@@ -257,7 +264,10 @@ block('Outcome of a task', [
 block('Columns of the sheet Agent', [
     ('Tasks that named another tree', 'A job runs six tasks at once and their six source trees sit side by side; each hides only the function of its own task. Counted here: tasks in which a command of the agent names a tree other than its own.'),
     ('... read their target file there', 'of those, the tasks in which such a command names the source file of the task\'s function, where the original implementation is readable'),
-    ('... of which passed', 'of those, the tasks that passed. An upper bound on results that may rest on the original code; not checked task by task.')])
+    ('... of which passed', 'of those, the tasks that passed. An upper bound on results that may rest on the original code; not checked task by task.'),
+    ('./compile runs', 'How often the agent ran the ./compile script of its tree during a task, counted from the last line the script prints. A run counts as successful when the module built (compiled OK). These are the agent\'s own builds while it works - not the build of the evaluation, which is in the columns Compiled / Compile rate.'),
+    ('Tasks without a ./compile run', 'tasks in which the agent never ran ./compile (it gave up, hit a limit first, or worked in another tree)'),
+    ('last ./compile run succeeded', 'tasks whose last ./compile run built the module: the state in which the agent handed in its work')])
 block('To be known when reading the numbers', [
     ('deepseek-v4-flash', 'Not run on the cluster (its API is not reachable from there): replies and agent runs were produced on another machine with the same scripts, prompts, container image and trees, and evaluated on the cluster. Its wall times are not comparable with the others.'),
     ('deepseek-v4-flash, mini_swe', '40 of its 205 tasks left their own tree, 36 read the target file elsewhere (8 of them passed) and 31 wrote into another tree. Its 82 passes may be too high or too low. Its OpenHands run shows none of this.'),

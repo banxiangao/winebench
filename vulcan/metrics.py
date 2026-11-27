@@ -16,6 +16,9 @@ Writes
 
 Columns that need explaining
   steps              agent: model calls of the task (= iterations of the agent loop); one-shot: empty
+  compile_runs       agent: how often the task really ran ./compile (counted from the script's own output); compile_runs_ok: how many of
+                     them succeeded; last_compile_ok: 1 if the last one did.  `compiles` is the runner's older count, which also takes
+                     commands that only name ./compile or make - the limit of 5 failed compiles was applied to that count
   prompt_tokens      agent: summed over all model calls of the task (the history is re-sent at every step);
                      one-shot: tokens of the prompt (once; the server computes it once per request of `chunk` replies)
   completion_tokens  agent: summed over the task; one-shot: summed over the n replies (completion_tokens_per_reply = / n)
@@ -24,11 +27,36 @@ Columns that need explaining
                      with other tasks in flight - NOT the latency of a single request
   status             agent: evaluation result of the submission; one-shot: empty (see passed / compiled of n)
 """
-import os, sys, json, glob, csv, argparse, statistics
+import os, re, sys, json, glob, csv, argparse, statistics
 
 def jload(f):
     try: return json.load(open(f, encoding='utf-8'))
     except Exception: return None
+
+OK_RE = re.compile(r"^compiled OK: ", re.M); FAIL_RE = re.compile(r"^compile FAILED \(make exit status", re.M)
+def compile_runs(traj_file, harness):
+    """how often the agent really ran ./compile, and how often it succeeded -> (runs, successful, was the last one successful).
+    Counted from the last line the script prints ("compiled OK: ..." / "compile FAILED (make exit status N)") in the outputs
+    of the agent's commands, not from the text of the commands: the runner's own count (column `compiles`) also takes any
+    command that merely names ./compile or make.  A run whose output the agent cut off (./compile | grep ...) is missed."""
+    t = jload(traj_file)
+    if not t: return "", "", ""
+    texts = []
+    if harness == "openhands":
+        for e in t.get("events", []):
+            o = e.get("observation")
+            if isinstance(o, dict):
+                c = o.get("content"); texts.append("\n".join(x.get("text", "") for x in c if isinstance(x, dict)) if isinstance(c, list) else str(c or ""))
+    else:
+        for m in t.get("messages", []):
+            ex = m.get("extra") or {}
+            if "returncode" in ex or m.get("role") == "tool": texts.append(str(ex.get("raw_output") if ex.get("raw_output") is not None else m.get("content") or ""))
+    ok = bad = 0; last = ""
+    for x in texts:                                     # in the order of the run
+        marks = sorted([(m.start(), True) for m in OK_RE.finditer(x)] + [(m.start(), False) for m in FAIL_RE.finditer(x)])
+        ok += sum(1 for _, good in marks if good); bad += sum(1 for _, good in marks if not good)
+        if marks: last = int(marks[-1][1])
+    return ok + bad, ok, last
 
 def dataset_info(root):
     info = {}
@@ -42,7 +70,7 @@ def dataset_info(root):
     return info
 
 COLS = ['scenario', 'harness', 'model', 'id', 'module', 'function', 'category', 'loc', 'cyclomatic', 'test_files', 'doc_chars',
-        'seconds', 'prompt_tokens', 'completion_tokens', 'steps', 'commands', 'edits', 'compiles', 'exit_status', 'tool_mode',
+        'seconds', 'prompt_tokens', 'completion_tokens', 'steps', 'commands', 'edits', 'compiles', 'compile_runs', 'compile_runs_ok', 'last_compile_ok', 'exit_status', 'tool_mode',
         'tool_name_fixes', 'tool_arg_fixes', 'status', 'identical', 'attempts', 'generation_failed',
         'n', 'requests', 'with_code', 'truncated', 'completion_tokens_per_reply', 'passed', 'compiled', 'eval_seconds']
 
@@ -58,9 +86,10 @@ def main():
             if not r: continue
             e = jload(os.path.join(os.path.dirname(os.path.dirname(d)), 'eval', model, r['id'] + '.json')) or {}
             u = r.get('usage') or {}; tc = r.get('tool_counts') or {}
+            cr, cr_ok, cr_last = compile_runs(f[:-5] + '.traj.json', harness)
             rows.append(dict(info.get(r['id'], {}), scenario=scen, harness=harness, model=model, id=r['id'], seconds=r.get('seconds'),
                              prompt_tokens=u.get('prompt_tokens'), completion_tokens=u.get('completion_tokens'), steps=r.get('steps'),
-                             commands=tc.get('commands', ''), edits=tc.get('edits', ''), compiles=len(r.get('compiles') or []),
+                             commands=tc.get('commands', ''), edits=tc.get('edits', ''), compiles=len(r.get('compiles') or []), compile_runs=cr, compile_runs_ok=cr_ok, last_compile_ok=cr_last,
                              exit_status=r.get('exit_status'), tool_mode=r.get('tool_mode'), tool_name_fixes=r.get('tool_name_fixes', ''),
                              tool_arg_fixes=r.get('tool_arg_fixes', ''), status=e.get('status', ''), identical=e.get('identical', ''),
                              attempts=r.get('gen_attempts_made', ''), generation_failed=r.get('generation_failed', '')))
@@ -110,6 +139,12 @@ def main():
                      submitted=sum(1 for r in g if r.get('exit_status') == 'Submitted') if harness != 'oneshot1' else '',
                      steps_mean=mean(r.get('steps') for r in g), steps_median=med(r.get('steps') for r in g), steps_max=max(num(r.get('steps') for r in g) or [''])),
         s = s[0] if isinstance(s, tuple) else s
+        if harness != 'oneshot':                                    # how the tasks ended (evaluation)
+            for st in ('test_fail', 'crash', 'timeout', 'compile_fail', 'splice_fail', 'no_code'): s[st] = sum(1 for r in g if r.get('status') == st)
+        if harness in ('mini_swe', 'openhands'):                     # the agent's own ./compile runs during the task
+            runs = num(r.get('compile_runs') for r in g); oks = num(r.get('compile_runs_ok') for r in g)
+            s.update(compile_runs_total=sum(runs), compile_runs_mean=round(sum(runs) / len(g), 2), compile_runs_ok_share=round(sum(oks) / sum(runs), 3) if sum(runs) else '',
+                     tasks_without_compile_run=sum(1 for x in runs if x == 0), tasks_last_compile_ok=sum(1 for r in g if r.get('last_compile_ok') == 1))
         if any(r.get('generation_failed') not in ('', None) for r in g):          # settings run with the two-attempt rule (API models)
             s.update(second_attempts=sum(1 for r in g if isinstance(r.get('attempts'), int) and r['attempts'] > 1),
                      generation_failed=sum(1 for r in g if r.get('generation_failed') is True))
