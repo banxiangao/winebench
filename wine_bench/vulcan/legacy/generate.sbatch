@@ -5,13 +5,13 @@
 #SBATCH --mem=64G
 #SBATCH --time=3:00:00
 #SBATCH --output=vulcan/logs/%x-%j.out
-# generate.sbatch - one model, scenarios 1.3 and 1.4 (name only / name + Microsoft docs), one-shot, no repository, no
+# generate.sbatch - one model, scenarios 1.1 and 1.2 (name only / name + Microsoft docs), one-shot, no repository, no
 # compiling: exactly the programmer stage of the API runs, served by vLLM on 2 L40S (bf16, tensor parallel).
 #
 #   cd .../wine_bench            (sbatch must be run from the wine_bench directory)
 #   sbatch vulcan/generate.sbatch qwen3.8-27b                 # <name> = folder under ~/scratch/models and the model name
 #   sbatch vulcan/generate.sbatch gpt-oss-20b
-#   SCENARIOS="1.3" sbatch vulcan/generate.sbatch glm-4.7-flash
+#   SCENARIOS="1.1" sbatch vulcan/generate.sbatch glm-4.7-flash
 #   squeue -u $USER;  tail -f vulcan/logs/winebench-gen-<jobid>.out
 #
 # Results: runs/scenario1.x/programmer/responses/<name>/<id>.{json,c} - copy back to the Ubuntu box for evaluation.
@@ -23,7 +23,7 @@ WB=${SLURM_SUBMIT_DIR:-$PWD}                             # sbatch is run from th
 PROJ=${PROJ:-$(dirname "$WB")}; VENV=${VENV:-$PROJ/venv-vllm}
 [ -x "$VENV/bin/vllm" ] || { echo "$VENV: no vLLM venv (bash vulcan/setup_vulcan.sh)"; exit 1; }
 cd "$WB"
-SCENARIOS=${SCENARIOS:-"1.3 1.4"}; WORKERS=${WORKERS:-32}; PORT=${PORT:-$((20000 + SLURM_JOB_ID % 20000))}; export WB_LOCAL_PORT=$PORT
+SCENARIOS=${SCENARIOS:-"1.1 1.2"}; WORKERS=${WORKERS:-32}; PORT=${PORT:-$((20000 + SLURM_JOB_ID % 20000))}; export WB_LOCAL_PORT=$PORT
 MODEL_DIR=$HOME/scratch/models/$NAME
 [ -f "$MODEL_DIR/config.json" ] || { echo "$MODEL_DIR: no weights (vulcan/download_models.sh $NAME)"; exit 1; }
 module purge 2>/dev/null; module load StdEnv/2023 2>/dev/null || true
@@ -56,4 +56,4 @@ for S in $SCENARIOS; do
     "$VENV/bin/python" scripts/run_llm.py --scenario "$S" --stage programmer --models "$MODELS" --workers "$WORKERS" ${REDO:+--redo-bad}
 done
 "$VENV/bin/python" scripts/summary_table.py | grep -E "^scenario |$NAME"
-echo "done: runs/scenario{1.3,1.4}/programmer/responses/$NAME/"
+echo "done: runs/scenario{1.1,1.2}/programmer/responses/$NAME/"

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """eval_samples.py - evaluate the N replies per task written by run_samples.py (for pass@k).
 
-    python3 scripts/eval_samples.py --src /w/wine --build /w/wine-build --scenario 1.3 --model qwen3.8-27b-n100 \
+    python3 scripts/eval_samples.py --src /w/wine --build /w/wine-build --scenario 1.1 --model qwen3.8-27b-n100 \
             --workers 6 --prefix /w/pfx/wine --runs /w/evalruns --shard 0/4
 
 Every reply is judged exactly as evaluate.py judges a one-shot reply (the same evaluate_record: splice, compile, the

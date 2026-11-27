@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """run_llm.py - send the prompts of one stage of a scenario to the models and store the replies.
 
-    python3 scripts/run_llm.py --scenario 1.1 --models deepseek --limit 10     # trial
-    python3 scripts/run_llm.py --scenario 1.1 --redo-bad                        # all enabled models, all prompts
-    python3 scripts/run_llm.py --scenario 1.2 --stage architect --models deepseek,qwen
-    python3 scripts/run_llm.py --scenario 1.1 --stage programmer --from-model deepseek --models deepseek
+    python3 scripts/run_llm.py --scenario 1.1 --stage programmer --models deepseek-v4-flash --limit 10     # trial
+    python3 scripts/run_llm.py --scenario 1.2 --stage programmer --redo-bad             # all enabled models, all prompts
+    python3 scripts/run_llm.py --scenario 1.2 --stage programmer --models M --gen-attempts 2   # at most two requests per task
+    (--from-model is for a stage that consumes another stage's replies; the current scenarios have only "programmer")
 
 Reads  runs/<scenario>/<stage>[/from_<model>]/prompts/<id>.json   (made by build_prompts.py)
 Writes runs/<scenario>/<stage>[/from_<model>]/responses/<model>/<id>.json and summary.json

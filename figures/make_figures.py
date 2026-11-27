@@ -5,9 +5,9 @@
 
 Writes, each as .pdf (vector), .png (300 dpi) and .svg:
   figures/cost_agent      agent settings: wall time, input tokens, output tokens and steps per task,
-                          scenario 3.2 (five models) and 3.1 (three local models), both harnesses
+                          scenario 2.2 (six models) and 2.1 (three local models), both harnesses
   figures/cost_oneshot    one-shot settings: time per reply, prompt tokens and output tokens per reply,
-                          scenarios 1.3 and 1.4, six models
+                          scenarios 1.1 and 1.2, six models
 Every bar is a mean over the 205 tasks of one setting.  Nothing is computed here that is not in the csv.
 
 Font: Times New Roman where it is installed; otherwise Liberation Serif (same metrics, free) or Nimbus Roman.
@@ -73,8 +73,8 @@ def save(fig, name):
 HARNESS = [('mini_swe', 'mini-swe-agent', '#4C72B0'), ('openhands', 'OpenHands', '#C44E52')]
 METRICS = [('seconds_mean', 1, 'Wall time (s)'), ('prompt_tokens_mean', 1e-3, 'Input tokens (k)'),
            ('completion_tokens_mean', 1e-3, 'Output tokens (k)'), ('steps_mean', 1, 'Agent steps (max. 40)')]          # all per task
-SCEN = [('3.2', 'Scenario 3.2\nname + docs', ['claude-haiku-5-5', 'openai-gpt-6-luna', 'deepseek-v4-flash', 'qwen3.8-27b', 'gpt-oss-20b', 'glm-4.7-flash']),
-        ('3.1', 'Scenario 3.1\nname only', ['qwen3.8-27b', 'gpt-oss-20b', 'glm-4.7-flash'])]
+SCEN = [('2.2', 'Scenario 2.2\nname + docs', ['claude-haiku-5-5', 'openai-gpt-6-luna', 'deepseek-v4-flash', 'qwen3.8-27b', 'gpt-oss-20b', 'glm-4.7-flash']),
+        ('2.1', 'Scenario 2.1\nname only', ['qwen3.8-27b', 'gpt-oss-20b', 'glm-4.7-flash'])]
 def agent_value(scen, h, m, key, scale):
     r = get(scen, h, m)
     return num(r, key) * scale if r and num(r, key) is not None else None
@@ -91,7 +91,7 @@ legend(fig, [(h[1], h[2]) for h in HARNESS], 1.03)
 save(fig, 'cost_agent')
 
 # ---------------------------------------------------------------- one-shot settings
-SCEN1 = [('1.3', 'Scenario 1.3: name only', '#8CC5BC'), ('1.4', 'Scenario 1.4: name + docs', '#1F7A6E')]     # one hue: without / with the documentation
+SCEN1 = [('1.1', 'Scenario 1.1: name only', '#8CC5BC'), ('1.2', 'Scenario 1.2: name + docs', '#1F7A6E')]     # one hue: without / with the documentation
 MODELS1 = ['claude-haiku-5-5', 'openai-gpt-6-luna', 'deepseek-v4-flash', 'qwen3.8-27b', 'gpt-oss-20b', 'glm-4.7-flash']
 LOCAL = {'qwen3.8-27b', 'gpt-oss-20b', 'glm-4.7-flash'}
 def one(scen, model):

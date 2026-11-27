@@ -9,8 +9,8 @@
 # tests on it (scripts/evaluate.py).  CPU only.  Normally the generation job of the setting submits it when the setting
 # is complete; by hand:
 #
-#   cd .../WineBench && bash vulcan/submit.sh eval qwen3.8-27b 3.1 openhands      # agent setting
-#   cd .../WineBench && bash vulcan/submit.sh eval qwen3.8-27b 1.3                # one-shot setting (both samples)
+#   cd .../WineBench && bash vulcan/submit.sh eval qwen3.8-27b 2.1 openhands      # agent setting
+#   cd .../WineBench && bash vulcan/submit.sh eval qwen3.8-27b 1.1                # one-shot setting (both samples)
 #
 # It runs in the package directory (wine_agent for 3.x, wine_bench for 1.x).  The clean, fully built Wine comes from
 # ~/scratch/winebench-w/eval-pair.tar (wine_agent/vulcan/pack_trees.sbatch), unpacked onto the node's local disk, one

@@ -1,6 +1,8 @@
 > **2026-11-20 起：提交方式改为一个作业一个设置，见 `../../vulcan/README.md`（`bash vulcan/submit.sh ...`）。下文提到的 `agents.sbatch` / `generate.sbatch` 已移到 `legacy/`，仅供参考。**
 
-# 在 Vulcan 上用本地模型跑 agent（场景 3.1 / 3.2）
+> **预实验时期的说明，部分内容已过时**（数据集、路径、旧脚本）。现在的入口和说明见仓库根目录下的 `vulcan/README.md`。
+
+# 在 Vulcan 上用本地模型跑 agent（场景 2.1 / 2.2）
 
 模型由 vLLM 在作业节点上提供（2× L40S）；agent（mini-swe-agent、OpenHands）和它执行的所有命令都在容器
 `../container/wine-agent.sif`（Ubuntu 22.04 + mingw + 两个 agent）里运行，工作目录是受限的 Wine 源码树
@@ -21,7 +23,7 @@ tail -f vulcan/logs/winebench-agents-<jobid>.out
 所以每个模型只需要 sbatch 一次。`CHAIN=0` 关闭接力；想中止就 `scancel` 掉最后那个作业。没有剩余任务的作业
 会在加载模型之前直接退出。每个作业的开头和结尾都会打印进度（`progress: 已完成 / 总数`）。
 
-可调：`N`、`AGENTS="mini_swe openhands"`、`SCENARIOS="3.1 3.2"`、`AGENT_WORKERS=4`（并行条数 = 受限树的份数）、
+可调：`N`、`AGENTS="mini_swe openhands"`、`SCENARIOS="2.1 2.2"`、`AGENT_WORKERS=4`（并行条数 = 受限树的份数）、
 `MAX_MODEL_LEN=65536`、`REDO=1`（重跑出错的）。
 
 工具调用：本地模型在两个 agent 里都用**文本模式**（mini-swe-agent 的 text-based 模型类：命令写在

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """run_mini_swe.py - scenarios 3.x with mini-swe-agent (https://github.com/SWE-agent/mini-swe-agent) as the agent.
 
-    python3 scripts/run_mini_swe.py --scenario 3.1 --models claude-haiku-5-5 --limit 5
-    python3 scripts/run_mini_swe.py --scenario 3.2 --models claude-haiku-5-5,openai-gpt-6-luna,deepseek-v4-flash --limit 100 --workers 2
-    python3 scripts/run_mini_swe.py --scenario 3.1 --models M --redo-bad
+    python3 scripts/run_mini_swe.py --scenario 2.1 --models claude-haiku-5-5 --limit 5
+    python3 scripts/run_mini_swe.py --scenario 2.2 --models claude-haiku-5-5,openai-gpt-6-luna,deepseek-v4-flash --limit 100 --workers 2
+    python3 scripts/run_mini_swe.py --scenario 2.1 --models M --redo-bad
 
 The agent is the unmodified DefaultAgent of mini-swe-agent (one bash command per step, LocalEnvironment); what is ours is
 the environment it runs in: a restricted copy of the Wine tree (scripts/make_swe_trees.sh: no tests, no git history, the

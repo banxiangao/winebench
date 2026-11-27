@@ -11,10 +11,10 @@ Unpack in the repository root; the files land where the scripts expect them:
 
 | archive | content |
 |---|---|
-| `oneshot_<S>_prompts` | the prompt of every task, scenario 1.3 (name only) / 1.4 (name + Microsoft docs) |
+| `oneshot_<S>_prompts` | the prompt of every task, scenario 1.1 (name only) / 1.2 (name + Microsoft docs) |
 | `oneshot_<S>_samples_<model>-n100` | local models: 100 replies per task (`samples/`), their evaluation (`samples_eval/`), job record |
 | `oneshot_<S>_single_<model>` | API models: one reply per task (`responses/`), its evaluation (`eval/`), job record |
-| `agent_<S>_<harness>_prompts` | the task text given to the agent, scenario 3.1 / 3.2, mini_swe / openhands |
+| `agent_<S>_<harness>_prompts` | the task text given to the agent, scenario 2.1 / 2.2, mini_swe / openhands |
 | `agent_<S>_<harness>_<model>` | per task: result `<id>.json`, patch, trajectory `<id>.traj.json` (`responses/`), evaluation (`eval/`), job record |
 | `baseline_wine11.19` | the dataset's tests on the untouched Wine tree: what a generated function is compared with |
 
@@ -26,7 +26,7 @@ Two things were changed after the runs:
 
 - `REDACTED.txt`: in 20 files the output of commands with which an agent listed the cluster's file system was replaced
   by a note (it held directory names of other users of the cluster).  Results and evaluations are untouched.
-- `agent_3.2_mini_swe_openai-gpt-6-luna` has a `superseded/` folder: four tasks were run again because one model
+- `agent_2.2_mini_swe_openai-gpt-6-luna` has a `superseded/` folder: four tasks were run again because one model
   reply never ended and the recorded time was about 600 s too high (see its README.txt).
 
 ## deepseek-v4-flash: generated outside the cluster (added 2026-11-27)
@@ -34,7 +34,7 @@ Two things were changed after the runs:
 The cluster's proxy refuses `api.deepseek.com`, so DeepSeek cannot be queried from a compute node.  Its one-shot replies
 were generated on a workstation on 2026-11-27 with `wine_bench/scripts/run_llm.py` from the archived prompts
 (`oneshot_<S>_prompts`, the ones every other model got): 205 replies per scenario and no failed request;
-with usable code / truncated at the 8192-token cap: 198 / 7 in scenario 1.3, 204 / 1 in scenario 1.4.
+with usable code / truncated at the 8192-token cap: 198 / 7 in scenario 1.1, 204 / 1 in scenario 1.2.
 
 They were then evaluated on the cluster like every other setting (same container, same Wine trees, same baseline);
 `oneshot_<S>_single_deepseek-v4-flash` holds the replies and the evaluation.
@@ -49,7 +49,7 @@ and the limits are the same, 6 tasks in parallel (the first 3 tasks of the mini_
   `agent_network = dead_proxy` in every result) instead of having no route out.  That stops what honours the proxy
   variables, it is not a firewall; commands that name curl / wget / pip / git clone / apt are in `violations`.
 
-`agent_3.2_mini_swe_deepseek-v4-flash` and `agent_3.2_openhands_deepseek-v4-flash` (generated 2026-11-27): 205 tasks
+`agent_2.2_mini_swe_deepseek-v4-flash` and `agent_2.2_openhands_deepseek-v4-flash` (generated 2026-11-27): 205 tasks
 each, none failed to generate; 188 and 201 with a patch that changes the target file.  Both were then evaluated on the
 cluster like every other setting; the archives hold the results, the trajectories and the evaluation.
 Passed: 82 of 205 with mini_swe, 82 of 205 with OpenHands.
@@ -66,3 +66,10 @@ Checked after the runs:
   disturbed that worker's task); 8 of the 36 passed.  (A first count on the workstation, with a narrower criterion,
   gave 34 tasks.)  So the 82 may be too high or too low: use it with care, or run the setting again with one tree
   per container.  In the OpenHands run no command names another tree.
+
+## Scenario numbers
+
+The scenarios were numbered 1.3, 1.4, 3.1 and 3.2 while the experiments ran and were renamed afterwards:
+1.3 → 1.1, 1.4 → 1.2, 3.1 → 2.1, 3.2 → 2.2.  Archive names and the paths inside the archives use the new numbers.
+The job records (`jobs/<model>.jsonl`, field `scenario` and the job names) were left as written by the jobs and carry
+the old ones.

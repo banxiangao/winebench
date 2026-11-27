@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""build_benchmark.py - scenario 1.1 dataset: one JSON per sampled Wine function.
+"""build_benchmark.py - the sampled dataset (wine500): one JSON per sampled Wine function.
 
     python3 build_benchmark.py --src <wine> --build <build-dir> --out <dir> [--n 500] [--seed 1]
 

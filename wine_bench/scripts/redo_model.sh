@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# LEGACY: written for the earlier two-stage design (architect -> programmer).  Scenario numbers in the comments below are
+# those of that design, not the current scenarios 1.1 / 1.2 (one-shot) and 2.1 / 2.2 (agent).  Not used by the Vulcan jobs.
 # redo_model.sh - re-query one model's bad replies (errors / truncated / bad format) of one scenario stage until
 # nothing is left or nothing improves.  Low parallelism, for vendors with tight rate limits (HTTP 429).
 #

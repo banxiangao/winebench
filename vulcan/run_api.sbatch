@@ -9,9 +9,9 @@
 # Submit it through vulcan/submit_api.sh, which sets the resources and the job name:
 #
 #   cd .../WineBench
-#   bash vulcan/submit_api.sh claude-haiku-5-5 1.4                 # one-shot: one reply per task (scenario 1.3 | 1.4)
-#   bash vulcan/submit_api.sh openai-gpt-6-luna 3.2 mini_swe       # agent in the source tree (mini_swe | openhands)
-#   N=5 CHAIN=0 EVAL=0 bash vulcan/submit_api.sh claude-haiku-5-5 3.2 openhands --time=0:40:00     # a trial: first 5 tasks
+#   bash vulcan/submit_api.sh claude-haiku-5-5 1.2                 # one-shot: one reply per task (scenario 1.1 | 1.2)
+#   bash vulcan/submit_api.sh openai-gpt-6-luna 2.2 mini_swe       # agent in the source tree (mini_swe | openhands)
+#   N=5 CHAIN=0 EVAL=0 bash vulcan/submit_api.sh claude-haiku-5-5 2.2 openhands --time=0:40:00     # a trial: first 5 tasks
 #   bash vulcan/submit_api.sh probe                                # one tiny request per model: is the key valid, which model id is served
 #
 # The model names are the entries of scenarios/models.toml (claude-haiku-5-5, openai-gpt-6-luna, deepseek-v4-flash).
@@ -53,7 +53,7 @@ run() { apptainer exec --containall --pwd "$PKG" --bind "$PKG" --bind "$LOCAL":/
 
 if [ "$NAME" = probe ]; then                                         # which keys work, which model ids are served
     cd "$ROOT/wine_bench"; PKG=$PWD
-    run python scripts/run_llm.py --scenario 1.3 --stage programmer --probe --models "${S:-claude-haiku-5-5,openai-gpt-6-luna,deepseek-v4-flash}"
+    run python scripts/run_llm.py --scenario 1.1 --stage programmer --probe --models "${S:-claude-haiku-5-5,openai-gpt-6-luna,deepseek-v4-flash}"
     exit 0
 fi
 [ -n "$S" ] || { echo "usage: run_api.sbatch <model> <scenario> [mini_swe | openhands]"; exit 1; }

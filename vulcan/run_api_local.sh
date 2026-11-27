@@ -4,9 +4,9 @@
 # without Slurm: the same container image, the same packed restricted trees, the same runner call, the same limits.
 #
 #   cd .../winebench                                              (the repository root)
-#   N=3 bash vulcan/run_api_local.sh deepseek-v4-flash 3.2 mini_swe     # a trial: the first 3 tasks
-#   bash vulcan/run_api_local.sh deepseek-v4-flash 3.2 mini_swe         # the setting (205 tasks); run it again to continue
-#   bash vulcan/run_api_local.sh deepseek-v4-flash 3.2 openhands
+#   N=3 bash vulcan/run_api_local.sh deepseek-v4-flash 2.2 mini_swe     # a trial: the first 3 tasks
+#   bash vulcan/run_api_local.sh deepseek-v4-flash 2.2 mini_swe         # the setting (205 tasks); run it again to continue
+#   bash vulcan/run_api_local.sh deepseek-v4-flash 2.2 openhands
 #
 # What must be on this machine (copied from Vulcan, NOT rebuilt here - the results are only comparable with the other
 # models if the image and the trees are the very same files):
@@ -32,7 +32,7 @@
 #     sets the dead proxy instead.)  WB_AGENT_OFFLINE=0 switches all of this off.
 # Tunable: N (first N tasks), AGENT_WORKERS (default 4), GEN_ATTEMPTS (2, as on the cluster), JOBS (make -j per compile).
 set -e
-NAME=${1:?model (entry of wine_agent/scenarios/models.toml), e.g. deepseek-v4-flash}; S=${2:?scenario: 3.1 | 3.2}; H=${3:?harness: mini_swe | openhands}
+NAME=${1:?model (entry of wine_agent/scenarios/models.toml), e.g. deepseek-v4-flash}; S=${2:?scenario: 2.1 | 2.2}; H=${3:?harness: mini_swe | openhands}
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd); PKG=$ROOT/wine_agent
 SIF=${SIF:-$ROOT/container/wine-agent.sif}; PACK=${PACK:-$HOME/winebench-pack/swe-pair.tar}
 SECRETS=${WB_SECRETS_FILE:-$HOME/.config/winebench/secrets.toml}; LOCAL=${LOCAL:-$HOME/wb-local}

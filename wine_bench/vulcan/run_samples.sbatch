@@ -8,8 +8,8 @@
 #SBATCH --output=vulcan/logs/%x-%j.out
 # run_samples.sbatch (one-shot scenarios, pass@k) - ONE setting per job: one model, one scenario, NS replies per task.
 #
-#   cd .../WineBench/wine_bench && sbatch --job-name=wb-pk-1.3-qwen3.8-27b vulcan/run_samples.sbatch qwen3.8-27b 1.3
-#   N=12 CHAIN=0 sbatch --time=0:40:00 --job-name=wb-pk-1.3-gpt-oss-20b vulcan/run_samples.sbatch gpt-oss-20b 1.3     # trial
+#   cd .../WineBench/wine_bench && sbatch --job-name=wb-pk-1.1-qwen3.8-27b vulcan/run_samples.sbatch qwen3.8-27b 1.1
+#   N=12 CHAIN=0 sbatch --time=0:40:00 --job-name=wb-pk-1.1-gpt-oss-20b vulcan/run_samples.sbatch gpt-oss-20b 1.1     # trial
 #
 # The replies are asked for with the API's "n": CHUNK replies per request, WORKERS tasks in flight, so WORKERS * CHUNK
 # sequences are decoded at once (vLLM's --max-num-seqs is set to that).  Defaults per model below; NS=100.
@@ -18,7 +18,7 @@
 # (CHAIN=0: no).  When every task is there, EVAL_SHARDS (8) CPU jobs evaluate the setting (EVAL=0: no):
 # ../vulcan/eval_samples.sbatch -> samples_eval/<model>-n<NS>/<id>.json, results/pass_at_k.txt.
 set -e
-NAME=${1:?model (folder under ~/scratch/models)}; S=${2:?scenario: 1.3 | 1.4}
+NAME=${1:?model (folder under ~/scratch/models)}; S=${2:?scenario: 1.1 | 1.2}
 WB=${SLURM_SUBMIT_DIR:-$PWD}
 [ -f "$WB/scripts/run_samples.py" ] || { echo "$WB is not the wine_bench directory"; exit 1; }
 WB=$(realpath "$WB"); PROJ=${PROJ:-$(dirname "$WB")}; VENV=${VENV:-$PROJ/venv-vllm}

@@ -18,7 +18,7 @@ def run(cmd, cwd):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--src', required=True); ap.add_argument('--build', required=True)
-    ap.add_argument('--workers', type=int, default=1); ap.add_argument('--id', default='0001'); ap.add_argument('--scenario', default='3.1')
+    ap.add_argument('--workers', type=int, default=1); ap.add_argument('--id', default='0001'); ap.add_argument('--scenario', default='2.1')
     a = ap.parse_args()
     rec = load_records(load_scenario(a.scenario).dataset, ids=a.id)[0]
     rel = rec['function']['file']; bad = 0

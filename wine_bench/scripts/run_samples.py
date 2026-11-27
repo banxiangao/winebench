@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """run_samples.py - N independent replies per task from one local model (for pass@k), asked for with the API's "n".
 
-    python3 scripts/run_samples.py --scenario 1.3 --model qwen3.8-27b --n 100 --chunk 20 --workers 3
+    python3 scripts/run_samples.py --scenario 1.1 --model qwen3.8-27b --n 100 --chunk 20 --workers 3
 
 One request returns `chunk` replies to the same prompt (the server decodes them as one batch and computes the prompt
 once); a task takes n / chunk requests, `workers` tasks are in flight at a time, so workers * chunk sequences are being

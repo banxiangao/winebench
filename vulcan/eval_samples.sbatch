@@ -7,7 +7,7 @@
 #SBATCH --output=vulcan/logs/%x-%j.out
 # eval_samples.sbatch - evaluate the NS replies per task of one pass@k setting (CPU job, node-local clean trees).
 #
-#   cd .../WineBench/wine_bench && sbatch --job-name=wb-pkeval-1.3-qwen3.8-27b ../vulcan/eval_samples.sbatch qwen3.8-27b 1.3 0 4
+#   cd .../WineBench/wine_bench && sbatch --job-name=wb-pkeval-1.1-qwen3.8-27b ../vulcan/eval_samples.sbatch qwen3.8-27b 1.1 0 4
 #
 # Arguments: MODEL SCENARIO [SHARD SHARDS]: shard i of m takes every m-th task, so m jobs share the setting (run_samples.sbatch
 # submits them).  Each reply is judged as in eval_setting.sbatch (scripts/evaluate.py's evaluate_record); identical code of

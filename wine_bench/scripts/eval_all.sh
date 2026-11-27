@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# LEGACY: written for the earlier two-stage design (architect -> programmer).  Scenario numbers in the comments below are
+# those of that design, not the current scenarios 1.1 / 1.2 (one-shot) and 2.1 / 2.2 (agent).  Not used by the Vulcan jobs.
 # eval_all.sh - run scripts/evaluate.py for every model and scenario that has programmer replies (Linux, after
 # scripts/setup_eval_ubuntu.sh).  Resumable: records that already have a result are skipped.
 #
@@ -7,7 +9,7 @@
 #   bash scripts/eval_all.sh claude-haiku-5-5     # one model (or a comma-separated list)
 #   WINE_SRC=~/wine WINE_BUILD=~/wine-build EVAL_OPTS="--timeout 300" bash scripts/eval_all.sh
 #   WORKERS=4 bash scripts/eval_all.sh            # 4 records at once (after: bash scripts/make_eval_trees.sh 4)
-#   SCENARIOS="1.3 1.4" bash scripts/eval_all.sh  # only these scenarios
+#   SCENARIOS="1.1 1.2" bash scripts/eval_all.sh  # only these scenarios
 set -e
 cd "$(dirname "$0")/.."
 SRC=${WINE_SRC:-$HOME/wine}; BUILD=${WINE_BUILD:-$HOME/wine-build}; PY=${PY:-python3}
@@ -21,13 +23,13 @@ if [ -n "$1" ]; then MODELS=${1//,/ }
 else MODELS=$(ls -d runs/scenario*/programmer/from_*/responses/* runs/scenario*/programmer/responses/* 2>/dev/null | xargs -n1 basename | sort -u); fi
 echo "models: $MODELS"
 
-SCENARIOS=${SCENARIOS:-"1.1 1.2 1.3 1.4 2.1"}               # e.g. SCENARIOS="1.3 1.4"
+SCENARIOS=${SCENARIOS:-"1.1 1.2"}               # e.g. SCENARIOS="1.1"
 for M in $MODELS; do
     for S in $SCENARIOS; do
         if [ -d runs/scenario$S/programmer/from_$M/responses/$M ]; then      # 1.1 / 1.2: each model implements its own specs
             echo "===== scenario $S, programmer $M (specs by $M)"
             $XVFB $PY scripts/evaluate.py $W --scenario $S --stage programmer --from-model "$M" --models "$M"
-        elif [ -d runs/scenario$S/programmer/responses/$M ]; then             # 1.3 / 1.4 / 2.1: no upstream stage
+        elif [ -d runs/scenario$S/programmer/responses/$M ]; then             # 1.1 / 1.2 / 2.1: no upstream stage
             echo "===== scenario $S, programmer $M"
             $XVFB $PY scripts/evaluate.py $W --scenario $S --stage programmer --models "$M"
         fi

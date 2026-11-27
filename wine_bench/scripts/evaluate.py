@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """evaluate.py - does the programmer's code compile inside Wine, and does it pass Wine's own tests?  (Linux)
 
-    python3 scripts/evaluate.py --src ~/wine --build ~/wine-build --scenario 1.1 --stage programmer --from-model M --models M
-    python3 scripts/evaluate.py --src ~/wine --build ~/wine-build --scenario 2.1 --stage programmer          # every model
+    python3 scripts/evaluate.py --src ~/wine --build ~/wine-build --scenario 1.1 --stage programmer --models M       # one-shot
+    python3 scripts/evaluate.py --src ~/wine --build ~/wine-build --scenario 2.2 --stage mini_swe                    # agent, every model
     python3 scripts/evaluate.py --src ~/wine --build ~/wine-build --scenario 1.1 --baseline                  # clean-tree test results only
-    python3 scripts/evaluate.py --src ~/wine --scenario 1.1 --stage programmer --from-model M --dry-run      # splice only, no build (works on macOS)
+    python3 scripts/evaluate.py --src ~/wine --scenario 1.1 --stage programmer --models M --dry-run                  # splice only, no build (works on macOS)
     python3 scripts/evaluate.py --table                                                                      # one table over all evaluations
 
 For every record that has a usable reply (responses/<model>/<id>.c):

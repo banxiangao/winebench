@@ -5,19 +5,19 @@
 
 | 场景 | 内容 | harness | 代码在 |
 |---|---|---|---|
-| 1.3 | 只给函数名，一次回答 | oneshot（无 agent） | `wine_bench/` |
-| 1.4 | 函数名 + 微软文档，一次回答 | oneshot | `wine_bench/` |
-| 3.1 | 函数名 + 源码树，agent 在树里工作、可编译 | mini_swe / openhands | `wine_agent/` |
-| 3.2 | 同 3.1，另给微软文档 | mini_swe / openhands | `wine_agent/` |
+| 1.1 | 只给函数名，一次回答 | oneshot（无 agent） | `wine_bench/` |
+| 1.2 | 函数名 + 微软文档，一次回答 | oneshot | `wine_bench/` |
+| 2.1 | 函数名 + 源码树，agent 在树里工作、可编译 | mini_swe / openhands | `wine_agent/` |
+| 2.2 | 同 2.1，另给微软文档 | mini_swe / openhands | `wine_agent/` |
 
 ```sh
 cd ~/projects/aip-zhouyang/xingan1/WineBench
 bash vulcan/submit.sh list                         # 所有设置：已生成、已评测、队列里的作业
-bash vulcan/submit.sh qwen3.8-27b 3.1 openhands    # 提交一个 agent 设置（生成，GPU；完成后自动评测）
-bash vulcan/submit.sh qwen3.8-27b 1.3              # 提交一个 oneshot 设置
-bash vulcan/submit.sh eval qwen3.8-27b 3.1 openhands   # 只提交评测（CPU）
+bash vulcan/submit.sh qwen3.8-27b 2.1 openhands    # 提交一个 agent 设置（生成，GPU；完成后自动评测）
+bash vulcan/submit.sh qwen3.8-27b 1.1              # 提交一个 oneshot 设置
+bash vulcan/submit.sh eval qwen3.8-27b 2.1 openhands   # 只提交评测（CPU）
 bash vulcan/submit.sh table                        # 看数字
-N=12 CHAIN=0 bash vulcan/submit.sh glm-4.7-flash 3.2 mini_swe --time=0:30:00   # 小规模试跑：前 12 个任务
+N=12 CHAIN=0 bash vulcan/submit.sh glm-4.7-flash 2.2 mini_swe --time=0:30:00   # 小规模试跑：前 12 个任务
 ```
 
 ## 流程
@@ -60,9 +60,9 @@ N=12 CHAIN=0 bash vulcan/submit.sh glm-4.7-flash 3.2 mini_swe --time=0:30:00   #
 
 ```bash
 bash vulcan/submit_api.sh probe                               # 密钥是否有效、接口实际提供的模型编号
-bash vulcan/submit_api.sh claude-haiku-5-5 1.4                # 单次生成（1.3 | 1.4），每个任务一个回复
-bash vulcan/submit_api.sh openai-gpt-6-luna 3.2 mini_swe      # agent（mini_swe | openhands）
-N=5 CHAIN=0 bash vulcan/submit_api.sh claude-haiku-5-5 3.2 openhands --time=0:40:00    # 试跑前 5 个任务
+bash vulcan/submit_api.sh claude-haiku-5-5 1.2                # 单次生成（1.1 | 1.2），每个任务一个回复
+bash vulcan/submit_api.sh openai-gpt-6-luna 2.2 mini_swe      # agent（mini_swe | openhands）
+N=5 CHAIN=0 bash vulcan/submit_api.sh claude-haiku-5-5 2.2 openhands --time=0:40:00    # 试跑前 5 个任务
 bash vulcan/submit_api.sh list                                # 各设置的进度、重试数、生成失败数
 ```
 
@@ -88,4 +88,4 @@ bash vulcan/submit_api.sh list                                # 各设置的进�
 `evaluate.py`（两个包各一份）会监视它启动的每个编译和测试：进程合计常驻内存超过 4096 MB（`--mem-limit-mb`，或环境变量
 `WB_MEM_LIMIT_MB`，0 为关闭）就整组杀掉，测试记为 `crash`（测试结果里带 `mem_killed`），编译记为失败；作业内存
 （匿名加共享）超过上限的 90% 时杀掉占用最大的那个命令。日志里以 `[mem]` 开头的行记录每次处理。加它的原因：生成的
-代码偶尔会无限吃内存，整个评测进程会被系统杀掉（2026-11-25，gpt-oss 1.3 的一个分片连续三次）。
+代码偶尔会无限吃内存，整个评测进程会被系统杀掉（2026-11-25，gpt-oss 1.1 的一个分片连续三次）。

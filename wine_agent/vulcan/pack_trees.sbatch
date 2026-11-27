@@ -51,7 +51,7 @@ echo "   testing the tarball: two copies, one Wine test ($(date '+%T'))"
 apptainer exec --containall --pwd "$WA" --bind "$PROJ" --bind "$W/eval-pair.tar.new":/pack/eval-pair.tar:ro --bind "$LOCAL/c":/w \
     --env "TMPDIR=/w/tmp,XDG_CACHE_HOME=/w/cache,PYTHONUNBUFFERED=1" "$SIF" bash -c '
     set -e; bash ../vulcan/unpack_eval_trees.sh /pack/eval-pair.tar 2
-    python scripts/evaluate.py --src /w/wine --build /w/wine-build --scenario 3.1 --stage mini_swe --baseline --ids 0001 \
+    python scripts/evaluate.py --src /w/wine --build /w/wine-build --scenario 2.1 --stage mini_swe --baseline --ids 0001 \
         --workers 2 --jobs 2 --prefix /w/pfx/wine --runs /w/smoke-runs
     cat /w/smoke-runs/baseline/*.json | head -12
     grep -q "\"status\": \"ok\"" /w/smoke-runs/baseline/*.json || { echo "the Wine test did not run to its summary line"; exit 1; }'

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# LEGACY: written for the earlier two-stage design (architect -> programmer).  Scenario numbers in the comments below are
+# those of that design, not the current scenarios 1.1 / 1.2 (one-shot) and 2.1 / 2.2 (agent).  Not used by the Vulcan jobs.
 # run_all.sh - the whole benchmark for every enabled model in scenarios/models.toml:
 #   1.1 architect -> 1.1 programmer (each model implements its OWN specs)
 #   1.2 architect -> 1.2 programmer (same)

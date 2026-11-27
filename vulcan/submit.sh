@@ -3,11 +3,11 @@
 #
 #   cd .../WineBench
 #   bash vulcan/submit.sh list                                   # every setting: generated, evaluated, jobs in the queue
-#   bash vulcan/submit.sh qwen3.8-27b 3.1 openhands              # an agent setting    (model, scenario, harness)
-#   bash vulcan/submit.sh qwen3.8-27b 1.3                        # a one-shot setting  (model, scenario)
-#   bash vulcan/submit.sh eval qwen3.8-27b 3.1 openhands         # only the evaluation of a setting (CPU job)
+#   bash vulcan/submit.sh qwen3.8-27b 2.1 openhands              # an agent setting    (model, scenario, harness)
+#   bash vulcan/submit.sh qwen3.8-27b 1.1                        # a one-shot setting  (model, scenario)
+#   bash vulcan/submit.sh eval qwen3.8-27b 2.1 openhands         # only the evaluation of a setting (CPU job)
 #   bash vulcan/submit.sh table                                  # the numbers: results/table.txt of both packages
-#   N=12 CHAIN=0 bash vulcan/submit.sh glm-4.7-flash 3.2 mini_swe --time=0:30:00     # a trial: first 12 tasks, no successor
+#   N=12 CHAIN=0 bash vulcan/submit.sh glm-4.7-flash 2.2 mini_swe --time=0:30:00     # a trial: first 12 tasks, no successor
 #
 # A setting is a line of vulcan/experiments.tsv; the job's GPUs, CPUs, memory, time limit and worker count come from
 # that line (sbatch options given after the names override them).  Jobs: wb-<scenario>-<harness>-<model> generates (GPU);

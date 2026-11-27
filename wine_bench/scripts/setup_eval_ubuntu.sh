@@ -50,4 +50,4 @@ timeout 120 ./server/wineserver -w || ./server/wineserver -k
 echo "== smoke test: kernelbase path tests on the clean tree"
 rm -f dlls/kernelbase/tests/*/path.ok
 xvfb-run -a make -s dlls/kernelbase/tests/x86_64-windows/path.ok | tail -3 || true
-echo "done.  Now:  xvfb-run -a python3 scripts/evaluate.py --src $SRC --build $BUILD --scenario 1.1 --stage programmer --from-model <M> --models <M>"
+echo "done.  Now:  xvfb-run -a python3 scripts/evaluate.py --src $SRC --build $BUILD --scenario 1.1 --stage programmer --models <M>"

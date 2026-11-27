@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """run_agent.py - scenarios 3.x: the benchmark's own agent (bench/agent.py) implements each function; the reply is C code.
 
-    python3 scripts/run_agent.py --scenario 3.1 --src ~/wine --build ~/wine-build --models claude-haiku-5-5 --limit 5
-    python3 scripts/run_agent.py --scenario 3.2 --src ~/wine --build ~/wine-build --models deepseek-v4-flash,openai-gpt-6-luna --workers 3
-    python3 scripts/run_agent.py --scenario 3.1 --src ~/wine --models M              # no --build: the compile tool is unavailable
-    python3 scripts/run_agent.py --scenario 3.1 --src ~/wine --build ~/wine-build --models M --redo-bad
-    python3 scripts/run_agent.py --scenario 3.1 --src ~/wine --build ~/wine-build --models M --sample 50   # a fixed random subset of 50
+    python3 scripts/run_agent.py --scenario 2.1 --src ~/wine --build ~/wine-build --models claude-haiku-5-5 --limit 5
+    python3 scripts/run_agent.py --scenario 2.2 --src ~/wine --build ~/wine-build --models deepseek-v4-flash,openai-gpt-6-luna --workers 3
+    python3 scripts/run_agent.py --scenario 2.1 --src ~/wine --models M              # no --build: the compile tool is unavailable
+    python3 scripts/run_agent.py --scenario 2.1 --src ~/wine --build ~/wine-build --models M --redo-bad
+    python3 scripts/run_agent.py --scenario 2.1 --src ~/wine --build ~/wine-build --models M --sample 50   # a fixed random subset of 50
 
 The agent reads the Wine source tree at --src directly (tests and the original implementation are not served to it, see
 bench/agent.py); compiling touches the tree under a lock and restores it, so --build must be a configured, fully built
-tree of the same source (the one evaluate.py uses is fine).  Prompts: build_prompts.py --scenario 3.1 --stage agent.
+tree of the same source (the one evaluate.py uses is fine).  Prompts: build_prompts.py --scenario 2.1 --stage agent.
 Output: runs/<scenario>/agent/responses/<model>/<id>.json (same fields as run_llm.py + steps, tool_counts, compiles,
 exit_status), <id>.c (the submission, evaluated like any programmer reply) and <id>.traj.json (the trajectory).
 """

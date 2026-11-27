@@ -2,9 +2,9 @@
 """run_openhands.py - scenarios 3.x with OpenHands (the OpenHands agent SDK, https://github.com/OpenHands/software-agent-sdk)
 as the agent.
 
-    python3 scripts/run_openhands.py --scenario 3.1 --models claude-haiku-5-5 --limit 5
-    python3 scripts/run_openhands.py --scenario 3.2 --models claude-haiku-5-5,openai-gpt-6-luna,deepseek-v4-flash --limit 100 --workers 2
-    python3 scripts/run_openhands.py --scenario 3.1 --models M --redo-bad
+    python3 scripts/run_openhands.py --scenario 2.1 --models claude-haiku-5-5 --limit 5
+    python3 scripts/run_openhands.py --scenario 2.2 --models claude-haiku-5-5,openai-gpt-6-luna,deepseek-v4-flash --limit 100 --workers 2
+    python3 scripts/run_openhands.py --scenario 2.1 --models M --redo-bad
 
 The agent is OpenHands' standard Agent with its terminal and file-editor tools (no browser, no task tracker) on a local
 workspace; what is ours is the workspace: a restricted copy of the Wine tree (scripts/make_swe_trees.sh: no tests, no

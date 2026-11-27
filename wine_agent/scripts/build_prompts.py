@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """build_prompts.py - write the prompts of one stage of a scenario (no model calls).
 
-    python3 scripts/build_prompts.py --scenario 1.1
-    python3 scripts/build_prompts.py --scenario 1.2 --stage architect --ids 0001,0040
-    python3 scripts/build_prompts.py --scenario 1.1 --stage programmer --from-model deepseek   # programmer fed by deepseek's specs
+    python3 scripts/build_prompts.py --scenario 1.1 --stage programmer                 # one-shot (wine_bench)
+    python3 scripts/build_prompts.py --scenario 2.2 --stage mini_swe --ids 0001,0040   # agent (wine_agent)
+    (--from-model: for a stage fed by another stage's replies; none of the current scenarios has one)
 
 Output: runs/<scenario>/<stage>[/from_<model>]/prompts/<id>.json (what is sent) and <id>.md (readable).
 A stage with [stage.<name>].input_stage set needs --from-model; records whose upstream reply is

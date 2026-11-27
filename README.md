@@ -23,15 +23,20 @@ Four scenarios:
 
 | Scenario | What the model gets | Mode |
 |---|---|---|
-| 1.3 | function name, prototype, context of its source file | one-shot: a single reply, no source tree, no compiler |
-| 1.4 | as 1.3, plus the full Microsoft documentation of the function | one-shot |
-| 3.1 | function name + the whole source tree (tests and the original implementation removed) | agent: can read code, edit code and run `./compile` |
-| 3.2 | as 3.1, plus the full Microsoft documentation | agent |
+| 1.1 | function name, prototype, context of its source file | one-shot: a single reply, no source tree, no compiler |
+| 1.2 | as 1.1, plus the full Microsoft documentation of the function | one-shot |
+| 2.1 | function name + the whole source tree (tests and the original implementation removed) | agent: can read code, edit code and run `./compile` |
+| 2.2 | as 2.1, plus the full Microsoft documentation | agent |
 
 The agent scenarios use two off-the-shelf harnesses, both unmodified: mini-swe-agent 2.4.6 and OpenHands
 (openhands-sdk 1.60.1). Limits per task: 40 steps, 30 minutes, 5 failed compiles. The agent's own tree has no tests
 and no git history, and its shell has no network access. The trees of the tasks that run in parallel in one job are
 visible to each other, however; this is a flaw, see [Known limitations](#known-limitations).
+
+The scenarios were numbered 1.3, 1.4, 3.1 and 3.2 while the experiments ran and were renamed afterwards
+(1.3 → 1.1, 1.4 → 1.2, 3.1 → 2.1, 3.2 → 2.2). Directories, scripts, tables and archives use the new numbers; the Slurm
+job names and the job records inside the archives (`jobs/*.jsonl`, `results/jobs_usage.txt`) keep the numbers the jobs
+were submitted with.
 
 One-shot generation differs by model type: local models are sampled 100 times per task and reported as pass@1,
 pass@10 and pass@100; API models produce one reply per task.
@@ -63,21 +68,21 @@ Every task comes with the full text of its Microsoft documentation.
 
 | Scenario | Harness | qwen3.8-27b | gpt-oss-20b | glm-4.7-flash | claude-haiku-5-5 | openai-gpt-6-luna | deepseek-v4-flash |
 |---|---|---|---|---|---|---|---|
-| 3.1 | mini_swe | 76 (37.1%) | 11 (5.4%) | 7 (3.4%) | — | — | — |
-| 3.1 | OpenHands | 88 (42.9%) | 55 (26.8%) | 28 (13.7%) | — | — | — |
-| 3.2 | mini_swe | 80 (39.0%) | 13 (6.3%) | 7 (3.4%) | 100 (48.8%) | 102 (49.8%) | 82 (40.0%) |
-| 3.2 | OpenHands | 88 (42.9%) | 59 (28.8%) | 31 (15.1%) | 106 (51.7%) | 93 (45.4%) | 82 (40.0%) |
+| 2.1 | mini_swe | 76 (37.1%) | 11 (5.4%) | 7 (3.4%) | — | — | — |
+| 2.1 | OpenHands | 88 (42.9%) | 55 (26.8%) | 28 (13.7%) | — | — | — |
+| 2.2 | mini_swe | 80 (39.0%) | 13 (6.3%) | 7 (3.4%) | 100 (48.8%) | 102 (49.8%) | 82 (40.0%) |
+| 2.2 | OpenHands | 88 (42.9%) | 59 (28.8%) | 31 (15.1%) | 106 (51.7%) | 93 (45.4%) | 82 (40.0%) |
 
 Compiled (%):
 
 | Scenario | Harness | qwen3.8-27b | gpt-oss-20b | glm-4.7-flash | claude-haiku-5-5 | openai-gpt-6-luna | deepseek-v4-flash |
 |---|---|---|---|---|---|---|---|
-| 3.1 | mini_swe | 84.9 | 15.1 | 6.3 | — | — | — |
-| 3.1 | OpenHands | 92.2 | 76.1 | 36.6 | — | — | — |
-| 3.2 | mini_swe | 84.9 | 18.5 | 10.2 | 98.0 | 97.6 | 88.8 |
-| 3.2 | OpenHands | 87.3 | 77.1 | 40.0 | 98.0 | 98.0 | 93.7 |
+| 2.1 | mini_swe | 84.9 | 15.1 | 6.3 | — | — | — |
+| 2.1 | OpenHands | 92.2 | 76.1 | 36.6 | — | — | — |
+| 2.2 | mini_swe | 84.9 | 18.5 | 10.2 | 98.0 | 97.6 | 88.8 |
+| 2.2 | OpenHands | 87.3 | 77.1 | 40.0 | 98.0 | 98.0 | 93.7 |
 
-The API models were run in scenario 3.2 only. The two deepseek-v4-flash runs were not made on the cluster, and its
+The API models were run in scenario 2.2 only. The two deepseek-v4-flash runs were not made on the cluster, and its
 mini_swe run is strongly affected by the tree-visibility flaw described under
 [Known limitations](#known-limitations): use its 82 with care.
 
@@ -85,12 +90,12 @@ mini_swe run is strongly affected by the tree-visibility flaw described under
 
 | Scenario | Model | pass@1 | pass@10 | pass@100 | compile@1 | compile@100 |
 |---|---|---|---|---|---|---|
-| 1.3 | gpt-oss-20b | 5.0 | 17.8 | 28.8 | 34.1 | 100.0 |
-| 1.3 | qwen3.8-27b | 4.4 | 11.9 | 23.4 | 23.9 | 95.6 |
-| 1.3 | glm-4.7-flash | 1.6 | 7.6 | 19.0 | 8.0 | 80.0 |
-| 1.4 | gpt-oss-20b | 5.8 | 17.3 | 27.8 | 33.4 | 99.0 |
-| 1.4 | qwen3.8-27b | 4.9 | 14.0 | 24.9 | 23.5 | 93.7 |
-| 1.4 | glm-4.7-flash | 2.0 | 8.3 | 17.6 | 9.1 | 83.9 |
+| 1.1 | gpt-oss-20b | 5.0 | 17.8 | 28.8 | 34.1 | 100.0 |
+| 1.1 | qwen3.8-27b | 4.4 | 11.9 | 23.4 | 23.9 | 95.6 |
+| 1.1 | glm-4.7-flash | 1.6 | 7.6 | 19.0 | 8.0 | 80.0 |
+| 1.2 | gpt-oss-20b | 5.8 | 17.3 | 27.8 | 33.4 | 99.0 |
+| 1.2 | qwen3.8-27b | 4.9 | 14.0 | 24.9 | 23.5 | 93.7 |
+| 1.2 | glm-4.7-flash | 2.0 | 8.3 | 17.6 | 9.1 | 83.9 |
 
 pass@k is the unbiased estimator `1 − C(n−c, k) / C(n, k)` with n = 100 and c the number of passing replies,
 averaged over the tasks.
@@ -99,17 +104,17 @@ averaged over the tasks.
 
 | Scenario | Model | With code | Compiled | Passed |
 |---|---|---|---|---|
-| 1.3 | claude-haiku-5-5 | 204 | 128 (62.4%) | 41 (20.0%) |
-| 1.3 | openai-gpt-6-luna | 205 | 121 (59.0%) | 40 (19.5%) |
-| 1.3 | deepseek-v4-flash | 198 | 93 (45.4%) | 29 (14.1%) |
-| 1.4 | claude-haiku-5-5 | 203 | 137 (66.8%) | 41 (20.0%) |
-| 1.4 | openai-gpt-6-luna | 204 | 136 (66.3%) | 38 (18.5%) |
-| 1.4 | deepseek-v4-flash | 204 | 97 (47.3%) | 30 (14.6%) |
+| 1.1 | claude-haiku-5-5 | 204 | 128 (62.4%) | 41 (20.0%) |
+| 1.1 | openai-gpt-6-luna | 205 | 121 (59.0%) | 40 (19.5%) |
+| 1.1 | deepseek-v4-flash | 198 | 93 (45.4%) | 29 (14.1%) |
+| 1.2 | claude-haiku-5-5 | 203 | 137 (66.8%) | 41 (20.0%) |
+| 1.2 | openai-gpt-6-luna | 204 | 136 (66.3%) | 38 (18.5%) |
+| 1.2 | deepseek-v4-flash | 204 | 97 (47.3%) | 30 (14.6%) |
 
 The deepseek-v4-flash replies were not generated on the cluster (see [Known limitations](#known-limitations)); they
 were evaluated like all the others.
 
-### Cost (scenario 3.2, mean per task)
+### Cost (scenario 2.2, mean per task)
 
 | Model | Harness | Wall time (s) | Steps | Input tokens | Output tokens |
 |---|---|---|---|---|---|
@@ -178,9 +183,9 @@ The experiments are written for a Slurm cluster: one setting (model + scenario +
 submits the evaluation of its setting when the generation is complete.
 
 ```bash
-bash vulcan/submit.sh qwen3.8-27b 3.2 openhands          # a local model, agent setting
-bash vulcan/submit_api.sh claude-haiku-5-5 1.4           # an API model, one-shot
-bash vulcan/submit_api.sh openai-gpt-6-luna 3.2 mini_swe # an API model, agent
+bash vulcan/submit.sh qwen3.8-27b 2.2 openhands          # a local model, agent setting
+bash vulcan/submit_api.sh claude-haiku-5-5 1.2           # an API model, one-shot
+bash vulcan/submit_api.sh openai-gpt-6-luna 2.2 mini_swe # an API model, agent
 ```
 
 Three things have to be prepared first; they are too large for the repository:
@@ -223,14 +228,14 @@ What should be known when the numbers are read:
 - **Output caps differ.** One-shot: 8,192 tokens for deepseek-v4-flash (8 replies were truncated by it), 16,000 for
   claude-haiku-5-5, none for openai-gpt-6-luna. Agent settings: 8,192 for the local models, deepseek and gpt-6-luna.
 - **The cap of gpt-6-luna was added during the runs.** This model now and then runs away into endless whitespace
-  inside a tool call. The first 74 tasks of its mini_swe 3.2 setting and its whole OpenHands 3.2 setting ran without
+  inside a tool call. The first 74 tasks of its mini_swe 2.2 setting and its whole OpenHands 2.2 setting ran without
   a cap; four tasks were run again because one reply had timed out after 600 seconds, and their first results are in
   the `superseded/` folder of the archive.
 - **gpt-oss-20b and glm-4.7-flash pass few tasks with mini_swe** mainly because they often hand in nothing that
   compiles, not because the code they write is wrong.
-- **The prompt templates of scenarios 1.3 and 1.4 were reconstructed.** The original templates were not on the
+- **The prompt templates of scenarios 1.1 and 1.2 were reconstructed.** The original templates were not on the
   cluster; the ones here were rebuilt from the prompts of the pilot run and checked against them: all 464 prompts of
-  scenario 1.4 are identical character for character, one prompt of scenario 1.3 differs.
+  scenario 1.2 are identical character for character, one prompt of scenario 1.1 differs.
 - **Some trajectories were cleaned.** In 15 agent trajectories a command had listed the file system of the cluster;
   the output of those commands was replaced by a note, see `runs_archive/REDACTED.txt`. Results and evaluations are
   untouched.

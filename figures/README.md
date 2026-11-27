@@ -5,8 +5,8 @@ one setting. Each figure exists as `.pdf` (vector, for the paper), `.png` (300 d
 
 | File | Content |
 |---|---|
-| `cost_agent` | cost per task of the agent settings: wall time, input tokens, output tokens, steps. Top: scenario 3.2 (six models); bottom: scenario 3.1 (the three local models). The two harnesses side by side. |
-| `cost_oneshot` | cost of the one-shot settings: time per reply, prompt tokens, output tokens per reply. Six models, scenarios 1.3 and 1.4 side by side. |
+| `cost_agent` | cost per task of the agent settings: wall time, input tokens, output tokens, steps. Top: scenario 2.2 (six models); bottom: scenario 2.1 (the three local models). The two harnesses side by side. |
+| `cost_oneshot` | cost of the one-shot settings: time per reply, prompt tokens, output tokens per reply. Six models, scenarios 1.1 and 1.2 side by side. |
 
 To draw them again (needs matplotlib; on Vulcan the cluster's own is used):
 

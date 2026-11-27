@@ -11,9 +11,9 @@
 # Submit it through the common entry point, which takes the resources from ../vulcan/experiments.tsv:
 #
 #   cd .../WineBench
-#   bash vulcan/submit.sh qwen3.8-27b 3.1 openhands
-#   bash vulcan/submit.sh glm-4.7-flash 3.1 mini_swe --time=12:00:00   # extra sbatch options after the three names
-#   N=20 CHAIN=0 bash vulcan/submit.sh gpt-oss-20b 3.2 mini_swe --time=1:00:00      # a short trial: first 20 tasks, no follow-up job
+#   bash vulcan/submit.sh qwen3.8-27b 2.1 openhands
+#   bash vulcan/submit.sh glm-4.7-flash 2.1 mini_swe --time=12:00:00   # extra sbatch options after the three names
+#   N=20 CHAIN=0 bash vulcan/submit.sh gpt-oss-20b 2.2 mini_swe --time=1:00:00      # a short trial: first 20 tasks, no follow-up job
 #
 # A setting = model + scenario + harness (mini_swe | openhands), plus what the scenario's config.toml fixes (step, time
 # and compile limits) and the dataset.  Its results are runs/scenario<S>/<harness>/responses/<model>/, nothing else.
@@ -33,7 +33,7 @@
 # Tunable (environment): N (first N tasks; default all), AGENT_WORKERS=6 (tasks in parallel = tree pairs), MAX_MODEL_LEN,
 # CHAIN, REDO, SWE_LOCAL_TOOL_MODE / TOOL_PARSER (see scripts/bench/swe.py: tool_mode).
 set -e
-NAME=${1:?model (folder under ~/scratch/models, entry in scenarios/models.toml)}; S=${2:?scenario, e.g. 3.1}; A=${3:?harness: mini_swe | openhands}
+NAME=${1:?model (folder under ~/scratch/models, entry in scenarios/models.toml)}; S=${2:?scenario, e.g. 2.1}; A=${3:?harness: mini_swe | openhands}
 WA=${SLURM_SUBMIT_DIR:-$PWD}
 [ -f "$WA/scripts/run_$A.py" ] || { echo "$WA is not the wine_agent directory, or '$A' is not a harness (mini_swe | openhands)"; exit 1; }
 WA=$(realpath "$WA"); PROJ=${PROJ:-$(dirname "$WA")}; VENV=${VENV:-$PROJ/venv-vllm}; SIF=${SIF:-$PROJ/container/wine-agent.sif}

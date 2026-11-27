@@ -47,7 +47,7 @@ def extra_lines(rec, ic, scn, ctx=None):
 
 @section('code')
 def code(rec, ic, scn, ctx=None):
-    """the original implementation (scenario 1.2 and later)"""
+    """the original implementation (for a stage that is shown it; none of the current scenarios)"""
     if not ic.get('show_code', False): return ''
     fn = rec['function']; c = clip(fn['code'], ic.get('code_max_lines', 0))
     if ic.get('show_header_comment', False) and fn.get('header_comment'): c = fn['header_comment'] + '\n' + c
@@ -141,7 +141,7 @@ def shared_helpers(rec, ic, scn, ctx=None):
 
 @section('docs_section')
 def docs(rec, ic, scn, ctx=None):
-    """Microsoft documentation pages attached to the record (scenario 2.1): YAML front matter removed"""
+    """Microsoft documentation pages attached to the record (scenarios 1.2 and 2.2): YAML front matter removed"""
     if not ic.get('show_docs', False): return ''
     import re
     pages = rec.get('docs') or []

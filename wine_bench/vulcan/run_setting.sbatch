@@ -6,11 +6,11 @@
 #SBATCH --mem=64G
 #SBATCH --time=1:00:00
 #SBATCH --output=vulcan/logs/%x-%j.out
-# run_setting.sbatch (one-shot scenarios) - ONE setting per job: one model, one scenario (1.3 = name only, 1.4 = name +
+# run_setting.sbatch (one-shot scenarios) - ONE setting per job: one model, one scenario (1.1 = name only, 1.2 = name +
 # Microsoft docs), over the whole benchmark.  One reply per task, no repository, no compiling.
 # Submit it through the common entry point, which takes the resources from ../vulcan/experiments.tsv:
 #
-#   cd .../WineBench && bash vulcan/submit.sh qwen3.8-27b 1.3
+#   cd .../WineBench && bash vulcan/submit.sh qwen3.8-27b 1.1
 #
 # The setting is sampled RUNS times (default "s1 s2": the models <name>-s1, <name>-s2 of scenarios/models.toml, fixed
 # seeds 1 and 2); RUNS="" queries the plain <name> once.  Results: runs/scenario<S>/programmer/responses/<name>[-sK]/.
@@ -18,7 +18,7 @@
 # finds every reply present exits before it loads the model.  REDO=1 re-queries replies that errored or had no code.
 # Every job appends a line to runs/scenario<S>/programmer/jobs/<name>.jsonl when it starts and when it ends.
 set -e
-NAME=${1:?model (folder under ~/scratch/models)}; S=${2:?scenario: 1.3 | 1.4}
+NAME=${1:?model (folder under ~/scratch/models)}; S=${2:?scenario: 1.1 | 1.2}
 WB=${SLURM_SUBMIT_DIR:-$PWD}
 [ -f "$WB/scripts/run_llm.py" ] || { echo "$WB is not the wine_bench directory"; exit 1; }
 WB=$(realpath "$WB"); PROJ=${PROJ:-$(dirname "$WB")}; VENV=${VENV:-$PROJ/venv-vllm}

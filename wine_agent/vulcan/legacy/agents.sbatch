@@ -5,12 +5,12 @@
 #SBATCH --mem=64G
 #SBATCH --time=3:00:00
 #SBATCH --output=vulcan/logs/%x-%j.out
-# agents.sbatch - scenarios 3.1 / 3.2 with mini-swe-agent and OpenHands driven by a LOCAL model on Vulcan.
+# agents.sbatch - scenarios 2.1 / 2.2 with mini-swe-agent and OpenHands driven by a LOCAL model on Vulcan.
 #
 #   cd .../WineBench/wine_agent            (sbatch must be run from the wine_agent directory)
 #   N=500 sbatch vulcan/agents.sbatch qwen3.8-27b                    # submit ONCE per model: see "Short jobs" below
 #   N=5 CHAIN=0 sbatch vulcan/agents.sbatch gpt-oss-20b              # a single short job, no follow-up
-#   N=500 AGENTS=mini_swe SCENARIOS=3.1 sbatch vulcan/agents.sbatch glm-4.7-flash
+#   N=500 AGENTS=mini_swe SCENARIOS=2.1 sbatch vulcan/agents.sbatch glm-4.7-flash
 #
 # Short jobs: the time limit is 3 hours (short jobs start much sooner than day-long ones).  The job stops working
 # 10 minutes before its limit and, if records are left and it made progress, submits its own successor with the same
@@ -30,7 +30,7 @@ NAME=${1:?model name (folder under ~/scratch/models, entry in scenarios/models.t
 WA=${SLURM_SUBMIT_DIR:-$PWD}
 [ -f "$WA/scripts/run_mini_swe.py" ] || { echo "$WA is not the wine_agent directory: cd into it and sbatch again"; exit 1; }
 WA=$(realpath "$WA"); PROJ=${PROJ:-$(dirname "$WA")}; VENV=${VENV:-$PROJ/venv-vllm}; SIF=${SIF:-$PROJ/container/wine-agent.sif}
-N=${N:-5}; AGENTS=${AGENTS:-"mini_swe openhands"}; SCENARIOS=${SCENARIOS:-"3.1 3.2"}; AGENT_WORKERS=${AGENT_WORKERS:-4}
+N=${N:-5}; AGENTS=${AGENTS:-"mini_swe openhands"}; SCENARIOS=${SCENARIOS:-"2.1 2.2"}; AGENT_WORKERS=${AGENT_WORKERS:-4}
 PORT=${PORT:-$((20000 + SLURM_JOB_ID % 20000))}; MAX_MODEL_LEN=${MAX_MODEL_LEN:-65536}
 MODEL_DIR=$HOME/scratch/models/$NAME
 W=$(realpath -m ~/scratch/winebench-w); TREES=$(realpath -m ~/scratch/winebench-trees/$NAME)

@@ -4,9 +4,9 @@
 #
 #   cd .../WineBench
 #   bash vulcan/submit_api.sh probe                                   # are the keys valid, which model ids are served
-#   bash vulcan/submit_api.sh claude-haiku-5-5 1.3                    # one-shot  (scenario 1.3 | 1.4)
-#   bash vulcan/submit_api.sh claude-haiku-5-5 3.2 mini_swe           # agent     (harness mini_swe | openhands)
-#   N=5 CHAIN=0 bash vulcan/submit_api.sh openai-gpt-6-luna 3.2 openhands --time=0:40:00      # a trial: first 5 tasks
+#   bash vulcan/submit_api.sh claude-haiku-5-5 1.1                    # one-shot  (scenario 1.1 | 1.2)
+#   bash vulcan/submit_api.sh claude-haiku-5-5 2.2 mini_swe           # agent     (harness mini_swe | openhands)
+#   N=5 CHAIN=0 bash vulcan/submit_api.sh openai-gpt-6-luna 2.2 openhands --time=0:40:00      # a trial: first 5 tasks
 #   bash vulcan/submit_api.sh list                                    # generated / evaluated per API setting
 #
 # Resources (sbatch options after the names override them):
@@ -25,7 +25,7 @@ fi
 if [ "${1:-}" = list ]; then
     Q=$(squeue -u "$USER" -h -o "%j %i %T" 2>/dev/null || true)
     printf '%-9s %-10s %-20s %-10s %-10s %-8s %-7s %s\n' scenario harness model generated evaluated retried failed "jobs in the queue"
-    for row in "1.3 oneshot" "1.4 oneshot" "3.2 mini_swe" "3.2 openhands" "3.1 mini_swe" "3.1 openhands"; do
+    for row in "1.1 oneshot" "1.2 oneshot" "2.2 mini_swe" "2.2 openhands" "2.1 mini_swe" "2.1 openhands"; do
         set -- $row; S=$1; H=$2
         for M in $API_MODELS; do
             if [ "$H" = oneshot ]; then SD="$ROOT/wine_bench/runs/scenario$S/programmer"; else SD="$ROOT/wine_agent/runs/scenario$S/$H"; fi
@@ -40,7 +40,7 @@ if [ "${1:-}" = list ]; then
     done
     exit 0
 fi
-M=${1:?model (claude-haiku-5-5 | openai-gpt-6-luna | deepseek-v4-flash), or: probe | list}; S=${2:?scenario: 1.3 | 1.4 | 3.2}; shift 2
+M=${1:?model (claude-haiku-5-5 | openai-gpt-6-luna | deepseek-v4-flash), or: probe | list}; S=${2:?scenario: 1.1 | 1.2 | 2.2}; shift 2
 H=oneshot; if [ $# -gt 0 ] && [ "${1#-}" = "$1" ]; then H=$1; shift; fi
 case "$H" in
     oneshot)            PKG="$ROOT/wine_bench"; RES=(--cpus-per-task=1 --mem=2G --time=1:00:00) ;;
