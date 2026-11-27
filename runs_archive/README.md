@@ -60,7 +60,7 @@ Checked after the runs:
   in any file (the key file shows up only as a name in `ls /` listings);
 - THE mini_swe RUN LEFT ITS TREES.  All trees of a job sit side by side and each hides only the function of its own
   task, so the original implementation of a task's function is readable in the sibling trees (this is true of every
-  agent run of the benchmark, see "已知情况" in the main README and `results/tree_access_*`).  This model often starts
+  agent run of the benchmark, see "Known limitations" in the main README and `results/tree_access_*`).  This model often starts
   with `cd /` or `cd /root` and looks for the file with `find /`: in 40 of the 205 mini_swe tasks a command names a
   tree other than the task's own, in 36 it names the target file there, in 31 it writes there (which may also have
   disturbed that worker's task); 8 of the 36 passed.  (A first count on the workstation, with a narrower criterion,

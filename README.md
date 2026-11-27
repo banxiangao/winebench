@@ -1,80 +1,89 @@
 # WineBench
 
-让大模型重新实现 Wine 里的 Windows API 函数，再用 Wine 自己的一致性测试判断写得对不对。
+Can a language model re-implement a Windows API function of Wine? Wine's own conformance tests decide.
 
-每个任务是 Wine 源码里的一个导出函数：把它的实现拿掉，让模型重写，然后把模型的代码放回 Wine、编译所在模块、
-运行引用到这个函数的测试文件，并与未改动的 Wine 上同一批测试的结果对比。新增了失败就算没通过。
+Each task is one exported function in the Wine source tree. Its implementation is removed and the model writes it
+again; the model's code is put back into Wine, the module is compiled, and the test files that reference the function
+are run and compared with the same tests on the untouched Wine. A task passes when no test fails that did not fail
+before.
 
-本仓库是 2026 年 11 月在 Vulcan 集群上做的一轮正式实验：代码、数据集、全部结果和原始输出。
+This repository holds one full round of experiments, run in November 2026 on the Vulcan cluster: the code, the
+dataset, every result and the raw outputs.
 
-## 实验设置
+## Setup
 
 | | |
 |---|---|
-| Wine 版本 | 11.19（tag `wine-11.19`） |
-| 任务 | 205 个函数，数据集 `wine_agent/dataset/winebench205_doc` |
-| 本地模型 | qwen3.8-27b、gpt-oss-20b、glm-4.7-flash（vLLM，两张 L40S） |
-| 商业模型 | claude-haiku-5-5、openai-gpt-6-luna、deepseek-v4-flash（均关闭思考） |
+| Wine | 11.19 (tag `wine-11.19`) |
+| Tasks | 205 functions, dataset `wine_agent/dataset/winebench205_doc` |
+| Local models | qwen3.8-27b, gpt-oss-20b, glm-4.7-flash (vLLM, two L40S GPUs) |
+| API models | claude-haiku-5-5, openai-gpt-6-luna, deepseek-v4-flash (thinking switched off) |
 
-四个场景：
+Four scenarios:
 
-| 场景 | 给模型什么 | 方式 |
+| Scenario | What the model gets | Mode |
 |---|---|---|
-| 1.3 | 函数名、原型、所在文件的上下文 | 单次生成：一次回复，没有源码树，不能编译 |
-| 1.4 | 同 1.3，另加微软官方文档全文 | 单次生成 |
-| 3.1 | 函数名 + 整棵源码树（去掉测试和原实现） | agent：可以读代码、改代码、运行 `./compile` |
-| 3.2 | 同 3.1，另加微软官方文档全文 | agent |
+| 1.3 | function name, prototype, context of its source file | one-shot: a single reply, no source tree, no compiler |
+| 1.4 | as 1.3, plus the full Microsoft documentation of the function | one-shot |
+| 3.1 | function name + the whole source tree (tests and the original implementation removed) | agent: can read code, edit code and run `./compile` |
+| 3.2 | as 3.1, plus the full Microsoft documentation | agent |
 
-agent 用两个现成的框架，都不改动框架本身：mini-swe-agent 2.4.6 和 OpenHands（openhands-sdk 1.60.1）。每个任务最多
-40 步、30 分钟、5 次编译失败。agent 自己的源码树里没有测试，也没有 git 历史，命令行不能联网。但同一个作业里并行
-任务的源码树彼此可见，这是一个漏洞，见"已知情况"。
+The agent scenarios use two off-the-shelf harnesses, both unmodified: mini-swe-agent 2.4.6 and OpenHands
+(openhands-sdk 1.60.1). Limits per task: 40 steps, 30 minutes, 5 failed compiles. The agent's own tree has no tests
+and no git history, and its shell has no network access. The trees of the tasks that run in parallel in one job are
+visible to each other, however; this is a flaw, see [Known limitations](#known-limitations).
 
-单次生成的做法因模型而异：本地模型每个任务采样 100 次，报告 pass@1 / pass@10 / pass@100；商业模型每个任务只
-生成一次。
+One-shot generation differs by model type: local models are sampled 100 times per task and reported as pass@1,
+pass@10 and pass@100; API models produce one reply per task.
 
-## 数据集
+## Dataset
 
-205 个任务取自 WineBench 全集（4598 个有测试的函数，`incoming/winebench_2026-11-24/`），每个都有微软文档全文。
+The 205 tasks are a subset of the full WineBench set (4,598 functions with tests, `incoming/winebench_2026-11-24/`).
+Every task comes with the full text of its Microsoft documentation.
 
-- 选取规则：实现不少于 15 行，本模块内引用它的测试多于 10 个且不超过 50 个，12 个一级分类各至少 10 个。
-- 其中 12 个任务在集群上测不了（需要外网或音频设备），换成了同样来自全集的 12 个（多于 10 行、多于 5 个测试），
-  经过见 `wine_agent/dataset/winebench205_doc/CHANGES.md`。
-- 规模：实现平均 35.5 行（13 到 198 行），平均每个任务 3.6 个测试文件。
+- Selection: the implementation has at least 15 lines; more than 10 and at most 50 tests of its own module reference
+  it; at least 10 tasks in each of the 12 top-level categories.
+- Twelve tasks could not be tested on the cluster (they need outside network access or an audio device) and were
+  replaced by twelve others from the full set (more than 10 lines, more than 5 tests); see
+  `wine_agent/dataset/winebench205_doc/CHANGES.md`.
+- Size: 35.5 lines per implementation on average (13 to 198); 3.6 test files per task on average.
 
-| 分类 | 任务数 | 分类 | 任务数 |
+| Category | Tasks | Category | Tasks |
 |---|---|---|---|
-| 图形与多媒体 | 36 | 用户输入与消息 | 15 |
-| 系统服务 | 29 | 网络 | 14 |
-| 数据访问与存储 | 17 | 用户界面 | 14 |
-| 安全与身份 | 16 | 诊断 | 14 |
-| 应用安装与维护 | 16 | 设备 | 13 |
-| Shell | 11 | C 运行时库 | 10 |
+| Graphics and multimedia | 36 | User input and messaging | 15 |
+| System services | 29 | Networking and internet | 14 |
+| Data access and storage | 17 | User interface | 14 |
+| Security and identity | 16 | Diagnostics | 14 |
+| Application installation and servicing | 16 | Devices | 13 |
+| Windows environment (Shell) | 11 | C runtime library | 10 |
 
-## 结果
+## Results
 
-### Agent：测试通过的任务数（共 205）
+### Agent: tasks passed (of 205)
 
-| 场景 | 框架 | qwen3.8-27b | gpt-oss-20b | glm-4.7-flash | claude-haiku-5-5 | openai-gpt-6-luna | deepseek-v4-flash |
+| Scenario | Harness | qwen3.8-27b | gpt-oss-20b | glm-4.7-flash | claude-haiku-5-5 | openai-gpt-6-luna | deepseek-v4-flash |
 |---|---|---|---|---|---|---|---|
-| 3.1 | mini_swe | 76（37.1%） | 11（5.4%） | 7（3.4%） | — | — | — |
-| 3.1 | OpenHands | 88（42.9%） | 55（26.8%） | 28（13.7%） | — | — | — |
-| 3.2 | mini_swe | 80（39.0%） | 13（6.3%） | 7（3.4%） | 100（48.8%） | 102（49.8%） | 82（40.0%） |
-| 3.2 | OpenHands | 88（42.9%） | 59（28.8%） | 31（15.1%） | 106（51.7%） | 93（45.4%） | 82（40.0%） |
+| 3.1 | mini_swe | 76 (37.1%) | 11 (5.4%) | 7 (3.4%) | — | — | — |
+| 3.1 | OpenHands | 88 (42.9%) | 55 (26.8%) | 28 (13.7%) | — | — | — |
+| 3.2 | mini_swe | 80 (39.0%) | 13 (6.3%) | 7 (3.4%) | 100 (48.8%) | 102 (49.8%) | 82 (40.0%) |
+| 3.2 | OpenHands | 88 (42.9%) | 59 (28.8%) | 31 (15.1%) | 106 (51.7%) | 93 (45.4%) | 82 (40.0%) |
 
-编译通过率（%）：
+Compiled (%):
 
-| 场景 | 框架 | qwen3.8-27b | gpt-oss-20b | glm-4.7-flash | claude-haiku-5-5 | openai-gpt-6-luna | deepseek-v4-flash |
+| Scenario | Harness | qwen3.8-27b | gpt-oss-20b | glm-4.7-flash | claude-haiku-5-5 | openai-gpt-6-luna | deepseek-v4-flash |
 |---|---|---|---|---|---|---|---|
 | 3.1 | mini_swe | 84.9 | 15.1 | 6.3 | — | — | — |
 | 3.1 | OpenHands | 92.2 | 76.1 | 36.6 | — | — | — |
 | 3.2 | mini_swe | 84.9 | 18.5 | 10.2 | 98.0 | 97.6 | 88.8 |
 | 3.2 | OpenHands | 87.3 | 77.1 | 40.0 | 98.0 | 98.0 | 93.7 |
 
-商业模型只跑了场景 3.2。deepseek-v4-flash 的两次运行不在集群上，其中 mini_swe 那次受下面"已知情况"里源码树互相可见的问题影响较大，82 这个数应谨慎使用。
+The API models were run in scenario 3.2 only. The two deepseek-v4-flash runs were not made on the cluster, and its
+mini_swe run is strongly affected by the tree-visibility flaw described under
+[Known limitations](#known-limitations): use its 82 with care.
 
-### 单次生成，本地模型（每个任务 100 次采样，%）
+### One-shot, local models (100 samples per task, %)
 
-| 场景 | 模型 | pass@1 | pass@10 | pass@100 | compile@1 | compile@100 |
+| Scenario | Model | pass@1 | pass@10 | pass@100 | compile@1 | compile@100 |
 |---|---|---|---|---|---|---|
 | 1.3 | gpt-oss-20b | 5.0 | 17.8 | 28.8 | 34.1 | 100.0 |
 | 1.3 | qwen3.8-27b | 4.4 | 11.9 | 23.4 | 23.9 | 95.6 |
@@ -83,128 +92,150 @@ agent 用两个现成的框架，都不改动框架本身：mini-swe-agent 2.4.6
 | 1.4 | qwen3.8-27b | 4.9 | 14.0 | 24.9 | 23.5 | 93.7 |
 | 1.4 | glm-4.7-flash | 2.0 | 8.3 | 17.6 | 9.1 | 83.9 |
 
-pass@k 用无偏估计 `1 − C(n−c, k) / C(n, k)`，n = 100，c 为通过的回复数，再对任务取平均。
+pass@k is the unbiased estimator `1 − C(n−c, k) / C(n, k)` with n = 100 and c the number of passing replies,
+averaged over the tasks.
 
-### 单次生成，商业模型（每个任务一次回复）
+### One-shot, API models (one reply per task)
 
-| 场景 | 模型 | 有代码 | 编译通过 | 测试通过 |
+| Scenario | Model | With code | Compiled | Passed |
 |---|---|---|---|---|
-| 1.3 | claude-haiku-5-5 | 204 | 128（62.4%） | 41（20.0%） |
-| 1.3 | openai-gpt-6-luna | 205 | 121（59.0%） | 40（19.5%） |
-| 1.3 | deepseek-v4-flash | 198 | 93（45.4%） | 29（14.1%） |
-| 1.4 | claude-haiku-5-5 | 203 | 137（66.8%） | 41（20.0%） |
-| 1.4 | openai-gpt-6-luna | 204 | 136（66.3%） | 38（18.5%） |
-| 1.4 | deepseek-v4-flash | 204 | 97（47.3%） | 30（14.6%） |
+| 1.3 | claude-haiku-5-5 | 204 | 128 (62.4%) | 41 (20.0%) |
+| 1.3 | openai-gpt-6-luna | 205 | 121 (59.0%) | 40 (19.5%) |
+| 1.3 | deepseek-v4-flash | 198 | 93 (45.4%) | 29 (14.1%) |
+| 1.4 | claude-haiku-5-5 | 203 | 137 (66.8%) | 41 (20.0%) |
+| 1.4 | openai-gpt-6-luna | 204 | 136 (66.3%) | 38 (18.5%) |
+| 1.4 | deepseek-v4-flash | 204 | 97 (47.3%) | 30 (14.6%) |
 
-deepseek-v4-flash 的回复不是在集群上生成的（见"已知情况"），评测与其他模型相同。
+The deepseek-v4-flash replies were not generated on the cluster (see [Known limitations](#known-limitations)); they
+were evaluated like all the others.
 
-### 开销（场景 3.2，每个任务平均）
+### Cost (scenario 3.2, mean per task)
 
-| 模型 | 框架 | 耗时（秒） | 步数 | 输入 token | 输出 token |
+| Model | Harness | Wall time (s) | Steps | Input tokens | Output tokens |
 |---|---|---|---|---|---|
-| claude-haiku-5-5 | mini_swe / OpenHands | 19 / 32 | 6.5 / 6.7 | 6.0 万 / 16.9 万 | 2409 / 6518 |
-| openai-gpt-6-luna | mini_swe / OpenHands | 25 / 34 | 9.0 / 10.5 | 7.7 万 / 14.4 万 | 1851 / 1249 |
-| deepseek-v4-flash | mini_swe / OpenHands | 30 / 32 | 14.4 / 18.1 | 20.1 万 / 40.0 万 | 2240 / 3256 |
-| gpt-oss-20b | mini_swe / OpenHands | 77 / 46 | 25.9 / 18.0 | 25.0 万 / 34.4 万 | 4103 / 2501 |
-| glm-4.7-flash | mini_swe / OpenHands | 153 / 150 | 34.5 / 35.4 | 33.7 万 / 58.0 万 | 4623 / 3217 |
-| qwen3.8-27b | mini_swe / OpenHands | 584 / 687 | 25.1 / 18.2 | 34.9 万 / 39.7 万 | 2654 / 2747 |
+| claude-haiku-5-5 | mini_swe / OpenHands | 19 / 32 | 6.5 / 6.7 | 60k / 169k | 2,409 / 6,518 |
+| openai-gpt-6-luna | mini_swe / OpenHands | 25 / 34 | 9.0 / 10.5 | 77k / 144k | 1,851 / 1,249 |
+| deepseek-v4-flash | mini_swe / OpenHands | 30 / 32 | 14.4 / 18.1 | 201k / 400k | 2,240 / 3,256 |
+| gpt-oss-20b | mini_swe / OpenHands | 77 / 46 | 25.9 / 18.0 | 250k / 344k | 4,103 / 2,501 |
+| glm-4.7-flash | mini_swe / OpenHands | 153 / 150 | 34.5 / 35.4 | 337k / 580k | 4,623 / 3,217 |
+| qwen3.8-27b | mini_swe / OpenHands | 584 / 687 | 25.1 / 18.2 | 349k / 397k | 2,654 / 2,747 |
 
-输入 token 是每一步重发历史累加的结果。耗时不能在本地模型和商业模型之间直接比较：前者是两张 L40S 上 6 个任务
-并行，后者走厂商接口。
+Input tokens are summed over the steps of a task (the history is sent again at every step). Wall times of local and
+API models cannot be compared directly: the former run six tasks at a time on two L40S GPUs, the latter go through a
+vendor's API. The deepseek-v4-flash times were measured on a different machine.
 
-完整数据：
+Where the complete numbers are:
 
-- `wine_agent/results/table.txt`：agent 各设置的汇总
-- `wine_bench/results/pass_at_k.txt`、`table.txt`：单次生成
-- `results/metrics_tasks.csv`：逐任务的时间、token、步数、结果；`metrics_settings.txt`：按设置汇总
-- `results/jobs_usage.txt`：每个集群作业申请和使用的资源
-- `results/tree_access_settings.txt`、`tree_access_tasks.csv`：agent 走出自己源码树的统计（见"已知情况"）
-- `figures/`：时间和 token 开销的两张图（`cost_agent`、`cost_oneshot`），说明见其中的 README
+- `wine_agent/results/table.txt`: one line per agent setting
+- `wine_bench/results/pass_at_k.txt` and `table.txt`: the one-shot settings
+- `results/metrics_tasks.csv`: time, tokens, steps and outcome of every task; `metrics_settings.txt`: the same per setting
+- `results/jobs_usage.txt`: what every cluster job requested and used
+- `results/tree_access_settings.txt`, `tree_access_tasks.csv`: which agents left the tree of their own task (see
+  [Known limitations](#known-limitations))
+- `figures/`: two figures of the time and token cost (`cost_agent`, `cost_oneshot`), described in its README
 
-## 评测方法
+## How a task is evaluated
 
-评测脚本是 `wine_bench/scripts/evaluate.py`（单次生成）和 `wine_agent/scripts/evaluate.py`（agent），逻辑相同：
+`wine_bench/scripts/evaluate.py` (one-shot) and `wine_agent/scripts/evaluate.py` (agent) follow the same steps:
 
-1. **拼接**：模型的代码替换源文件里的原函数（agent 提交的是补丁，打在它看到的那份源码上）。
-2. **编译**：编译函数所在的模块。
-3. **测试**：运行每个引用到该函数的测试文件，与未改动的 Wine 上的结果（基线）对比。
-4. **还原**：把源码树恢复原样。
+1. **Splice.** The model's code replaces the original function in its source file. (An agent hands in a patch, which
+   is applied to the tree as the agent saw it.)
+2. **Compile.** The module of the function is built.
+3. **Test.** Every test file that references the function is run and compared with its result on the untouched Wine
+   (the baseline).
+4. **Restore.** The tree is put back as it was.
 
-每个任务的结果是下列之一：
+Every task ends in one of these states:
 
-| 状态 | 含义 |
+| Status | Meaning |
 |---|---|
-| `pass` | 编译通过，测试没有新增失败 |
-| `test_fail` | 有测试新增了失败 |
-| `crash` | 测试进程崩溃或没有跑完 |
-| `timeout` | 测试超过 300 秒 |
-| `compile_fail` | 编译不过 |
-| `splice_fail` | 代码拼不进源文件 |
-| `no_code` | 回复里没有可用的代码 |
+| `pass` | compiles, and no test fails that did not fail on the baseline |
+| `test_fail` | a test fails that passed on the baseline |
+| `crash` | a test process crashed or did not finish |
+| `timeout` | a test ran longer than 300 seconds |
+| `compile_fail` | the module does not compile |
+| `splice_fail` | the code cannot be placed into the source file |
+| `no_code` | the reply holds no usable code |
 
-基线上本身就崩溃或超时的测试文件不参与判断。
+Test files that crash or time out on the baseline itself are left out.
 
-## 仓库结构
+## Repository layout
 
-| 目录 | 内容 |
+| Directory | Content |
 |---|---|
-| `wine_bench/` | 单次生成：提示词构建、调用模型、评测、pass@k |
-| `wine_agent/` | agent：两个框架的运行脚本、评测、数据集 |
-| `vulcan/` | 集群上的作业脚本和入口，说明见 `vulcan/README.md` |
-| `container/` | 容器镜像的定义文件 `wine-agent.def` 和 Wine 的构建脚本 |
-| `results/` | 指标表 |
-| `runs_archive/` | 全部原始输出的压缩包：提示词、回复、补丁、agent 轨迹、逐任务评测结果，说明见其中的 README |
-| `incoming/` | WineBench 全集和子集的原始材料 |
+| `wine_bench/` | one-shot: building the prompts, querying the models, evaluation, pass@k |
+| `wine_agent/` | agent: the runners of the two harnesses, evaluation, the dataset |
+| `vulcan/` | job scripts and entry points for the cluster (`vulcan/README.md`, in Chinese) |
+| `container/` | definition of the container image (`wine-agent.def`) and the script that builds Wine |
+| `results/` | metrics tables |
+| `figures/` | cost figures and the script that draws them |
+| `runs_archive/` | every raw output, packed: prompts, replies, patches, agent trajectories, per-task evaluations (see its README) |
+| `incoming/` | the full WineBench set and the subset as they were delivered |
 
-## 怎么运行
+## Running it
 
-实验是为 Slurm 集群写的：一个设置（模型 + 场景 + 框架）一个作业，生成完自动提交评测。
+The experiments are written for a Slurm cluster: one setting (model + scenario + harness) is one job, and the job
+submits the evaluation of its setting when the generation is complete.
 
 ```bash
-bash vulcan/submit.sh qwen3.8-27b 3.2 openhands          # 本地模型的 agent 设置
-bash vulcan/submit_api.sh claude-haiku-5-5 1.4           # 商业模型，单次生成
-bash vulcan/submit_api.sh openai-gpt-6-luna 3.2 mini_swe # 商业模型，agent
+bash vulcan/submit.sh qwen3.8-27b 3.2 openhands          # a local model, agent setting
+bash vulcan/submit_api.sh claude-haiku-5-5 1.4           # an API model, one-shot
+bash vulcan/submit_api.sh openai-gpt-6-luna 3.2 mini_swe # an API model, agent
 ```
 
-需要事先准备三样东西，它们太大，不在仓库里：
+Three things have to be prepared first; they are too large for the repository:
 
-- 容器镜像 `container/wine-agent.sif`（由 `wine-agent.def` 构建：Ubuntu 22.04、编译 Wine 的工具链、两个 agent 框架）
-- 编译好的 Wine 11.19 源码树和构建目录（`container/build_wine.sbatch`）
-- 由它们打包出的 agent 用树和评测用树（`wine_agent/vulcan/pack_trees.sbatch`）
+- the container image `container/wine-agent.sif`, built from `wine-agent.def` (Ubuntu 22.04, the toolchain that
+  compiles Wine, the two agent harnesses)
+- a compiled Wine 11.19 source and build tree (`container/build_wine.sbatch`)
+- the trees for the agents and for the evaluation, packed from it (`wine_agent/vulcan/pack_trees.sbatch`)
 
-商业模型的密钥放在 `~/.config/winebench/secrets.toml`，格式见 `wine_bench/secrets.toml.example`。
+API keys go into `~/.config/winebench/secrets.toml`, in the form of `wine_bench/secrets.toml.example`.
 
-只想重新统计或查看结果，不需要以上任何环境：解开 `runs_archive/` 里的压缩包即可。
+None of this is needed to look at the results or to recompute the statistics: unpack the archives in `runs_archive/`.
 
-## 已知情况
+## Known limitations
 
-读结果时需要知道的几点：
+What should be known when the numbers are read:
 
-- **商业模型最多生成两次。** 第一次因接口、网络或运行器出错没有拿到结果时才重试一次，仍失败记为生成失败。回复里
-  没有代码、回复被截断、agent 撞到上限都算任务的结果，不重试。实际运行中没有任何任务用到第二次。
-- **并行任务的源码树彼此可见（agent 实验）。** 一个作业同时跑 6 个任务，6 棵源码树并排放着，每棵只隐藏了自己那个
-  任务的函数，所以在别的树里该函数的原实现是可读的，也没有机制阻止 agent 走出自己的树。按轨迹里的命令统计
-  （`vulcan/tree_access.py`，明细在 `results/tree_access_tasks.csv`）：
-  - 集群上的 16 个设置共 3280 个任务，76 个任务的命令提到过别的树；其中在别的树里读过目标文件并且最终通过的有
-    6 个（gpt-oss-20b 4 个，claude-haiku-5-5 1 个，qwen3.8-27b 1 个）。最坏情况下单个设置的通过数少 3 个。
-  - deepseek-v4-flash 的 mini_swe 运行受影响大得多：205 个任务里 40 个走出了自己的树，36 个在别的树里读过目标
-    文件，31 个往别的树里写过东西，读过目标文件且通过的有 8 个。它的 82 个通过可能偏高，也可能偏低（有的任务把
-    代码写进了别的树，自己的树没动，记成了没有代码）。它的 OpenHands 运行没有这种情况。
-  - 这些数字是按命令文本统计的上限，没有逐个核对最终代码是否照抄。另有 6 个任务的命令提到过项目目录或数据集。
-- **deepseek-v4-flash 不是在集群上生成的。** 集群的代理不放行它的接口，它的回复和 agent 运行都是在另一台机器上用
-  同一套脚本、同一份提示词、同一个容器镜像和同一份源码树做的，评测仍在集群上做。那台机器能直接联网，所以给
-  agent 的命令行设了一个不存在的代理来阻断联网（`WB_AGENT_OFFLINE=1`），这比集群上的物理断网弱。它的耗时与其他
-  模型不可比。
-- **输出上限不统一。** 单次生成时 deepseek-v4-flash 的上限是 8192 token（8 个回复因此被截断），claude-haiku-5-5
-  是 16000，openai-gpt-6-luna 没有上限。agent 实验里本地模型、deepseek 和 gpt-6-luna 是 8192。
-- **gpt-6-luna 的上限是中途加的。** 它偶尔会在工具调用里无限输出空白字符。mini_swe 3.2 的前 74 个任务和 OpenHands
-  3.2 的全部任务是在没有上限时跑的；有 4 个任务因一次回复超时（600 秒）而重跑，旧结果在归档的 `superseded/` 里。
-- **mini_swe 下 gpt-oss 和 glm 的通过率很低**，主要因为它们常常交不出可编译的代码，而不是代码写错。
-- **场景 1.3、1.4 的提示词模板是重建的。** 原模板不在集群上，这里的版本根据预实验的提示词还原，并与之核对过：1.4 的 464 条全部逐字一致，1.3 有 1 条不同。
-- **轨迹做过清理。** 有 15 个 agent 轨迹里列出了集群文件系统的目录，那些命令的输出被替换成了说明，见
-  `runs_archive/REDACTED.txt`。结果和评测没有改动。
+- **API models get at most two generations per task.** A task is generated a second time only if the first attempt
+  returned nothing because of an API, network or runner error; if the second fails too, the task counts as a failed
+  generation. A reply without code, a truncated reply and an agent that hits one of its limits are results of the
+  task and are not retried. In these runs no task needed its second attempt.
+- **The trees of parallel tasks are visible to each other (agent settings).** A job runs six tasks at once, and their
+  six source trees sit side by side. Each tree hides only the function of its own task, so the original
+  implementation of that function can be read in the other trees, and nothing keeps an agent inside its own tree.
+  Counted from the commands in the trajectories (`vulcan/tree_access.py`, details in `results/tree_access_tasks.csv`):
+  - In the 16 settings run on the cluster (3,280 tasks), the commands of 76 tasks name another tree. Six of the tasks
+    that read their target file in another tree passed (gpt-oss-20b 4, claude-haiku-5-5 1, qwen3.8-27b 1). In the
+    worst case a setting loses 3 passes.
+  - The mini_swe run of deepseek-v4-flash is affected far more: 40 of its 205 tasks left their own tree, 36 read the
+    target file in another tree, 31 wrote into another tree, and 8 of those that read the target file passed. Its 82
+    may be too high, and it may be too low (some tasks put their code into another tree, left their own untouched and
+    count as no code). Its OpenHands run shows none of this.
+  - These counts are upper bounds taken from the text of the commands; whether the submitted code was actually copied
+    has not been checked task by task. The commands of 6 further tasks name the project directory or the dataset.
+- **deepseek-v4-flash was not run on the cluster.** The cluster's proxy does not let its API through, so its replies
+  and its agent runs were produced on another machine, with the same scripts, the same prompts, the same container
+  image and the same packed trees; the evaluation was done on the cluster. That machine has direct internet access,
+  so the agent's shell was given a proxy that does not exist (`WB_AGENT_OFFLINE=1`) to cut it off, which is weaker
+  than the cluster's compute nodes, which have no route out at all. Its wall times are not comparable with the others.
+- **Output caps differ.** One-shot: 8,192 tokens for deepseek-v4-flash (8 replies were truncated by it), 16,000 for
+  claude-haiku-5-5, none for openai-gpt-6-luna. Agent settings: 8,192 for the local models, deepseek and gpt-6-luna.
+- **The cap of gpt-6-luna was added during the runs.** This model now and then runs away into endless whitespace
+  inside a tool call. The first 74 tasks of its mini_swe 3.2 setting and its whole OpenHands 3.2 setting ran without
+  a cap; four tasks were run again because one reply had timed out after 600 seconds, and their first results are in
+  the `superseded/` folder of the archive.
+- **gpt-oss-20b and glm-4.7-flash pass few tasks with mini_swe** mainly because they often hand in nothing that
+  compiles, not because the code they write is wrong.
+- **The prompt templates of scenarios 1.3 and 1.4 were reconstructed.** The original templates were not on the
+  cluster; the ones here were rebuilt from the prompts of the pilot run and checked against them: all 464 prompts of
+  scenario 1.4 are identical character for character, one prompt of scenario 1.3 differs.
+- **Some trajectories were cleaned.** In 15 agent trajectories a command had listed the file system of the cluster;
+  the output of those commands was replaced by a note, see `runs_archive/REDACTED.txt`. Results and evaluations are
+  untouched.
 
-## 数据来源
+## Sources
 
-任务中的函数实现和测试来自 [Wine](https://www.winehq.org/)（LGPL），文档来自微软的公开 API 文档。使用这些内容时
-请遵守各自的许可。
+The implementations and tests of the tasks come from [Wine](https://www.winehq.org/) (LGPL), the documentation from
+Microsoft's public API documentation. Their licences apply to that material.
